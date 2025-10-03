@@ -6,6 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		87CB52972E90242F00618C59 /* Apollo in Frameworks */ = {isa = PBXBuildFile; productRef = 87CB52962E90242F00618C59 /* Apollo */; };
+		87CB52992E90242F00618C59 /* ApolloAPI in Frameworks */ = {isa = PBXBuildFile; productRef = 87CB52982E90242F00618C59 /* ApolloAPI */; };
+		87CB529B2E90242F00618C59 /* ApolloSQLite in Frameworks */ = {isa = PBXBuildFile; productRef = 87CB529A2E90242F00618C59 /* ApolloSQLite */; };
+		87CB529D2E90242F00618C59 /* ApolloWebSocket in Frameworks */ = {isa = PBXBuildFile; productRef = 87CB529C2E90242F00618C59 /* ApolloWebSocket */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		87F968CD2E8F622A00EC1A7C /* LlegoiOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LlegoiOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +30,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				87CB52992E90242F00618C59 /* ApolloAPI in Frameworks */,
+				87CB529D2E90242F00618C59 /* ApolloWebSocket in Frameworks */,
+				87CB52972E90242F00618C59 /* Apollo in Frameworks */,
+				87CB529B2E90242F00618C59 /* ApolloSQLite in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +76,10 @@
 			);
 			name = LlegoiOS;
 			packageProductDependencies = (
+				87CB52962E90242F00618C59 /* Apollo */,
+				87CB52982E90242F00618C59 /* ApolloAPI */,
+				87CB529A2E90242F00618C59 /* ApolloSQLite */,
+				87CB529C2E90242F00618C59 /* ApolloWebSocket */,
 			);
 			productName = LlegoiOS;
 			productReference = 87F968CD2E8F622A00EC1A7C /* LlegoiOS.app */;
@@ -94,6 +109,9 @@
 			);
 			mainGroup = 87F968C42E8F622A00EC1A7C;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				87CB52952E90242F00618C59 /* XCRemoteSwiftPackageReference "apollo-ios" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 87F968CE2E8F622A00EC1A7C /* Products */;
 			projectDirPath = "";
@@ -332,6 +350,40 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		87CB52952E90242F00618C59 /* XCRemoteSwiftPackageReference "apollo-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apollographql/apollo-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		87CB52962E90242F00618C59 /* Apollo */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 87CB52952E90242F00618C59 /* XCRemoteSwiftPackageReference "apollo-ios" */;
+			productName = Apollo;
+		};
+		87CB52982E90242F00618C59 /* ApolloAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 87CB52952E90242F00618C59 /* XCRemoteSwiftPackageReference "apollo-ios" */;
+			productName = ApolloAPI;
+		};
+		87CB529A2E90242F00618C59 /* ApolloSQLite */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 87CB52952E90242F00618C59 /* XCRemoteSwiftPackageReference "apollo-ios" */;
+			productName = ApolloSQLite;
+		};
+		87CB529C2E90242F00618C59 /* ApolloWebSocket */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 87CB52952E90242F00618C59 /* XCRemoteSwiftPackageReference "apollo-ios" */;
+			productName = ApolloWebSocket;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 87F968C52E8F622A00EC1A7C /* Project object */;
 }
