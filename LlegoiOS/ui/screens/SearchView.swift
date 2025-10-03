@@ -195,11 +195,11 @@ struct SearchView: View {
 
     // MARK: - Body
     var body: some View {
-        NavigationStack {
             ZStack {
-                // Fondo consistente para toda la vista
-                Color(.systemBackground)
-                    .ignoresSafeArea()
+                Color.llegoBackground.ignoresSafeArea()
+//                // Fondo consistente para toda la vista
+//                Color(.systemBackground)
+//                    .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
                     // Búsquedas populares fijas en la parte superior con glasmorphismo
@@ -236,7 +236,7 @@ struct SearchView: View {
                         }
                         .padding(.top, 20)
                     }
-                }.scrollEdgeEffectStyle(.hard, for: .top)
+                }
                 
                 // Loading overlay
                 if isLoading {
@@ -254,6 +254,7 @@ struct SearchView: View {
                     .background(Color(.systemBackground).opacity(0.8))
                 }
             }
+            
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(false)
             .toolbar {
@@ -261,12 +262,8 @@ struct SearchView: View {
                     Button(action: {
                         dismiss()
                     }) {
-                        HStack(spacing: 4) {
                             Image(systemName: "chevron.left")
                                 .font(.system(size: 16, weight: .semibold))
-                            Text("Atrás")
-                                .font(.system(size: 16, weight: .medium))
-                        }
                         .foregroundColor(.llegoPrimary)
                     }
                 }
@@ -300,7 +297,7 @@ struct SearchView: View {
                     }
                 }
             }
-        }
+        
         .onAppear {
             // Estado inicial
             displayedProducts = allProducts
@@ -323,10 +320,8 @@ struct SearchView: View {
                 }
             }
         }
-        .navigationTitle("Buscar")
-        .toolbarBackground(.visible, for: .navigationBar)
-        .toolbarColorScheme(.light, for: .navigationBar)
-        .toolbar(.visible, for: .navigationBar)
+       
+        
     }
 
     // MARK: - Products Grid

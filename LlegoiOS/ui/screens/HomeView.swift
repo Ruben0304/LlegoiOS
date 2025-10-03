@@ -15,6 +15,7 @@ struct HomeView: View {
     @State private var triggerCartBounce = false
     @State private var navigateToPlans = false
     @State private var navigateToCart = false
+    @State private var selectedProduct: Product? = nil
 
     private var totalCartItems: Int {
         productCounts.values.reduce(0, +)
@@ -203,6 +204,9 @@ struct HomeView: View {
                                             endPosition: cartPosition
                                         )
                                         print("✅ AnimationData created - Start: \(animationTrigger!.startPosition), End: \(animationTrigger!.endPosition)")
+                                    },
+                                    onProductTap: { product in
+                                        selectedProduct = product
                                     }
                                 )
 
@@ -248,6 +252,18 @@ struct HomeView: View {
                                 }
                                 .hidden()
 
+                                // Navigation link for Product Detail
+                                NavigationLink(
+                                    destination: selectedProduct.map { ProductDetailView(product: $0) },
+                                    isActive: Binding(
+                                        get: { selectedProduct != nil },
+                                        set: { if !$0 { selectedProduct = nil } }
+                                    )
+                                ) {
+                                    EmptyView()
+                                }
+                                .hidden()
+
 
                             }
                         }
@@ -272,8 +288,9 @@ struct HomeView: View {
             .addToCartOverlay(animationTrigger: $animationTrigger) {
                 triggerCartBounce = true
             }
-            
+
         }
         .navigationViewStyle(StackNavigationViewStyle())
+        
     }
 }

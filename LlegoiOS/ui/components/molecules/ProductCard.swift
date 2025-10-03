@@ -1,5 +1,13 @@
 import SwiftUI
 
+struct ScaleButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6, blendDuration: 0), value: configuration.isPressed)
+    }
+}
+
 struct Product: Identifiable {
     let id: Int
     let name: String
@@ -22,8 +30,10 @@ struct ProductCard: View {
     let onIncrement: () -> Void
     let onDecrement: () -> Void
     var onAddToCartAnimation: ((String, CGPoint) -> Void)? = nil
+    var onProductTap: (() -> Void)? = nil
 
     @State private var imagePosition: CGPoint = .zero
+    @State private var isPressed: Bool = false
 
     var body: some View {
         GeometryReader { containerGeometry in
@@ -173,6 +183,8 @@ struct ProductCard: View {
 
 
             }
+            .scaleEffect(isPressed ? 0.95 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
             .onPreferenceChange(ImagePositionKey.self) { position in
                 imagePosition = position
                 print("📍 Product \(product.id) image position updated: \(position)")
@@ -184,6 +196,20 @@ struct ProductCard: View {
                 .fill(Color.white)
                 .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 2)
         )
-        
+        .overlay(
+            CurvedBottomShape()
+                .stroke(Color.llegoPrimary.opacity(isPressed ? 0.6 : 0), lineWidth: 3)
+                .animation(.easeInOut(duration: 0.15), value: isPressed)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onProductTap?()
+        }
+        .onLongPressGesture(minimumDuration: 0.0, maximumDistance: .infinity, pressing: { pressing in
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                isPressed = pressing
+            }
+        }, perform: {})
+
     }
 }

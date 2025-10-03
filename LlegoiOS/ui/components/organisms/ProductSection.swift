@@ -7,6 +7,7 @@ struct ProductSection: View {
     let cardHeight: CGFloat
     let onSeeMoreClick: () -> Void
     var onAddToCartAnimation: ((String, CGPoint) -> Void)? = nil
+    var onProductTap: ((Product) -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -49,7 +50,10 @@ struct ProductSection: View {
                                     productCounts[product.id] = currentCount - 1
                                 }
                             },
-                            onAddToCartAnimation: onAddToCartAnimation
+                            onAddToCartAnimation: onAddToCartAnimation,
+                            onProductTap: {
+                                onProductTap?(product)
+                            }
                         )
                         .frame(width: cardWidth, height: cardHeight)
                     }

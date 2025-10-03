@@ -17,16 +17,17 @@ struct ContentView: View {
     @State private var isOnboardingCompleted = OnboardingHelper.isOnboardingCompleted
 
     var body: some View {
-        if isOnboardingCompleted {
-            MainAppView(selectedTab: $selectedTab)
-        } else {
-            OnboardingView(isOnboardingCompleted: $isOnboardingCompleted)
-                .onChange(of: isOnboardingCompleted) { completed in
-                    if completed {
-                        OnboardingHelper.completeOnboarding()
-                    }
-                }
-        }
+//        if isOnboardingCompleted {
+//            MainAppView(selectedTab: $selectedTab)
+//        } else {
+//            OnboardingView(isOnboardingCompleted: $isOnboardingCompleted)
+//                .onChange(of: isOnboardingCompleted) { completed in
+//                    if completed {
+//                        OnboardingHelper.completeOnboarding()
+//                    }
+//                }
+//        }
+        MainAppView(selectedTab: $selectedTab)
     }
 }
 
@@ -40,15 +41,16 @@ struct MainAppView: View {
     var body: some View {
         Group {
             if #available(iOS 26.0, *) {
-                NavigationStack {
+           
                     TabView() {
                         Tab("Inicio", systemImage: "house") {
                             HomeView()
                                 .ignoresSafeArea(.container, edges: .bottom)
                         }
                         Tab(role: .search) {
-                            SearchView(searchText: $searchText)
-                                .searchable(text: $searchText)
+                            NavigationStack {
+                                                   SearchView(searchText: $searchText)
+                                                   }
                         }
                         Tab("Categorías", systemImage: "square.grid.2x2") {
                             CategoriesView()
@@ -60,7 +62,14 @@ struct MainAppView: View {
                                 .ignoresSafeArea(.container, edges: .bottom)
                         }
                     }
+                    .searchable(
+                                    text: $searchText,
+                                    placement: .toolbar,
+                                    prompt: "Buscar productos o negocios..."
+                                )
                     
+                    
+                                .searchToolbarBehavior(.minimize)
                     .tabViewBottomAccessory {
 
                             OrderTrackingCard(onTap: {
@@ -72,7 +81,7 @@ struct MainAppView: View {
                     }
                     .tabBarMinimizeBehavior(.onScrollDown)
                     .accentColor(Color.llegoPrimary)
-                }
+                
                 // .toolbarBackground(.hidden, for: .tabBar)
                 // .background(.clear)
             } else {
