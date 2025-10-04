@@ -14,13 +14,13 @@ public struct LottieView: UIViewRepresentable {
     private let contentMode: UIView.ContentMode
     private let speed: CGFloat
 
-    public init(name: String, loopMode: LottieLoopMode = .loop, contentMode: UIView.ContentMode = .scaleAspectFit, speed: CGFloat = 1.0) {
+    public init(name: String, loopMode: LottieLoopMode = .loop, contentMode: UIView.ContentMode = .scaleAspectFill, speed: CGFloat = 1.0) {
         self.source = .name(name)
         self.loopMode = loopMode
         self.contentMode = contentMode
         self.speed = speed
     }
-    
+
     public init(name: String) {
         // Detectar automáticamente si es .lottie o .json
         if Bundle.main.url(forResource: name, withExtension: "lottie") != nil {
@@ -29,11 +29,11 @@ public struct LottieView: UIViewRepresentable {
             self.source = .name(name)
         }
         self.loopMode = .loop
-        self.contentMode = .scaleAspectFit
+        self.contentMode = .scaleAspectFill
         self.speed = 1.0
     }
 
-    public init(url: URL, loopMode: LottieLoopMode = .loop, contentMode: UIView.ContentMode = .scaleAspectFit, speed: CGFloat = 1.0) {
+    public init(url: URL, loopMode: LottieLoopMode = .loop, contentMode: UIView.ContentMode = .scaleAspectFill, speed: CGFloat = 1.0) {
         // Detectar si es .lottie basado en la extensión
         if url.pathExtension.lowercased() == "lottie" {
             self.source = .dotLottieURL(url)
@@ -44,16 +44,16 @@ public struct LottieView: UIViewRepresentable {
         self.contentMode = contentMode
         self.speed = speed
     }
-    
+
     // Inicializadores específicos para .lottie
-    public init(dotLottieName: String, loopMode: LottieLoopMode = .loop, contentMode: UIView.ContentMode = .scaleAspectFit, speed: CGFloat = 1.0) {
+    public init(dotLottieName: String, loopMode: LottieLoopMode = .loop, contentMode: UIView.ContentMode = .scaleAspectFill, speed: CGFloat = 1.0) {
         self.source = .dotLottieName(dotLottieName)
         self.loopMode = loopMode
         self.contentMode = contentMode
         self.speed = speed
     }
-    
-    public init(dotLottieURL: URL, loopMode: LottieLoopMode = .loop, contentMode: UIView.ContentMode = .scaleAspectFit, speed: CGFloat = 1.0) {
+
+    public init(dotLottieURL: URL, loopMode: LottieLoopMode = .loop, contentMode: UIView.ContentMode = .scaleAspectFill, speed: CGFloat = 1.0) {
         self.source = .dotLottieURL(dotLottieURL)
         self.loopMode = loopMode
         self.contentMode = contentMode

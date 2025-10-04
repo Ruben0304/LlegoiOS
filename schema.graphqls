@@ -1,23 +1,41 @@
-scalar DateTime
-scalar JSON
-
-type Query {
-  users: [UserType!]!
-  user(id: String!): UserType
-  searchUsers(query: String!): [UserType!]!
-  businesses: [BusinessType!]!
-  business(id: String!): BusinessType
-  searchBusinesses(query: String!): [BusinessType!]!
-  branches: [BranchType!]!
-  branch(id: String!): BranchType
-  searchBranches(query: String!): [BranchType!]!
-  products: [ProductType!]!
-  product(id: String!): ProductType
-  searchProducts(query: String!): [ProductType!]!
-  hello: String!
-  greet(name: String!): String!
+schema {
+  query: Query
+  mutation: Mutation
 }
-
+"Date with time (isoformat)"
+scalar DateTime
+"The `JSON` scalar type represents JSON values as specified by [ECMA-404](https://ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf)."
+scalar JSON
+type Query {
+  "Lista de usuarios"
+  users: [UserType!]!
+  "Obtener usuario por ID"
+  user(id: String!): UserType
+  "Buscar usuarios"
+  searchUsers(query: String!): [UserType!]!
+  "Lista de negocios"
+  businesses(ownerId: String = null): [BusinessType!]!
+  "Obtener negocio por ID"
+  business(id: String!): BusinessType
+  "Buscar negocios"
+  searchBusinesses(query: String!): [BusinessType!]!
+  "Lista de sucursales"
+  branches(businessId: String = null): [BranchType!]!
+  "Obtener sucursal por ID"
+  branch(id: String!): BranchType
+  "Buscar sucursales"
+  searchBranches(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true): [BranchType!]!
+  "Lista de productos"
+  products(ids: [String!] = null, branchId: String = null, availableOnly: Boolean! = false): [ProductType!]!
+  "Obtener producto por ID"
+  product(id: String!): ProductType
+  "Buscar productos"
+  searchProducts(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true): [ProductType!]!
+  "Saludo de ejemplo"
+  hello: String!
+  "Saluda por nombre"
+  greet(name: String! = "mundo"): String!
+}
 type UserType {
   id: String!
   name: String!
@@ -25,7 +43,6 @@ type UserType {
   role: String!
   createdAt: DateTime!
 }
-
 type BusinessType {
   id: String!
   name: String!
@@ -34,7 +51,6 @@ type BusinessType {
   globalRating: Float!
   createdAt: DateTime!
 }
-
 type BranchType {
   id: String!
   businessId: String!
@@ -47,12 +63,10 @@ type BranchType {
   status: String!
   createdAt: DateTime!
 }
-
 type CoordinatesType {
   type: String!
   coordinates: [Float!]!
 }
-
 type ProductType {
   id: String!
   branchId: String!
@@ -65,3 +79,39 @@ type ProductType {
   availability: Boolean!
   createdAt: DateTime!
 }
+type Mutation {
+  "Register a new user"
+  register(input: RegisterInput!): AuthResponse!
+  "Login with email and password"
+  login(input: LoginInput!): AuthResponse!
+}
+type AuthResponse {
+  accessToken: String!
+  tokenType: String!
+  user: UserData!
+}
+type UserData {
+  id: String!
+  name: String!
+  email: String!
+  phone: String
+  role: String!
+  createdAt: String!
+}
+input RegisterInput {
+  name: String!
+  email: String!
+  password: String!
+  phone: String = null
+  role: String = "customer"
+}
+input LoginInput {
+  email: String!
+  password: String!
+}
+"Exposes a URL that specifies the behavior of this scalar."
+directive @specifiedBy(
+    "The URL that specifies the behavior of this scalar."
+    url: String!
+  ) on SCALAR
+

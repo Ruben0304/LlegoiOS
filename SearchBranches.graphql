@@ -1,0 +1,15 @@
+query SearchBranches($query: String!) {
+  searchBranches(query: $query) {
+    id
+    businessId
+    name
+    address
+    coordinates {
+      type
+      coordinates
+    }
+    phone
+    status
+    createdAt
+  }
+}

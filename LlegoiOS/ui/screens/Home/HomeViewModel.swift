@@ -48,7 +48,7 @@ class HomeViewModel: ObservableObject {
                     // Map GraphQL products to UI Product model
                     self.products = homeData.products.map { productGraphQL in
                         Product(
-                            id: Int(productGraphQL.id.hashValue),
+                            id: productGraphQL.id, // Use real GraphQL ID
                             name: productGraphQL.name,
                             shop: "Store", // Will be updated when we link products to branches
                             weight: productGraphQL.weight,

@@ -6,15 +6,15 @@ struct StoreDetailView: View {
     @Environment(\.presentationMode) var presentationMode
     @State private var region: MKCoordinateRegion
     @State private var showShareSheet = false
-    @State private var productCounts: [Int: Int] = [:]
+    @State private var productCounts: [String: Int] = [:]
 
     // Sample product data
     private let sampleProducts: [Product] = [
-        Product(id: 1, name: "Manzana Roja Premium", shop: "Fresh Market", weight: "1kg", price: "$5.99", imageUrl: "https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=300"),
-        Product(id: 2, name: "Plátano Orgánico", shop: "Fresh Market", weight: "500g", price: "$3.50", imageUrl: "https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=300"),
-        Product(id: 3, name: "Naranja Fresca", shop: "Fresh Market", weight: "1kg", price: "$4.99", imageUrl: "https://images.unsplash.com/photo-1547514701-42782101795e?w=300"),
-        Product(id: 4, name: "Fresa Dulce", shop: "Fresh Market", weight: "250g", price: "$6.50", imageUrl: "https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=300"),
-        Product(id: 5, name: "Uva Verde", shop: "Fresh Market", weight: "500g", price: "$7.99", imageUrl: "https://images.unsplash.com/photo-1599819177016-c7d9368c7959?w=300")
+        Product(id: "1", name: "Manzana Roja Premium", shop: "Fresh Market", weight: "1kg", price: "$5.99", imageUrl: "https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=300"),
+        Product(id: "2", name: "Plátano Orgánico", shop: "Fresh Market", weight: "500g", price: "$3.50", imageUrl: "https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=300"),
+        Product(id: "3", name: "Naranja Fresca", shop: "Fresh Market", weight: "1kg", price: "$4.99", imageUrl: "https://images.unsplash.com/photo-1547514701-42782101795e?w=300"),
+        Product(id: "4", name: "Fresa Dulce", shop: "Fresh Market", weight: "250g", price: "$6.50", imageUrl: "https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=300"),
+        Product(id: "5", name: "Uva Verde", shop: "Fresh Market", weight: "500g", price: "$7.99", imageUrl: "https://images.unsplash.com/photo-1599819177016-c7d9368c7959?w=300")
     ]
 
     // Sample branch data (user will customize later)

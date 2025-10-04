@@ -17,9 +17,9 @@ struct CategoryItem: View {
             ZStack {
                 Circle()
                     .frame(width: circleSize, height: circleSize)
-                    // .glassEffect(.regular.tint(Color.llegoSecondary))
-                    .glassEffect(.regular.interactive())
-                    .tint(Color.llegoSecondary)
+//                     .glassEffect(.regular.tint(Color.llegoSecondary))
+                    .glassEffect(.regular.interactive().tint(Color.llegoSecondary))
+//                    .tint(Color.llegoSecondary)
 
                 Image(imageName)
                     .resizable()

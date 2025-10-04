@@ -1,0 +1,14 @@
+query GetCartProducts($ids: [String!]!) {
+  products(ids: $ids) {
+    id
+    branchId
+    name
+    description
+    weight
+    price
+    currency
+    image
+    availability
+    createdAt
+  }
+}

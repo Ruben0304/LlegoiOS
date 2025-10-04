@@ -1,0 +1,14 @@
+query SearchProducts($query: String!) {
+  searchProducts(query: $query) {
+    id
+    branchId
+    name
+    description
+    weight
+    price
+    currency
+    image
+    availability
+    createdAt
+  }
+}

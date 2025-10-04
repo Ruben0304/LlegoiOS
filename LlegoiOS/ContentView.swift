@@ -120,7 +120,7 @@ struct MainAppView: View {
             } else {
                 TabView(selection: $selectedTab) {
                     NavigationStack {
-                        SearchTabContent(searchText: $searchText)
+//                        SearchTabContent(searchText: $searchText)
                     }
                     .searchable(text: $searchText)
                     .tabItem {

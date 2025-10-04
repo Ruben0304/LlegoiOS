@@ -9,8 +9,8 @@ extension CLLocationCoordinate2D: Equatable {
 }
 
 struct ProfileView: View {
+    @StateObject private var viewModel = ProfileViewModel()
     @StateObject private var locationManager = LocationManager()
-    @State private var userName = "María González"
     @State private var showingLocationPicker = false
     @State private var showingEditName = false
 
@@ -20,6 +20,43 @@ struct ProfileView: View {
     )
 
     var body: some View {
+        Group {
+            switch viewModel.state {
+            case .unauthenticated, .idle:
+                // Mostrar pantalla de login
+                LoginView(viewModel: viewModel)
+
+            case .authenticated:
+                // Mostrar perfil del usuario
+                authenticatedProfileView
+
+            case .loading:
+                // Loading state
+                loadingView
+
+            case .error(let message):
+                // Error state
+                errorView(message: message)
+            }
+        }
+        .onAppear {
+            viewModel.checkAuthenticationStatus()
+            locationManager.requestPermission()
+            if let location = locationManager.location {
+                region.center = location
+            }
+        }
+        .onChange(of: locationManager.location) { newLocation in
+            if let location = newLocation {
+                withAnimation {
+                    region.center = location
+                }
+            }
+        }
+    }
+
+    // MARK: - Authenticated Profile View
+    private var authenticatedProfileView: some View {
         NavigationView {
             ZStack {
                 Color.llegoBackground.ignoresSafeArea()
@@ -35,6 +72,9 @@ struct ProfileView: View {
                         // Información mínima
                         minimalInfoSection
 
+                        // Botón de cerrar sesión
+                        signOutButton
+
                         Spacer(minLength: 60)
                     }
                     .padding(.horizontal, 20)
@@ -48,21 +88,83 @@ struct ProfileView: View {
             LocationPickerView(locationManager: locationManager)
         }
         .sheet(isPresented: $showingEditName) {
-            EditNameView(userName: $userName)
+            EditNameView(userName: Binding(
+                get: { viewModel.currentUser?.fullName ?? "Usuario" },
+                set: { _ in }
+            ))
         }
-        .onAppear {
-            locationManager.requestPermission()
-            if let location = locationManager.location {
-                region.center = location
+    }
+
+    // MARK: - Loading View
+    private var loadingView: some View {
+        ZStack {
+            Color.llegoBackground.ignoresSafeArea()
+
+            VStack(spacing: 20) {
+                LottieView(name: "loading")
+                    .frame(width: 150, height: 150)
+
+                Text("Cargando perfil...")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.gray)
             }
         }
-        .onChange(of: locationManager.location) { newLocation in
-            if let location = newLocation {
-                withAnimation {
-                    region.center = location
+    }
+
+    // MARK: - Error View
+    private func errorView(message: String) -> some View {
+        ZStack {
+            Color.llegoBackground.ignoresSafeArea()
+
+            VStack(spacing: 20) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 60))
+                    .foregroundColor(.red)
+
+                Text(message)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.gray)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+
+                Button(action: {
+                    viewModel.checkAuthenticationStatus()
+                }) {
+                    Text("Reintentar")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(width: 150, height: 50)
+                        .background(Color.llegoButton)
+                        .cornerRadius(12)
                 }
             }
         }
+    }
+
+    // MARK: - Sign Out Button
+    private var signOutButton: some View {
+        Button(action: {
+            viewModel.signOut()
+        }) {
+            HStack(spacing: 14) {
+                Image(systemName: "arrow.right.square.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.red)
+
+                Text("Cerrar sesión")
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundColor(.red)
+
+                Spacer()
+            }
+            .padding(18)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.white)
+                    .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 
     private var profileHeaderSection: some View {
@@ -85,11 +187,11 @@ struct ProfileView: View {
             }
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(userName)
+                Text(viewModel.currentUser?.fullName ?? "Usuario")
                     .font(.system(size: 22, weight: .bold, design: .rounded))
                     .foregroundColor(.llegoPrimary)
 
-                Text("Cliente Premium")
+                Text(viewModel.currentUser?.email ?? "")
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(.gray)
             }

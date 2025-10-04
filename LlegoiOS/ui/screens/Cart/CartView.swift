@@ -25,47 +25,16 @@ enum Currency: String, CaseIterable {
     }
 }
 
-struct CartItem: Identifiable {
-    let id: Int
-    let product: Product
-    var quantity: Int
-}
-
 struct CartView: View {
+    @Environment(\.dismiss) private var dismiss
     @Environment(\.presentationMode) var presentationMode
-    @Binding var productCounts: [Int: Int]
-    let products: [Product]
+    @StateObject private var viewModel = CartViewModel()
     @State private var navigateToCheckout = false
     @State private var isAnimatingCheckout = false
     @State private var selectedCurrency: Currency = .CUP
 
-    private var cartItems: [CartItem] {
-        productCounts.compactMap { (productId, quantity) in
-            guard quantity > 0,
-                  let product = products.first(where: { $0.id == productId }) else {
-                return nil
-            }
-            return CartItem(id: productId, product: product, quantity: quantity)
-        }
-    }
-
-    private var subtotal: Double {
-        cartItems.reduce(0.0) { total, item in
-            let priceString = item.product.price.replacingOccurrences(of: "$", with: "").replacingOccurrences(of: ",", with: "")
-            let price = Double(priceString) ?? 0.0
-            return total + (price * Double(item.quantity))
-        }
-    }
-
-    private var deliveryFee: Double {
-        cartItems.isEmpty ? 0.0 : 5.0
-    }
-
-    private var total: Double {
-        subtotal + deliveryFee
-    }
-
     var body: some View {
+        NavigationStack{
         ZStack {
             // Fondo con gradiente elegante
             LinearGradient(
@@ -78,67 +47,150 @@ struct CartView: View {
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
-
-            VStack(spacing: 0) {
-                // Header personalizado
-                header
-
-                if cartItems.isEmpty {
-                    emptyCartView
-                } else {
-                    // Lista de productos
-                    ScrollView(.vertical, showsIndicators: true) {
-                        VStack(spacing: 16) {
-                            ForEach(Array(cartItems.enumerated()), id: \.element.id) { index, item in
-                                CartItemCard(
-                                    item: item,
-                                    onIncrement: {
-                                        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                                            productCounts[item.id, default: 0] += 1
-                                        }
-                                    },
-                                    onDecrement: {
-                                        let newCount = productCounts[item.id, default: 0] - 1
-                                        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                                            if newCount > 0 {
-                                                productCounts[item.id] = newCount
-                                            } else {
-                                                productCounts[item.id] = nil
+           
+            
+                    
+                    // Loading State
+                    if case .loading = viewModel.state {
+                        VStack(spacing: 20) {
+                            LottieView(name: "loader")
+                                .frame(width: 150, height: 150)
+                            Text("Cargando carrito...")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.gray)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                    // Error State
+                    else if case .error(let message) = viewModel.state {
+                        VStack(spacing: 20) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 60))
+                                .foregroundColor(.red.opacity(0.6))
+                            Text(message)
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.gray)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 40)
+                            Button("Reintentar") {
+                                viewModel.loadCart()
+                            }
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 30)
+                            .padding(.vertical, 12)
+                            .background(Color.llegoAccent)
+                            .cornerRadius(12)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                    // Empty Cart
+                    else if viewModel.cartItems.isEmpty {
+                        emptyCartView
+                    }
+                    // Cart with items
+                    else {
+                        // Lista de productos
+                        ScrollView(.vertical, showsIndicators: true) {
+                            VStack(spacing: 16) {
+                                ForEach(Array(viewModel.cartItems.enumerated()), id: \.element.id) { index, item in
+                                    CartItemCard(
+                                        item: item,
+                                        onIncrement: {
+                                            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                                                viewModel.incrementQuantity(productId: item.id)
+                                            }
+                                        },
+                                        onDecrement: {
+                                            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                                                viewModel.decrementQuantity(productId: item.id)
+                                            }
+                                        },
+                                        onRemove: {
+                                            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                                                viewModel.removeFromCart(productId: item.id)
                                             }
                                         }
-                                    },
-                                    onRemove: {
-                                        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                                            productCounts[item.id] = nil
-                                        }
-                                    }
-                                )
-                                .transition(.asymmetric(
-                                    insertion: .scale.combined(with: .opacity),
-                                    removal: .scale.combined(with: .opacity)
-                                ))
-                                .animation(.easeInOut(duration: 0.3).delay(Double(index) * 0.05), value: cartItems.count)
+                                    )
+                                    .transition(.asymmetric(
+                                        insertion: .scale.combined(with: .opacity),
+                                        removal: .scale.combined(with: .opacity)
+                                    ))
+                                    .animation(.easeInOut(duration: 0.3).delay(Double(index) * 0.05), value: viewModel.cartItems.count)
+                                }
+                                
+                                // Resumen de precios
+                                priceBreakdown
+                                
+                                Spacer(minLength: 100)
                             }
-
-                            // Resumen de precios
-                            priceBreakdown
-
-                            Spacer(minLength: 100)
+                            .padding(.horizontal, 20)
+                            .padding(.top, 16)
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 16)
+                        
+                        // Botón de checkout fijo en la parte inferior
+                        checkoutButton
                     }
+                }
+            
+        }
+        .navigationTitle("Carrito")
+        .navigationBarBackButtonHidden(true)
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button(action: {
+                    dismiss()
+                }) {
+                    Image(systemName: "chevron.left")
+                        .foregroundColor(Color.llegoPrimary)
+                        .font(.system(size: 18, weight: .semibold))
+                }
+            }
 
-                    // Botón de checkout fijo en la parte inferior
-                    checkoutButton
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Menu {
+                    ForEach(Currency.allCases, id: \.self) { currency in
+                        Button(action: {
+                            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                                selectedCurrency = currency
+                            }
+                        }) {
+                            HStack {
+                                Text(currency.flag)
+                                    .font(.system(size: 20))
+                                Text(currency.rawValue)
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.llegoPrimary)
+                                Spacer()
+                                if selectedCurrency == currency {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: 14, weight: .bold))
+                                        .foregroundColor(.llegoAccent)
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(selectedCurrency.flag)
+                            .font(.system(size: 18))
+                        Text(selectedCurrency.rawValue)
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.llegoPrimary)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.llegoPrimary)
+                    }
+                    .frame(width: 85, height: 40)
                 }
             }
         }
-        .navigationBarHidden(true)
-        .toolbar(.hidden, for: .tabBar)
-        .toolbarTitleDisplayMode(.inline)
         .fullScreenCover(isPresented: $navigateToCheckout) {
             CheckoutView()
+        }
+        .onAppear {
+            viewModel.loadCart()
         }
     }
 
@@ -165,8 +217,8 @@ struct CartView: View {
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundColor(.llegoPrimary)
 
-                if !cartItems.isEmpty {
-                    Text("\(cartItems.count) producto\(cartItems.count != 1 ? "s" : "")")
+                if !viewModel.cartItems.isEmpty {
+                    Text("\(viewModel.cartItems.count) producto\(viewModel.cartItems.count != 1 ? "s" : "")")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.gray)
                 }
@@ -295,7 +347,7 @@ struct CartView: View {
 
                 Spacer()
 
-                Text("$\(String(format: "%.2f", subtotal))")
+                Text(viewModel.formattedSubtotal)
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
                     .foregroundColor(.llegoPrimary)
             }
@@ -314,7 +366,7 @@ struct CartView: View {
 
                 Spacer()
 
-                Text("$\(String(format: "%.2f", deliveryFee))")
+                Text(viewModel.formattedDeliveryFee)
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
                     .foregroundColor(.llegoPrimary)
             }
@@ -331,7 +383,7 @@ struct CartView: View {
 
                 Spacer()
 
-                Text("$\(String(format: "%.2f", total))")
+                Text(viewModel.formattedTotal)
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundColor(.llegoAccent)
             }
@@ -388,7 +440,7 @@ struct CartView: View {
 
                     Spacer()
 
-                    Text("$\(String(format: "%.2f", total))")
+                    Text(viewModel.formattedTotal)
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                 }
                 .foregroundColor(.white)
@@ -424,17 +476,11 @@ struct CartItemCard: View {
 
     @State private var showDeleteConfirmation = false
 
-    var itemTotal: Double {
-        let priceString = item.product.price.replacingOccurrences(of: "$", with: "").replacingOccurrences(of: ",", with: "")
-        let price = Double(priceString) ?? 0.0
-        return price * Double(item.quantity)
-    }
-
     var body: some View {
         HStack(spacing: 12) {
             // Imagen del producto - más pequeña
             CachedAsyncImage(
-                url: URL(string: item.product.imageUrl),
+                url: URL(string: item.imageUrl),
                 content: { image in
                     image
                         .resizable()
@@ -453,13 +499,13 @@ struct CartItemCard: View {
 
             // Información del producto - compacta
             VStack(alignment: .leading, spacing: 4) {
-                Text(item.product.name)
+                Text(item.name)
                     .font(.system(size: 15, weight: .bold, design: .default))
                     .foregroundColor(.llegoPrimary)
                     .lineLimit(1)
 
                 HStack(spacing: 6) {
-                    Text(item.product.shop)
+                    Text(item.shop)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.gray)
 
@@ -467,14 +513,14 @@ struct CartItemCard: View {
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(.gray)
 
-                    Text(item.product.weight)
+                    Text(item.weight)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.llegoAccent)
                 }
 
                 // Precio y total
                 HStack(spacing: 6) {
-                    Text(item.product.price)
+                    Text(item.formattedPrice)
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(.gray)
 
@@ -486,7 +532,7 @@ struct CartItemCard: View {
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.gray)
 
-                    Text("$\(String(format: "%.2f", itemTotal))")
+                    Text(item.formattedItemTotal)
                         .font(.system(size: 15, weight: .bold, design: .rounded))
                         .foregroundColor(.llegoAccent)
                 }
@@ -548,25 +594,5 @@ struct CartItemCard: View {
 }
 
 #Preview {
-    CartView(
-        productCounts: .constant([1: 2, 2: 1]),
-        products: [
-            Product(
-                id: 1,
-                name: "Pizza Margarita",
-                shop: "FreshMart",
-                weight: "500g",
-                price: "$12.99",
-                imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen PNG.png"
-            ),
-            Product(
-                id: 2,
-                name: "Tres leches",
-                shop: "EcoFruit",
-                weight: "1kg",
-                price: "$8.49",
-                imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen (13).png"
-            )
-        ]
-    )
+    CartView()
 }

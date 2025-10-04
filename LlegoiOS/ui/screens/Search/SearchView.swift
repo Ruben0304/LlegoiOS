@@ -3,13 +3,12 @@ import SwiftUI
 struct SearchView: View {
     @Binding var searchText: String
     @State private var selectedCategory: SearchCategory = .products
-    @State private var productCounts: [Int: Int] = [:]
+    @State private var productCounts: [String: Int] = [:]
     @State private var animationDelay: Double = 0
     
-    @State private var isLoading: Bool = false
-    @State private var displayedProducts: [Product] = []
-    @State private var displayedStores: [Store] = []
-    @State private var searchTask: Task<Void, Never>? = nil
+    // Loading state is provided by the view model
+    @StateObject private var viewModel = SearchViewModel()
+    // local searchTask removed: debouncing is handled by SearchViewModel
     @State private var searchAnimationDelay: Double = 0
     @State private var selectedStore: Store? = nil
     @Environment(\.dismiss) private var dismiss
@@ -19,72 +18,7 @@ struct SearchView: View {
     }
 
     // MARK: - Sample Data
-    private let allProducts: [Product] = [
-        Product(
-            id: 1,
-            name: "Pizza",
-            shop: "FreshMart",
-            weight: "500g",
-            price: "$4.99",
-            imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen PNG.png"
-        ),
-        Product(
-            id: 2,
-            name: "Tres leches",
-            shop: "EcoFruit",
-            weight: "1kg",
-            price: "$2.49",
-            imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen (13).png"
-        ),
-        Product(
-            id: 3,
-            name: "Batido de mamey",
-            shop: "TropicalFresh",
-            weight: "2 unidades",
-            price: "$6.99",
-            imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen (17).png"
-        ),
-        Product(
-            id: 4,
-            name: "Arroz con pescado y papas fritas",
-            shop: "Berry Farm",
-            weight: "250g",
-            price: "$3.99",
-            imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen (14).png"
-        ),
-        Product(
-            id: 6,
-            name: "Spaguetti",
-            shop: "GreenGarden",
-            weight: "300g",
-            price: "$5.49",
-            imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen (11).png"
-        ),
-        Product(
-            id: 7,
-            name: "Cheese Cake",
-            shop: "GreenGarden",
-            weight: "300g",
-            price: "$5.49",
-            imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen (15).png"
-        ),
-        Product(
-            id: 8,
-            name: "Batido de fresa",
-            shop: "GreenGarden",
-            weight: "300g",
-            price: "$5.49",
-            imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Pasted Graphic.png"
-        ),
-        Product(
-            id: 9,
-            name: "Carne de res y vegetales",
-            shop: "GreenGarden",
-            weight: "300g",
-            price: "$5.49",
-            imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen (12).png"
-        )
-    ]
+    
 
     private let allStores: [Store] = [
         Store(id: "1", name: "FreshMart Premium", etaMinutes: 25,
@@ -121,52 +55,31 @@ struct SearchView: View {
 
     // MARK: - Simulated Search
     private func performSearch(with text: String) {
-        // Cancel any in-flight search
-        searchTask?.cancel()
+    // Any local animation task was removed; debounce is handled in the view model
 
-        // If text is empty, reset immediately
+        // If text is empty, reset animations and keep sample data
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            isLoading = false
-            displayedProducts = allProducts
-            displayedStores = allStores
             resetSearchAnimation()
             return
         }
 
-        isLoading = true
-        // Reset animation state
-        searchAnimationDelay = 0
+        // Use the SearchViewModel to perform a real (GraphQL) search.
+        // Debounce is handled inside the view model, so the view only triggers searches.
+        viewModel.performSearch(query: text, category: selectedCategory)
 
-        searchTask = Task { [text] in
-            // Simula latencia de red (1.7s)
-            try? await Task.sleep(nanoseconds: 1700_000_000)
-            if Task.isCancelled { return }
-
-            // Filtra según el texto
-            let products = allProducts.filter { p in
-                p.name.localizedCaseInsensitiveContains(text) ||
-                p.shop.localizedCaseInsensitiveContains(text)
-            }
-            let stores = allStores.filter { s in
-                s.name.localizedCaseInsensitiveContains(text)
-            }
-
-            await MainActor.run {
-                // Mantén la categoría elegida, pero refresca ambas colecciones
-                displayedProducts = products
-                displayedStores = stores
-                isLoading = false
-                
-                // Trigger search animation
-                triggerSearchAnimation()
-            }
-        }
+        // Reset animation for search results
+        animationDelay = 0
     }
     
     private func triggerSearchAnimation() {
         searchAnimationDelay = 0
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            let itemCount = selectedCategory == .products ? displayedProducts.count : displayedStores.count
+            let itemCount: Int
+            if searchText.isEmpty {
+                itemCount = 0
+            } else {
+                itemCount = selectedCategory == .products ? viewModel.products.count : viewModel.stores.count
+            }
             searchAnimationDelay = Double(itemCount) * 0.15 + 0.2
         }
     }
@@ -174,7 +87,7 @@ struct SearchView: View {
     private func resetSearchAnimation() {
         searchAnimationDelay = 0
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            let itemCount = selectedCategory == .products ? allProducts.count : allStores.count
+            let itemCount = 0
             searchAnimationDelay = Double(itemCount) * 0.1 + 0.1
         }
     }
@@ -182,16 +95,16 @@ struct SearchView: View {
     // MARK: - Computed Properties
     private var filteredProducts: [Product] {
         if searchText.isEmpty {
-            return allProducts
+            return []
         }
-        return displayedProducts
+        return viewModel.products
     }
 
     private var filteredStores: [Store] {
         if searchText.isEmpty {
             return allStores
         }
-        return displayedStores
+        return viewModel.stores
     }
 
     // MARK: - Body
@@ -214,7 +127,7 @@ struct SearchView: View {
                         VStack(spacing: 40) {
                             if searchText.isEmpty {
                                 emptySearchState
-                            } else if isLoading {
+                            } else if viewModel.isLoading {
                                 // Espacio vacío durante loading
                                 Spacer()
                                     .frame(height: 200)
@@ -240,13 +153,11 @@ struct SearchView: View {
                 }
                 
                 // Loading overlay
-                if isLoading {
+                if viewModel.isLoading {
                     VStack(spacing: 16) {
-                        // Placeholder para el Lottie loader
-                        ProgressView()
-                            .scaleEffect(1.5)
-                            .progressViewStyle(CircularProgressViewStyle(tint: .llegoPrimary))
-                        
+                        LottieView(name: "loader")
+                            .frame(width: 120, height: 120)
+
                         Text("Buscando...")
                             .font(.system(size: 18, weight: .semibold, design: .rounded))
                             .foregroundColor(.llegoPrimary)
@@ -300,9 +211,11 @@ struct SearchView: View {
             }
         
         .onAppear {
-            // Estado inicial
-            displayedProducts = allProducts
-            displayedStores = allStores
+            // Estado inicial: keep sample data for empty search
+            // If there's already a query, perform it
+            if !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                viewModel.performSearch(query: searchText, category: selectedCategory)
+            }
         }
         .onChange(of: searchText) { newValue in
             performSearch(with: newValue)
@@ -315,9 +228,18 @@ struct SearchView: View {
                     animationDelay = 0.2
                 }
             } else {
-                searchAnimationDelay = 0
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                    triggerSearchAnimation()
+                // When category changes, re-run the search against the view model
+                viewModel.performSearch(query: searchText, category: selectedCategory)
+                animationDelay = 0
+            }
+        }
+        .onChange(of: viewModel.isLoading) { isLoading in
+            // Trigger animation when loading finishes
+            if !isLoading && !searchText.isEmpty {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    let itemCount = selectedCategory == .products ?
+                        viewModel.products.count : viewModel.stores.count
+                    animationDelay = Double(itemCount) * 0.1 + 0.1
                 }
             }
         }
@@ -367,22 +289,13 @@ struct SearchView: View {
                     }
                 )
                 .aspectRatio(155.0/310.0, contentMode: .fit)
-                .opacity(searchText.isEmpty ? 
-                    (animationDelay > Double(index) * 0.1 ? 1 : 0) :
-                    (searchAnimationDelay > Double(index) * 0.15 ? 1 : 0)
-                )
-                .scaleEffect(searchText.isEmpty ? 
-                    (animationDelay > Double(index) * 0.1 ? 1 : 0.95) :
-                    (searchAnimationDelay > Double(index) * 0.15 ? 1 : 0.95)
-                )
-                .offset(y: searchText.isEmpty ? 
-                    (animationDelay > Double(index) * 0.1 ? 0 : 10) :
-                    (searchAnimationDelay > Double(index) * 0.15 ? 0 : 10)
-                )
+                .opacity(animationDelay > Double(index) * 0.1 ? 1 : 0)
+                .scaleEffect(animationDelay > Double(index) * 0.1 ? 1 : 0.95)
+                .offset(y: animationDelay > Double(index) * 0.1 ? 0 : 10)
                 .animation(
                     .easeOut(duration: 0.8)
-                    .delay(Double(index) * (searchText.isEmpty ? 0.05 : 0.12)),
-                    value: searchText.isEmpty ? animationDelay : searchAnimationDelay
+                    .delay(Double(index) * 0.05),
+                    value: animationDelay
                 )
             }
         }
@@ -416,25 +329,16 @@ struct SearchView: View {
                     size: .expanded
                 )
                 .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
-                .opacity(searchText.isEmpty ?
-                    (animationDelay > Double(index) * 0.1 ? 1 : 0) :
-                    (searchAnimationDelay > Double(index) * 0.15 ? 1 : 0)
-                )
+                .opacity(animationDelay > Double(index) * 0.1 ? 1 : 0)
                 .onTapGesture {
                     selectedStore = store
                 }
-                .scaleEffect(searchText.isEmpty ? 
-                    (animationDelay > Double(index) * 0.1 ? 1 : 0.95) :
-                    (searchAnimationDelay > Double(index) * 0.15 ? 1 : 0.95)
-                )
-                .offset(y: searchText.isEmpty ? 
-                    (animationDelay > Double(index) * 0.1 ? 0 : 15) :
-                    (searchAnimationDelay > Double(index) * 0.15 ? 0 : 15)
-                )
+                .scaleEffect(animationDelay > Double(index) * 0.1 ? 1 : 0.95)
+                .offset(y: animationDelay > Double(index) * 0.1 ? 0 : 15)
                 .animation(
-                    .easeOut(duration: 0.8)
-                    .delay(Double(index) * (searchText.isEmpty ? 0.08 : 0.12)),
-                    value: searchText.isEmpty ? animationDelay : searchAnimationDelay
+                    .easeOut(duration: 0.6)
+                    .delay(Double(index) * 0.05),
+                    value: animationDelay
                 )
             }
         }

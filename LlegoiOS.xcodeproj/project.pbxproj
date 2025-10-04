@@ -11,6 +11,7 @@
 		87CB52992E90242F00618C59 /* ApolloAPI in Frameworks */ = {isa = PBXBuildFile; productRef = 87CB52982E90242F00618C59 /* ApolloAPI */; };
 		87CB529B2E90242F00618C59 /* ApolloSQLite in Frameworks */ = {isa = PBXBuildFile; productRef = 87CB529A2E90242F00618C59 /* ApolloSQLite */; };
 		87CB529D2E90242F00618C59 /* ApolloWebSocket in Frameworks */ = {isa = PBXBuildFile; productRef = 87CB529C2E90242F00618C59 /* ApolloWebSocket */; };
+		87D766B02E91C0B5003D2461 /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = 87D766AF2E91C0B5003D2461 /* Lottie */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +31,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				87D766B02E91C0B5003D2461 /* Lottie in Frameworks */,
 				87CB52992E90242F00618C59 /* ApolloAPI in Frameworks */,
 				87CB529D2E90242F00618C59 /* ApolloWebSocket in Frameworks */,
 				87CB52972E90242F00618C59 /* Apollo in Frameworks */,
@@ -40,11 +42,19 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		095875A3AD4E80E59A68CD27 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
 		87F968C42E8F622A00EC1A7C = {
 			isa = PBXGroup;
 			children = (
 				87F968CF2E8F622A00EC1A7C /* LlegoiOS */,
 				87F968CE2E8F622A00EC1A7C /* Products */,
+				095875A3AD4E80E59A68CD27 /* Pods */,
 			);
 			sourceTree = "<group>";
 		};
@@ -80,6 +90,7 @@
 				87CB52982E90242F00618C59 /* ApolloAPI */,
 				87CB529A2E90242F00618C59 /* ApolloSQLite */,
 				87CB529C2E90242F00618C59 /* ApolloWebSocket */,
+				87D766AF2E91C0B5003D2461 /* Lottie */,
 			);
 			productName = LlegoiOS;
 			productReference = 87F968CD2E8F622A00EC1A7C /* LlegoiOS.app */;
@@ -111,6 +122,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				87CB52952E90242F00618C59 /* XCRemoteSwiftPackageReference "apollo-ios" */,
+				87D766AE2E91C0B5003D2461 /* XCRemoteSwiftPackageReference "lottie-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 87F968CE2E8F622A00EC1A7C /* Products */;
@@ -360,6 +372,14 @@
 				minimumVersion = 2.0.0;
 			};
 		};
+		87D766AE2E91C0B5003D2461 /* XCRemoteSwiftPackageReference "lottie-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/airbnb/lottie-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.5.2;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -382,6 +402,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 87CB52952E90242F00618C59 /* XCRemoteSwiftPackageReference "apollo-ios" */;
 			productName = ApolloWebSocket;
+		};
+		87D766AF2E91C0B5003D2461 /* Lottie */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 87D766AE2E91C0B5003D2461 /* XCRemoteSwiftPackageReference "lottie-ios" */;
+			productName = Lottie;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

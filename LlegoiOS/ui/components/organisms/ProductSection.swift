@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ProductSection: View {
     let products: [Product]
-    @Binding var productCounts: [Int: Int]
+    @Binding var productCounts: [String: Int]
     let cardWidth: CGFloat
     let cardHeight: CGFloat
     let onSeeMoreClick: () -> Void

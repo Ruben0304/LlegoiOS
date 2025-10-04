@@ -8,8 +8,8 @@ struct ScaleButtonStyle: ButtonStyle {
     }
 }
 
-struct Product: Identifiable {
-    let id: Int
+struct Product: Identifiable, Hashable {
+    let id: String // ID real de GraphQL
     let name: String
     let shop: String
     let weight: String
@@ -34,6 +34,9 @@ struct ProductCard: View {
 
     @State private var imagePosition: CGPoint = .zero
     @State private var isPressed: Bool = false
+
+    // CartManager singleton para añadir al carrito globalmente
+    private let cartManager = CartManager.shared
 
     var body: some View {
         GeometryReader { containerGeometry in
@@ -116,6 +119,8 @@ struct ProductCard: View {
                 if count == 0 {
                     // Initial state: just "+" symbol without circle
                     Button(action: {
+                        // Añadir al carrito usando CartManager
+                        cartManager.addToCart(productId: product.id, quantity: 1)
                         onIncrement()
                         print("🔄 Sending position from ProductCard: \(imagePosition)")
                         onAddToCartAnimation?(product.imageUrl, imagePosition)
@@ -137,7 +142,12 @@ struct ProductCard: View {
                     // State with counter and buttons
                     HStack {
                         // Decrement pill button
-                        Button(action: onDecrement) {
+                        Button(action: {
+                            // Decrementar en CartManager
+                            let currentQty = cartManager.getQuantity(for: product.id)
+                            cartManager.updateQuantity(productId: product.id, quantity: currentQty - 1)
+                            onDecrement()
+                        }) {
                             Text("–")
                                 .font(.system(size: counterFontSize, weight: .bold, design: .default))
                                 .foregroundColor(Color(red: 19/255, green: 45/255, blue: 47/255)) // onSurfaceVariant
@@ -157,6 +167,8 @@ struct ProductCard: View {
 
                         // Increment pill button
                         Button(action: {
+                            // Incrementar en CartManager
+                            cartManager.addToCart(productId: product.id, quantity: 1)
                             onIncrement()
                             onAddToCartAnimation?(product.imageUrl, imagePosition)
                         }) {

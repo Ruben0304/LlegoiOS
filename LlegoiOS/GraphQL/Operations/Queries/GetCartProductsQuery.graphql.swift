@@ -5,14 +5,20 @@
 @_spi(Execution) @_spi(Unsafe) import ApolloAPI
 
 public extension LlegoAPI {
-  struct GetProductsQuery: GraphQLQuery {
-    public static let operationName: String = "GetProducts"
+  struct GetCartProductsQuery: GraphQLQuery {
+    public static let operationName: String = "GetCartProducts"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetProducts { products { __typename id branchId name description weight price currency image availability createdAt } }"#
+        #"query GetCartProducts($ids: [String!]!) { products(ids: $ids) { __typename id branchId name description weight price currency image availability createdAt } }"#
       ))
 
-    public init() {}
+    public var ids: [String]
+
+    public init(ids: [String]) {
+      self.ids = ids
+    }
+
+    @_spi(Unsafe) public var __variables: Variables? { ["ids": ids] }
 
     public struct Data: LlegoAPI.SelectionSet {
       @_spi(Unsafe) public let __data: DataDict
@@ -20,10 +26,10 @@ public extension LlegoAPI {
 
       @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.Query }
       @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
-        .field("products", [Product].self),
+        .field("products", [Product].self, arguments: ["ids": .variable("ids")]),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
-        GetProductsQuery.Data.self
+        GetCartProductsQuery.Data.self
       ] }
 
       /// Lista de productos
@@ -51,7 +57,7 @@ public extension LlegoAPI {
           .field("createdAt", LlegoAPI.DateTime.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
-          GetProductsQuery.Data.Product.self
+          GetCartProductsQuery.Data.Product.self
         ] }
 
         public var id: String { __data["id"] }

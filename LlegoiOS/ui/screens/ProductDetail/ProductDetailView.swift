@@ -309,7 +309,7 @@ struct ProductDetailView: View {
                                         ForEach(0..<5) { index in
                                             SimilarProductCard(
                                                 product: Product(
-                                                    id: index,
+                                                    id: String(index),
                                                     name: "Producto \(index + 1)",
                                                     shop: "Shop",
                                                     weight: "500g",
@@ -396,7 +396,7 @@ struct ProductDetailView_Previews: PreviewProvider {
         NavigationView {
             ProductDetailView(
                 product: Product(
-                    id: 1,
+                    id: "1",
                     name: "Pizza",
                     shop: "FreshMart",
                     weight: "500g",

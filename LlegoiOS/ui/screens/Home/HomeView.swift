@@ -9,7 +9,7 @@ struct CartPositionKey: PreferenceKey {
 
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
-    @State private var productCounts: [Int: Int] = [:]
+    @State private var productCounts: [String: Int] = [:]
     @State private var searchText: String = ""
     @State private var animationTrigger: AnimationData? = nil
     @State private var cartPosition: CGPoint = .zero
@@ -95,8 +95,8 @@ struct HomeView: View {
                                 // Loading state
                                 if viewModel.isLoading {
                                     VStack(spacing: 20) {
-                                        ProgressView()
-                                            .scaleEffect(1.5)
+                                        LottieView(name: "loader")
+                                            .frame(width: 150, height: 150)
                                         Text("Cargando...")
                                             .font(.system(size: 16, weight: .medium))
                                             .foregroundColor(.gray)
@@ -187,10 +187,7 @@ struct HomeView: View {
 
                                 // Navigation link for Cart
                                 NavigationLink(
-                                    destination: CartView(
-                                        productCounts: $productCounts,
-                                        products: viewModel.products
-                                    ),
+                                    destination: CartView(),
                                     isActive: $navigateToCart
                                 ) {
                                     EmptyView()

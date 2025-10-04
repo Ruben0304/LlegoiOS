@@ -5,14 +5,20 @@
 @_spi(Execution) @_spi(Unsafe) import ApolloAPI
 
 public extension LlegoAPI {
-  struct GetProductsQuery: GraphQLQuery {
-    public static let operationName: String = "GetProducts"
+  struct SearchProductsQuery: GraphQLQuery {
+    public static let operationName: String = "SearchProducts"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetProducts { products { __typename id branchId name description weight price currency image availability createdAt } }"#
+        #"query SearchProducts($query: String!) { searchProducts(query: $query) { __typename id branchId name description weight price currency image availability createdAt } }"#
       ))
 
-    public init() {}
+    public var query: String
+
+    public init(query: String) {
+      self.query = query
+    }
+
+    @_spi(Unsafe) public var __variables: Variables? { ["query": query] }
 
     public struct Data: LlegoAPI.SelectionSet {
       @_spi(Unsafe) public let __data: DataDict
@@ -20,19 +26,19 @@ public extension LlegoAPI {
 
       @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.Query }
       @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
-        .field("products", [Product].self),
+        .field("searchProducts", [SearchProduct].self, arguments: ["query": .variable("query")]),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
-        GetProductsQuery.Data.self
+        SearchProductsQuery.Data.self
       ] }
 
-      /// Lista de productos
-      public var products: [Product] { __data["products"] }
+      /// Buscar productos
+      public var searchProducts: [SearchProduct] { __data["searchProducts"] }
 
-      /// Product
+      /// SearchProduct
       ///
       /// Parent Type: `ProductType`
-      public struct Product: LlegoAPI.SelectionSet {
+      public struct SearchProduct: LlegoAPI.SelectionSet {
         @_spi(Unsafe) public let __data: DataDict
         @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
 
@@ -51,7 +57,7 @@ public extension LlegoAPI {
           .field("createdAt", LlegoAPI.DateTime.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
-          GetProductsQuery.Data.Product.self
+          SearchProductsQuery.Data.SearchProduct.self
         ] }
 
         public var id: String { __data["id"] }
