@@ -185,14 +185,9 @@ struct HomeView: View {
                                 }
                                 .hidden()
 
-                                // Navigation link for Cart
-                                NavigationLink(
-                                    destination: CartView(),
-                                    isActive: $navigateToCart
-                                ) {
-                                    EmptyView()
-                                }
-                                .hidden()
+                                // Navigation link for Cart (kept for compatibility — replaced by fullScreenCover below)
+                                // The actual presentation uses a fullScreenCover so the Cart appears modally like CheckoutView
+                                EmptyView()
 
                                 // Navigation link for Product Detail
                                 NavigationLink(
@@ -250,6 +245,14 @@ struct HomeView: View {
 
         }
         .navigationViewStyle(StackNavigationViewStyle())
+        // Present CartView modally using fullScreenCover to match Cart -> Checkout behavior
+        // Wrap in NavigationView so the modal has its own navigation bar (title + toolbar)
+        .fullScreenCover(isPresented: $navigateToCart) {
+            NavigationView {
+                CartView()
+            }
+            .navigationViewStyle(StackNavigationViewStyle())
+        }
 
     }
 }

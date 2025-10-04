@@ -34,7 +34,7 @@ struct CartView: View {
     @State private var selectedCurrency: Currency = .CUP
 
     var body: some View {
-        NavigationStack{
+        NavigationView{
         ZStack {
             // Fondo con gradiente elegante
             LinearGradient(
