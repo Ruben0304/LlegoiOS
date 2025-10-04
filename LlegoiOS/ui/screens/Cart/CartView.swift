@@ -118,18 +118,59 @@ struct CartView: View {
                                     ))
                                     .animation(.easeInOut(duration: 0.3).delay(Double(index) * 0.05), value: viewModel.cartItems.count)
                                 }
-                                
+
                                 // Resumen de precios
                                 priceBreakdown
-                                
-                                Spacer(minLength: 100)
+
                             }
                             .padding(.horizontal, 20)
-                            .padding(.top, 16)
+                           
                         }
-                        
-                        // Botón de checkout fijo en la parte inferior
-                        checkoutButton
+                        // Insertamos el bottom bar como inset para que el ScrollView no quede oculto
+                        .safeAreaInset(edge: .bottom) {
+                            VStack(spacing: 12) {
+                                // Mensaje de información
+                                HStack(spacing: 8) {
+                                    Image(systemName: "lock.shield.fill")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(.llegoAccent)
+
+                                    Text("Pago seguro y protegido")
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundColor(.gray)
+                                }
+
+                                Button(action: {
+                                    navigateToCheckout = true
+                                }) {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: "cart.fill.badge.plus")
+                                            .font(.system(size: 18, weight: .bold))
+
+                                        Text("Proceder al Pago")
+                                            .font(.system(size: 18, weight: .bold, design: .rounded))
+
+                                        Spacer()
+
+                                        Text(viewModel.formattedTotal)
+                                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                                    }
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 24)
+                                    .frame(height: 60)
+                                    
+                                    .cornerRadius(30)
+                                   
+                                }
+                                .buttonStyle(.glassProminent)
+                                .tint(Color.llegoPrimary)
+                                .shadow(color: Color.llegoAccent.opacity(0.5), radius: 15, x: 0, y: 8)
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 16)
+                            // Para que el botón quede sobre el teclado cuando aparezca
+                            .ignoresSafeArea(.keyboard, edges: .bottom)
+                        }
                     }
                 }
             
@@ -194,87 +235,7 @@ struct CartView: View {
         }
     }
 
-    private var header: some View {
-        HStack {
-            Button(action: {
-                presentationMode.wrappedValue.dismiss()
-            }) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.llegoPrimary)
-                    .frame(width: 40, height: 40)
-                    .background(
-                        Circle()
-                            .fill(Color.white)
-                            .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 4)
-                    )
-            }
-
-            Spacer()
-
-            VStack(spacing: 2) {
-                Text("Mi Carrito")
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .foregroundColor(.llegoPrimary)
-
-                if !viewModel.cartItems.isEmpty {
-                    Text("\(viewModel.cartItems.count) producto\(viewModel.cartItems.count != 1 ? "s" : "")")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.gray)
-                }
-            }
-
-            Spacer()
-
-            // Selector de moneda
-            Menu {
-                ForEach(Currency.allCases, id: \.self) { currency in
-                    Button(action: {
-                        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                            selectedCurrency = currency
-                        }
-                    }) {
-                        HStack {
-                            Text(currency.flag)
-                                .font(.system(size: 20))
-                            Text(currency.rawValue)
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.llegoPrimary)
-                            Spacer()
-                            if selectedCurrency == currency {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundColor(.llegoAccent)
-                            }
-                        }
-                    }
-                }
-            } label: {
-                HStack(spacing: 6) {
-                    Text(selectedCurrency.flag)
-                        .font(.system(size: 18))
-                    Text(selectedCurrency.rawValue)
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.llegoPrimary)
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.llegoPrimary)
-                }
-                .frame(width: 85, height: 40)
-                .background(
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(Color.white)
-                        .shadow(color: Color.llegoAccent.opacity(0.2), radius: 8, x: 0, y: 4)
-                )
-            }
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
-        .background(
-            Color.llegoBackground.opacity(0.95)
-                .ignoresSafeArea(edges: .top)
-        )
-    }
+    
 
     private var emptyCartView: some View {
         VStack(spacing: 24) {
@@ -408,64 +369,8 @@ struct CartView: View {
         .padding(.top, 8)
     }
 
-    private var checkoutButton: some View {
-        VStack(spacing: 12) {
-            // Mensaje de información
-            HStack(spacing: 8) {
-                Image(systemName: "lock.shield.fill")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.llegoAccent)
-
-                Text("Pago seguro y protegido")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.gray)
-            }
-
-            Button(action: {
-                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                    isAnimatingCheckout = true
-                }
-
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    navigateToCheckout = true
-                    isAnimatingCheckout = false
-                }
-            }) {
-                HStack(spacing: 12) {
-                    Image(systemName: "cart.fill.badge.plus")
-                        .font(.system(size: 18, weight: .bold))
-
-                    Text("Proceder al Pago")
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-
-                    Spacer()
-
-                    Text(viewModel.formattedTotal)
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, 24)
-                .frame(height: 60)
-                .background(
-                    LinearGradient(
-                        gradient: Gradient(colors: [Color.llegoAccent, Color.llegoPrimary]),
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .cornerRadius(30)
-                .shadow(color: Color.llegoAccent.opacity(0.5), radius: 15, x: 0, y: 8)
-                .scaleEffect(isAnimatingCheckout ? 0.95 : 1.0)
-            }
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
-        .background(
-            Color.white
-                .ignoresSafeArea(edges: .bottom)
-                .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: -5)
-        )
-    }
+   
+        
 }
 
 struct CartItemCard: View {
