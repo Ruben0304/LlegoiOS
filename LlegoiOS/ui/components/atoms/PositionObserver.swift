@@ -2,7 +2,7 @@ import SwiftUI
 
 // PreferenceKey para observar posiciones
 struct ViewPositionKey: PreferenceKey {
-    static var defaultValue: [String: CGPoint] = [:]
+    nonisolated(unsafe) static var defaultValue: [String: CGPoint] = [:]
 
     static func reduce(value: inout [String: CGPoint], nextValue: () -> [String: CGPoint]) {
         value.merge(nextValue()) { $1 }

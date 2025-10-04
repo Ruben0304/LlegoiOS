@@ -1,0 +1,67 @@
+scalar DateTime
+scalar JSON
+
+type Query {
+  users: [UserType!]!
+  user(id: String!): UserType
+  searchUsers(query: String!): [UserType!]!
+  businesses: [BusinessType!]!
+  business(id: String!): BusinessType
+  searchBusinesses(query: String!): [BusinessType!]!
+  branches: [BranchType!]!
+  branch(id: String!): BranchType
+  searchBranches(query: String!): [BranchType!]!
+  products: [ProductType!]!
+  product(id: String!): ProductType
+  searchProducts(query: String!): [ProductType!]!
+  hello: String!
+  greet(name: String!): String!
+}
+
+type UserType {
+  id: String!
+  name: String!
+  email: String!
+  role: String!
+  createdAt: DateTime!
+}
+
+type BusinessType {
+  id: String!
+  name: String!
+  type: String!
+  ownerId: String!
+  globalRating: Float!
+  createdAt: DateTime!
+}
+
+type BranchType {
+  id: String!
+  businessId: String!
+  name: String!
+  address: String!
+  coordinates: CoordinatesType!
+  phone: String!
+  schedule: JSON!
+  managerIds: [String!]!
+  status: String!
+  createdAt: DateTime!
+}
+
+type CoordinatesType {
+  type: String!
+  coordinates: [Float!]!
+}
+
+type ProductType {
+  id: String!
+  branchId: String!
+  name: String!
+  description: String!
+  weight: String!
+  price: Float!
+  currency: String!
+  image: String!
+  availability: Boolean!
+  createdAt: DateTime!
+}

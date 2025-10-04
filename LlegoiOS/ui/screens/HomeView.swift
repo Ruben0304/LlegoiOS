@@ -1,13 +1,14 @@
 import SwiftUI
 
 struct CartPositionKey: PreferenceKey {
-    static var defaultValue: CGPoint = .zero
+    nonisolated(unsafe) static var defaultValue: CGPoint = .zero
     static func reduce(value: inout CGPoint, nextValue: () -> CGPoint) {
         value = nextValue()
     }
 }
 
 struct HomeView: View {
+    @StateObject private var viewModel = HomeViewModel()
     @State private var productCounts: [Int: Int] = [:]
     @State private var searchText: String = ""
     @State private var animationTrigger: AnimationData? = nil
@@ -16,103 +17,11 @@ struct HomeView: View {
     @State private var navigateToPlans = false
     @State private var navigateToCart = false
     @State private var selectedProduct: Product? = nil
+    @State private var selectedStore: Store? = nil
 
     private var totalCartItems: Int {
         productCounts.values.reduce(0, +)
     }
-
-    // Local test data that matches the structure
-    private let sampleProducts: [Product] = [
-        Product(
-            id: 1,
-            name: "Pizza",
-            shop: "FreshMart",
-            weight: "500g",
-            price: "$4.99",
-            imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen PNG.png"
-        ),
-        Product(
-            id: 2,
-            name: "Tres leches",
-            shop: "EcoFruit",
-            weight: "1kg",
-            price: "$2.49",
-            imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen (13).png"
-        ),
-        Product(
-            id: 3,
-            name: "Batido de mamey",
-            shop: "TropicalFresh",
-            weight: "2 unidades",
-            price: "$6.99",
-            imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen (17).png"
-        ),
-        Product(
-            id: 4,
-            name: "Arroz con pescado y papas fritas",
-            shop: "Berry Farm",
-            weight: "250g",
-            price: "$3.99",
-            imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen (14).png"
-        ),
-        Product(
-            id: 6,
-            name: "Spaguetti",
-            shop: "GreenGarden",
-            weight: "300g",
-            price: "$5.49",
-            imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen (11).png"
-        ),
-        Product(
-            id: 7,
-            name: "Cheese Cake",
-            shop: "GreenGarden",
-            weight: "300g",
-            price: "$5.49",
-            imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen (15).png"
-        ),
-        Product(
-            id: 8,
-            name: "Batido de fresa",
-            shop: "GreenGarden",
-            weight: "300g",
-            price: "$5.49",
-            imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Pasted Graphic.png"
-        ),
-        Product(
-            id: 9,
-            name: "Carne de res y vegetales",
-            shop: "GreenGarden",
-            weight: "300g",
-            price: "$5.49",
-            imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen (12).png"
-        )
-    ]
-
-    // Sample store data
-    private let sampleStores: [Store] = [
-        Store(
-            id: "1",
-            name: "Fresh Market",
-            etaMinutes: 25,
-            logoUrl: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&h=200&fit=crop&crop=center",
-            bannerUrl: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&h=200&fit=crop&crop=center"
-        ),
-        Store(
-            id: "3",
-            name: "Local Grocery",
-            etaMinutes: 30,
-            logoUrl: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&h=200&fit=crop&crop=center",
-            bannerUrl: "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=500&h=200&fit=crop&crop=center"
-        ),
-        Store(
-            id: "4",
-            name: "Express Market",
-            etaMinutes: 12,
-            logoUrl: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&h=200&fit=crop&crop=center",
-            bannerUrl: "https://images.unsplash.com/photo-1604719312566-878b831d929b?w=500&h=200&fit=crop&crop=center"
-        )
-    ]
 
     var body: some View {
         NavigationView {
@@ -183,41 +92,77 @@ struct HomeView: View {
                         // Contenido scrolleable
                         ScrollView {
                             VStack(alignment: .leading, spacing: 20) {
-                                // Espacio para el slider que está en ZStack
-
-
-
-                                // Product Section
-                                ProductSection(
-                                    products: sampleProducts,
-                                    productCounts: $productCounts,
-                                    cardWidth: 155,
-                                    cardHeight: 310,
-                                    onSeeMoreClick: {
-                                        print("Ver más clicked!")
-                                    },
-                                    onAddToCartAnimation: { imageUrl, startPosition in
-                                        print("📥 Received in HomeView - Start: \(startPosition), Cart: \(cartPosition)")
-                                        animationTrigger = AnimationData(
-                                            imageUrl: imageUrl,
-                                            startPosition: startPosition,
-                                            endPosition: cartPosition
-                                        )
-                                        print("✅ AnimationData created - Start: \(animationTrigger!.startPosition), End: \(animationTrigger!.endPosition)")
-                                    },
-                                    onProductTap: { product in
-                                        selectedProduct = product
+                                // Loading state
+                                if viewModel.isLoading {
+                                    VStack(spacing: 20) {
+                                        ProgressView()
+                                            .scaleEffect(1.5)
+                                        Text("Cargando...")
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundColor(.gray)
                                     }
-                                )
-
-
-                                // Store Section
-                                StoreSection(
-                                    stores: sampleStores,
-                                    onSeeMoreTap: {
-                                        print("Ver más tiendas clicked!")
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .padding(.top, 100)
+                                }
+                                // Error state
+                                else if case .error(let message) = viewModel.state {
+                                    VStack(spacing: 16) {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                            .font(.system(size: 50))
+                                            .foregroundColor(.orange)
+                                        Text(message)
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundColor(.gray)
+                                            .multilineTextAlignment(.center)
+                                            .padding(.horizontal, 32)
+                                        Button("Reintentar") {
+                                            viewModel.loadHomeData()
+                                        }
+                                        .padding(.horizontal, 24)
+                                        .padding(.vertical, 12)
+                                        .background(Color.llegoPrimary)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(8)
                                     }
-                                )
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .padding(.top, 100)
+                                }
+                                // Success state
+                                else if case .success = viewModel.state {
+                                    // Product Section
+                                    ProductSection(
+                                        products: viewModel.products,
+                                        productCounts: $productCounts,
+                                        cardWidth: 155,
+                                        cardHeight: 310,
+                                        onSeeMoreClick: {
+                                            print("Ver más clicked!")
+                                        },
+                                        onAddToCartAnimation: { imageUrl, startPosition in
+                                            print("📥 Received in HomeView - Start: \(startPosition), Cart: \(cartPosition)")
+                                            animationTrigger = AnimationData(
+                                                imageUrl: imageUrl,
+                                                startPosition: startPosition,
+                                                endPosition: cartPosition
+                                            )
+                                            print("✅ AnimationData created - Start: \(animationTrigger!.startPosition), End: \(animationTrigger!.endPosition)")
+                                        },
+                                        onProductTap: { product in
+                                            selectedProduct = product
+                                        }
+                                    )
+
+                                    // Store Section
+                                    StoreSection(
+                                        stores: viewModel.stores,
+                                        onSeeMoreTap: {
+                                            print("Ver más tiendas clicked!")
+                                        },
+                                        onStoreTap: { store in
+                                            selectedStore = store
+                                        }
+                                    )
+                                }
 
                                 // Promo Section
                                 PromoSection(
@@ -244,7 +189,7 @@ struct HomeView: View {
                                 NavigationLink(
                                     destination: CartView(
                                         productCounts: $productCounts,
-                                        products: sampleProducts
+                                        products: viewModel.products
                                     ),
                                     isActive: $navigateToCart
                                 ) {
@@ -258,6 +203,18 @@ struct HomeView: View {
                                     isActive: Binding(
                                         get: { selectedProduct != nil },
                                         set: { if !$0 { selectedProduct = nil } }
+                                    )
+                                ) {
+                                    EmptyView()
+                                }
+                                .hidden()
+
+                                // Navigation link for Store Detail
+                                NavigationLink(
+                                    destination: selectedStore.map { StoreDetailView(store: $0) },
+                                    isActive: Binding(
+                                        get: { selectedStore != nil },
+                                        set: { if !$0 { selectedStore = nil } }
                                     )
                                 ) {
                                     EmptyView()
@@ -288,9 +245,14 @@ struct HomeView: View {
             .addToCartOverlay(animationTrigger: $animationTrigger) {
                 triggerCartBounce = true
             }
+            .onAppear {
+                if case .idle = viewModel.state {
+                    viewModel.loadHomeData()
+                }
+            }
 
         }
         .navigationViewStyle(StackNavigationViewStyle())
-        
+
     }
 }

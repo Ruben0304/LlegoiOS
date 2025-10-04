@@ -1,8 +1,8 @@
 import SwiftUI
 
 // MARK: - Image Cache Manager
-class ImageCacheManager {
-    static let shared = ImageCacheManager()
+final class ImageCacheManager: @unchecked Sendable {
+    nonisolated(unsafe) static let shared = ImageCacheManager()
 
     private let cache = NSCache<NSString, UIImage>()
     private let urlCache: URLCache

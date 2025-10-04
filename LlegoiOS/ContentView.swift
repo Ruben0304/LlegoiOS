@@ -15,6 +15,7 @@ struct ComposeView: UIViewControllerRepresentable {
 struct ContentView: View {
     @State private var selectedTab = 0
     @State private var isOnboardingCompleted = OnboardingHelper.isOnboardingCompleted
+    private let productRepository = ProductRepository()
 
     var body: some View {
 //        if isOnboardingCompleted {
@@ -28,7 +29,39 @@ struct ContentView: View {
 //                }
 //        }
         MainAppView(selectedTab: $selectedTab)
+//            .onAppear {
+//                testGraphQLConnection()
+//            }
     }
+
+    // Test GraphQL connection
+//    private func testGraphQLConnection() {
+//        print("🚀 Testing GraphQL connection...")
+//
+//        productRepository.fetchProducts { result in
+//            switch result {
+//            case .success(let products):
+//                print("✅ Successfully fetched \(products.count) products:")
+//                print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+//                for (index, product) in products.enumerated() {
+//                    print("\n📦 Product #\(index + 1):")
+//                    print("   ID: \(product.id)")
+//                    print("   Name: \(product.name)")
+//                    print("   Description: \(product.description)")
+//                    print("   Price: \(product.currency) \(product.price)")
+//                    print("   Weight: \(product.weight)")
+//                    print("   Available: \(product.availability ? "Yes" : "No")")
+//                    print("   Image: \(product.image)")
+//                    print("   Branch ID: \(product.branchId)")
+//                    print("   Created: \(product.createdAt)")
+//                }
+//                print("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+//
+//            case .failure(let error):
+//                print("❌ Failed to fetch products: \(error.localizedDescription)")
+//            }
+//        }
+//    }
 }
 
 struct MainAppView: View {

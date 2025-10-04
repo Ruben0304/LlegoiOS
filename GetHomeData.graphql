@@ -1,0 +1,27 @@
+query GetHomeData {
+  products {
+    id
+    branchId
+    name
+    description
+    weight
+    price
+    currency
+    image
+    availability
+    createdAt
+  }
+  branches {
+    id
+    businessId
+    name
+    address
+    coordinates {
+      type
+      coordinates
+    }
+    phone
+    status
+    createdAt
+  }
+}

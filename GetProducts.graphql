@@ -1,0 +1,14 @@
+query GetProducts {
+  products {
+    id
+    branchId
+    name
+    description
+    weight
+    price
+    currency
+    image
+    availability
+    createdAt
+  }
+}

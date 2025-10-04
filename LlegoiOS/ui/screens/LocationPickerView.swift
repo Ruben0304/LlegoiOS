@@ -1,5 +1,5 @@
 import SwiftUI
-import MapKit
+@preconcurrency import MapKit
 
 struct LocationPickerView: View {
     @Environment(\.presentationMode) var presentationMode
@@ -279,28 +279,24 @@ struct LocationPickerView: View {
         isSearching = true
         showSearchResults = true
 
-        Task {
-            guard let request = MKGeocodingRequest(addressString: searchText) else {
-                await MainActor.run {
-                    isSearching = false
-                    searchResults = []
+        let searchQuery = searchText
+
+        Task { @MainActor in
+            let mapItems: [MKMapItem]
+
+            if let request = MKGeocodingRequest(addressString: searchQuery) {
+                do {
+                    mapItems = try await request.mapItems
+                } catch {
+                    print("Error searching address: \(error.localizedDescription)")
+                    mapItems = []
                 }
-                return
+            } else {
+                mapItems = []
             }
 
-            do {
-                let mapItems = try await request.mapItems
-                await MainActor.run {
-                    searchResults = mapItems
-                    isSearching = false
-                }
-            } catch {
-                print("Error searching address: \(error.localizedDescription)")
-                await MainActor.run {
-                    searchResults = []
-                    isSearching = false
-                }
-            }
+            self.searchResults = mapItems
+            self.isSearching = false
         }
     }
 
@@ -330,3 +326,4 @@ struct LocationPickerView: View {
         return nil
     }
 }
+

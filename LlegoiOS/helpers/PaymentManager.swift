@@ -2,8 +2,8 @@ import Foundation
 import PassKit
 import Combine
 
-class PaymentManager: NSObject, ObservableObject {
-    static let shared = PaymentManager()
+final class PaymentManager: NSObject, ObservableObject {
+    @MainActor static let shared = PaymentManager()
 
     @Published var paymentStatus: PaymentStatus = .idle
     @Published var lastError: String?

@@ -3,6 +3,7 @@ import SwiftUI
 struct SearchTabContent: View {
     @State private var productCounts: [Int: Int] = [:]
     @State private var selectedCategory: SearchCategory = .products
+    @State private var selectedStore: Store? = nil
 
     // Sample products data for search
     private let allProducts: [Product] = [
@@ -196,6 +197,18 @@ struct SearchTabContent: View {
 
                 // Additional spacing for navigation
                 Spacer().frame(height: 100)
+
+                // Navigation link for Store Detail
+                NavigationLink(
+                    destination: selectedStore.map { StoreDetailView(store: $0) },
+                    isActive: Binding(
+                        get: { selectedStore != nil },
+                        set: { if !$0 { selectedStore = nil } }
+                    )
+                ) {
+                    EmptyView()
+                }
+                .hidden()
             }
         }
         .navigationTitle("Buscar")
@@ -277,6 +290,9 @@ struct SearchTabContent: View {
                             size: .expanded
                         )
                         .transition(.scale.combined(with: .opacity))
+                        .onTapGesture {
+                            selectedStore = store
+                        }
                     }
                 }
                 .padding(.horizontal, 16)

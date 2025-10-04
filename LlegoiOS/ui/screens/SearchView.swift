@@ -11,6 +11,7 @@ struct SearchView: View {
     @State private var displayedStores: [Store] = []
     @State private var searchTask: Task<Void, Never>? = nil
     @State private var searchAnimationDelay: Double = 0
+    @State private var selectedStore: Store? = nil
     @Environment(\.dismiss) private var dismiss
 
     init(searchText: Binding<String> = .constant("")) {
@@ -415,10 +416,13 @@ struct SearchView: View {
                     size: .expanded
                 )
                 .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
-                .opacity(searchText.isEmpty ? 
+                .opacity(searchText.isEmpty ?
                     (animationDelay > Double(index) * 0.1 ? 1 : 0) :
                     (searchAnimationDelay > Double(index) * 0.15 ? 1 : 0)
                 )
+                .onTapGesture {
+                    selectedStore = store
+                }
                 .scaleEffect(searchText.isEmpty ? 
                     (animationDelay > Double(index) * 0.1 ? 1 : 0.95) :
                     (searchAnimationDelay > Double(index) * 0.15 ? 1 : 0.95)
@@ -486,6 +490,18 @@ struct SearchView: View {
                     }
                 }
                 .padding(.horizontal, 1) // Pequeño padding para evitar recortes
+
+                // Navigation link for Store Detail
+                NavigationLink(
+                    destination: selectedStore.map { StoreDetailView(store: $0) },
+                    isActive: Binding(
+                        get: { selectedStore != nil },
+                        set: { if !$0 { selectedStore = nil } }
+                    )
+                ) {
+                    EmptyView()
+                }
+                .hidden()
             }
         }
         .background(Color.clear) // Asegurar fondo transparente

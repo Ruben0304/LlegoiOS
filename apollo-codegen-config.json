@@ -1,0 +1,28 @@
+{
+  "schemaNamespace": "LlegoAPI",
+  "input": {
+    "operationSearchPaths": [
+      "**/*.graphql"
+    ],
+    "schemaSearchPaths": [
+      "schema.graphqls"
+    ]
+  },
+  "output": {
+    "testMocks": {
+      "none": {}
+    },
+    "schemaTypes": {
+      "path": "./LlegoiOS/GraphQL",
+      "moduleType": {
+        "embeddedInTarget": {
+          "name": "LlegoiOS",
+          "accessModifier": "public"
+        }
+      }
+    },
+    "operations": {
+      "inSchemaModule": {}
+    }
+  }
+}

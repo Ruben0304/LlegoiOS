@@ -58,7 +58,8 @@ struct ProductDetailView: View {
     let product: Product
     @Environment(\.presentationMode) var presentationMode
     @State private var selectedVariant = "Queso extra"
-    @State private var selectedStore: String? = nil
+    @State private var selectedStoreId: String? = nil
+    @State private var selectedStoreForNav: Store? = nil
     @State private var cartItemCount = 3
 
     private let variants = [
@@ -270,27 +271,25 @@ struct ProductDetailView: View {
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 12) {
                                         ForEach(sampleStores, id: \.id) { store in
-                                            Button(action: {
-                                                selectedStore = store.id
-                                            }) {
-                                                StoreCard(
-                                                    storeName: store.name,
-                                                    etaMinutes: store.etaMinutes,
-                                                    logoUrl: store.logoUrl,
-                                                    bannerUrl: store.bannerUrl,
-                                                    address: store.address,
-                                                    rating: store.rating,
-                                                    size: .medium
-                                                )
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: 16)
-                                                        .stroke(
-                                                            selectedStore == store.id ? Color.llegoPrimary : Color.clear,
-                                                            lineWidth: 3
-                                                        )
-                                                )
+                                            StoreCard(
+                                                storeName: store.name,
+                                                etaMinutes: store.etaMinutes,
+                                                logoUrl: store.logoUrl,
+                                                bannerUrl: store.bannerUrl,
+                                                address: store.address,
+                                                rating: store.rating,
+                                                size: .medium
+                                            )
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 16)
+                                                    .stroke(
+                                                        selectedStoreId == store.id ? Color.llegoPrimary : Color.clear,
+                                                        lineWidth: 3
+                                                    )
+                                            )
+                                            .onTapGesture {
+                                                selectedStoreForNav = store
                                             }
-                                            .buttonStyle(PlainButtonStyle())
                                         }
                                     }
                                     .padding(.horizontal, 16)
@@ -326,6 +325,18 @@ struct ProductDetailView: View {
                             }
                             .padding(.top, 24)
                             .padding(.bottom, 32)
+
+                            // Navigation link for Store Detail
+                            NavigationLink(
+                                destination: selectedStoreForNav.map { StoreDetailView(store: $0) },
+                                isActive: Binding(
+                                    get: { selectedStoreForNav != nil },
+                                    set: { if !$0 { selectedStoreForNav = nil } }
+                                )
+                            ) {
+                                EmptyView()
+                            }
+                            .hidden()
                         }.padding(.top,-45)
                     }
                     .padding(.top, 60)
@@ -337,6 +348,7 @@ struct ProductDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .tabBar)
+        .toolbarBackground(.hidden, for: .navigationBar)
         .onAppear {
             let appearance = UITabBarAppearance()
             appearance.configureWithTransparentBackground()

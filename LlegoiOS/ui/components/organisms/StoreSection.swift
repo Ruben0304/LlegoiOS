@@ -3,10 +3,12 @@ import SwiftUI
 struct StoreSection: View {
     let stores: [Store]
     let onSeeMoreTap: () -> Void
+    var onStoreTap: ((Store) -> Void)? = nil
 
-    init(stores: [Store], onSeeMoreTap: @escaping () -> Void = {}) {
+    init(stores: [Store], onSeeMoreTap: @escaping () -> Void = {}, onStoreTap: ((Store) -> Void)? = nil) {
         self.stores = stores
         self.onSeeMoreTap = onSeeMoreTap
+        self.onStoreTap = onStoreTap
     }
 
     var body: some View {
@@ -32,15 +34,20 @@ struct StoreSection: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(stores, id: \.id) { store in
-                        StoreCard(
-                            storeName: store.name,
-                            etaMinutes: store.etaMinutes,
-                            logoUrl: store.logoUrl,
-                            bannerUrl: store.bannerUrl,
-                            address: store.address,
-                            rating: store.rating,
-                            size: .medium
-                        )
+                        Button(action: {
+                            onStoreTap?(store)
+                        }) {
+                            StoreCard(
+                                storeName: store.name,
+                                etaMinutes: store.etaMinutes,
+                                logoUrl: store.logoUrl,
+                                bannerUrl: store.bannerUrl,
+                                address: store.address,
+                                rating: store.rating,
+                                size: .medium
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
                 }
                 .padding(.horizontal, 16)

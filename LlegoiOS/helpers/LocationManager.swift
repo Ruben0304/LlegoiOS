@@ -3,6 +3,7 @@ import CoreLocation
 import MapKit
 import Combine
 
+@MainActor
 class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let manager = CLLocationManager()
 
@@ -39,46 +40,34 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         authorizationStatus = manager.authorizationStatus
     }
 
-    func reverseGeocode(coordinate: CLLocationCoordinate2D) {
+    nonisolated func reverseGeocode(coordinate: CLLocationCoordinate2D) {
         Task {
             let location = CLLocation(
                 latitude: coordinate.latitude,
                 longitude: coordinate.longitude
             )
 
-            guard let request = MKReverseGeocodingRequest(location: location) else {
-                await MainActor.run {
-                    self.address = "Ubicación seleccionada"
+            let addressString: String
+
+            if let request = MKReverseGeocodingRequest(location: location) {
+                do {
+                    let mapItems = try await request.mapItems
+                    if let mapItem = mapItems.first, let name = mapItem.name, !name.isEmpty {
+                        addressString = name
+                    } else {
+                        // Fallback to coordinate display
+                        addressString = "Lat: \(String(format: "%.4f", coordinate.latitude)), Lng: \(String(format: "%.4f", coordinate.longitude))"
+                    }
+                } catch {
+                    print("Error reverse geocoding: \(error.localizedDescription)")
+                    addressString = "Ubicación seleccionada"
                 }
-                return
+            } else {
+                addressString = "Ubicación seleccionada"
             }
 
-            do {
-                let mapItems = try await request.mapItems
-                guard let mapItem = mapItems.first else {
-                    await MainActor.run {
-                        self.address = "Ubicación seleccionada"
-                    }
-                    return
-                }
-
-                // Keep it really simple - just use the name from mapItem
-                let addressString: String
-                if let name = mapItem.name, !name.isEmpty {
-                    addressString = name
-                } else {
-                    // Fallback to coordinate display
-                    addressString = "Lat: \(String(format: "%.4f", coordinate.latitude)), Lng: \(String(format: "%.4f", coordinate.longitude))"
-                }
-
-                await MainActor.run {
-                    self.address = addressString
-                }
-            } catch {
-                print("Error reverse geocoding: \(error.localizedDescription)")
-                await MainActor.run {
-                    self.address = "Ubicación seleccionada"
-                }
+            await MainActor.run {
+                self.address = addressString
             }
         }
     }
