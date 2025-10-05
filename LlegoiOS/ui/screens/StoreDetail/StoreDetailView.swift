@@ -3,7 +3,7 @@ import MapKit
 
 struct StoreDetailView: View {
     let store: Store
-    @Environment(\.presentationMode) var presentationMode
+    @Environment(\.dismiss) private var dismiss
     @State private var region: MKCoordinateRegion
     @State private var showShareSheet = false
     @State private var productCounts: [String: Int] = [:]
@@ -117,32 +117,43 @@ struct StoreDetailView: View {
                                             .fill(Color.white)
                                             .frame(width: 110, height: 110)
                                             .overlay(ProgressView())
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(Color.white, lineWidth: 5)
+                                            )
+                                            .shadow(color: Color.black.opacity(0.25), radius: 15, x: 0, y: 5)
                                     case .success(let image):
                                         image
                                             .resizable()
                                             .aspectRatio(contentMode: .fill)
                                             .frame(width: 110, height: 110)
                                             .clipShape(Circle())
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(Color.white, lineWidth: 5)
+                                            )
+                                            .shadow(color: Color.black.opacity(0.25), radius: 15, x: 0, y: 5)
                                     case .failure:
                                         Circle()
                                             .fill(Color.gray.opacity(0.3))
                                             .frame(width: 110, height: 110)
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(Color.white, lineWidth: 5)
+                                            )
+                                            .shadow(color: Color.black.opacity(0.25), radius: 15, x: 0, y: 5)
                                     @unknown default:
                                         EmptyView()
                                     }
                                 }
-                                .overlay(
-                                    Circle()
-                                        .stroke(Color.white, lineWidth: 5)
-                                )
-                                .shadow(color: Color.black.opacity(0.25), radius: 15, x: 0, y: 5)
 
                                 Spacer()
                             }
                             .padding(.horizontal, 20)
                             .padding(.bottom, -55)
                         }
-                        .frame(width: geometry.size.width, height: 280)
+                        .frame(width: geometry.size.width)
+                        .padding(.bottom, 20)
 
                         // Add space to show full profile logo
                         Spacer()
@@ -232,30 +243,17 @@ struct StoreDetailView: View {
                                 HStack(spacing: 12) {
                                     // Instagram
                                     SocialButton(
-                                        icon: "Instagram",
+                                        iconAsset: "Instagram",
                                         title: "Instagram",
                                         gradient: [Color.pink, Color.purple, Color.orange]
                                     )
 
                                     // Facebook
                                     SocialButton(
-                                        icon: "Facebook",
+                                        iconAsset: "Facebook",
                                         title: "Facebook",
                                         color: Color.blue
                                     )
-
-                                    // WhatsApp
-                                    Button(action: {}) {
-                                        Image(systemName: "phone.circle.fill")
-                                            .font(.system(size: 24))
-                                            .foregroundColor(.white)
-                                            .frame(width: 50, height: 50)
-                                            .background(
-                                                Circle()
-                                                    .fill(Color.green)
-                                            )
-                                            .shadow(color: Color.green.opacity(0.3), radius: 8, x: 0, y: 4)
-                                    }
                                 }
                             }
                             .padding(20)
@@ -418,12 +416,10 @@ struct StoreDetailView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: {
-                    presentationMode.wrappedValue.dismiss()
+                    dismiss()
                 }) {
                     Image(systemName: "chevron.left")
-                        
                         .font(.system(size: 18, weight: .semibold))
-                
                 }
             }
 
@@ -432,10 +428,30 @@ struct StoreDetailView: View {
                     showShareSheet = true
                 }) {
                     Image(systemName: "square.and.arrow.up")
-                       
                         .font(.system(size: 18, weight: .semibold))
-                       
                 }
+            }
+
+            ToolbarItem(placement: .bottomBar) {
+                
+                   
+Spacer()
+                    Button(action: {
+                        // WhatsApp action
+                    }) {
+                        HStack(spacing: 8) {
+                            Image("WhatsApp")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 22, height: 22)
+
+                            Text("WhatsApp")
+                                .font(.system(size: 18, weight: .semibold))
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 12)
+                    }
+                
             }
         }
         .sheet(isPresented: $showShareSheet) {
@@ -446,7 +462,7 @@ struct StoreDetailView: View {
 
 // Social Button Component
 struct SocialButton: View {
-    let icon: String
+    let iconAsset: String
     let title: String
     var gradient: [Color]? = nil
     var color: Color? = nil
@@ -454,8 +470,10 @@ struct SocialButton: View {
     var body: some View {
         Button(action: {}) {
             HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 16, weight: .semibold))
+                Image(iconAsset)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 20, height: 20)
 
                 Text(title)
                     .font(.system(size: 14, weight: .semibold))

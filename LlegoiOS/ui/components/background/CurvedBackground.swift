@@ -8,8 +8,8 @@ struct CurvedBackground<Content: View>: View {
     let content: () -> Content
 
     init(
-        curveStartAbsolute: CGFloat = 170,
-        curveEndAbsolute: CGFloat = 170,
+        curveStartAbsolute: CGFloat = 150,
+        curveEndAbsolute: CGFloat = 150,
         curveInclinationAbsolute: CGFloat = 50,
         invertCurve: Bool = false,
         @ViewBuilder content: @escaping () -> Content

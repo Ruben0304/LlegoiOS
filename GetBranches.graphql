@@ -1,0 +1,15 @@
+query GetBranches {
+  branches {
+    id
+    businessId
+    name
+    address
+    coordinates {
+      type
+      coordinates
+    }
+    phone
+    status
+    createdAt
+  }
+}

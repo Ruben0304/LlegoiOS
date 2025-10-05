@@ -90,8 +90,8 @@ struct MainAppView: View {
                                 .ignoresSafeArea(.container, edges: .bottom)
                         }
 
-                        Tab("Cuenta", systemImage: "person") {
-                            ProfileView()
+                        Tab("Mapa", systemImage: "map") {
+                            MapView()
                                 .ignoresSafeArea(.container, edges: .bottom)
                         }
                     }

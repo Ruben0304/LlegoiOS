@@ -9,6 +9,7 @@ struct CartPositionKey: PreferenceKey {
 
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
+    @StateObject private var walletViewModel = WalletViewModel()
     @State private var productCounts: [String: Int] = [:]
     @State private var searchText: String = ""
     @State private var animationTrigger: AnimationData? = nil
@@ -16,6 +17,7 @@ struct HomeView: View {
     @State private var triggerCartBounce = false
     @State private var navigateToPlans = false
     @State private var navigateToCart = false
+    @State private var navigateToWallet = false
     @State private var navigateToProductDetails: Bool = false
     @State private var selectedProduct: Product? = nil
     @State private var selectedStore: Store? = nil
@@ -25,50 +27,11 @@ struct HomeView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             CurvedBackground {
                 ZStack(alignment: .top) {
                     // Contenido principal
                     VStack(spacing: 0) {
-                        // Header: SearchBar + CartButton
-                        HStack(spacing: 8) {
-                            LlegoSearchBar(
-                                text: $searchText,
-                                onValueChange: { newValue in
-                                    // Manejar búsqueda
-                                    print("Búsqueda: \(newValue)")
-                                }
-                            )
-                            .frame(height: 50)
-
-                            LlegoCartButton(
-                                icon: "cart",
-                                badgeCount: totalCartItems > 0 ? totalCartItems : nil,
-                                triggerBounce: triggerCartBounce,
-                                onBounceEnd: {
-                                    triggerCartBounce = false
-                                },
-                                onClick: {
-                                    navigateToCart = true
-                                }
-                            )
-                            .frame(width: 50, height: 50)
-                            .background(
-                                GeometryReader { geometry in
-                                    Color.clear.preference(
-                                        key: CartPositionKey.self,
-                                        value: CGPoint(
-                                            x: geometry.frame(in: .global).midX,
-                                            y: geometry.frame(in: .global).midY
-                                        )
-                                    )
-                                }
-                            )
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 8)
-                        .zIndex(1)
-
                         // Ubicación
                         VStack(spacing: 5) {
                             Text("Ubicación actual")
@@ -97,10 +60,7 @@ struct HomeView: View {
                                 if viewModel.isLoading {
                                     VStack(spacing: 20) {
                                         LottieView(name: "loader")
-                                            .frame(width: 150, height: 150)
-                                        Text("Cargando...")
-                                            .font(.system(size: 16, weight: .medium))
-                                            .foregroundColor(.gray)
+                                            .frame(width: 170, height: 170)
                                     }
                                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                                     .padding(.top, 100)
@@ -163,19 +123,21 @@ struct HomeView: View {
                                             selectedStore = store
                                         }
                                     )
+                                    
+                                    // Promo Section
+                                    PromoSection(
+                                        onSubscriptionTap: {
+                                            navigateToPlans = true
+                                        },
+                                        onFamilyPaymentTap: {
+                                            print("Family payment tapped!")
+                                            // TODO: Navigate to family payment info
+                                        }
+                                    )
+                                    .padding(.top, 8)
                                 }
 
-                                // Promo Section
-                                PromoSection(
-                                    onSubscriptionTap: {
-                                        navigateToPlans = true
-                                    },
-                                    onFamilyPaymentTap: {
-                                        print("Family payment tapped!")
-                                        // TODO: Navigate to family payment info
-                                    }
-                                )
-                                .padding(.top, 8)
+                              
 
                                 // Navigation link for Plans & Pricing
                                 NavigationLink(
@@ -204,7 +166,7 @@ struct HomeView: View {
 
                         SemicircularSlider()
                             .padding(.horizontal, 0)
-                            .padding(.top, -70)
+                            .padding(.top, -130)
                     }
                     .zIndex(2)
                 }
@@ -213,6 +175,47 @@ struct HomeView: View {
                     print("🛒 Cart position updated: \(position)")
                 }
             }
+            .toolbar {
+                
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(action: {
+                        navigateToWallet = true
+                    }) {
+                        HStack(spacing: 4) {
+                            Image("cerdito")
+                                .renderingMode(.original)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 20, height: 20)
+                            
+                            Text("$\(String(format: "%.2f", walletViewModel.balance))")
+                                .font(.system(size: 14, weight: .medium))
+                        }
+                    }
+                }
+                
+                // Botón del carrito a la derecha
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: {
+                        navigateToCart = true
+                    }) {
+                        
+                            Image(systemName: "cart.fill")
+                           
+                    }.badge(totalCartItems)
+                }
+                
+                // Botón de perfil a la derecha
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: {
+                        // TODO: Navigate to profile
+                        print("Profile tapped")
+                    }) {
+                        Image(systemName: "person.circle")
+                    }
+                }
+            }
+            .navigationBarBackButtonHidden(true)
             .addToCartOverlay(animationTrigger: $animationTrigger) {
                 triggerCartBounce = true
             }
@@ -220,15 +223,25 @@ struct HomeView: View {
                 if case .idle = viewModel.state {
                     viewModel.loadHomeData()
                 }
+                walletViewModel.loadBalance()
             }
 
         }
-        .navigationViewStyle(StackNavigationViewStyle())
+        
+//        .navigationViewStyle(StackNavigationViewStyle())
         // Present CartView modally using fullScreenCover to match Cart -> Checkout behavior
         // Wrap in NavigationView so the modal has its own navigation bar (title + toolbar)
         .fullScreenCover(isPresented: $navigateToCart) {
             NavigationView {
                 CartView()
+            }
+            .navigationViewStyle(StackNavigationViewStyle())
+        }
+
+        // Present WalletView modally
+        .fullScreenCover(isPresented: $navigateToWallet) {
+            NavigationView {
+                WalletView()
             }
             .navigationViewStyle(StackNavigationViewStyle())
         }
