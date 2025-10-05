@@ -21,6 +21,7 @@ struct HomeView: View {
     @State private var navigateToProductDetails: Bool = false
     @State private var selectedProduct: Product? = nil
     @State private var selectedStore: Store? = nil
+    @State private var navigateToProfile = false
 
     private var totalCartItems: Int {
         productCounts.values.reduce(0, +)
@@ -208,8 +209,7 @@ struct HomeView: View {
                 // Botón de perfil a la derecha
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: {
-                        // TODO: Navigate to profile
-                        print("Profile tapped")
+                        navigateToProfile = true
                     }) {
                         Image(systemName: "person.circle")
                     }
@@ -258,6 +258,14 @@ struct HomeView: View {
         .fullScreenCover(item: $selectedStore) { store in
             NavigationView {
                 StoreDetailView(store: store)
+            }
+            .navigationViewStyle(StackNavigationViewStyle())
+        }
+
+        // Present ProfileView modally
+        .fullScreenCover(isPresented: $navigateToProfile) {
+            NavigationView {
+                ProfileView()
             }
             .navigationViewStyle(StackNavigationViewStyle())
         }
