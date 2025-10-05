@@ -341,7 +341,7 @@ struct ProductDetailView: View {
                     }
                     .padding(.top, 60)
                     .zIndex(100)
-                    .clipped()
+                    
                 }.zIndex(200)
             }
         }
