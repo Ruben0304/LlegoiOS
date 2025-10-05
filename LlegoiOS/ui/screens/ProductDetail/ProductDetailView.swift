@@ -56,7 +56,7 @@ struct SimilarProductCard: View {
 
 struct ProductDetailView: View {
     let product: Product
-    @Environment(\.presentationMode) var presentationMode
+    @Environment(\.dismiss) private var dismiss
     @State private var selectedVariant = "Queso extra"
     @State private var selectedStoreId: String? = nil
     @State private var selectedStoreForNav: Store? = nil
@@ -347,18 +347,10 @@ struct ProductDetailView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
-        .toolbar(.hidden, for: .tabBar)
-        .toolbarBackground(.hidden, for: .navigationBar)
-        .onAppear {
-            let appearance = UITabBarAppearance()
-            appearance.configureWithTransparentBackground()
-            UITabBar.appearance().standardAppearance = appearance
-            UITabBar.appearance().scrollEdgeAppearance = appearance
-        }
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: {
-                    presentationMode.wrappedValue.dismiss()
+                    dismiss()
                 }) {
                     Image(systemName: "chevron.left")
                         .foregroundColor(Color.llegoPrimary)

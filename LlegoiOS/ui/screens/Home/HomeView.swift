@@ -190,29 +190,7 @@ struct HomeView: View {
                                 // The actual presentation uses a fullScreenCover so the Cart appears modally like CheckoutView
                                 EmptyView()
 
-                                // Navigation link for Product Detail
-                                NavigationLink(
-                                    destination: selectedProduct.map { ProductDetailView(product: $0) },
-                                    isActive: Binding(
-                                        get: { selectedProduct != nil },
-                                        set: { if !$0 { selectedProduct = nil } }
-                                    )
-                                ) {
-                                    EmptyView()
-                                }
-                                .hidden()
-
-                                // Navigation link for Store Detail
-                                NavigationLink(
-                                    destination: selectedStore.map { StoreDetailView(store: $0) },
-                                    isActive: Binding(
-                                        get: { selectedStore != nil },
-                                        set: { if !$0 { selectedStore = nil } }
-                                    )
-                                ) {
-                                    EmptyView()
-                                }
-                                .hidden()
+                                // NOTE: Product and Store details are presented modally using fullScreenCover below.
 
 
                             }
@@ -253,14 +231,22 @@ struct HomeView: View {
                 CartView()
             }
             .navigationViewStyle(StackNavigationViewStyle())
-            
         }
-        .fullScreenCover(isPresented: $navigateToProductDetails) {
+
+        // Present Product detail modally when a product is selected
+        .fullScreenCover(item: $selectedProduct) { product in
             NavigationView {
-                
+                ProductDetailView(product: product)
             }
             .navigationViewStyle(StackNavigationViewStyle())
-            
+        }
+
+        // Present Store detail modally when a store is selected
+        .fullScreenCover(item: $selectedStore) { store in
+            NavigationView {
+                StoreDetailView(store: store)
+            }
+            .navigationViewStyle(StackNavigationViewStyle())
         }
 
     }

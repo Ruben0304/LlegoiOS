@@ -27,7 +27,6 @@ enum Currency: String, CaseIterable {
 
 struct CartView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.presentationMode) var presentationMode
     @StateObject private var viewModel = CartViewModel()
     @State private var navigateToCheckout = false
     @State private var isAnimatingCheckout = false
@@ -272,7 +271,7 @@ struct CartView: View {
             }
 
             Button(action: {
-                presentationMode.wrappedValue.dismiss()
+               dismiss()
             }) {
                 HStack(spacing: 12) {
                     Image(systemName: "arrow.left")
