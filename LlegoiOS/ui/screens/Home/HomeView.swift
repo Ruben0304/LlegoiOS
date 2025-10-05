@@ -16,6 +16,7 @@ struct HomeView: View {
     @State private var triggerCartBounce = false
     @State private var navigateToPlans = false
     @State private var navigateToCart = false
+    @State private var navigateToProductDetails: Bool = false
     @State private var selectedProduct: Product? = nil
     @State private var selectedStore: Store? = nil
 
@@ -252,6 +253,14 @@ struct HomeView: View {
                 CartView()
             }
             .navigationViewStyle(StackNavigationViewStyle())
+            
+        }
+        .fullScreenCover(isPresented: $navigateToProductDetails) {
+            NavigationView {
+                
+            }
+            .navigationViewStyle(StackNavigationViewStyle())
+            
         }
 
     }

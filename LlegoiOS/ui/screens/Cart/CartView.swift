@@ -35,7 +35,7 @@ struct CartView: View {
 
     var body: some View {
         NavigationView{
-        ZStack {
+    ZStack(alignment: .top) {
             // Fondo con gradiente elegante
             LinearGradient(
                 gradient: Gradient(colors: [
@@ -126,6 +126,7 @@ struct CartView: View {
                             .padding(.horizontal, 20)
                            
                         }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                         // Insertamos el bottom bar como inset para que el ScrollView no quede oculto
                         .safeAreaInset(edge: .bottom) {
                             VStack(spacing: 12) {
@@ -176,8 +177,8 @@ struct CartView: View {
             
         }
         .navigationTitle("Carrito")
-        .navigationBarBackButtonHidden(true)
-        .navigationBarTitleDisplayMode(.large)
+    .navigationBarBackButtonHidden(true)
+    .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: {
@@ -202,7 +203,7 @@ struct CartView: View {
                                     .font(.system(size: 20))
                                 Text(currency.rawValue)
                                     .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.llegoPrimary)
+                                    .foregroundColor(.primary)
                                 Spacer()
                                 if selectedCurrency == currency {
                                     Image(systemName: "checkmark")
