@@ -1,12 +1,14 @@
 import SwiftUI
+import CoreLocation
 
 
 struct CheckoutView: View {
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var orderManager = OrderManager.shared
     @State private var selectedPaymentMethod: PaymentMethod?
     @State private var isProcessingPayment = false
     @State private var navigateToConfirmation = false
-    @State private var deliveryLocation = "Vedado, La Habana"
+    @State private var deliveryLocation = "Calle 23 #456, Vedado, La Habana"
     @State private var deliveryPrice = "150 CUP"
 
     let paymentMethods: [PaymentMethod] = [
@@ -370,17 +372,75 @@ struct CheckoutView: View {
 
 
     private func processPayment() {
-        guard selectedPaymentMethod != nil else { return }
+        guard let paymentMethod = selectedPaymentMethod else { return }
 
         withAnimation(.easeInOut(duration: 0.3)) {
             isProcessingPayment = true
         }
 
-        // Simular procesamiento
+        // Simular procesamiento de pago
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             isProcessingPayment = false
+
+            // Iniciar pedido con OrderManager
+            startOrder(paymentMethod: paymentMethod)
+
+            // Navegar a confirmación
             navigateToConfirmation = true
         }
+    }
+
+    private func startOrder(paymentMethod: PaymentMethod) {
+        // Productos de ejemplo (en producción, vendrían del carrito)
+        let products: [ActiveOrder.OrderProduct] = [
+            ActiveOrder.OrderProduct(
+                id: "1",
+                name: "Pizza Margarita",
+                imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen PNG.png",
+                quantity: 2,
+                price: 15.50
+            ),
+            ActiveOrder.OrderProduct(
+                id: "2",
+                name: "Tres Leches",
+                imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen (13).png",
+                quantity: 1,
+                price: 8.00
+            ),
+            ActiveOrder.OrderProduct(
+                id: "3",
+                name: "Batido de Mamey",
+                imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen (17).png",
+                quantity: 1,
+                price: 22.00
+            )
+        ]
+
+        // Coordenadas del restaurante (origen)
+        let restaurantCoordinates = CLLocationCoordinate2D(
+            latitude: 23.1150,
+            longitude: -82.3680
+        )
+
+        // Coordenadas de entrega (destino)
+        let deliveryCoordinates = CLLocationCoordinate2D(
+            latitude: 23.1136,
+            longitude: -82.3666
+        )
+
+        // Iniciar el pedido con simulación de 2 minutos
+        orderManager.startOrder(
+            products: products,
+            totalAmount: 45.50,
+            currency: "USD",
+            deliveryLocation: deliveryLocation,
+            deliveryCoordinates: deliveryCoordinates,
+            restaurantLocation: "Restaurante El Cubano, Centro Habana",
+            restaurantCoordinates: restaurantCoordinates,
+            paymentMethod: paymentMethod.name
+        )
+
+        print("✅ CheckoutView: Pedido iniciado con simulación de 2 minutos")
     }
 }
 

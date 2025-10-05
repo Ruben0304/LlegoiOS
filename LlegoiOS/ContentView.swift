@@ -66,15 +66,23 @@ struct ContentView: View {
 
 struct MainAppView: View {
     @Binding var selectedTab: Int
+    @StateObject private var orderManager = OrderManager.shared
     @State private var searchText = ""
     @State private var showTrackingView = false
-    @State private var navigateToTracking = false
+    @State private var showTrackingFullScreen = false
 
+    // Determinar si hay un pedido activo
+    private var hasActiveOrder: Bool {
+        orderManager.currentOrder != nil &&
+        orderManager.orderStatus != .idle &&
+        orderManager.orderStatus != .cancelled &&
+        orderManager.orderStatus != .delivered
+    }
 
     var body: some View {
         Group {
             if #available(iOS 26.0, *) {
-           
+
                     TabView() {
                         Tab("Inicio", systemImage: "house") {
                             HomeView()
@@ -100,21 +108,30 @@ struct MainAppView: View {
                                     placement: .toolbar,
                                     prompt: "Buscar productos o negocios..."
                                 )
-                    
-                    
+
+
                                 .searchToolbarBehavior(.minimize)
                     .tabViewBottomAccessory {
-
-                            OrderTrackingCard(onTap: {
-                                navigateToTracking = true
-                            })
-                    }
-                    .navigationDestination(isPresented: $navigateToTracking) {
-                        LiveOrderTrackingView()
+                        // Solo mostrar si hay pedido activo
+                        if hasActiveOrder {
+                            OrderTrackingCard(
+                                orderManager: orderManager,
+                                onTap: {
+                                    print("🔵 OrderTrackingCard tapped")
+                                    showTrackingFullScreen = true
+                                }
+                            )
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                        }
                     }
                     .tabBarMinimizeBehavior(.onScrollDown)
                     .accentColor(Color.llegoPrimary)
-                
+                    .fullScreenCover(isPresented: $showTrackingFullScreen) {
+                        if #available(iOS 26.0, *) {
+                            LiveOrderTrackingView()
+                        }
+                    }
+
                 // .toolbarBackground(.hidden, for: .tabBar)
                 // .background(.clear)
             } else {

@@ -5,9 +5,11 @@ import Combine
 @available(iOS 26.0, *)
 struct LiveOrderTrackingView: View {
     @Environment(\.dismiss) var dismiss
-    @StateObject private var trackingManager = OrderTrackingManager()
+    @StateObject private var orderManager = OrderManager.shared
     @State private var showDriverInfo = false
     @State private var hasAppeared = false
+    @State private var routeCoordinates: [CLLocationCoordinate2D] = []
+    @State private var currentDriverIndex: Int = 0
 
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 23.1143, longitude: -82.3673),
@@ -18,18 +20,7 @@ struct LiveOrderTrackingView: View {
         NavigationStack {
             ZStack(alignment: .bottom) {
                 // Mapa principal
-                Map(coordinateRegion: $region, annotationItems: [
-                    MapMarkerItem(
-                        id: "driver",
-                        coordinate: trackingManager.driverLocation,
-                        type: .driver
-                    ),
-                    MapMarkerItem(
-                        id: "destination",
-                        coordinate: trackingManager.destinationLocation,
-                        type: .destination
-                    )
-                ]) { item in
+                Map(coordinateRegion: $region, annotationItems: mapMarkers) { item in
                     MapAnnotation(coordinate: item.coordinate) {
                         Button(action: {
                             if item.type == .driver {
@@ -42,10 +33,27 @@ struct LiveOrderTrackingView: View {
                         }
                     }
                 }
+                .overlay(
+                    RouteOverlay(
+                        startCoordinate: orderManager.currentOrder?.restaurantCoordinates.clLocationCoordinate ?? CLLocationCoordinate2D(),
+                        endCoordinate: orderManager.currentOrder?.deliveryCoordinates.clLocationCoordinate ?? CLLocationCoordinate2D(),
+                        driverLocation: orderManager.driverLocation,
+                        region: $region
+                    )
+                )
                 .ignoresSafeArea()
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        Image(systemName: "xmark.circle")
+                            .foregroundColor(Color.llegoPrimary)
+                    }
+                }
+
                 ToolbarItem(placement: .principal) {
                     Text("Rastreando pedido")
                         .font(.headline)
@@ -61,37 +69,105 @@ struct LiveOrderTrackingView: View {
             }
             .sheet(isPresented: $showDriverInfo) {
                 orderDetailsSheet
-                    .presentationDetents([.height(300)])
+                    .presentationDetents([.height(350)])
                     .presentationDragIndicator(.visible)
             }
         }
         .onAppear {
-            trackingManager.startTracking()
+            generateRoute()
             updateMapRegion()
         }
-        .onDisappear {
-            trackingManager.stopTracking()
-        }
-        .onChange(of: trackingManager.driverLocation) { _ in
+        .onChange(of: orderManager.driverLocation) { _ in
             updateMapRegion()
+            updateDriverRouteIndex()
         }
+    }
+
+    private func generateRoute() {
+        guard let order = orderManager.currentOrder else { return }
+
+        let start = order.restaurantCoordinates.clLocationCoordinate
+        let end = order.deliveryCoordinates.clLocationCoordinate
+
+        routeCoordinates = generateRoutePoints(from: start, to: end)
+    }
+
+    private func generateRoutePoints(from start: CLLocationCoordinate2D, to end: CLLocationCoordinate2D) -> [CLLocationCoordinate2D] {
+        var points: [CLLocationCoordinate2D] = []
+        let numberOfPoints = 40
+
+        for i in 0...numberOfPoints {
+            let progress = Double(i) / Double(numberOfPoints)
+            let baseLat = start.latitude + (end.latitude - start.latitude) * progress
+            let baseLon = start.longitude + (end.longitude - start.longitude) * progress
+            let variation = sin(progress * .pi * 3) * 0.0005
+
+            points.append(CLLocationCoordinate2D(
+                latitude: baseLat + variation,
+                longitude: baseLon + variation * 0.7
+            ))
+        }
+
+        return points
+    }
+
+    private func updateDriverRouteIndex() {
+        guard let driverLoc = orderManager.driverLocation else { return }
+
+        // Encontrar el punto más cercano en la ruta
+        var minDistance = Double.infinity
+        var closestIndex = 0
+
+        for (index, point) in routeCoordinates.enumerated() {
+            let distance = sqrt(pow(point.latitude - driverLoc.latitude, 2) + pow(point.longitude - driverLoc.longitude, 2))
+            if distance < minDistance {
+                minDistance = distance
+                closestIndex = index
+            }
+        }
+
+        currentDriverIndex = closestIndex
+    }
+
+    // MARK: - Map Markers
+    private var mapMarkers: [MapMarkerItem] {
+        guard let order = orderManager.currentOrder,
+              let driverLocation = orderManager.driverLocation else {
+            return []
+        }
+
+        return [
+            MapMarkerItem(
+                id: "driver",
+                coordinate: driverLocation,
+                type: .driver
+            ),
+            MapMarkerItem(
+                id: "destination",
+                coordinate: order.deliveryCoordinates.clLocationCoordinate,
+                type: .destination
+            )
+        ]
     }
 
     private var orderDetailsSheet: some View {
         VStack(spacing: 0) {
 
-            // Header con botón de llamar
+            // Header con estado del pedido
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
 
                     HStack(spacing: 6) {
-                    
-                        Text("Pedido en camino")
+                        Image(systemName: orderManager.orderStatus.icon)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.llegoPrimary)
+
+                        Text(orderManager.orderStatus.displayText)
                             .font(.headline)
                     }
                     .padding(.top, 14)
 
-                    Text("\(trackingManager.estimatedMinutes) min aprox.")
+                    Text("\(orderManager.estimatedMinutesRemaining) min aprox.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -115,61 +191,61 @@ struct LiveOrderTrackingView: View {
             Divider()
 
             // Dirección de entrega
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "location.fill")
-                    .foregroundColor(.gray)
-                    .font(.body)
+            if let order = orderManager.currentOrder {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "location.fill")
+                        .foregroundColor(.gray)
+                        .font(.body)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Dirección de entrega")
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Dirección de entrega")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        Text(order.deliveryLocation)
+                            .font(.subheadline)
+                    }
+
+                    Spacer()
+                }
+                .padding()
+
+                Divider()
+
+                // Contenido del pedido
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Contenido del pedido")
                         .font(.caption)
                         .foregroundColor(.secondary)
 
-                    Text("Calle 23 #456, Vedado, Havana")
-                        .font(.subheadline)
+                    ScrollView {
+                        VStack(spacing: 8) {
+                            ForEach(order.products) { product in
+                                OrderProductRow(
+                                    imageUrl: product.imageUrl,
+                                    name: product.name,
+                                    quantity: product.quantity
+                                )
+                            }
+                        }
+                    }
                 }
-
-                Spacer()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
             }
-            .padding()
-
-            Divider()
-
-            // Contenido del pedido
-            VStack(alignment: .leading, spacing: 5) {
-                Text("Contenido del pedido")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                VStack(spacing: 8) {
-                    OrderProductRow(
-                        imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen PNG.png",
-                        name: "Pizza",
-                        quantity: 2
-                    )
-
-                    OrderProductRow(
-                        imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen (13).png",
-                        name: "Tres leches",
-                        quantity: 1
-                    )
-
-                    OrderProductRow(
-                        imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen (17).png",
-                        name: "Batido de mamey",
-                        quantity: 1
-                    )
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding()
 
             Spacer()
         }
     }
 
     private func updateMapRegion() {
-        let locations = [trackingManager.driverLocation, trackingManager.destinationLocation]
+        guard let order = orderManager.currentOrder,
+              let driverLocation = orderManager.driverLocation else {
+            return
+        }
+
+        let destinationLocation = order.deliveryCoordinates.clLocationCoordinate
+        let locations = [driverLocation, destinationLocation]
         let latitudes = locations.map { $0.latitude }
         let longitudes = locations.map { $0.longitude }
 
@@ -271,7 +347,7 @@ struct AnnotationMarker: View {
                     )
                     .shadow(radius: 4)
 
-                Image(systemName: "bicycle")
+                Image(systemName: "motorcycle")
                     .foregroundColor(.white)
                     .font(.system(size: 20, weight: .semibold))
             } else {
@@ -313,42 +389,6 @@ struct Triangle: Shape {
     }
 }
 
-// MARK: - Order Tracking Manager
-
-@available(iOS 26.0, *)
-class OrderTrackingManager: ObservableObject {
-    @Published var driverLocation = CLLocationCoordinate2D(latitude: 23.1150, longitude: -82.3680)
-    @Published var destinationLocation = CLLocationCoordinate2D(latitude: 23.1136, longitude: -82.3666)
-    @Published var estimatedMinutes = 15
-
-    private var timer: Timer?
-
-    func startTracking() {
-        // Simular actualización de ubicación del repartidor cada 3 segundos
-        timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
-            self?.updateDriverLocation()
-        }
-    }
-
-    func stopTracking() {
-        timer?.invalidate()
-        timer = nil
-    }
-
-    private func updateDriverLocation() {
-        // Simular movimiento del repartidor hacia el destino
-        let latDiff = destinationLocation.latitude - driverLocation.latitude
-        let lonDiff = destinationLocation.longitude - driverLocation.longitude
-
-        withAnimation(.easeInOut(duration: 2.0)) {
-            driverLocation.latitude += latDiff * 0.08
-            driverLocation.longitude += lonDiff * 0.08
-
-            // Actualizar tiempo estimado
-            estimatedMinutes = max(2, estimatedMinutes - 1)
-        }
-    }
-}
 
 #Preview {
     if #available(iOS 26.0, *) {

@@ -368,10 +368,9 @@ struct WalletView: View {
                 Button(action: {
                     dismiss()
                 }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 22))
-                        .foregroundColor(.secondary)
-                        .symbolRenderingMode(.hierarchical)
+                    Image(systemName: "xmark.circle")
+                        .foregroundColor(Color.llegoPrimary)
+
                 }
             }
         }

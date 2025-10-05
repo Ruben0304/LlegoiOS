@@ -1,12 +1,28 @@
 import SwiftUI
 
 struct CurvedBackground<Content: View>: View {
-    let curveStartAbsolute: CGFloat
+    @Binding var curveStartAbsolute: CGFloat
     let curveEndAbsolute: CGFloat
     let curveInclinationAbsolute: CGFloat
     let invertCurve: Bool
     let content: () -> Content
 
+    // Inicializador con Binding (para valores dinámicos)
+    init(
+        curveStartAbsolute: Binding<CGFloat>,
+        curveEndAbsolute: CGFloat = 150,
+        curveInclinationAbsolute: CGFloat = 50,
+        invertCurve: Bool = false,
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self._curveStartAbsolute = curveStartAbsolute
+        self.curveEndAbsolute = curveEndAbsolute
+        self.curveInclinationAbsolute = curveInclinationAbsolute
+        self.invertCurve = invertCurve
+        self.content = content
+    }
+
+    // Inicializador con CGFloat (para valores estáticos)
     init(
         curveStartAbsolute: CGFloat = 150,
         curveEndAbsolute: CGFloat = 150,
@@ -14,7 +30,7 @@ struct CurvedBackground<Content: View>: View {
         invertCurve: Bool = false,
         @ViewBuilder content: @escaping () -> Content
     ) {
-        self.curveStartAbsolute = curveStartAbsolute
+        self._curveStartAbsolute = .constant(curveStartAbsolute)
         self.curveEndAbsolute = curveEndAbsolute
         self.curveInclinationAbsolute = curveInclinationAbsolute
         self.invertCurve = invertCurve
