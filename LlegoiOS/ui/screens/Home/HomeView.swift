@@ -124,7 +124,12 @@ struct HomeView: View {
                                             selectedStore = store
                                         }
                                     )
-                                    
+
+                                    // Category Selection Card
+                                    CategorySelectionCard()
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 8)
+
                                     // Promo Section
                                     PromoSection(
                                         onSubscriptionTap: {

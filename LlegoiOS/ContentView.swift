@@ -18,17 +18,17 @@ struct ContentView: View {
     private let productRepository = ProductRepository()
 
     var body: some View {
-//        if isOnboardingCompleted {
-//            MainAppView(selectedTab: $selectedTab)
-//        } else {
-//            OnboardingView(isOnboardingCompleted: $isOnboardingCompleted)
-//                .onChange(of: isOnboardingCompleted) { completed in
-//                    if completed {
-//                        OnboardingHelper.completeOnboarding()
-//                    }
-//                }
-//        }
-        MainAppView(selectedTab: $selectedTab)
+        if isOnboardingCompleted {
+            MainAppView(selectedTab: $selectedTab)
+        } else {
+            OnboardingView(isOnboardingCompleted: $isOnboardingCompleted)
+                .onChange(of: isOnboardingCompleted) { completed in
+                    if completed {
+                        OnboardingHelper.completeOnboarding()
+                    }
+                }
+        }
+//        MainAppView(selectedTab: $selectedTab)
 //            .onAppear {
 //                testGraphQLConnection()
 //            }
@@ -91,7 +91,11 @@ struct MainAppView: View {
                         Tab(role: .search) {
                             NavigationStack {
                                                    SearchView(searchText: $searchText)
-                                                   }
+                                                   }.searchable(
+                                                    text: $searchText,
+                                                    placement: .toolbar,
+                                                    prompt: "Buscar productos o negocios..."
+                                                )
                         }
                         Tab("Categorías", systemImage: "square.grid.2x2") {
                             CategoriesView()
@@ -103,11 +107,7 @@ struct MainAppView: View {
                                 .ignoresSafeArea(.container, edges: .bottom)
                         }
                     }
-                    .searchable(
-                                    text: $searchText,
-                                    placement: .toolbar,
-                                    prompt: "Buscar productos o negocios..."
-                                )
+                    
 
 
                                 .searchToolbarBehavior(.minimize)

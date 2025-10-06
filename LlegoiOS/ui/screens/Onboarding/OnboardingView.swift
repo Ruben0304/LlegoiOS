@@ -11,18 +11,18 @@ struct OnboardingView: View {
             description: "Pide comida, productos y mucho más desde la comodidad de tu casa",
             imageName: "onboarding"
         ),
-        OnboardingPage(
-            title: "Delivery rápido",
-            subtitle: "Entrega en tiempo récord",
-            description: "Recibe tus pedidos en minutos. Nuestros repartidores están siempre listos para llevarte lo que necesitas",
-            imageName: "onboarding"
-        ),
-        OnboardingPage(
-            title: "Miles de productos",
-            subtitle: "Todo lo que necesitas en un solo lugar",
-            description: "Restaurantes, supermercados, farmacias y mucho más. Encuentra todo lo que buscas en Llegó",
-            imageName: "onboarding"
-        )
+//        OnboardingPage(
+//            title: "Delivery rápido",
+//            subtitle: "Entrega en tiempo récord",
+//            description: "Recibe tus pedidos en minutos. Nuestros repartidores están siempre listos para llevarte lo que necesitas",
+//            imageName: "onboarding"
+//        ),
+//        OnboardingPage(
+//            title: "Miles de productos",
+//            subtitle: "Todo lo que necesitas en un solo lugar",
+//            description: "Restaurantes, supermercados, farmacias y mucho más. Encuentra todo lo que buscas en Llegó",
+//            imageName: "onboarding"
+//        )
     ]
 
     var body: some View {

@@ -87,16 +87,15 @@ struct ProductDetailView: View {
     ]
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                CurvedBackground(
-                    curveStartAbsolute: 170,
-                    curveEndAbsolute: 170,
-                    curveInclinationAbsolute: 50,
-                    invertCurve: true
-                ) {
-                    ScrollView {
-                        VStack(spacing: 0) {
+        ZStack {
+            CurvedBackground(
+                curveStartAbsolute: 170,
+                curveEndAbsolute: 170,
+                curveInclinationAbsolute: 50,
+                invertCurve: true
+            ) {
+                ScrollView {
+                    VStack(spacing: 0) {
                             // Product Image
                             AsyncImage(url: URL(string: product.imageUrl)) { phase in
                                 switch phase {
@@ -337,13 +336,12 @@ struct ProductDetailView: View {
                                 EmptyView()
                             }
                             .hidden()
-                        }.padding(.top,-45)
-                    }
-                    .padding(.top, 60)
-                    .zIndex(100)
-                    
-                }.zIndex(200)
-            }
+                    }.padding(.top,-45)
+                }
+                .padding(.top, 60)
+                .zIndex(100)
+
+            }.zIndex(200)
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
