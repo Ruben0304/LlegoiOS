@@ -17,27 +17,34 @@ struct RegisterView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Background
-                Color.llegoBackground
-                    .ignoresSafeArea()
+                // Gradient Background moderno
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.llegoBackground,
+                        Color.white
+                    ]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
 
-                ScrollView {
+                ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
                         // Header
                         headerSection
-                            .padding(.top, 40)
+                            .padding(.top, 20)
 
                         // Formulario de registro
                         registerFormSection
-                            .padding(.top, 40)
+                            .padding(.top, 36)
 
                         // Login link
                         loginLinkSection
-                            .padding(.top, 32)
+                            .padding(.top, 28)
 
                         Spacer(minLength: 40)
                     }
-                    .padding(.horizontal, 24)
+                    .padding(.horizontal, 28)
                 }
 
                 // Loading overlay
@@ -67,45 +74,56 @@ struct RegisterView: View {
 
     // MARK: - Header Section
     private var headerSection: some View {
-        VStack(spacing: 16) {
-            // Logo
-            Circle()
-                .fill(Color.llegoPrimary)
-                .frame(width: 70, height: 70)
-                .overlay(
-                    Text("L")
-                        .font(.system(size: 36, weight: .bold))
-                        .foregroundColor(.white)
-                )
+        VStack(spacing: 20) {
+            // Logo con animación
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color.llegoPrimary,
+                                Color.llegoPrimary.opacity(0.8)
+                            ]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 90, height: 90)
+                    .shadow(color: Color.llegoPrimary.opacity(0.3), radius: 20, x: 0, y: 10)
 
-            // Título
-            Text("Crear cuenta")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundColor(.llegoPrimary)
+                Text("L")
+                    .font(.system(size: 42, weight: .bold))
+                    .foregroundColor(.white)
+            }
 
-            // Subtítulo
-            Text("Completa tus datos para registrarte")
-                .font(.system(size: 16, weight: .regular))
-                .foregroundColor(.gray)
-                .multilineTextAlignment(.center)
+            VStack(spacing: 8) {
+                // Título
+                Text("Crear cuenta")
+                    .font(.system(size: 32, weight: .bold))
+                    .foregroundColor(.llegoPrimary)
+
+                // Subtítulo
+                Text("Completa tus datos para comenzar")
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
         }
     }
 
     // MARK: - Register Form Section
     private var registerFormSection: some View {
-        VStack(spacing: 16) {
-            // Name Field
+        VStack(spacing: 18) {
+            // Name Field - Estilo iOS moderno
             VStack(alignment: .leading, spacing: 8) {
-                Text("Nombre completo")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.llegoPrimary)
-
-                HStack {
+                HStack(spacing: 12) {
                     Image(systemName: "person.fill")
-                        .foregroundColor(.gray)
-                        .frame(width: 20)
+                        .font(.system(size: 16))
+                        .foregroundColor(focusedField == .name ? .llegoPrimary : .gray)
+                        .frame(width: 24)
 
-                    TextField("Tu nombre completo", text: $viewModel.registerName)
+                    TextField("Nombre completo", text: $viewModel.registerName)
+                        .font(.system(size: 16))
                         .autocapitalization(.words)
                         .focused($focusedField, equals: .name)
                         .submitLabel(.next)
@@ -113,62 +131,57 @@ struct RegisterView: View {
                             focusedField = .email
                         }
                 }
-                .padding()
-                .background(Color.white)
-                .cornerRadius(12)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
+                .background(Color(.systemGray6))
+                .cornerRadius(14)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(focusedField == .name ? Color.llegoPrimary : Color.gray.opacity(0.3), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(focusedField == .name ? Color.llegoPrimary : Color.clear, lineWidth: 2)
                 )
+                .animation(.easeInOut(duration: 0.2), value: focusedField)
             }
 
-            // Email Field
+            // Email Field - Estilo iOS moderno
             VStack(alignment: .leading, spacing: 8) {
-                Text("Correo electrónico")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.llegoPrimary)
-
-                HStack {
+                HStack(spacing: 12) {
                     Image(systemName: "envelope.fill")
-                        .foregroundColor(.gray)
-                        .frame(width: 20)
+                        .font(.system(size: 16))
+                        .foregroundColor(focusedField == .email ? .llegoPrimary : .gray)
+                        .frame(width: 24)
 
-                    TextField("tu@email.com", text: $viewModel.registerEmail)
+                    TextField("Correo electrónico", text: $viewModel.registerEmail)
+                        .font(.system(size: 16))
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
+                        .autocorrectionDisabled()
                         .focused($focusedField, equals: .email)
                         .submitLabel(.next)
                         .onSubmit {
                             focusedField = .phone
                         }
                 }
-                .padding()
-                .background(Color.white)
-                .cornerRadius(12)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
+                .background(Color(.systemGray6))
+                .cornerRadius(14)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(focusedField == .email ? Color.llegoPrimary : Color.gray.opacity(0.3), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(focusedField == .email ? Color.llegoPrimary : Color.clear, lineWidth: 2)
                 )
+                .animation(.easeInOut(duration: 0.2), value: focusedField)
             }
 
-            // Phone Field (Optional)
+            // Phone Field (Optional) - Estilo iOS moderno
             VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("Teléfono")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.llegoPrimary)
-
-                    Text("(opcional)")
-                        .font(.system(size: 12, weight: .regular))
-                        .foregroundColor(.gray)
-                }
-
-                HStack {
+                HStack(spacing: 12) {
                     Image(systemName: "phone.fill")
-                        .foregroundColor(.gray)
-                        .frame(width: 20)
+                        .font(.system(size: 16))
+                        .foregroundColor(focusedField == .phone ? .llegoPrimary : .gray)
+                        .frame(width: 24)
 
-                    TextField("+53 5555 5555", text: $viewModel.registerPhone)
+                    TextField("Teléfono (opcional)", text: $viewModel.registerPhone)
+                        .font(.system(size: 16))
                         .keyboardType(.phonePad)
                         .focused($focusedField, equals: .phone)
                         .submitLabel(.next)
@@ -176,112 +189,133 @@ struct RegisterView: View {
                             focusedField = .password
                         }
                 }
-                .padding()
-                .background(Color.white)
-                .cornerRadius(12)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
+                .background(Color(.systemGray6))
+                .cornerRadius(14)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(focusedField == .phone ? Color.llegoPrimary : Color.gray.opacity(0.3), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(focusedField == .phone ? Color.llegoPrimary : Color.clear, lineWidth: 2)
                 )
+                .animation(.easeInOut(duration: 0.2), value: focusedField)
             }
 
-            // Password Field
+            // Password Field - Estilo iOS moderno
             VStack(alignment: .leading, spacing: 8) {
-                Text("Contraseña")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.llegoPrimary)
-
-                HStack {
+                HStack(spacing: 12) {
                     Image(systemName: "lock.fill")
-                        .foregroundColor(.gray)
-                        .frame(width: 20)
+                        .font(.system(size: 16))
+                        .foregroundColor(focusedField == .password ? .llegoPrimary : .gray)
+                        .frame(width: 24)
 
-                    if showPassword {
-                        TextField("Mínimo 6 caracteres", text: $viewModel.registerPassword)
-                            .focused($focusedField, equals: .password)
-                            .submitLabel(.go)
-                            .onSubmit {
-                                Task {
-                                    await viewModel.register()
-                                }
-                            }
-                    } else {
-                        SecureField("Mínimo 6 caracteres", text: $viewModel.registerPassword)
-                            .focused($focusedField, equals: .password)
-                            .submitLabel(.go)
-                            .onSubmit {
-                                Task {
-                                    await viewModel.register()
-                                }
-                            }
+                    Group {
+                        if showPassword {
+                            TextField("Contraseña (mín. 6 caracteres)", text: $viewModel.registerPassword)
+                                .font(.system(size: 16))
+                        } else {
+                            SecureField("Contraseña (mín. 6 caracteres)", text: $viewModel.registerPassword)
+                                .font(.system(size: 16))
+                        }
+                    }
+                    .focused($focusedField, equals: .password)
+                    .submitLabel(.go)
+                    .onSubmit {
+                        Task {
+                            await viewModel.register()
+                        }
                     }
 
                     Button(action: {
-                        showPassword.toggle()
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showPassword.toggle()
+                        }
                     }) {
                         Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
+                            .font(.system(size: 16))
                             .foregroundColor(.gray)
                     }
                 }
-                .padding()
-                .background(Color.white)
-                .cornerRadius(12)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
+                .background(Color(.systemGray6))
+                .cornerRadius(14)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(focusedField == .password ? Color.llegoPrimary : Color.gray.opacity(0.3), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(focusedField == .password ? Color.llegoPrimary : Color.clear, lineWidth: 2)
                 )
+                .animation(.easeInOut(duration: 0.2), value: focusedField)
             }
 
-            // Register Button
+            // Register Button - Estilo iOS moderno
             Button(action: {
                 Task {
                     await viewModel.register()
                 }
             }) {
-                HStack {
+                HStack(spacing: 8) {
                     Text("Crear cuenta")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(.white)
 
                     if case .loading = viewModel.state {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            .scaleEffect(0.8)
+                            .scaleEffect(0.9)
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: 54)
+                .frame(height: 56)
                 .background(
                     viewModel.isRegisterButtonEnabled
-                        ? Color.llegoButton
-                        : Color.gray.opacity(0.3)
+                        ? LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color.llegoButton,
+                                Color.llegoButton.opacity(0.9)
+                            ]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                        : LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color.gray.opacity(0.3),
+                                Color.gray.opacity(0.3)
+                            ]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
                 )
-                .cornerRadius(12)
+                .cornerRadius(14)
+                .shadow(
+                    color: viewModel.isRegisterButtonEnabled ? Color.llegoButton.opacity(0.4) : Color.clear,
+                    radius: 12,
+                    x: 0,
+                    y: 6
+                )
             }
             .disabled(!viewModel.isRegisterButtonEnabled)
             .padding(.top, 8)
 
             // Terms and conditions
-            Text("Al registrarte, aceptas nuestros términos y condiciones")
-                .font(.system(size: 12, weight: .regular))
-                .foregroundColor(.gray)
+            Text("Al registrarte, aceptas nuestros **términos y condiciones**")
+                .font(.system(size: 13, weight: .regular))
+                .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
-                .padding(.top, 8)
+                .padding(.top, 4)
         }
     }
 
     // MARK: - Login Link Section
     private var loginLinkSection: some View {
-        VStack(spacing: 12) {
+        HStack(spacing: 4) {
             Text("¿Ya tienes una cuenta?")
-                .font(.system(size: 14, weight: .regular))
-                .foregroundColor(.gray)
+                .font(.system(size: 15, weight: .regular))
+                .foregroundColor(.secondary)
 
             Button(action: {
                 presentationMode.wrappedValue.dismiss()
             }) {
                 Text("Inicia sesión")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.llegoPrimary)
             }
         }

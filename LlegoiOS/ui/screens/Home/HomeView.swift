@@ -160,16 +160,11 @@ struct HomeView: View {
                         }
                     }
 
-                    // Semicircular Slider - en ZStack por encima
-                    VStack {
-                        Spacer()
-                            .frame(height: 130)
-
-                        SemicircularSlider()
-                            .padding(.horizontal, 0)
-                            .padding(.top, -130)
-                    }
-                    .zIndex(2)
+                    // Semicircular Slider - Posición absoluta fija
+                    SemicircularSlider()
+                        .frame(maxWidth: .infinity)
+                        .position(x: UIScreen.main.bounds.width / 2, y: 180)
+                        .zIndex(2)
                 }
                 .onPreferenceChange(CartPositionKey.self) { position in
                     cartPosition = position
