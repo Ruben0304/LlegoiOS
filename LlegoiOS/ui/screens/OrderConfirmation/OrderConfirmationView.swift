@@ -94,23 +94,23 @@ struct OrderConfirmationView: View {
                                     .foregroundColor(.white.opacity(0.9))
                             }
 
-                            HStack(spacing: 16) {
-                                Image(systemName: "truck.box.fill")
-                                    .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(.white)
-
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Envío a \(deliveryLocation)")
-                                        .font(.system(size: 18, weight: .medium))
-                                        .foregroundColor(.white.opacity(0.9))
-
-                                    Text("Pago: \(selectedPaymentMethod)")
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(.white.opacity(0.7))
-                                }
-
-                                Spacer()
-                            }
+//                            HStack(spacing: 16) {
+//                                Image(systemName: "truck.box.fill")
+//                                    .font(.system(size: 18, weight: .bold))
+//                                    .foregroundColor(.white)
+//
+//                                VStack(alignment: .leading, spacing: 4) {
+//                                    Text("Envío a \(deliveryLocation)")
+//                                        .font(.system(size: 18, weight: .medium))
+//                                        .foregroundColor(.white.opacity(0.9))
+//
+//                                    Text("Pago: \(selectedPaymentMethod)")
+//                                        .font(.system(size: 16, weight: .medium))
+//                                        .foregroundColor(.white.opacity(0.7))
+//                                }
+//
+//                                Spacer()
+//                            }
                         }
                         .padding(.top, 16)
                         .transition(.scale.combined(with: .opacity))

@@ -48,16 +48,9 @@ struct RegisterView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: {
+                    BackButton(action: {
                         presentationMode.wrappedValue.dismiss()
-                    }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 16, weight: .semibold))
-                            Text("Volver")
-                        }
-                        .foregroundColor(.llegoPrimary)
-                    }
+                    })
                 }
             }
             .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {

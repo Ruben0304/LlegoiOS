@@ -36,19 +36,15 @@ struct LocationPickerView: View {
                 // Header con búsqueda
                 VStack(spacing: 0) {
                     HStack {
-                        Button(action: {
-                            presentationMode.wrappedValue.dismiss()
-                        }) {
-                            ZStack {
-                                Circle()
-                                    .fill(Color.white)
-                                    .frame(width: 40, height: 40)
-                                    .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 2)
+                        ZStack {
+                            Circle()
+                                .fill(Color.white)
+                                .frame(width: 40, height: 40)
+                                .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 2)
 
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.llegoPrimary)
-                            }
+                            CloseButton(action: {
+                                presentationMode.wrappedValue.dismiss()
+                            })
                         }
 
                         Spacer()

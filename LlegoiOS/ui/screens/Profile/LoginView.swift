@@ -2,6 +2,7 @@ import SwiftUI
 import AuthenticationServices
 
 struct LoginView: View {
+    @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: ProfileViewModel
 
     @State private var showPassword: Bool = false
@@ -14,49 +15,60 @@ struct LoginView: View {
     }
 
     var body: some View {
-        ZStack {
-            // Background
-            Color.llegoBackground
-                .ignoresSafeArea()
+        NavigationView {
+            ZStack {
+                // Background
+                Color.llegoBackground
+                    .ignoresSafeArea()
 
-            ScrollView {
-                VStack(spacing: 0) {
-                    // Header con logo y título
-                    headerSection
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // Header con logo y título
+                        headerSection
 
-                    // Formulario de login
-                    loginFormSection
-                        .padding(.top, 40)
+                        // Formulario de login
+                        loginFormSection
+                            .padding(.top, 40)
 
-                    // Divider con "o"
-                    dividerSection
-                        .padding(.vertical, 32)
+                        // Divider con "o"
+                        dividerSection
+                            .padding(.vertical, 32)
 
-                    // Apple Sign In
-                    appleSignInSection
+                        // Apple Sign In
+                        appleSignInSection
 
-                    // Registro
-                    registerSection
-                        .padding(.top, 32)
+                        // Registro
+                        registerSection
+                            .padding(.top, 32)
 
-                    Spacer(minLength: 40)
+                        Spacer(minLength: 40)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 60)
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 60)
-            }
 
-            // Loading overlay
-            if case .loading = viewModel.state {
-                loadingOverlay
+                // Loading overlay
+                if case .loading = viewModel.state {
+                    loadingOverlay
+                }
             }
-        }
-        .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
-            Button("OK") {
-                viewModel.errorMessage = nil
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    BackButton(action: {
+                        dismiss()
+                    })
+                }
             }
-        } message: {
-            if let error = viewModel.errorMessage {
-                Text(error)
+            .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
+                Button("OK") {
+                    viewModel.errorMessage = nil
+                }
+            } message: {
+                if let error = viewModel.errorMessage {
+                    Text(error)
+                }
             }
         }
     }

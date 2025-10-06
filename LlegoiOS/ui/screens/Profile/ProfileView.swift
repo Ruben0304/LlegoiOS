@@ -9,6 +9,7 @@ extension CLLocationCoordinate2D: Equatable {
 }
 
 struct ProfileView: View {
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = ProfileViewModel()
     @StateObject private var locationManager = LocationManager()
     @State private var showingLocationPicker = false
@@ -83,6 +84,14 @@ struct ProfileView: View {
             }
             .navigationTitle("Mi Cuenta")
             .navigationBarTitleDisplayMode(.large)
+            .navigationBarBackButtonHidden(true)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    BackButton(action: {
+                        dismiss()
+                    })
+                }
+            }
         }
         .sheet(isPresented: $showingLocationPicker) {
             LocationPickerView(locationManager: locationManager)
@@ -454,13 +463,9 @@ struct EditNameView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: {
+                    CloseButton(action: {
                         presentationMode.wrappedValue.dismiss()
-                    }) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.llegoPrimary)
-                    }
+                    })
                 }
             }
         }

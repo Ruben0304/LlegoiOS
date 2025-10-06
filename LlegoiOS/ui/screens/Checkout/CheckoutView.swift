@@ -16,7 +16,7 @@ struct CheckoutView: View {
             id: "cash_cup",
             name: "Efectivo CUP",
             description: "Pago al recibir el pedido",
-            icon: "banknote",
+            imageType: .systemIcon("banknote"),
             color: Color.llegoPrimary,
             currency: "CUP"
         ),
@@ -24,7 +24,7 @@ struct CheckoutView: View {
             id: "cash_usd",
             name: "Efectivo USD",
             description: "Pago al recibir el pedido",
-            icon: "dollarsign.circle",
+            imageType: .systemIcon("dollarsign.circle"),
             color: Color.llegoAccent,
             currency: "USD"
         ),
@@ -32,7 +32,7 @@ struct CheckoutView: View {
             id: "bank_transfer",
             name: "Transferencia Bancaria",
             description: "Transferencia CUP a cuenta bancaria",
-            icon: "building.columns",
+            imageType: .systemIcon("building.columns"),
             color: Color.llegoSecondary,
             currency: "CUP"
         ),
@@ -40,7 +40,7 @@ struct CheckoutView: View {
             id: "credit_card",
             name: "Tarjeta de Crédito",
             description: "Visa/Mastercard USD",
-            icon: "creditcard",
+            imageType: .assetImage("visa"),
             color: Color.llegoTertiary,
             currency: "USD"
         ),
@@ -48,7 +48,7 @@ struct CheckoutView: View {
             id: "qvapay",
             name: "QvaPay",
             description: "Pago digital rápido y seguro",
-            icon: "qrcode",
+            imageType: .assetImage("qvapay"),
             color: Color(red: 0.2, green: 0.6, blue: 0.9),
             currency: "CUP/USD"
         ),
@@ -56,7 +56,7 @@ struct CheckoutView: View {
             id: "tropipay",
             name: "TropiPay",
             description: "Cartera digital cubana",
-            icon: "wallet.pass",
+            imageType: .assetImage("tropipay"),
             color: Color(red: 0.9, green: 0.4, blue: 0.1),
             currency: "CUP/USD"
         )
@@ -99,19 +99,9 @@ struct CheckoutView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: {
+                    BackButton(action: {
                         dismiss()
-                    }) {
-                        Image(systemName: "chevron.left")
-                            .font(.title2.weight(.semibold))
-                            .foregroundColor(.llegoPrimary)
-                    }
-                }
-
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Image(systemName: "truck.box")
-                        .font(.title2.weight(.bold))
-                        .foregroundColor(.llegoAccent)
+                    })
                 }
             }
         }
@@ -458,9 +448,17 @@ struct PaymentMethodCard: View {
                         .fill(method.color.opacity(0.1))
                         .frame(width: 50, height: 50)
 
-                    Image(systemName: method.icon)
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundColor(method.color)
+                    switch method.imageType {
+                    case .systemIcon(let iconName):
+                        Image(systemName: iconName)
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundColor(method.color)
+                    case .assetImage(let imageName):
+                        Image(imageName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 30, height: 30)
+                    }
                 }
 
                 // Información del método
@@ -522,12 +520,27 @@ struct PaymentMethodCard: View {
 }
 
 struct PaymentMethod: Equatable {
+    enum ImageType: Equatable {
+        case systemIcon(String)
+        case assetImage(String)
+    }
+
     let id: String
     let name: String
     let description: String
-    let icon: String
+    let imageType: ImageType
     let color: Color
     let currency: String
+
+    // Computed property para compatibilidad con código existente
+    var icon: String {
+        switch imageType {
+        case .systemIcon(let name):
+            return name
+        case .assetImage(let name):
+            return name
+        }
+    }
 
     static func == (lhs: PaymentMethod, rhs: PaymentMethod) -> Bool {
         return lhs.id == rhs.id

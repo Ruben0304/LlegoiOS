@@ -171,13 +171,9 @@ struct SearchView: View {
             .navigationBarBackButtonHidden(false)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: {
+                    BackButton(action: {
                         dismiss()
-                    }) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.llegoPrimary)
-                    }
+                    })
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {

@@ -349,14 +349,9 @@ struct ProductDetailView: View {
         .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: {
+                BackButton(action: {
                     dismiss()
-                }) {
-                    Image(systemName: "chevron.left")
-                        .foregroundColor(Color.llegoPrimary)
-                        .font(.system(size: 18, weight: .semibold))
-                }.buttonStyle(.glassProminent)
-                    .tint(Color.white)
+                })
             }
 
             ToolbarItem(placement: .principal) {
@@ -371,12 +366,9 @@ struct ProductDetailView: View {
                         print("Cart tapped")
                     }) {
                         Image(systemName: "cart")
-                            .foregroundColor(Color.llegoPrimary)
-                            .font(.system(size: 18, weight: .semibold))
+                           
                     }.badge(cartItemCount)
-                        .buttonStyle(.glassProminent)
-                            .tint(Color.white)
-
+                    
                 }
             }
         }

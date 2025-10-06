@@ -365,13 +365,9 @@ struct WalletView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
+                CloseButton(action: {
                     dismiss()
-                }) {
-                    Image(systemName: "xmark.circle")
-                        .foregroundColor(Color.llegoPrimary)
-
-                }
+                })
             }
         }
         .sheet(isPresented: $viewModel.showRechargeSheet) {

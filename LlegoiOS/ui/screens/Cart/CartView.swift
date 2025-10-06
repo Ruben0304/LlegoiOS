@@ -180,13 +180,9 @@ struct CartView: View {
     .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: {
+                BackButton(action: {
                     dismiss()
-                }) {
-                    Image(systemName: "chevron.left")
-                        .foregroundColor(Color.llegoPrimary)
-                        .font(.system(size: 18, weight: .semibold))
-                }
+                })
             }
 
             ToolbarItem(placement: .navigationBarTrailing) {

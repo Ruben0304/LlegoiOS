@@ -415,12 +415,9 @@ struct StoreDetailView: View {
         .toolbarBackground(.hidden, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: {
+                BackButton(action: {
                     dismiss()
-                }) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 18, weight: .semibold))
-                }
+                })
             }
 
             ToolbarItem(placement: .navigationBarTrailing) {

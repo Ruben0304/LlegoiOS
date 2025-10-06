@@ -7,6 +7,7 @@ struct LiveOrderTrackingView: View {
     @Environment(\.dismiss) var dismiss
     @StateObject private var orderManager = OrderManager.shared
     @State private var showDriverInfo = false
+    @State private var showChat = false
     @State private var hasAppeared = false
     @State private var routeCoordinates: [CLLocationCoordinate2D] = []
     @State private var currentDriverIndex: Int = 0
@@ -42,35 +43,62 @@ struct LiveOrderTrackingView: View {
                     )
                 )
                 .ignoresSafeArea()
+
+                // Botones flotantes sobre el mapa
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 12) {
+                            // Botón de info
+                            Button(action: {
+                                showDriverInfo.toggle()
+                            }) {
+                                Image(systemName: "info.circle.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(.white)
+                                    .frame(width: 56, height: 56)
+                                    .background(Circle().fill(Color.llegoPrimary))
+                                    .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
+                            }
+
+                            // Botón de chat
+                            Button(action: {
+                                showChat = true
+                            }) {
+                                Image(systemName: "message.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(.white)
+                                    .frame(width: 56, height: 56)
+                                    .background(Circle().fill(Color.llegoAccent))
+                                    .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
+                            }
+                        }
+                        .padding(.trailing, 20)
+                        .padding(.bottom, 20)
+                    }
+                }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button(action: {
+                    CloseButton(action: {
                         dismiss()
-                    }) {
-                        Image(systemName: "xmark.circle")
-                            .foregroundColor(Color.llegoPrimary)
-                    }
+                    })
                 }
 
                 ToolbarItem(placement: .principal) {
                     Text("Rastreando pedido")
                         .font(.headline)
                 }
-
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: {
-                        showDriverInfo.toggle()
-                    }) {
-                        Image(systemName: "info.circle")
-                    }
-                }
             }
             .sheet(isPresented: $showDriverInfo) {
                 orderDetailsSheet
                     .presentationDetents([.height(350)])
                     .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showChat) {
+                ChatView()
             }
         }
         .onAppear {
