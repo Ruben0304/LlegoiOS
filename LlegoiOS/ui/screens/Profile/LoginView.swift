@@ -17,34 +17,41 @@ struct LoginView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Background
-                Color.llegoBackground
-                    .ignoresSafeArea()
+                // Gradient Background moderno
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.llegoBackground,
+                        Color.white
+                    ]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
 
-                ScrollView {
+                ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
                         // Header con logo y título
                         headerSection
+                            .padding(.top, 20)
 
                         // Formulario de login
                         loginFormSection
-                            .padding(.top, 40)
+                            .padding(.top, 48)
 
                         // Divider con "o"
                         dividerSection
-                            .padding(.vertical, 32)
+                            .padding(.vertical, 28)
 
                         // Apple Sign In
                         appleSignInSection
 
                         // Registro
                         registerSection
-                            .padding(.top, 32)
+                            .padding(.top, 28)
 
                         Spacer(minLength: 40)
                     }
-                    .padding(.horizontal, 24)
-                    .padding(.top, 60)
+                    .padding(.horizontal, 28)
                 }
 
                 // Loading overlay
@@ -75,106 +82,120 @@ struct LoginView: View {
 
     // MARK: - Header Section
     private var headerSection: some View {
-        VStack(spacing: 16) {
-            // Logo
-            Circle()
-                .fill(Color.llegoPrimary)
-                .frame(width: 80, height: 80)
-                .overlay(
-                    Text("L")
-                        .font(.system(size: 40, weight: .bold))
-                        .foregroundColor(.white)
-                )
+        VStack(spacing: 20) {
+            // Logo con animación
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color.llegoPrimary,
+                                Color.llegoPrimary.opacity(0.8)
+                            ]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 100, height: 100)
+                    .shadow(color: Color.llegoPrimary.opacity(0.3), radius: 20, x: 0, y: 10)
 
-            // Título
-            Text("Bienvenido a Llego")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundColor(.llegoPrimary)
+                Text("L")
+                    .font(.system(size: 48, weight: .bold))
+                    .foregroundColor(.white)
+            }
+            .padding(.top, 20)
 
-            // Subtítulo
-            Text("Inicia sesión para continuar")
-                .font(.system(size: 16, weight: .regular))
-                .foregroundColor(.gray)
+            VStack(spacing: 8) {
+                // Título
+                Text("Bienvenido")
+                    .font(.system(size: 34, weight: .bold))
+                    .foregroundColor(.llegoPrimary)
+
+                // Subtítulo
+                Text("Inicia sesión para continuar")
+                    .font(.system(size: 17, weight: .regular))
+                    .foregroundColor(.secondary)
+            }
         }
     }
 
     // MARK: - Login Form Section
     private var loginFormSection: some View {
-        VStack(spacing: 16) {
-            // Email Field
+        VStack(spacing: 20) {
+            // Email Field - Estilo iOS moderno
             VStack(alignment: .leading, spacing: 8) {
-                Text("Correo electrónico")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.llegoPrimary)
-
-                HStack {
+                HStack(spacing: 12) {
                     Image(systemName: "envelope.fill")
-                        .foregroundColor(.gray)
-                        .frame(width: 20)
+                        .font(.system(size: 16))
+                        .foregroundColor(focusedField == .email ? .llegoPrimary : .gray)
+                        .frame(width: 24)
 
-                    TextField("tu@email.com", text: $viewModel.email)
+                    TextField("Correo electrónico", text: $viewModel.email)
+                        .font(.system(size: 16))
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
+                        .autocorrectionDisabled()
                         .focused($focusedField, equals: .email)
                         .submitLabel(.next)
                         .onSubmit {
                             focusedField = .password
                         }
                 }
-                .padding()
-                .background(Color.white)
-                .cornerRadius(12)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
+                .background(Color(.systemGray6))
+                .cornerRadius(14)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(focusedField == .email ? Color.llegoPrimary : Color.gray.opacity(0.3), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(focusedField == .email ? Color.llegoPrimary : Color.clear, lineWidth: 2)
                 )
+                .animation(.easeInOut(duration: 0.2), value: focusedField)
             }
 
-            // Password Field
+            // Password Field - Estilo iOS moderno
             VStack(alignment: .leading, spacing: 8) {
-                Text("Contraseña")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.llegoPrimary)
-
-                HStack {
+                HStack(spacing: 12) {
                     Image(systemName: "lock.fill")
-                        .foregroundColor(.gray)
-                        .frame(width: 20)
+                        .font(.system(size: 16))
+                        .foregroundColor(focusedField == .password ? .llegoPrimary : .gray)
+                        .frame(width: 24)
 
-                    if showPassword {
-                        TextField("Tu contraseña", text: $viewModel.password)
-                            .focused($focusedField, equals: .password)
-                            .submitLabel(.go)
-                            .onSubmit {
-                                Task {
-                                    await viewModel.signIn()
-                                }
-                            }
-                    } else {
-                        SecureField("Tu contraseña", text: $viewModel.password)
-                            .focused($focusedField, equals: .password)
-                            .submitLabel(.go)
-                            .onSubmit {
-                                Task {
-                                    await viewModel.signIn()
-                                }
-                            }
+                    Group {
+                        if showPassword {
+                            TextField("Contraseña", text: $viewModel.password)
+                                .font(.system(size: 16))
+                        } else {
+                            SecureField("Contraseña", text: $viewModel.password)
+                                .font(.system(size: 16))
+                        }
+                    }
+                    .focused($focusedField, equals: .password)
+                    .submitLabel(.go)
+                    .onSubmit {
+                        Task {
+                            await viewModel.signIn()
+                        }
                     }
 
                     Button(action: {
-                        showPassword.toggle()
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showPassword.toggle()
+                        }
                     }) {
                         Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
+                            .font(.system(size: 16))
                             .foregroundColor(.gray)
                     }
                 }
-                .padding()
-                .background(Color.white)
-                .cornerRadius(12)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
+                .background(Color(.systemGray6))
+                .cornerRadius(14)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(focusedField == .password ? Color.llegoPrimary : Color.gray.opacity(0.3), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(focusedField == .password ? Color.llegoPrimary : Color.clear, lineWidth: 2)
                 )
+                .animation(.easeInOut(duration: 0.2), value: focusedField)
             }
 
             // Forgot Password
@@ -185,36 +206,57 @@ struct LoginView: View {
                     print("Recuperar contraseña")
                 }) {
                     Text("¿Olvidaste tu contraseña?")
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.system(size: 15, weight: .medium))
                         .foregroundColor(.llegoButton)
                 }
             }
+            .padding(.top, -8)
 
-            // Login Button
+            // Login Button - Estilo iOS moderno
             Button(action: {
                 Task {
                     await viewModel.signIn()
                 }
             }) {
-                HStack {
+                HStack(spacing: 8) {
                     Text("Iniciar Sesión")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(.white)
 
                     if case .loading = viewModel.state {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            .scaleEffect(0.8)
+                            .scaleEffect(0.9)
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: 54)
+                .frame(height: 56)
                 .background(
                     viewModel.isLoginButtonEnabled
-                        ? Color.llegoButton
-                        : Color.gray.opacity(0.3)
+                        ? LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color.llegoButton,
+                                Color.llegoButton.opacity(0.9)
+                            ]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                        : LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color.gray.opacity(0.3),
+                                Color.gray.opacity(0.3)
+                            ]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
                 )
-                .cornerRadius(12)
+                .cornerRadius(14)
+                .shadow(
+                    color: viewModel.isLoginButtonEnabled ? Color.llegoButton.opacity(0.4) : Color.clear,
+                    radius: 12,
+                    x: 0,
+                    y: 6
+                )
             }
             .disabled(!viewModel.isLoginButtonEnabled)
             .padding(.top, 8)
@@ -251,31 +293,26 @@ struct LoginView: View {
             }
         )
         .signInWithAppleButtonStyle(.black)
-        .frame(height: 54)
-        .cornerRadius(12)
+        .frame(height: 56)
+        .cornerRadius(14)
+        .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
     }
 
     // MARK: - Register Section
     private var registerSection: some View {
-        VStack(spacing: 12) {
-            Text("¿No tienes una cuenta?")
-                .font(.system(size: 14, weight: .regular))
-                .foregroundColor(.gray)
+        VStack(spacing: 16) {
+            HStack(spacing: 4) {
+                Text("¿No tienes una cuenta?")
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundColor(.secondary)
 
-            Button(action: {
-                showRegisterView = true
-            }) {
-                Text("Regístrate")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.llegoPrimary)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 54)
-                    .background(Color.white)
-                    .cornerRadius(12)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.llegoPrimary, lineWidth: 2)
-                    )
+                Button(action: {
+                    showRegisterView = true
+                }) {
+                    Text("Regístrate")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.llegoPrimary)
+                }
             }
         }
         .sheet(isPresented: $showRegisterView) {
