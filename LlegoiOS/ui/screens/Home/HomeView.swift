@@ -163,7 +163,7 @@ struct HomeView: View {
                     // Semicircular Slider - Posición absoluta fija
                     SemicircularSlider()
                         .frame(maxWidth: .infinity)
-                        .position(x: UIScreen.main.bounds.width / 2, y: 180)
+                        .position(x: UIScreen.main.bounds.width / 2, y: 90)
                         .zIndex(2)
                 }
                 .onPreferenceChange(CartPositionKey.self) { position in

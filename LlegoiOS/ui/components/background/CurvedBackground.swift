@@ -24,8 +24,8 @@ struct CurvedBackground<Content: View>: View {
 
     // Inicializador con CGFloat (para valores estáticos)
     init(
-        curveStartAbsolute: CGFloat = 150,
-        curveEndAbsolute: CGFloat = 150,
+        curveStartAbsolute: CGFloat = 200,
+        curveEndAbsolute: CGFloat = 200,
         curveInclinationAbsolute: CGFloat = 50,
         invertCurve: Bool = false,
         @ViewBuilder content: @escaping () -> Content
@@ -38,44 +38,40 @@ struct CurvedBackground<Content: View>: View {
     }
 
     var body: some View {
-        GeometryReader { geometry in
-            let height = geometry.size.height
-
-            ZStack {
-                // Background gray surface
-                Color.llegoBackground
-                    .ignoresSafeArea(.all)
-
-                // Primary color curved background
-                CurvedShape(
-                    curveStart: curveStartAbsolute / height,
-                    curveEnd: curveEndAbsolute / height,
-                    curveInclination: curveInclinationAbsolute / height,
-                    invertCurve: invertCurve
-                )
-                .fill(Color.llegoPrimary)
+        ZStack {
+            // Background gray surface
+            Color.llegoBackground
                 .ignoresSafeArea(.all)
 
-                // Content on top
-                content()
-            }
+            // Primary color curved background (ahora con posiciones absolutas)
+            CurvedShape(
+                curveStartAbsolute: curveStartAbsolute,
+                curveEndAbsolute: curveEndAbsolute,
+                curveInclinationAbsolute: curveInclinationAbsolute,
+                invertCurve: invertCurve
+            )
+            .fill(Color.llegoPrimary)
+            .ignoresSafeArea(.all)
+
+            // Content on top
+            content()
         }
     }
 }
 
 struct CurvedShape: Shape {
-    let curveStart: CGFloat
-    let curveEnd: CGFloat
-    let curveInclination: CGFloat
+    let curveStartAbsolute: CGFloat
+    let curveEndAbsolute: CGFloat
+    let curveInclinationAbsolute: CGFloat
     let invertCurve: Bool
 
     func path(in rect: CGRect) -> Path {
         var path = Path()
 
         let width = rect.width
-        let height = rect.height
-        let curveStartY = height * curveStart
-        let curveEndY = height * curveEnd
+        // Usamos valores absolutos en puntos (no relativos al height)
+        let curveStartY = curveStartAbsolute
+        let curveEndY = curveEndAbsolute
 
         if invertCurve {
             // Inverted curve (curves upward from top)
@@ -86,7 +82,7 @@ struct CurvedShape: Shape {
             path.addLine(to: CGPoint(x: 0, y: curveStartY))
 
             // Create curved path (inverted - curves upward)
-            let curveHeight = height * curveInclination
+            let curveHeight = curveInclinationAbsolute
             let controlPointY = curveStartY - curveHeight
 
             // Cubic curve that simulates a semicircle (inverted)
@@ -108,7 +104,7 @@ struct CurvedShape: Shape {
             path.addLine(to: CGPoint(x: 0, y: curveStartY))
 
             // Create curved path
-            let curveHeight = height * curveInclination
+            let curveHeight = curveInclinationAbsolute
             let controlPointY = curveStartY + curveHeight
 
             // Cubic curve that simulates a semicircle

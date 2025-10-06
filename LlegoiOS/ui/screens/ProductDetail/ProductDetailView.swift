@@ -90,8 +90,8 @@ struct ProductDetailView: View {
         NavigationStack {
             ZStack {
                 CurvedBackground(
-                    curveStartAbsolute: 150,
-                    curveEndAbsolute: 150,
+                    curveStartAbsolute: 170,
+                    curveEndAbsolute: 170,
                     curveInclinationAbsolute: 50,
                     invertCurve: true
                 ) {

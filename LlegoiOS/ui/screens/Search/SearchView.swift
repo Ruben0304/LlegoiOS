@@ -170,11 +170,6 @@ struct SearchView: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(false)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    BackButton(action: {
-                        dismiss()
-                    })
-                }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
