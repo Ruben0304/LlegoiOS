@@ -7,6 +7,139 @@ struct CartPositionKey: PreferenceKey {
     }
 }
 
+private enum DayMoment: String, CaseIterable, Identifiable {
+    case breakfast
+    case lunch
+    case lateNight
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .breakfast:
+            return "Desayuno"
+        case .lunch:
+            return "Almuerzo"
+        case .lateNight:
+            return "Cena"
+        }
+    }
+
+    var sectionTitle: String {
+        switch self {
+        case .breakfast:
+            return "Sabores para comenzar tu día"
+        case .lunch:
+            return "Listos para el almuerzo"
+        case .lateNight:
+            return "Tentaciones nocturnas"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .breakfast:
+            return "Energía suave para la mañana"
+        case .lunch:
+            return "Tus favoritos del mediodía"
+        case .lateNight:
+            return "Antojos para cerrar el día"
+        }
+    }
+
+    var emoji: String {
+        switch self {
+        case .breakfast:
+            return "🌅"
+        case .lunch:
+            return "☀️"
+        case .lateNight:
+            return "🌙"
+        }
+    }
+
+    var accentColor: Color {
+        switch self {
+        case .breakfast:
+            return Color(red: 243/255, green: 158/255, blue: 72/255)
+        case .lunch:
+            return Color(red: 220/255, green: 121/255, blue: 65/255)
+        case .lateNight:
+            return Color(red: 118/255, green: 108/255, blue: 201/255)
+        }
+    }
+
+    var gradientColors: [Color] {
+        switch self {
+        case .breakfast:
+            return [
+                Color(red: 255/255, green: 245/255, blue: 225/255),
+                Color(red: 255/255, green: 228/255, blue: 183/255)
+            ]
+        case .lunch:
+            return [
+                Color(red: 255/255, green: 242/255, blue: 233/255),
+                Color(red: 255/255, green: 222/255, blue: 207/255)
+            ]
+        case .lateNight:
+            return [
+                Color(red: 235/255, green: 236/255, blue: 253/255),
+                Color(red: 222/255, green: 226/255, blue: 247/255)
+            ]
+        }
+    }
+
+    var backgroundGradient: LinearGradient {
+        LinearGradient(colors: gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
+
+    var order: Int {
+        switch self {
+        case .breakfast:
+            return 0
+        case .lunch:
+            return 1
+        case .lateNight:
+            return 2
+        }
+    }
+
+    var keywords: [String] {
+        switch self {
+        case .breakfast:
+            return ["breakfast", "desayuno", "coffee", "café", "pan", "bread", "juice", "huevo", "omelette", "bagel", "smoothie"]
+        case .lunch:
+            return ["almuerzo", "lunch", "burger", "sandwich", "pollo", "rice", "arroz", "pasta", "pizza", "ensalada", "salad"]
+        case .lateNight:
+            return ["late", "night", "nocturno", "postre", "dessert", "snack", "taco", "wrap", "sushi", "helado"]
+        }
+    }
+
+    func fallbackRange(total: Int) -> Range<Int> {
+        guard total > 0 else { return 0..<0 }
+        if total <= DayMoment.allCases.count {
+            return 0..<total
+        }
+
+        let segments = DayMoment.allCases.count
+        let baseSize = max(1, total / segments)
+        let remainder = total % segments
+        var start = order * baseSize + min(order, remainder)
+        var length = baseSize
+
+        if order < remainder {
+            length += 1
+        }
+
+        if start >= total {
+            start = max(0, total - baseSize)
+        }
+
+        let end = min(total, start + length)
+        return start..<end
+    }
+}
+
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
     @StateObject private var walletViewModel = WalletViewModel()
@@ -22,9 +155,48 @@ struct HomeView: View {
     @State private var selectedProduct: Product? = nil
     @State private var selectedStore: Store? = nil
     @State private var navigateToProfile = false
+    @State private var selectedMoment: DayMoment = .breakfast
 
     private var totalCartItems: Int {
         productCounts.values.reduce(0, +)
+    }
+
+    private var momentProducts: [Product] {
+        products(for: selectedMoment)
+    }
+
+    private func products(for moment: DayMoment) -> [Product] {
+        let allProducts = viewModel.products
+        guard !allProducts.isEmpty else { return [] }
+
+        let keywordMatches = allProducts.filter { product in
+            moment.keywords.contains { keyword in
+                product.name.localizedCaseInsensitiveContains(keyword)
+            }
+        }
+
+        if keywordMatches.count >= 4 {
+            return Array(keywordMatches.prefix(8))
+        }
+
+        let fallbackRange = moment.fallbackRange(total: allProducts.count)
+        let fallbackProducts: [Product]
+
+        if fallbackRange.isEmpty {
+            fallbackProducts = allProducts
+        } else {
+            fallbackProducts = Array(allProducts[fallbackRange])
+        }
+
+        if keywordMatches.isEmpty {
+            return Array(fallbackProducts.prefix(8))
+        } else {
+            var combined = keywordMatches
+            for product in fallbackProducts where !combined.contains(product) {
+                combined.append(product)
+            }
+            return Array(combined.prefix(8))
+        }
     }
 
     var body: some View {
@@ -125,10 +297,32 @@ struct HomeView: View {
                                         }
                                     )
 
+                                    MomentOfDayDiscoverySection(
+                                        selectedMoment: $selectedMoment,
+                                        products: momentProducts,
+                                        productCounts: $productCounts,
+                                        onSeeMoreTap: {
+                                            print("Ver todo \(selectedMoment.displayName)")
+                                        },
+                                        onAddToCartAnimation: { imageUrl, startPosition in
+                                            print("📥 Received in MomentOfDay - Start: \(startPosition), Cart: \(cartPosition)")
+                                            animationTrigger = AnimationData(
+                                                imageUrl: imageUrl,
+                                                startPosition: startPosition,
+                                                endPosition: cartPosition
+                                            )
+                                            print("✅ MomentOfDay AnimationData created - Start: \(animationTrigger!.startPosition), End: \(animationTrigger!.endPosition)")
+                                        },
+                                        onProductTap: { product in
+                                            selectedProduct = product
+                                        }
+                                    )
+                                    .padding(.top, 8)
+
                                     // Category Selection Card
-                                    CategorySelectionCard()
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 8)
+//                                    CategorySelectionCard()
+//                                        .padding(.horizontal, 16)
+//                                        .padding(.vertical, 8)
 
                                     // Promo Section
                                     PromoSection(
@@ -270,5 +464,134 @@ struct HomeView: View {
             .navigationViewStyle(StackNavigationViewStyle())
         }
 
+    }
+}
+
+private struct MomentOfDayDiscoverySection: View {
+    @Binding var selectedMoment: DayMoment
+    let products: [Product]
+    @Binding var productCounts: [String: Int]
+    let onSeeMoreTap: () -> Void
+    var onAddToCartAnimation: ((String, CGPoint) -> Void)?
+    var onProductTap: ((Product) -> Void)?
+
+    private let titleColor = Color(red: 27/255, green: 27/255, blue: 27/255)
+    private let subtitleColor = Color(red: 74/255, green: 74/255, blue: 74/255)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            header
+                .padding(.horizontal, 16)
+
+            momentTabs
+                .padding(.horizontal, 16)
+
+            if products.isEmpty {
+                emptyState
+            } else {
+                ProductSection(
+                    products: products,
+                    productCounts: $productCounts,
+                    cardWidth: 155,
+                    cardHeight: 310,
+                    onSeeMoreClick: onSeeMoreTap,
+                    onAddToCartAnimation: onAddToCartAnimation,
+                    onProductTap: { product in
+                        onProductTap?(product)
+                    },
+                    title: selectedMoment.sectionTitle,
+                    actionTitle: "Ver todo",
+                    accentColor: selectedMoment.accentColor
+                )
+            }
+        }
+        .padding(.top, 8)
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Text("Explora por momento del día")
+                    .font(.system(size: 22, weight: .semibold, design: .default))
+                    .foregroundColor(titleColor)
+                Text(selectedMoment.emoji)
+                    .font(.system(size: 22))
+            }
+
+            Text(selectedMoment.subtitle)
+                .font(.system(size: 14, weight: .medium, design: .default))
+                .foregroundColor(subtitleColor)
+        }
+    }
+
+    private var momentTabs: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(DayMoment.allCases) { moment in
+                    Button {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            selectedMoment = moment
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text(moment.emoji)
+                                .font(.system(size: 14))
+                            Text(moment.displayName)
+                                .font(.system(size: 14, weight: .semibold, design: .default))
+                        }
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 14)
+                        .background(
+                            Capsule()
+                                .fill(chipBackground(for: moment))
+                        )
+                        .overlay(
+                            Capsule()
+                                .stroke(chipBorder(for: moment), lineWidth: 1)
+                        )
+                        .foregroundColor(chipForeground(for: moment))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    private var emptyState: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("No encontramos productos para \(selectedMoment.displayName.lowercased()).")
+                .font(.system(size: 15, weight: .semibold, design: .default))
+            Text("Prueba otro momento o explora otras secciones mientras actualizamos esta categoría.")
+                .font(.system(size: 13, weight: .regular, design: .default))
+                .foregroundColor(subtitleColor)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 28)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func chipBackground(for moment: DayMoment) -> Color {
+        if selectedMoment == moment {
+            return moment.accentColor.opacity(0.2)
+        } else {
+            return Color.white.opacity(0.6)
+        }
+    }
+
+    private func chipBorder(for moment: DayMoment) -> Color {
+        if selectedMoment == moment {
+            return moment.accentColor.opacity(0.6)
+        } else {
+            return moment.accentColor.opacity(0.2)
+        }
+    }
+
+    private func chipForeground(for moment: DayMoment) -> Color {
+        if selectedMoment == moment {
+            return moment.accentColor
+        } else {
+            return titleColor
+        }
     }
 }

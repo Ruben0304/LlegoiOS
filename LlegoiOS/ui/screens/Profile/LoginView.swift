@@ -7,6 +7,7 @@ struct LoginView: View {
 
     @State private var showPassword: Bool = false
     @State private var showRegisterView: Bool = false
+    @State private var animateContent: Bool = false
     @FocusState private var focusedField: LoginField?
 
     enum LoginField {
@@ -32,26 +33,49 @@ struct LoginView: View {
                     VStack(spacing: 0) {
                         // Header con logo y título
                         headerSection
-                            .padding(.top, 20)
+                            .opacity(animateContent ? 1 : 0)
+                            .offset(y: animateContent ? 0 : 20)
+                            .animation(.easeOut(duration: 0.6).delay(0.05), value: animateContent)
 
                         // Formulario de login
                         loginFormSection
-                            .padding(.top, 48)
+                            .padding(.top, 24)
+                            .opacity(animateContent ? 1 : 0)
+                            .offset(y: animateContent ? 0 : 20)
+                            .animation(.easeOut(duration: 0.6).delay(0.15), value: animateContent)
 
                         // Divider con "o"
                         dividerSection
-                            .padding(.vertical, 28)
+                            .padding(.vertical, 20)
+                            .opacity(animateContent ? 1 : 0)
+                            .offset(y: animateContent ? 0 : 16)
+                            .animation(.easeOut(duration: 0.6).delay(0.25), value: animateContent)
 
                         // Apple Sign In
                         appleSignInSection
+                            .opacity(animateContent ? 1 : 0)
+                            .offset(y: animateContent ? 0 : 16)
+                            .animation(.easeOut(duration: 0.6).delay(0.35), value: animateContent)
 
                         // Registro
                         registerSection
-                            .padding(.top, 28)
+                            .padding(.top, 20)
+                            .opacity(animateContent ? 1 : 0)
+                            .offset(y: animateContent ? 0 : 16)
+                            .animation(.easeOut(duration: 0.6).delay(0.45), value: animateContent)
 
                         Spacer(minLength: 40)
                     }
                     .padding(.horizontal, 28)
+                }
+                .onAppear {
+                    animateContent = false
+                    DispatchQueue.main.async {
+                        animateContent = true
+                    }
+                }
+                .onDisappear {
+                    animateContent = false
                 }
 
                 // Loading overlay
@@ -82,7 +106,7 @@ struct LoginView: View {
 
     // MARK: - Header Section
     private var headerSection: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 16) {
             // Logo con animación
             ZStack {
                 Circle()
@@ -96,14 +120,12 @@ struct LoginView: View {
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: 100, height: 100)
+                    .frame(width: 88, height: 88)
                     .shadow(color: Color.llegoPrimary.opacity(0.3), radius: 20, x: 0, y: 10)
-
-                Text("L")
-                    .font(.system(size: 48, weight: .bold))
+                Image(systemName: "person.fill")
+                    .font(.system(size: 44, weight: .semibold))
                     .foregroundColor(.white)
             }
-            .padding(.top, 20)
 
             VStack(spacing: 8) {
                 // Título

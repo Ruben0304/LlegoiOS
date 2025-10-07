@@ -13,19 +13,52 @@ struct CategorySelectionCard: View {
 
     var body: some View {
         ZStack {
-            // Background gradient
-            RoundedRectangle(cornerRadius: 24)
+            // Verdant container with layered glow
+            RoundedRectangle(cornerRadius: 26)
                 .fill(
                     LinearGradient(
                         gradient: Gradient(colors: [
-                            Color.llegoBackground,
-                            Color.llegoSecondary.opacity(0.1)
+                            Color.llegoButton.opacity(0.95),
+                            Color.llegoAccent.opacity(0.85)
                         ]),
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
-                .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 26)
+                        .stroke(Color.white.opacity(0.15), lineWidth: 1)
+                )
+                .overlay(
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color.white.opacity(0.25),
+                            Color.white.opacity(0.05)
+                        ]),
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 26))
+                )
+                .shadow(color: Color.llegoPrimary.opacity(0.18), radius: 18, x: 0, y: 10)
+
+            RoundedRectangle(cornerRadius: 26)
+                .fill(
+                    RadialGradient(
+                        gradient: Gradient(colors: [
+                            Color.llegoAccent.opacity(0.55),
+                            Color.clear
+                        ]),
+                        center: .topLeading,
+                        startRadius: 0,
+                        endRadius: 260
+                    )
+                )
+                .scaleEffect(pulseScale)
+                .blur(radius: 36)
+                .opacity(0.75)
+                .animation(.easeInOut(duration: 4.5).repeatForever(autoreverses: true), value: pulseScale)
+                .allowsHitTesting(false)
 
             HStack(spacing: 16) {
                 // Left side: Image with animation
@@ -35,10 +68,10 @@ struct CategorySelectionCard: View {
                         .fill(
                             RadialGradient(
                                 gradient: Gradient(colors: [
-                                    selectedCategory == .restaurant ?
-                                        Color.orange.opacity(0.15) :
-                                        Color.green.opacity(0.15),
-                                    Color.clear
+                                    selectedCategory == .restaurant
+                                        ? Color.llegoAccent.opacity(0.45)
+                                        : Color.llegoButton.opacity(0.45),
+                                    Color.llegoPrimary.opacity(0.05)
                                 ]),
                                 center: .center,
                                 startRadius: 0,

@@ -4,6 +4,7 @@ struct StoreSection: View {
     let stores: [Store]
     let onSeeMoreTap: () -> Void
     var onStoreTap: ((Store) -> Void)? = nil
+    @State private var animationDelay: Double = 0
 
     init(stores: [Store], onSeeMoreTap: @escaping () -> Void = {}, onStoreTap: ((Store) -> Void)? = nil) {
         self.stores = stores
@@ -32,8 +33,8 @@ struct StoreSection: View {
 
             // Horizontal Scrolling Store Cards
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(stores, id: \.id) { store in
+                LazyHStack(spacing: 8) {
+                    ForEach(Array(stores.enumerated()), id: \.element.id) { index, store in
                         Button(action: {
                             onStoreTap?(store)
                         }) {
@@ -46,13 +47,35 @@ struct StoreSection: View {
                                 rating: store.rating,
                                 size: .medium
                             )
+                            .opacity(animationDelay > Double(index) * 0.1 ? 1 : 0)
+                            .scaleEffect(animationDelay > Double(index) * 0.1 ? 1 : 0.95)
+                            .offset(y: animationDelay > Double(index) * 0.1 ? 0 : 15)
+                            .animation(
+                                .easeOut(duration: 0.6)
+                                    .delay(Double(index) * 0.05),
+                                value: animationDelay
+                            )
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
+                .onAppear {
+                    triggerAnimation(for: stores.count)
+                }
+                .onChange(of: stores.map(\.id)) { _ in
+                    triggerAnimation(for: stores.count)
+                }
             }
+        }
+    }
+
+    private func triggerAnimation(for count: Int) {
+        animationDelay = 0
+        guard count > 0 else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            animationDelay = Double(count) * 0.1 + 0.1
         }
     }
 }

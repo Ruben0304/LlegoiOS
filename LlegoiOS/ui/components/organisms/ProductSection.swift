@@ -8,21 +8,25 @@ struct ProductSection: View {
     let onSeeMoreClick: () -> Void
     var onAddToCartAnimation: ((String, CGPoint) -> Void)? = nil
     var onProductTap: ((Product) -> Void)? = nil
+    var title: String = "Podrías necesitar"
+    var actionTitle: String = "Ver más"
+    var accentColor: Color = Color(red: 124/255, green: 65/255, blue: 43/255)
+    @State private var animationDelay: Double = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Section header
             HStack {
-                Text("Podrías necesitar")
+                Text(title)
                     .font(.system(size: 22, weight: .semibold, design: .default))
                     .foregroundColor(Color(red: 27/255, green: 27/255, blue: 27/255))
 
                 Spacer()
 
                 Button(action: onSeeMoreClick) {
-                    Text("Ver más")
+                    Text(actionTitle)
                         .font(.system(size: 13, weight: .semibold, design: .default))
-                        .foregroundColor(Color(red: 124/255, green: 65/255, blue: 43/255))
+                        .foregroundColor(accentColor)
                 }
             }
             .padding(.horizontal, 16)
@@ -31,7 +35,7 @@ struct ProductSection: View {
             // Products horizontal scroll
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 16) {
-                    ForEach(products, id: \.id) { product in
+                    ForEach(Array(products.enumerated()), id: \.element.id) { index, product in
                         ProductCard(
                             product: product,
                             count: Binding(
@@ -56,10 +60,32 @@ struct ProductSection: View {
                             }
                         )
                         .frame(width: cardWidth, height: cardHeight)
+                        .opacity(animationDelay > Double(index) * 0.1 ? 1 : 0)
+                        .scaleEffect(animationDelay > Double(index) * 0.1 ? 1 : 0.95)
+                        .offset(y: animationDelay > Double(index) * 0.1 ? 0 : 10)
+                        .animation(
+                            .easeOut(duration: 0.8)
+                                .delay(Double(index) * 0.05),
+                            value: animationDelay
+                        )
                     }
                 }
                 .padding(.horizontal, 16)
+                .onAppear {
+                    triggerAnimation(for: products.count)
+                }
+                .onChange(of: products.map(\.id)) { _ in
+                    triggerAnimation(for: products.count)
+                }
             }
+        }
+    }
+
+    private func triggerAnimation(for count: Int) {
+        animationDelay = 0
+        guard count > 0 else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            animationDelay = Double(count) * 0.1 + 0.1
         }
     }
 }
