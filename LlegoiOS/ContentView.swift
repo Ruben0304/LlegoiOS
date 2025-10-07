@@ -102,7 +102,7 @@ struct MainAppView: View {
                                 .ignoresSafeArea(.container, edges: .bottom)
                         }
 
-                        Tab("Mapa", systemImage: "map") {
+                        Tab("Lugares", systemImage: "map") {
                             MapView()
                                 .ignoresSafeArea(.container, edges: .bottom)
                         }
