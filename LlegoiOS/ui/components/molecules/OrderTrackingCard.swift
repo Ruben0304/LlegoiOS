@@ -22,12 +22,10 @@ struct OrderTrackingCard: View {
     }
 
     var body: some View {
-        let statusText = orderManager.orderStatus.displayText
         let timeRemaining = orderManager.estimatedMinutesRemaining
 
         HStack(spacing: 0) {
-            
-            if(placement == .inline ) {
+            if placement != .inline {
                 // Icono de origen (tienda)
                 VStack(spacing: 4) {
                     Image(systemName: "storefront.fill")
@@ -90,33 +88,33 @@ struct OrderTrackingCard: View {
                 Spacer()
                 
                 // Información de estado
-                VStack(alignment: .trailing, spacing: 3) {
-                    Text("En camino")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(.primary)
-                        .lineLimit(1)
-                    
-                    HStack(spacing: 4) {
-                        if timeRemaining > 0 {
-                            Image(systemName: "clock.fill")
-                                .font(.system(size: 10))
-                                .foregroundColor(.llegoAccent)
-                            
-                            Text("\(timeRemaining) min")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(.llegoPrimary)
-                        } else {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 10))
-                                .foregroundColor(.green)
-                            
-                            Text("Entregado")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(.green)
-                        }
-                    }
-                }
-                .frame(width: 85)
+//                VStack(alignment: .trailing, spacing: 3) {
+//                    Text("En camino")
+//                        .font(.system(size: 11, weight: .bold))
+//                        .foregroundColor(.primary)
+//                        .lineLimit(1)
+//                    
+//                    HStack(spacing: 4) {
+//                        if timeRemaining > 0 {
+//                            Image(systemName: "clock.fill")
+//                                .font(.system(size: 10))
+//                                .foregroundColor(.llegoAccent)
+//                            
+//                            Text("\(timeRemaining) min")
+//                                .font(.system(size: 11, weight: .semibold))
+//                                .foregroundColor(.llegoPrimary)
+//                        } else {
+//                            Image(systemName: "checkmark.circle.fill")
+//                                .font(.system(size: 10))
+//                                .foregroundColor(.green)
+//                            
+//                            Text("Entregado")
+//                                .font(.system(size: 11, weight: .semibold))
+//                                .foregroundColor(.green)
+//                        }
+//                    }
+//                }
+//                .frame(width: 85)
                 
                 // Botón de acción
                 Button(action: onTap) {
@@ -140,6 +138,61 @@ struct OrderTrackingCard: View {
                         )
                 }
                 .padding(.leading, 8)
+            }
+            else {
+                // Diseño compacto sólo con origen, progreso y destino
+                VStack(spacing: 4) {
+                    Image(systemName: "storefront.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.llegoTertiary)
+                    
+                    Text("Origen")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+                .frame(width: 50)
+                
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color.gray.opacity(0.2))
+                            .frame(width: geometry.size.width, height: 3)
+                        
+                        Capsule()
+                            .fill(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [
+                                        Color.llegoPrimary,
+                                        Color.llegoAccent
+                                    ]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(width: geometry.size.width * deliveryProgress, height: 3)
+                            .animation(.easeInOut(duration: 0.8), value: deliveryProgress)
+                        
+                        Image(systemName: "bicycle")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.llegoPrimary)
+                            .offset(x: max(0, min((geometry.size.width * deliveryProgress) - 8, geometry.size.width - 16)))
+                            .animation(.easeInOut(duration: 0.8), value: deliveryProgress)
+                    }
+                    .frame(height: 20)
+                }
+                .frame(height: 20)
+                .padding(.horizontal, 8)
+                
+                VStack(spacing: 4) {
+                    Image(systemName: "house.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(deliveryProgress >= 1.0 ? .llegoAccent : .gray)
+                    
+                    Text("Destino")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundColor(deliveryProgress >= 1.0 ? .llegoAccent : .secondary)
+                }
+                .frame(width: 50)
             }
         }
         .padding(.horizontal, 12)
