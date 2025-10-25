@@ -16,6 +16,9 @@ struct CategoriesView: View {
         GridItem(.flexible(), spacing: 16)
     ]
 
+    @State private var navigateToShop = false
+    @State private var selectedCategory: String? = nil
+
     var body: some View {
         NavigationView {
             ScrollView {
@@ -23,7 +26,11 @@ struct CategoriesView: View {
                     ForEach(categories.indices, id: \.self) { index in
                         CategoryCard(
                             name: categories[index].0,
-                            imageName: categories[index].1
+                            imageName: categories[index].1,
+                            onTap: {
+                                selectedCategory = categories[index].0
+                                navigateToShop = true
+                            }
                         )
                     }
                 }
@@ -35,12 +42,19 @@ struct CategoriesView: View {
             .navigationTitle("Categorías")
             .navigationBarTitleDisplayMode(.large)
         }
+        .fullScreenCover(isPresented: $navigateToShop) {
+            NavigationView {
+                ShopView(category: selectedCategory)
+            }
+            .navigationViewStyle(StackNavigationViewStyle())
+        }
     }
 }
 
 struct CategoryCard: View {
     let name: String
     let imageName: String
+    let onTap: () -> Void
 
     @State private var isPressed = false
 
@@ -66,7 +80,7 @@ struct CategoryCard: View {
                     impact.impactOccurred()
 
                     // Acción al presionar Ver
-                    print("Ver categoría: \(name)")
+                    onTap()
                 }) {
                     HStack(spacing: 6) {
                         Text("Ver")

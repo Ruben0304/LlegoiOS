@@ -14,6 +14,7 @@ struct SemicircularSlider: View {
     let containerHeight: CGFloat = 200
     let itemSize: CGFloat = 60
     let spacing: CGFloat = 20
+    var onCategoryTap: ((String) -> Void)? = nil
 
     // Crear lista infinita para scroll continuo
     private var infiniteCategories: [(String, String)] {
@@ -50,6 +51,9 @@ struct SemicircularSlider: View {
                                 circleSize: itemSize
                             )
                             .offset(y: yOffset)
+                            .onTapGesture {
+                                onCategoryTap?(category.0)
+                            }
                         }
                         .frame(width: itemSize + 10, height: itemSize + 30)
                         }

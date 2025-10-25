@@ -85,197 +85,180 @@ struct CartView: View {
     ]
 
     var body: some View {
-        NavigationView{
-    ZStack(alignment: .top) {
-            // Fondo con gradiente elegante
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color.llegoBackground,
-                    Color.white,
-                    Color.llegoBackground.opacity(0.3)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
-           
-            
-                    
-                    // Loading State
-                    if case .loading = viewModel.state {
-                        VStack(spacing: 20) {
-                            LottieView(name: "loader")
-                                .frame(width: 150, height: 150)
-                            Text("Cargando carrito...")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.gray)
+        NavigationStack {
+            ZStack(alignment: .top) {
+                // Fondo con gradiente elegante
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.llegoBackground,
+                        Color.white,
+                        Color.llegoBackground.opacity(0.3)
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+
+                if case .loading = viewModel.state {
+                    VStack(spacing: 20) {
+                        LottieView(name: "loader")
+                            .frame(width: 150, height: 150)
+                        Text("Cargando carrito...")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.gray)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                // Error State
+                else if case .error(let message) = viewModel.state {
+                    VStack(spacing: 20) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 60))
+                            .foregroundColor(.red.opacity(0.6))
+                        Text(message)
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.gray)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 40)
+                        Button("Reintentar") {
+                            viewModel.loadCart()
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 30)
+                        .padding(.vertical, 12)
+                        .background(Color.llegoAccent)
+                        .cornerRadius(12)
                     }
-                    // Error State
-                    else if case .error(let message) = viewModel.state {
-                        VStack(spacing: 20) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .font(.system(size: 60))
-                                .foregroundColor(.red.opacity(0.6))
-                            Text(message)
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.gray)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, 40)
-                            Button("Reintentar") {
-                                viewModel.loadCart()
-                            }
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 30)
-                            .padding(.vertical, 12)
-                            .background(Color.llegoAccent)
-                            .cornerRadius(12)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
-                    // Empty Cart
-                    else if viewModel.cartItems.isEmpty {
-                        emptyCartView
-                    }
-                    // Cart with items
-                    else {
-                        // Lista de productos
-                        ScrollView(.vertical, showsIndicators: true) {
-                            VStack(spacing: 16) {
-                                ForEach(Array(viewModel.cartItems.enumerated()), id: \.element.id) { index, item in
-                                    CartItemCard(
-                                        item: item,
-                                        onIncrement: {
-                                            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                                                viewModel.incrementQuantity(productId: item.id)
-                                            }
-                                        },
-                                        onDecrement: {
-                                            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                                                viewModel.decrementQuantity(productId: item.id)
-                                            }
-                                        },
-                                        onRemove: {
-                                            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                                                viewModel.removeFromCart(productId: item.id)
-                                            }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                // Empty Cart
+                else if viewModel.cartItems.isEmpty {
+                    emptyCartView
+                }
+                // Cart with items
+                else {
+                    ScrollView(.vertical, showsIndicators: true) {
+                        VStack(spacing: 16) {
+                            ForEach(Array(viewModel.cartItems.enumerated()), id: \.element.id) { index, item in
+                                CartItemCard(
+                                    item: item,
+                                    onIncrement: {
+                                        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                                            viewModel.incrementQuantity(productId: item.id)
                                         }
-                                    )
-                                    .transition(.asymmetric(
-                                        insertion: .scale.combined(with: .opacity),
-                                        removal: .scale.combined(with: .opacity)
-                                    ))
-                                    .animation(.easeInOut(duration: 0.3).delay(Double(index) * 0.05), value: viewModel.cartItems.count)
-                                }
-
-                                // Resumen de precios
-                                priceBreakdown
-
-                                // Selector de método de pago
-//                                paymentMethodSelector
-
+                                    },
+                                    onDecrement: {
+                                        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                                            viewModel.decrementQuantity(productId: item.id)
+                                        }
+                                    },
+                                    onRemove: {
+                                        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                                            viewModel.removeFromCart(productId: item.id)
+                                        }
+                                    }
+                                )
+                                .transition(.asymmetric(
+                                    insertion: .scale.combined(with: .opacity),
+                                    removal: .scale.combined(with: .opacity)
+                                ))
+                                .animation(.easeInOut(duration: 0.3).delay(Double(index) * 0.05), value: viewModel.cartItems.count)
                             }
-                            .padding(.horizontal, 20)
-                           
+
+                            // Resumen de precios
+                            priceBreakdown
+
+                            // Selector de método de pago
+                            // paymentMethodSelector
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                        // Insertamos el bottom bar como inset para que el ScrollView no quede oculto
-                        .safeAreaInset(edge: .bottom) {
-                            VStack(spacing: 12) {
-                                // Mensaje de información
-                                HStack(spacing: 8) {
-                                    Image(systemName: "lock.shield.fill")
-                                        .font(.system(size: 14, weight: .medium))
-                                        .foregroundColor(.llegoAccent)
+                        .padding(.horizontal, 20)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .safeAreaInset(edge: .bottom) {
+                        VStack(spacing: 12) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "lock.shield.fill")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.llegoAccent)
 
-                                    Text("Pago seguro y protegido")
-                                        .font(.system(size: 13, weight: .medium))
-                                        .foregroundColor(.gray)
-                                }
+                                Text("Pago seguro y protegido")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundColor(.gray)
+                            }
 
-                                // Dos botones horizontales
-                                HStack(spacing: 12) {
-                                    // Botón izquierdo: Pagar con [método]
-                                    Button(action: {
-                                        showPaymentMethodPicker = true
-                                    }) {
-                                        HStack(spacing: 8) {
-                                            if let method = selectedPaymentMethod {
-                                                // Icono del método
-                                                switch method.imageType {
-                                                case .systemIcon(let iconName):
-                                                    Image(systemName: iconName)
-                                                        .font(.system(size: 16, weight: .bold))
-                                                case .assetImage(let imageName):
-                                                    Image(imageName)
-                                                        .resizable()
-                                                        .scaledToFit()
-                                                        .frame(width: 23, height: 23)
-                                                }
-
-                                                VStack(alignment: .leading, spacing: 2) {
-                                                    Text("Pagar con")
-                                                        .font(.system(size: 13, weight: .medium))
-                                                    Text(method.name)
-                                                        .font(.system(size: 14, weight: .bold))
-                                                }
-                                            } else {
-                                                Image(systemName: "creditcard")
+                            HStack(spacing: 12) {
+                                Button(action: {
+                                    showPaymentMethodPicker = true
+                                }) {
+                                    HStack(spacing: 8) {
+                                        if let method = selectedPaymentMethod {
+                                            switch method.imageType {
+                                            case .systemIcon(let iconName):
+                                                Image(systemName: iconName)
                                                     .font(.system(size: 16, weight: .bold))
-                                                Text("Método de pago")
+                                            case .assetImage(let imageName):
+                                                Image(imageName)
+                                                    .resizable()
+                                                    .scaledToFit()
+                                                    .frame(width: 23, height: 23)
+                                            }
+
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text("Pagar con")
+                                                    .font(.system(size: 13, weight: .medium))
+                                                Text(method.name)
                                                     .font(.system(size: 14, weight: .bold))
                                             }
+                                        } else {
+                                            Image(systemName: "creditcard")
+                                                .font(.system(size: 16, weight: .bold))
+                                            Text("Método de pago")
+                                                .font(.system(size: 14, weight: .bold))
                                         }
-                                        .frame(maxWidth: .infinity)
-                                        .frame(height: 40)
                                     }
-                                    .buttonStyle(.glass)
-                                    
-
-                                    // Botón derecho: Pagar
-                                    Button(action: {
-                                        // Acción de pagar
-                                        processPayment()
-                                    }) {
-                                        HStack(spacing: 4) {
-                                            Text("Pagar")
-                                                .font(.system(size: 16, weight: .bold, design: .rounded))
-                                            Text(viewModel.formattedTotal)
-                                                .font(.system(size: 14, weight: .bold, design: .rounded))
-                                        }
-                                        .frame(maxWidth: .infinity)
-                                        .frame(height: 40)
-                                    }
-                                    .disabled(selectedPaymentMethod == nil)
-                                    .opacity(selectedPaymentMethod == nil ? 0.5 : 1.0)
-                                    .buttonStyle(.glassProminent)
-                                    .tint(.llegoPrimary)
-                                    
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 40)
                                 }
-                                .frame(height: 60)
-                            }
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 16)
-                            // Para que el botón quede sobre el teclado cuando aparezca
-                            .ignoresSafeArea(.keyboard, edges: .bottom)
-                        }
+                                .buttonStyle(.glass)
 
-                        NavigationLink(
-                            destination: PlansAndPricingView(),
-                            isActive: $navigateToPlans
-                        ) {
-                            EmptyView()
+                                Button(action: {
+                                    processPayment()
+                                }) {
+                                    HStack(spacing: 4) {
+                                        Text("Pagar")
+                                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                                        Text(viewModel.formattedTotal)
+                                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 40)
+                                }
+                                .disabled(selectedPaymentMethod == nil)
+                                .opacity(selectedPaymentMethod == nil ? 0.5 : 1.0)
+                                .buttonStyle(.glassProminent)
+                                .tint(.llegoPrimary)
+                            }
+                            .frame(height: 60)
                         }
-                        .hidden()
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 16)
+                        .ignoresSafeArea(.keyboard, edges: .bottom)
                     }
+
+                    NavigationLink(
+                        destination: PlansAndPricingView(),
+                        isActive: $navigateToPlans
+                    ) {
+                        EmptyView()
+                    }
+                    .hidden()
                 }
-            
+            }
         }
         .navigationTitle("Carrito")
-    .navigationBarBackButtonHidden(true)
-    .navigationBarTitleDisplayMode(.automatic)
+        .navigationBarBackButtonHidden(true)
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 BackButton(action: {

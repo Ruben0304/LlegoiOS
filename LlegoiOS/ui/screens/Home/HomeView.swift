@@ -156,6 +156,8 @@ struct HomeView: View {
     @State private var selectedStore: Store? = nil
     @State private var navigateToProfile = false
     @State private var selectedMoment: DayMoment = .breakfast
+    @State private var navigateToShop = false
+    @State private var shopInitialCategory: String? = nil
 
     private var totalCartItems: Int {
         productCounts.values.reduce(0, +)
@@ -270,7 +272,8 @@ struct HomeView: View {
                                         cardWidth: 155,
                                         cardHeight: 310,
                                         onSeeMoreClick: {
-                                            print("Ver más clicked!")
+                                            shopInitialCategory = nil
+                                            navigateToShop = true
                                         },
                                         onAddToCartAnimation: { imageUrl, startPosition in
                                             print("📥 Received in HomeView - Start: \(startPosition), Cart: \(cartPosition)")
@@ -360,7 +363,10 @@ struct HomeView: View {
                     }
 
                     // Semicircular Slider - Posición absoluta fija
-                    SemicircularSlider()
+                    SemicircularSlider(onCategoryTap: { category in
+                        shopInitialCategory = category
+                        navigateToShop = true
+                    })
                         .frame(maxWidth: .infinity)
                         .position(x: UIScreen.main.bounds.width / 2, y: 90)
                         .zIndex(2)
@@ -460,6 +466,14 @@ struct HomeView: View {
         .fullScreenCover(isPresented: $navigateToProfile) {
             NavigationView {
                 ProfileView()
+            }
+            .navigationViewStyle(StackNavigationViewStyle())
+        }
+
+        // Present ShopView modally
+        .fullScreenCover(isPresented: $navigateToShop) {
+            NavigationView {
+                ShopView(category: shopInitialCategory)
             }
             .navigationViewStyle(StackNavigationViewStyle())
         }
