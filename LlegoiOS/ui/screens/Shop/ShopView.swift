@@ -396,6 +396,36 @@ private struct FiltersSheet: View {
                             // Mapa interactivo con radio
                             RadiusMapView(radiusKm: $tempDistance)
 
+                            // Cuadrito informativo
+                            HStack(spacing: 10) {
+                                Image(systemName: "info.circle.fill")
+                                    .font(.system(size: 18))
+                                    .foregroundColor(.llegoAccent)
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Ahorra en envíos")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(.llegoPrimary)
+
+                                    Text("Mientras más cerca busques, menores serán los costos de entrega")
+                                        .font(.system(size: 11, weight: .regular))
+                                        .foregroundColor(.gray)
+                                        .lineLimit(2)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+
+                                Spacer()
+                            }
+                            .padding(12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(Color.llegoAccent.opacity(0.08))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.llegoAccent.opacity(0.2), lineWidth: 1)
+                            )
+
                             // Slider estilizado
                             VStack(spacing: 12) {
                                 HStack(spacing: 12) {
@@ -463,7 +493,7 @@ private struct FiltersSheet: View {
                             }
                         }
                         .padding(16)
-                        .background(Color.white)
+                        .background(.white)
                         .cornerRadius(16)
                         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
 
@@ -495,15 +525,13 @@ private struct FiltersSheet: View {
                             }
                         }
                         .padding(16)
-                        .background(Color.white)
+                        .background(.white)
                         .cornerRadius(12)
                     }
                     .padding(16)
                 }
 
-                // Botón aplicar
-                VStack(spacing: 0) {
-                    Divider()
+
                     HStack(spacing: 12) {
                         Button(action: {
                             tempDistance = 50
@@ -530,12 +558,11 @@ private struct FiltersSheet: View {
                         .tint(.llegoPrimary)
                     }
                     .padding(16)
-                    .background(Color.white)
-                }
+                
             }
-            .background(Color.llegoBackground)
-            .navigationTitle("Filtros")
-            .navigationBarTitleDisplayMode(.inline)
+//            .background(Color.llegoBackground)
+//            .navigationTitle("Filtros")
+//            .navigationBarTitleDisplayMode(.inline)
         }
     }
 }

@@ -8,14 +8,19 @@
 import SwiftUI
 
 struct ContentView: View {
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+    @AppStorage("isLoggedIn") private var isLoggedIn = false
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        Group {
+            if !hasSeenOnboarding {
+                OnboardingWatchView(isOnboardingCompleted: $hasSeenOnboarding)
+            } else if !isLoggedIn {
+                LoginWatchView(isLoggedIn: $isLoggedIn)
+            } else {
+                MainWatchView()
+            }
         }
-        .padding()
     }
 }
 

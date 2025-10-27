@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		87B147A62E9346C400A515EF /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 87B147A52E9346C400A515EF /* AppIcon.icon */; };
+		87B49C2C2EAFCE6D002EF780 /* LeegoWatchOS Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 87B49C222EAFCE6B002EF780 /* LeegoWatchOS Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		87CB52972E90242F00618C59 /* Apollo in Frameworks */ = {isa = PBXBuildFile; productRef = 87CB52962E90242F00618C59 /* Apollo */; };
 		87CB52992E90242F00618C59 /* ApolloAPI in Frameworks */ = {isa = PBXBuildFile; productRef = 87CB52982E90242F00618C59 /* ApolloAPI */; };
 		87CB529B2E90242F00618C59 /* ApolloSQLite in Frameworks */ = {isa = PBXBuildFile; productRef = 87CB529A2E90242F00618C59 /* ApolloSQLite */; };
@@ -15,12 +16,42 @@
 		87D766B02E91C0B5003D2461 /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = 87D766AF2E91C0B5003D2461 /* Lottie */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		87B49C2A2EAFCE6D002EF780 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 87F968C52E8F622A00EC1A7C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 87B49C212EAFCE6B002EF780;
+			remoteInfo = "LeegoWatchOS Watch App";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		87B49C2D2EAFCE6D002EF780 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				87B49C2C2EAFCE6D002EF780 /* LeegoWatchOS Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		87B147A52E9346C400A515EF /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
+		87B49C222EAFCE6B002EF780 /* LeegoWatchOS Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "LeegoWatchOS Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		87F968CD2E8F622A00EC1A7C /* LlegoiOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LlegoiOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		87B49C232EAFCE6B002EF780 /* LeegoWatchOS Watch App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "LeegoWatchOS Watch App";
+			sourceTree = "<group>";
+		};
 		87F968CF2E8F622A00EC1A7C /* LlegoiOS */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = LlegoiOS;
@@ -29,6 +60,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		87B49C1F2EAFCE6B002EF780 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		87F968CA2E8F622A00EC1A7C /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -55,6 +93,7 @@
 			isa = PBXGroup;
 			children = (
 				87F968CF2E8F622A00EC1A7C /* LlegoiOS */,
+				87B49C232EAFCE6B002EF780 /* LeegoWatchOS Watch App */,
 				87F968CE2E8F622A00EC1A7C /* Products */,
 				095875A3AD4E80E59A68CD27 /* Pods */,
 				87B147A52E9346C400A515EF /* AppIcon.icon */,
@@ -65,6 +104,7 @@
 			isa = PBXGroup;
 			children = (
 				87F968CD2E8F622A00EC1A7C /* LlegoiOS.app */,
+				87B49C222EAFCE6B002EF780 /* LeegoWatchOS Watch App.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -72,6 +112,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		87B49C212EAFCE6B002EF780 /* LeegoWatchOS Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 87B49C302EAFCE6D002EF780 /* Build configuration list for PBXNativeTarget "LeegoWatchOS Watch App" */;
+			buildPhases = (
+				87B49C1E2EAFCE6B002EF780 /* Sources */,
+				87B49C1F2EAFCE6B002EF780 /* Frameworks */,
+				87B49C202EAFCE6B002EF780 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				87B49C232EAFCE6B002EF780 /* LeegoWatchOS Watch App */,
+			);
+			name = "LeegoWatchOS Watch App";
+			packageProductDependencies = (
+			);
+			productName = "LeegoWatchOS Watch App";
+			productReference = 87B49C222EAFCE6B002EF780 /* LeegoWatchOS Watch App.app */;
+			productType = "com.apple.product-type.application";
+		};
 		87F968CC2E8F622A00EC1A7C /* LlegoiOS */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 87F968D82E8F622C00EC1A7C /* Build configuration list for PBXNativeTarget "LlegoiOS" */;
@@ -79,10 +141,12 @@
 				87F968C92E8F622A00EC1A7C /* Sources */,
 				87F968CA2E8F622A00EC1A7C /* Frameworks */,
 				87F968CB2E8F622A00EC1A7C /* Resources */,
+				87B49C2D2EAFCE6D002EF780 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				87B49C2B2EAFCE6D002EF780 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				87F968CF2E8F622A00EC1A7C /* LlegoiOS */,
@@ -109,6 +173,9 @@
 				LastSwiftUpdateCheck = 2600;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
+					87B49C212EAFCE6B002EF780 = {
+						CreatedOnToolsVersion = 26.0.1;
+					};
 					87F968CC2E8F622A00EC1A7C = {
 						CreatedOnToolsVersion = 26.0.1;
 					};
@@ -133,11 +200,19 @@
 			projectRoot = "";
 			targets = (
 				87F968CC2E8F622A00EC1A7C /* LlegoiOS */,
+				87B49C212EAFCE6B002EF780 /* LeegoWatchOS Watch App */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		87B49C202EAFCE6B002EF780 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		87F968CB2E8F622A00EC1A7C /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -149,6 +224,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		87B49C1E2EAFCE6B002EF780 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		87F968C92E8F622A00EC1A7C /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -158,7 +240,81 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		87B49C2B2EAFCE6D002EF780 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 87B49C212EAFCE6B002EF780 /* LeegoWatchOS Watch App */;
+			targetProxy = 87B49C2A2EAFCE6D002EF780 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		87B49C2E2EAFCE6D002EF780 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Z398HHQ7B4;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = LeegoWatchOS;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.ruben.LlegoiOS;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ruben.LlegoiOS.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		87B49C2F2EAFCE6D002EF780 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Z398HHQ7B4;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = LeegoWatchOS;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.ruben.LlegoiOS;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ruben.LlegoiOS.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
 		87F968D62E8F622C00EC1A7C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -353,6 +509,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		87B49C302EAFCE6D002EF780 /* Build configuration list for PBXNativeTarget "LeegoWatchOS Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				87B49C2E2EAFCE6D002EF780 /* Debug */,
+				87B49C2F2EAFCE6D002EF780 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		87F968C82E8F622A00EC1A7C /* Build configuration list for PBXProject "LlegoiOS" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

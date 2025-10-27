@@ -7,6 +7,13 @@ struct CartPositionKey: PreferenceKey {
     }
 }
 
+struct ScrollOffsetPreferenceKey: PreferenceKey {
+    nonisolated(unsafe) static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
 private enum DayMoment: String, CaseIterable, Identifiable {
     case breakfast
     case lunch
@@ -158,6 +165,7 @@ struct HomeView: View {
     @State private var selectedMoment: DayMoment = .breakfast
     @State private var navigateToShop = false
     @State private var shopInitialCategory: String? = nil
+    @State private var scrollOffset: CGFloat = 0
 
     private var totalCartItems: Int {
         productCounts.values.reduce(0, +)
@@ -230,6 +238,14 @@ struct HomeView: View {
 
                         // Contenido scrolleable
                         ScrollView {
+                            GeometryReader { proxy in
+                                Color.clear.preference(
+                                    key: ScrollOffsetPreferenceKey.self,
+                                    value: proxy.frame(in: .named("homeScroll")).minY
+                                )
+                            }
+                            .frame(height: 0)
+
                             VStack(alignment: .leading, spacing: 20) {
                                 // Loading state
                                 if viewModel.isLoading {
@@ -360,6 +376,7 @@ struct HomeView: View {
 
                             }
                         }
+                        .coordinateSpace(name: "homeScroll")
                     }
 
                     // Semicircular Slider - Posición absoluta fija
@@ -374,6 +391,13 @@ struct HomeView: View {
                 .onPreferenceChange(CartPositionKey.self) { position in
                     cartPosition = position
                     print("🛒 Cart position updated: \(position)")
+                }
+                .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
+                    let currentOffset = -offset
+                    if scrollOffset != currentOffset {
+                        scrollOffset = currentOffset
+                        print("📜 Scroll offset: \(String(format: "%.2f", currentOffset))")
+                    }
                 }
             }
             .toolbar {

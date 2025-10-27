@@ -372,9 +372,11 @@ struct WalletView: View {
         }
         .sheet(isPresented: $viewModel.showRechargeSheet) {
             LocalRechargeSheet(viewModel: viewModel)
+                .presentationDetents([.height(350)])
         }
         .sheet(isPresented: $viewModel.showForeignRechargeSheet) {
             ForeignRechargeSheet(viewModel: viewModel)
+                .presentationDetents([.medium])
         }
         .onAppear {
             viewModel.loadBalance()

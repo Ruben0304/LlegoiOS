@@ -107,107 +107,10 @@ struct RadiusMapView: View {
                 Spacer()
             }
             .padding(12)
-
-            // Controles de zoom y ubicación
-            VStack {
-                Spacer()
-                HStack {
-                    // Botón de re-centrar
-                    recenterButton
-                    Spacer()
-                    // Controles de zoom
-                    zoomControls
-                }
-            }
-            .padding(12)
         }
         .frame(height: 280)
         .onAppear {
             pulseAnimation = true
-        }
-    }
-
-    // MARK: - Map Controls
-
-    private var recenterButton: some View {
-        Button(action: recenterMap) {
-            Image(systemName: "location.fill")
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.white)
-                .frame(width: 36, height: 36)
-                .background(
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                gradient: Gradient(colors: [
-                                    Color.llegoPrimary,
-                                    Color.llegoPrimary.opacity(0.85)
-                                ]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                )
-                .shadow(color: Color.llegoPrimary.opacity(0.4), radius: 8, x: 0, y: 2)
-        }
-        .overlay(
-            Circle()
-                .stroke(Color.white.opacity(0.3), lineWidth: 1)
-        )
-    }
-
-    private var zoomControls: some View {
-        VStack(spacing: 0) {
-            // Botón de acercar (+)
-            Button(action: zoomIn) {
-                Image(systemName: "plus")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.llegoPrimary)
-                    .frame(width: 36, height: 36)
-            }
-            .background(Color.white)
-
-            Divider()
-                .frame(height: 1)
-                .background(Color.llegoPrimary.opacity(0.2))
-
-            // Botón de alejar (-)
-            Button(action: zoomOut) {
-                Image(systemName: "minus")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.llegoPrimary)
-                    .frame(width: 36, height: 36)
-            }
-            .background(Color.white)
-        }
-        .cornerRadius(8)
-        .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 2)
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.llegoPrimary.opacity(0.15), lineWidth: 1)
-        )
-    }
-
-    // MARK: - Map Functions
-
-    private func recenterMap() {
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-            region.center = CLLocationCoordinate2D(latitude: 23.1136, longitude: -82.3666)
-            region.span = MKCoordinateSpan(latitudeDelta: 0.15, longitudeDelta: 0.15)
-        }
-    }
-
-    private func zoomIn() {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            region.span.latitudeDelta *= 0.5
-            region.span.longitudeDelta *= 0.5
-        }
-    }
-
-    private func zoomOut() {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            region.span.latitudeDelta *= 2.0
-            region.span.longitudeDelta *= 2.0
         }
     }
 
