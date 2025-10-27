@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		879D684B2EB004D60045F86E /* Stripe in Frameworks */ = {isa = PBXBuildFile; productRef = 879D684A2EB004D60045F86E /* Stripe */; };
+		879D684D2EB004D60045F86E /* StripePaymentSheet in Frameworks */ = {isa = PBXBuildFile; productRef = 879D684C2EB004D60045F86E /* StripePaymentSheet */; };
 		87B147A62E9346C400A515EF /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 87B147A52E9346C400A515EF /* AppIcon.icon */; };
 		87B49C2C2EAFCE6D002EF780 /* LeegoWatchOS Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 87B49C222EAFCE6B002EF780 /* LeegoWatchOS Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		87CB52972E90242F00618C59 /* Apollo in Frameworks */ = {isa = PBXBuildFile; productRef = 87CB52962E90242F00618C59 /* Apollo */; };
@@ -75,7 +77,9 @@
 				87CB52992E90242F00618C59 /* ApolloAPI in Frameworks */,
 				87CB529D2E90242F00618C59 /* ApolloWebSocket in Frameworks */,
 				87CB52972E90242F00618C59 /* Apollo in Frameworks */,
+				879D684D2EB004D60045F86E /* StripePaymentSheet in Frameworks */,
 				87CB529B2E90242F00618C59 /* ApolloSQLite in Frameworks */,
+				879D684B2EB004D60045F86E /* Stripe in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -158,6 +162,8 @@
 				87CB529A2E90242F00618C59 /* ApolloSQLite */,
 				87CB529C2E90242F00618C59 /* ApolloWebSocket */,
 				87D766AF2E91C0B5003D2461 /* Lottie */,
+				879D684A2EB004D60045F86E /* Stripe */,
+				879D684C2EB004D60045F86E /* StripePaymentSheet */,
 			);
 			productName = LlegoiOS;
 			productReference = 87F968CD2E8F622A00EC1A7C /* LlegoiOS.app */;
@@ -193,6 +199,7 @@
 			packageReferences = (
 				87CB52952E90242F00618C59 /* XCRemoteSwiftPackageReference "apollo-ios" */,
 				87D766AE2E91C0B5003D2461 /* XCRemoteSwiftPackageReference "lottie-ios" */,
+				879D68492EB004D60045F86E /* XCRemoteSwiftPackageReference "stripe-ios-spm" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 87F968CE2E8F622A00EC1A7C /* Products */;
@@ -539,6 +546,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		879D68492EB004D60045F86E /* XCRemoteSwiftPackageReference "stripe-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/stripe/stripe-ios-spm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 24.24.4;
+			};
+		};
 		87CB52952E90242F00618C59 /* XCRemoteSwiftPackageReference "apollo-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/apollographql/apollo-ios.git";
@@ -558,6 +573,16 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		879D684A2EB004D60045F86E /* Stripe */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 879D68492EB004D60045F86E /* XCRemoteSwiftPackageReference "stripe-ios-spm" */;
+			productName = Stripe;
+		};
+		879D684C2EB004D60045F86E /* StripePaymentSheet */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 879D68492EB004D60045F86E /* XCRemoteSwiftPackageReference "stripe-ios-spm" */;
+			productName = StripePaymentSheet;
+		};
 		87CB52962E90242F00618C59 /* Apollo */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 87CB52952E90242F00618C59 /* XCRemoteSwiftPackageReference "apollo-ios" */;

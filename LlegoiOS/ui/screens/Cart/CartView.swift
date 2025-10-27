@@ -1,4 +1,5 @@
 import SwiftUI
+import StripePaymentSheet
 
 enum Currency: String, CaseIterable {
     case CUP = "CUP"
@@ -33,7 +34,26 @@ struct CartView: View {
     @State private var showPaymentMethodPicker = false
     @State private var navigateToPlans = false
 
+    // MARK: - Stripe PaymentSheet
+    @State private var paymentSheet: PaymentSheet?
+    @State private var isLoadingPayment = false
+    @State private var paymentResult: PaymentSheetResult?
+    @State private var showPaymentAlert = false
+    @State private var paymentAlertMessage = ""
+    @State private var generatedPaymentLink: String?
+    @State private var showPaymentLinkSheet = false
+    @State private var showBankTransferSheet = false
+    private let paymentRepository = PaymentRepository()
+
     let paymentMethods: [PaymentMethod] = [
+        PaymentMethod(
+            id: "invoice_international",
+            name: "ENviar factura a persona en el extranjero",
+            description: "Enviar link de pago",
+            imageType: .systemIcon("link.circle.fill"),
+            color: Color(red: 0.2, green: 0.5, blue: 0.9),
+            currency: "USD"
+        ),
         PaymentMethod(
             id: "cash_cup",
             name: "Efectivo",
@@ -226,10 +246,15 @@ struct CartView: View {
                                     processPayment()
                                 }) {
                                     HStack(spacing: 4) {
-                                        Text("Pagar")
-                                            .font(.system(size: 16, weight: .bold, design: .rounded))
-                                        Text(viewModel.formattedTotal)
-                                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                                        if selectedPaymentMethod?.id == "invoice_international" {
+                                            Text("Enviar factura")
+                                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                                        } else {
+                                            Text("Pagar")
+                                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                                            Text(viewModel.formattedTotal)
+                                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                        }
                                     }
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 40)
@@ -311,6 +336,62 @@ struct CartView: View {
             )
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showPaymentLinkSheet) {
+            PaymentLinkSheetView(
+                paymentLink: generatedPaymentLink ?? "",
+                onDismiss: {
+                    showPaymentLinkSheet = false
+                }
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showBankTransferSheet) {
+            BankTransferSheetView(
+                totalAmount: viewModel.formattedTotal,
+                onConfirm: {
+                    showBankTransferSheet = false
+                    paymentAlertMessage = "¡Transferencia registrada! Estamos verificando tu pago. Te notificaremos cuando se confirme."
+                    showPaymentAlert = true
+
+                    // Limpiar carrito después de confirmar
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        viewModel.clearCart()
+                    }
+                },
+                onDismiss: {
+                    showBankTransferSheet = false
+                }
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .alert("Estado del Pago", isPresented: $showPaymentAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(paymentAlertMessage)
+        }
+        .overlay {
+            if isLoadingPayment {
+                ZStack {
+                    Color.black.opacity(0.4)
+                        .ignoresSafeArea()
+
+                    VStack(spacing: 20) {
+                        LottieView(name: "loading")
+                            .frame(width: 150, height: 150)
+                        Text("Preparando pago...")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.white)
+                    }
+                    .padding(40)
+                    .background(
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(Color.llegoBackground)
+                    )
+                }
+            }
         }
         .onAppear {
             viewModel.loadCart()
@@ -430,11 +511,241 @@ struct CartView: View {
     private func processPayment() {
         guard let paymentMethod = selectedPaymentMethod else { return }
 
-        print("💳 Procesando pago con: \(paymentMethod.name) - \(paymentMethod.currency)")
-        print("💰 Total: \(viewModel.formattedTotal)")
+        // Si el método de pago es factura internacional, generar payment link
+        if paymentMethod.id == "invoice_international" {
+            generatePaymentLink()
+        }
+        // Si el método de pago es transferencia bancaria, mostrar sheet
+        else if paymentMethod.id == "bank_transfer" {
+            showBankTransferSheet = true
+        }
+        // Si el método de pago es tarjeta de crédito, usar Stripe
+        else if paymentMethod.id == "credit_card" {
+            initiateStripePayment()
+        } else {
+            // Para otros métodos de pago, usar el flujo actual
+            print("💳 Procesando pago con: \(paymentMethod.name) - \(paymentMethod.currency)")
+            print("💰 Total: \(viewModel.formattedTotal)")
 
-        // Aquí iría la lógica real de procesamiento de pago
-        // Por ahora solo imprimimos en consola
+            // Aquí iría la lógica para otros métodos de pago
+            // (QvaPay, TropiPay, Efectivo, etc.)
+        }
+    }
+
+    // MARK: - Generate Payment Link
+    private func generatePaymentLink() {
+        isLoadingPayment = true
+
+        // Convertir el total a centavos
+        let amountInCents = Int(viewModel.total * 100)
+
+        print("🔗 Generando Payment Link")
+        print("💰 Monto: \(amountInCents) centavos (\(viewModel.formattedTotal))")
+
+        paymentRepository.createPaymentLink(
+            amount: amountInCents,
+            currency: "usd",
+            metadata: [
+                "cart_items": String(viewModel.totalItems),
+                "subtotal": String(format: "%.2f", viewModel.subtotal),
+                "delivery_fee": String(format: "%.2f", viewModel.deliveryFee)
+            ]
+        ) { [self] result in
+            Task { @MainActor in
+                self.isLoadingPayment = false
+
+                switch result {
+                case .success(let paymentLinkURL):
+                    print("✅ Payment Link generado exitosamente")
+                    self.generatedPaymentLink = paymentLinkURL
+                    self.showPaymentLinkSheet = true
+
+                case .failure(let error):
+                    print("❌ Error generando Payment Link: \(error.localizedDescription)")
+                    self.paymentAlertMessage = "Error al generar el link de pago: \(error.localizedDescription)"
+                    self.showPaymentAlert = true
+                }
+            }
+        }
+    }
+
+    // MARK: - Stripe Payment
+    private func initiateStripePayment() {
+        isLoadingPayment = true
+
+        // Convertir el total a centavos (Stripe maneja montos en centavos)
+        let amountInCents = Int(viewModel.total * 100)
+
+        print("💳 Iniciando pago con Stripe")
+        print("💰 Monto: \(amountInCents) centavos (\(viewModel.formattedTotal))")
+
+        // Verificar si estamos en modo mock
+        if StripeConfig.useMockData {
+            print("🧪 Usando MOCK MODE - llamando directamente a Stripe API (solo para testing)")
+
+            // Crear PaymentIntent directamente con Stripe API (SOLO PARA TESTING)
+            paymentRepository.createPaymentIntentDirectly(
+                amount: amountInCents,
+                currency: "usd"
+            ) { [self] result in
+                Task { @MainActor in
+                    self.isLoadingPayment = false
+
+                    switch result {
+                    case .success(let response):
+                        print("✅ [MOCK MODE] PaymentIntent creado exitosamente")
+                        self.configurePaymentSheet(response: response)
+
+                    case .failure(let error):
+                        print("❌ [MOCK MODE] Error creando PaymentIntent: \(error.localizedDescription)")
+                        self.paymentAlertMessage = "Error al iniciar el pago: \(error.localizedDescription)"
+                        self.showPaymentAlert = true
+                    }
+                }
+            }
+        } else {
+            print("🏭 Usando modo PRODUCCIÓN - llamando al backend")
+
+            // Crear PaymentIntent en el backend (PRODUCCIÓN)
+            paymentRepository.createPaymentIntent(
+                amount: amountInCents,
+                currency: "usd",
+                customerEmail: "user@example.com", // TODO: Obtener email del usuario actual
+                metadata: [
+                    "cart_items": String(viewModel.totalItems),
+                    "subtotal": String(format: "%.2f", viewModel.subtotal),
+                    "delivery_fee": String(format: "%.2f", viewModel.deliveryFee)
+                ]
+            ) { [self] result in
+                Task { @MainActor in
+                    self.isLoadingPayment = false
+
+                    switch result {
+                    case .success(let response):
+                        print("✅ PaymentIntent creado exitosamente")
+                        self.configurePaymentSheet(response: response)
+
+                    case .failure(let error):
+                        print("❌ Error creando PaymentIntent: \(error.localizedDescription)")
+                        self.paymentAlertMessage = "Error al iniciar el pago: \(error.localizedDescription)"
+                        self.showPaymentAlert = true
+                    }
+                }
+            }
+        }
+    }
+
+    private func configurePaymentSheet(response: PaymentIntentResponse) {
+        // Configurar Stripe con la publishable key
+        STPAPIClient.shared.publishableKey = response.publishableKey
+
+        // Configurar PaymentSheet
+        var configuration = PaymentSheet.Configuration()
+        configuration.merchantDisplayName = StripeConfig.merchantDisplayName
+
+        // Solo configurar customer si no estamos en modo mock
+        if !StripeConfig.useMockData && response.customer != "cus_mock" {
+            // Configurar customer (solo en producción con backend)
+            configuration.customer = .init(
+                id: response.customer,
+                ephemeralKeySecret: response.ephemeralKey
+            )
+            print("✅ Customer configurado: \(response.customer)")
+        } else {
+            print("🧪 [MOCK MODE] Omitiendo configuración de Customer")
+        }
+
+        // MARK: - Apple Pay Configuration
+        if StripeConfig.enableApplePay {
+            configuration.applePay = .init(
+                merchantId: StripeConfig.applePayMerchantId,
+                merchantCountryCode: StripeConfig.merchantCountryCode
+            )
+            print("🍎 Apple Pay habilitado")
+            print("   Merchant ID: \(StripeConfig.applePayMerchantId)")
+            print("   Country: \(StripeConfig.merchantCountryCode)")
+        }
+
+        // Permitir métodos de pago diferidos (como cuentas bancarias)
+        configuration.allowsDelayedPaymentMethods = true
+
+        // Configurar URL de retorno para autenticación
+        configuration.returnURL = StripeConfig.returnURL
+
+        // MARK: - Appearance (Opcional - personalizar colores)
+        var appearance = PaymentSheet.Appearance()
+        appearance.colors.primary = UIColor(Color.llegoPrimary)
+        appearance.colors.background = UIColor(Color.white)
+        appearance.cornerRadius = 16.0
+        configuration.appearance = appearance
+
+        // Crear PaymentSheet
+        self.paymentSheet = PaymentSheet(
+            paymentIntentClientSecret: response.paymentIntent,
+            configuration: configuration
+        )
+
+        print("✅ PaymentSheet configurado correctamente")
+        print("   PaymentIntent: \(response.paymentIntent.prefix(20))...")
+        if StripeConfig.enableInstallments {
+            print("   💳 Pagos a plazos habilitados (se mostrarán si son elegibles)")
+        }
+
+        // Mostrar PaymentSheet automáticamente
+        presentPaymentSheet()
+    }
+
+    private func presentPaymentSheet() {
+        guard let paymentSheet = paymentSheet else {
+            print("⚠️ PaymentSheet no está configurado")
+            return
+        }
+
+        // Obtener el UIViewController actual
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootViewController = windowScene.windows.first?.rootViewController else {
+            print("❌ No se pudo obtener el rootViewController")
+            return
+        }
+
+        // Encontrar el viewController presentado más reciente
+        var topViewController = rootViewController
+        while let presented = topViewController.presentedViewController {
+            topViewController = presented
+        }
+
+        // Presentar PaymentSheet
+        paymentSheet.present(from: topViewController) { [self] paymentResult in
+            Task { @MainActor in
+                self.handlePaymentResult(paymentResult)
+            }
+        }
+    }
+
+    private func handlePaymentResult(_ result: PaymentSheetResult) {
+        self.paymentResult = result
+
+        switch result {
+        case .completed:
+            print("✅ Pago completado exitosamente")
+            paymentAlertMessage = "¡Pago completado exitosamente! Tu pedido está siendo procesado."
+            showPaymentAlert = true
+
+            // Limpiar carrito después de pago exitoso
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                viewModel.clearCart()
+            }
+
+        case .canceled:
+            print("⚠️ Pago cancelado por el usuario")
+            paymentAlertMessage = "Pago cancelado. Puedes intentar nuevamente cuando estés listo."
+            showPaymentAlert = true
+
+        case .failed(let error):
+            print("❌ Pago fallido: \(error.localizedDescription)")
+            paymentAlertMessage = "Error al procesar el pago: \(error.localizedDescription)"
+            showPaymentAlert = true
+        }
     }
 
     
@@ -918,6 +1229,612 @@ struct CartItemCard: View {
                 .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
         )
     }
+}
+
+// MARK: - Payment Link Sheet View
+struct PaymentLinkSheetView: View {
+    let paymentLink: String
+    let onDismiss: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var showCopiedMessage = false
+
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color.llegoBackground
+                    .ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 24) {
+                        // Header Icon
+                        ZStack {
+                            Circle()
+                                .fill(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [
+                                            Color(red: 0.2, green: 0.5, blue: 0.9).opacity(0.2),
+                                            Color(red: 0.2, green: 0.5, blue: 0.9).opacity(0.1)
+                                        ]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 120, height: 120)
+
+                            Image(systemName: "link.circle.fill")
+                                .font(.system(size: 60, weight: .medium))
+                                .foregroundColor(Color(red: 0.2, green: 0.5, blue: 0.9))
+                        }
+                        .padding(.top, 20)
+
+                        // Title & Description
+                        VStack(spacing: 12) {
+                            Text("Link de Pago Generado")
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .foregroundColor(.llegoPrimary)
+
+                            Text("Comparte este link con alguien en el exterior para que pague tu pedido")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.gray)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 30)
+                        }
+
+                        // Link Container
+                        VStack(spacing: 16) {
+                            // Link Display
+                            HStack(spacing: 12) {
+                                Image(systemName: "link")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(Color(red: 0.2, green: 0.5, blue: 0.9))
+
+                                Text(paymentLink)
+                                    .font(.system(size: 14, weight: .medium, design: .monospaced))
+                                    .foregroundColor(.llegoPrimary)
+                                    .lineLimit(2)
+                                    .truncationMode(.middle)
+
+                                Spacer(minLength: 0)
+                            }
+                            .padding(16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.white)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .stroke(Color(red: 0.2, green: 0.5, blue: 0.9).opacity(0.3), lineWidth: 1.5)
+                                    )
+                            )
+
+                            // Copy Button
+                            Button(action: {
+                                UIPasteboard.general.string = paymentLink
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                                    showCopiedMessage = true
+                                }
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                                    withAnimation {
+                                        showCopiedMessage = false
+                                    }
+                                }
+                            }) {
+                                HStack(spacing: 12) {
+                                    Image(systemName: showCopiedMessage ? "checkmark.circle.fill" : "doc.on.doc.fill")
+                                        .font(.system(size: 18, weight: .bold))
+
+                                    Text(showCopiedMessage ? "¡Copiado!" : "Copiar Link")
+                                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                                }
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 52)
+                                .background(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: showCopiedMessage ? [
+                                            Color.llegoAccent,
+                                            Color.llegoAccent
+                                        ] : [
+                                            Color(red: 0.2, green: 0.5, blue: 0.9),
+                                            Color(red: 0.15, green: 0.4, blue: 0.85)
+                                        ]),
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .cornerRadius(16)
+                                .shadow(
+                                    color: showCopiedMessage ? Color.llegoAccent.opacity(0.4) : Color(red: 0.2, green: 0.5, blue: 0.9).opacity(0.3),
+                                    radius: 12,
+                                    x: 0,
+                                    y: 6
+                                )
+                            }
+                            .scaleEffect(showCopiedMessage ? 1.05 : 1.0)
+                            .animation(.spring(response: 0.4, dampingFraction: 0.7), value: showCopiedMessage)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 8)
+
+                        // Instructions Card
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "info.circle.fill")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(Color(red: 0.2, green: 0.5, blue: 0.9))
+
+                                Text("Instrucciones")
+                                    .font(.system(size: 15, weight: .bold))
+                                    .foregroundColor(.llegoPrimary)
+                            }
+
+                            VStack(alignment: .leading, spacing: 8) {
+                                InstructionRow(number: "1", text: "Copia el link de pago")
+                                InstructionRow(number: "2", text: "Envíalo por WhatsApp, email o mensaje")
+                                InstructionRow(number: "3", text: "La persona paga de forma segura con Stripe")
+                                InstructionRow(number: "4", text: "Recibirás una notificación cuando se complete el pago")
+                            }
+                        }
+                        .padding(20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.white)
+                                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+                        )
+                        .padding(.horizontal, 20)
+
+                        Spacer()
+                    }
+                }
+            }
+            .navigationTitle("Factura al Exterior")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cerrar") {
+                        dismiss()
+                        onDismiss()
+                    }
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.llegoPrimary)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Instruction Row Helper
+struct InstructionRow: View {
+    let number: String
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(Color(red: 0.2, green: 0.5, blue: 0.9).opacity(0.15))
+                    .frame(width: 28, height: 28)
+
+                Text(number)
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundColor(Color(red: 0.2, green: 0.5, blue: 0.9))
+            }
+
+            Text(text)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.gray)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+// MARK: - Bank Transfer Sheet View
+struct BankTransferSheetView: View {
+    let totalAmount: String
+    let onConfirm: () -> Void
+    let onDismiss: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedImage: UIImage?
+    @State private var showImagePicker = false
+    @State private var validationState: ValidationState = .idle
+    @State private var isValidating = false
+
+    enum ValidationState {
+        case idle
+        case validating
+        case validated
+        case failed
+    }
+
+    // Datos bancarios de ejemplo
+    let bankAccountNumber = "9225 8899 0012 3456"
+    let phoneNumber = "+53 5234 5678"
+    let bankName = "Banco Metropolitano"
+
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color.llegoBackground
+                    .ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 24) {
+                        // Header Icon
+                        ZStack {
+                            Circle()
+                                .fill(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [
+                                            Color.llegoSecondary.opacity(0.2),
+                                            Color.llegoSecondary.opacity(0.1)
+                                        ]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 120, height: 120)
+
+                            Image(systemName: "building.columns.fill")
+                                .font(.system(size: 60, weight: .medium))
+                                .foregroundColor(Color.llegoSecondary)
+                        }
+                        .padding(.top, 20)
+
+                        // Title
+                        VStack(spacing: 8) {
+                            Text("Transferencia Bancaria")
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .foregroundColor(.llegoPrimary)
+
+                            Text("Realiza tu transferencia y sube el comprobante")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.gray)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 30)
+                        }
+
+                        // Bank Information Card
+                        VStack(spacing: 16) {
+                            // Bank Name
+                            HStack {
+                                Image(systemName: "building.2.fill")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.llegoSecondary)
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Banco")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.gray)
+                                    Text(bankName)
+                                        .font(.system(size: 16, weight: .bold))
+                                        .foregroundColor(.llegoPrimary)
+                                }
+
+                                Spacer()
+                            }
+
+                            Divider()
+
+                            // Card Number
+                            HStack {
+                                Image(systemName: "creditcard.fill")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.llegoSecondary)
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Número de Tarjeta")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.gray)
+                                    Text(bankAccountNumber)
+                                        .font(.system(size: 16, weight: .bold, design: .monospaced))
+                                        .foregroundColor(.llegoPrimary)
+                                }
+
+                                Spacer()
+
+                                Button(action: {
+                                    UIPasteboard.general.string = bankAccountNumber
+                                }) {
+                                    Image(systemName: "doc.on.doc.fill")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(.llegoAccent)
+                                        .padding(8)
+                                        .background(Circle().fill(Color.llegoAccent.opacity(0.15)))
+                                }
+                            }
+
+                            Divider()
+
+                            // Phone Number
+                            HStack {
+                                Image(systemName: "phone.fill")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.llegoSecondary)
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Teléfono de Confirmación")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.gray)
+                                    Text(phoneNumber)
+                                        .font(.system(size: 16, weight: .bold, design: .monospaced))
+                                        .foregroundColor(.llegoPrimary)
+                                }
+
+                                Spacer()
+                            }
+
+                            Divider()
+
+                            // Amount
+                            HStack {
+                                Image(systemName: "dollarsign.circle.fill")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.llegoAccent)
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Monto a Transferir")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.gray)
+                                    Text(totalAmount)
+                                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                                        .foregroundColor(.llegoAccent)
+                                }
+
+                                Spacer()
+                            }
+                        }
+                        .padding(20)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(Color.white)
+                                .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+                        )
+                        .padding(.horizontal, 20)
+
+                        // Upload Receipt Section
+                        VStack(spacing: 16) {
+                            HStack {
+                                Image(systemName: "photo.badge.plus.fill")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.llegoPrimary)
+
+                                Text("Comprobante de Pago")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(.llegoPrimary)
+
+                                Spacer()
+
+                                if validationState == .validated {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.system(size: 14, weight: .bold))
+                                        Text("Verificado")
+                                            .font(.system(size: 12, weight: .semibold))
+                                    }
+                                    .foregroundColor(.llegoAccent)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color.llegoAccent.opacity(0.15))
+                                    )
+                                }
+                            }
+
+                            if let image = selectedImage {
+                                // Image Preview with Validation State
+                                ZStack {
+                                    Image(uiImage: image)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(height: 200)
+                                        .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                                    // Validation Overlay
+                                    if validationState == .validating {
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .fill(Color.black.opacity(0.6))
+
+                                        VStack(spacing: 16) {
+                                            LottieView(name: "loading")
+                                                .frame(width: 80, height: 80)
+
+                                            Text("Verificando comprobante...")
+                                                .font(.system(size: 14, weight: .semibold))
+                                                .foregroundColor(.white)
+                                        }
+                                    } else if validationState == .validated {
+                                        VStack {
+                                            HStack {
+                                                Spacer()
+                                                ZStack {
+                                                    Circle()
+                                                        .fill(Color.llegoAccent)
+                                                        .frame(width: 40, height: 40)
+
+                                                    Image(systemName: "checkmark")
+                                                        .font(.system(size: 20, weight: .bold))
+                                                        .foregroundColor(.white)
+                                                }
+                                                .shadow(color: Color.llegoAccent.opacity(0.5), radius: 8, x: 0, y: 4)
+                                                .padding()
+                                            }
+                                            Spacer()
+                                        }
+                                    }
+                                }
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(
+                                            validationState == .validated ? Color.llegoAccent : Color.gray.opacity(0.3),
+                                            lineWidth: 2
+                                        )
+                                )
+
+                                // Change Image Button
+                                if validationState != .validating {
+                                    Button(action: {
+                                        showImagePicker = true
+                                    }) {
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "arrow.triangle.2.circlepath")
+                                                .font(.system(size: 14, weight: .semibold))
+                                            Text("Cambiar imagen")
+                                                .font(.system(size: 14, weight: .semibold))
+                                        }
+                                        .foregroundColor(.llegoPrimary)
+                                        .padding(.vertical, 8)
+                                    }
+                                }
+                            } else {
+                                // Upload Button
+                                Button(action: {
+                                    showImagePicker = true
+                                }) {
+                                    VStack(spacing: 12) {
+                                        ZStack {
+                                            Circle()
+                                                .fill(Color.llegoSecondary.opacity(0.15))
+                                                .frame(width: 60, height: 60)
+
+                                            Image(systemName: "photo.badge.plus")
+                                                .font(.system(size: 28, weight: .medium))
+                                                .foregroundColor(.llegoSecondary)
+                                        }
+
+                                        Text("Subir Comprobante")
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .foregroundColor(.llegoPrimary)
+
+                                        Text("Toca para seleccionar una imagen")
+                                            .font(.system(size: 13, weight: .medium))
+                                            .foregroundColor(.gray)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 180)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .strokeBorder(
+                                                style: StrokeStyle(lineWidth: 2, dash: [8, 4])
+                                            )
+                                            .foregroundColor(Color.llegoSecondary.opacity(0.3))
+                                    )
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+
+                        // Confirm Button
+                        Button(action: {
+                            onConfirm()
+                            dismiss()
+                        }) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 18, weight: .bold))
+
+                                Text("Confirmar Transferencia")
+                                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [
+                                        Color.llegoAccent,
+                                        Color.llegoPrimary
+                                    ]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(16)
+                            .shadow(
+                                color: validationState == .validated ? Color.llegoAccent.opacity(0.4) : Color.gray.opacity(0.2),
+                                radius: 12,
+                                x: 0,
+                                y: 6
+                            )
+                        }
+                        .disabled(validationState != .validated)
+                        .opacity(validationState == .validated ? 1.0 : 0.4)
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 20)
+                    }
+                }
+            }
+            .navigationTitle("Transferencia Bancaria")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cancelar") {
+                        dismiss()
+                        onDismiss()
+                    }
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.gray)
+                }
+            }
+            .sheet(isPresented: $showImagePicker) {
+                ImagePicker(image: $selectedImage, onImageSelected: {
+                    // Iniciar validación simulada
+                    validateReceipt()
+                })
+            }
+        }
+    }
+
+    private func validateReceipt() {
+        validationState = .validating
+
+        // Simular validación con delay de 3 segundos
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                validationState = .validated
+            }
+        }
+    }
+}
+
+// MARK: - Image Picker
+struct ImagePicker: UIViewControllerRepresentable {
+    @Binding var image: UIImage?
+    @Environment(\.dismiss) private var dismiss
+    let onImageSelected: () -> Void
+
+    class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
+        let parent: ImagePicker
+
+        init(_ parent: ImagePicker) {
+            self.parent = parent
+        }
+
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+            if let uiImage = info[.originalImage] as? UIImage {
+                parent.image = uiImage
+                parent.onImageSelected()
+            }
+            parent.dismiss()
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.dismiss()
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.delegate = context.coordinator
+        picker.sourceType = .photoLibrary
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
 }
 
 #Preview {
