@@ -350,7 +350,7 @@ struct CartView: View {
         .sheet(isPresented: $showBankTransferSheet) {
             BankTransferSheetView(
                 totalAmount: viewModel.formattedTotal,
-                onConfirm: {
+                onConfirm: { _ in
                     showBankTransferSheet = false
                     paymentAlertMessage = "¡Transferencia registrada! Estamos verificando tu pago. Te notificaremos cuando se confirme."
                     showPaymentAlert = true
@@ -884,6 +884,19 @@ struct CartView: View {
         .padding(.top, 8)
     }
 
+    private var tipAttributedString: AttributedString {
+        var base = AttributedString("Recomendamos elegir productos de un mismo vendedor para hacer más barato el envío o ")
+        base.font = .system(size: 13, weight: .medium)
+        base.foregroundColor = .gray
+
+        var action = AttributedString("suscribirse")
+        action.font = .system(size: 13, weight: .semibold)
+        action.foregroundColor = .llegoAccent
+        action.underlineStyle = .single
+
+        return base + action
+    }
+
     private var shippingTipCard: some View {
         HStack(alignment: .top, spacing: 12) {
             ZStack {
@@ -905,15 +918,8 @@ struct CartView: View {
                 Button(action: {
                     navigateToPlans = true
                 }) {
-                    (Text("Recomendamos elegir productos de un mismo vendedor para hacer más barato el envío o ")
-                        .foregroundColor(.gray)
-                        .font(.system(size: 13, weight: .medium)) +
-                     Text("suscribirse")
-                        .foregroundColor(.llegoAccent)
-                        .font(.system(size: 13, weight: .semibold))
-                        .underline()
-                    )
-                    .multilineTextAlignment(.leading)
+                    Text(tipAttributedString)
+                        .multilineTextAlignment(.leading)
                 }
                 .buttonStyle(.plain)
             }
@@ -1238,6 +1244,23 @@ struct PaymentLinkSheetView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showCopiedMessage = false
 
+    private var copyButtonGradient: LinearGradient {
+        let colors: [Color]
+        if showCopiedMessage {
+            colors = [Color.llegoAccent, Color.llegoAccent]
+        } else {
+            colors = [
+                Color(red: 0.2, green: 0.5, blue: 0.9),
+                Color(red: 0.15, green: 0.4, blue: 0.85)
+            ]
+        }
+        return LinearGradient(
+            gradient: Gradient(colors: colors),
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+    }
+
     var body: some View {
         NavigationView {
             ZStack {
@@ -1328,19 +1351,7 @@ struct PaymentLinkSheetView: View {
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 52)
-                                .background(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: showCopiedMessage ? [
-                                            Color.llegoAccent,
-                                            Color.llegoAccent
-                                        ] : [
-                                            Color(red: 0.2, green: 0.5, blue: 0.9),
-                                            Color(red: 0.15, green: 0.4, blue: 0.85)
-                                        ]),
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
+                                .background(copyButtonGradient)
                                 .cornerRadius(16)
                                 .shadow(
                                     color: showCopiedMessage ? Color.llegoAccent.opacity(0.4) : Color(red: 0.2, green: 0.5, blue: 0.9).opacity(0.3),
@@ -1430,26 +1441,110 @@ struct InstructionRow: View {
 // MARK: - Bank Transfer Sheet View
 struct BankTransferSheetView: View {
     let totalAmount: String
-    let onConfirm: () -> Void
+    let allowAmountEditing: Bool
+    let onConfirm: (String) -> Void
     let onDismiss: () -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @State private var editableAmount: String
+    @State private var transferId: String = ""
     @State private var selectedImage: UIImage?
     @State private var showImagePicker = false
     @State private var validationState: ValidationState = .idle
     @State private var isValidating = false
+    @State private var validationError: String = ""
+    @State private var showValidationError = false
+    @State private var lastValidationResult: PaymentValidationResult?
 
-    enum ValidationState {
+    private let cartRepository = CartRepository()
+
+    enum ValidationState: Equatable {
         case idle
         case validating
         case validated
-        case failed
+        case failed(String)
+    }
+
+    init(
+        totalAmount: String,
+        allowAmountEditing: Bool = false,
+        onConfirm: @escaping (String) -> Void,
+        onDismiss: @escaping () -> Void
+    ) {
+        self.totalAmount = totalAmount
+        self.allowAmountEditing = allowAmountEditing
+        self.onConfirm = onConfirm
+        self.onDismiss = onDismiss
+        _editableAmount = State(initialValue: totalAmount)
     }
 
     // Datos bancarios de ejemplo
     let bankAccountNumber = "9225 8899 0012 3456"
     let phoneNumber = "+53 5234 5678"
     let bankName = "Banco Metropolitano"
+
+    private var currentAmountText: String {
+        let value = allowAmountEditing ? editableAmount : totalAmount
+        return value.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var isAmountProvided: Bool {
+        !currentAmountText.isEmpty
+    }
+
+    @ViewBuilder
+    private func validationOverlay() -> some View {
+        switch validationState {
+        case .validating:
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.black.opacity(0.6))
+                .overlay(
+                    VStack(spacing: 16) {
+                        LottieView(name: "loading")
+                            .frame(width: 80, height: 80)
+                        Text("Verificando comprobante...")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+                )
+        case .validated:
+            VStack {
+                HStack {
+                    Spacer()
+                    ZStack {
+                        Circle()
+                            .fill(Color.llegoAccent)
+                            .frame(width: 40, height: 40)
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                    .shadow(color: Color.llegoAccent.opacity(0.5), radius: 8, x: 0, y: 4)
+                    .padding()
+                }
+                Spacer()
+            }
+        case .failed:
+            VStack {
+                HStack {
+                    Spacer()
+                    ZStack {
+                        Circle()
+                            .fill(Color.red)
+                            .frame(width: 40, height: 40)
+                        Image(systemName: "xmark")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                    .shadow(color: Color.red.opacity(0.5), radius: 8, x: 0, y: 4)
+                    .padding()
+                }
+                Spacer()
+            }
+        default:
+            EmptyView()
+        }
+    }
 
     var body: some View {
         NavigationView {
@@ -1459,39 +1554,8 @@ struct BankTransferSheetView: View {
 
                 ScrollView {
                     VStack(spacing: 24) {
-                        // Header Icon
-                        ZStack {
-                            Circle()
-                                .fill(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            Color.llegoSecondary.opacity(0.2),
-                                            Color.llegoSecondary.opacity(0.1)
-                                        ]),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-                                .frame(width: 120, height: 120)
-
-                            Image(systemName: "building.columns.fill")
-                                .font(.system(size: 60, weight: .medium))
-                                .foregroundColor(Color.llegoSecondary)
-                        }
-                        .padding(.top, 20)
-
-                        // Title
-                        VStack(spacing: 8) {
-                            Text("Transferencia Bancaria")
-                                .font(.system(size: 24, weight: .bold, design: .rounded))
-                                .foregroundColor(.llegoPrimary)
-
-                            Text("Realiza tu transferencia y sube el comprobante")
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(.gray)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, 30)
-                        }
+                        headerSection
+                        titleSection
 
                         // Bank Information Card
                         VStack(spacing: 16) {
@@ -1575,9 +1639,23 @@ struct BankTransferSheetView: View {
                                     Text("Monto a Transferir")
                                         .font(.system(size: 12, weight: .medium))
                                         .foregroundColor(.gray)
-                                    Text(totalAmount)
-                                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                                        .foregroundColor(.llegoAccent)
+                                    if allowAmountEditing {
+                                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                            TextField("0.00", text: $editableAmount)
+                                                .font(.system(size: 20, weight: .bold, design: .rounded))
+                                                .keyboardType(.decimalPad)
+                                                .foregroundColor(.llegoAccent)
+                                                .multilineTextAlignment(.leading)
+
+                                            Text("CUP")
+                                                .font(.system(size: 14, weight: .semibold))
+                                                .foregroundColor(.llegoAccent.opacity(0.85))
+                                        }
+                                    } else {
+                                        Text(totalAmount)
+                                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                                            .foregroundColor(.llegoAccent)
+                                    }
                                 }
 
                                 Spacer()
@@ -1589,6 +1667,39 @@ struct BankTransferSheetView: View {
                                 .fill(Color.white)
                                 .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
                         )
+                        .padding(.horizontal, 20)
+
+                        // Transfer ID Input Section
+                        VStack(spacing: 16) {
+                            HStack {
+                                Image(systemName: "number.circle.fill")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.llegoPrimary)
+
+                                Text("Identificador de Transferencia")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(.llegoPrimary)
+
+                                Spacer()
+                            }
+
+                            TextField("Ej: 1234567890", text: $transferId)
+                                .font(.system(size: 16, weight: .medium, design: .monospaced))
+                                .padding(16)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.white)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(
+                                                    transferId.isEmpty ? Color.gray.opacity(0.3) : Color.llegoAccent,
+                                                    lineWidth: 1.5
+                                                )
+                                        )
+                                )
+                                .autocapitalization(.none)
+                                .keyboardType(.numberPad)
+                        }
                         .padding(.horizontal, 20)
 
                         // Upload Receipt Section
@@ -1631,49 +1742,24 @@ struct BankTransferSheetView: View {
                                         .clipShape(RoundedRectangle(cornerRadius: 16))
 
                                     // Validation Overlay
-                                    if validationState == .validating {
-                                        RoundedRectangle(cornerRadius: 16)
-                                            .fill(Color.black.opacity(0.6))
-
-                                        VStack(spacing: 16) {
-                                            LottieView(name: "loading")
-                                                .frame(width: 80, height: 80)
-
-                                            Text("Verificando comprobante...")
-                                                .font(.system(size: 14, weight: .semibold))
-                                                .foregroundColor(.white)
-                                        }
-                                    } else if validationState == .validated {
-                                        VStack {
-                                            HStack {
-                                                Spacer()
-                                                ZStack {
-                                                    Circle()
-                                                        .fill(Color.llegoAccent)
-                                                        .frame(width: 40, height: 40)
-
-                                                    Image(systemName: "checkmark")
-                                                        .font(.system(size: 20, weight: .bold))
-                                                        .foregroundColor(.white)
-                                                }
-                                                .shadow(color: Color.llegoAccent.opacity(0.5), radius: 8, x: 0, y: 4)
-                                                .padding()
-                                            }
-                                            Spacer()
-                                        }
-                                    }
+                                    validationOverlay()
                                 }
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 16)
                                         .stroke(
-                                            validationState == .validated ? Color.llegoAccent : Color.gray.opacity(0.3),
+                                            strokeColorForValidationState(),
                                             lineWidth: 2
                                         )
                                 )
 
                                 // Change Image Button
-                                if validationState != .validating {
+                                if case .validating = validationState {
+                                    EmptyView()
+                                } else {
                                     Button(action: {
+                                        // Reset validation state
+                                        validationState = .idle
+                                        lastValidationResult = nil
                                         showImagePicker = true
                                     }) {
                                         HStack(spacing: 8) {
@@ -1686,10 +1772,17 @@ struct BankTransferSheetView: View {
                                         .padding(.vertical, 8)
                                     }
                                 }
+
+                                if let validationResult = lastValidationResult {
+                                    validationResultSummary(result: validationResult)
+                                        .padding(.top, 12)
+                                }
                             } else {
                                 // Upload Button
                                 Button(action: {
-                                    showImagePicker = true
+                                    if !transferId.isEmpty {
+                                        showImagePicker = true
+                                    }
                                 }) {
                                     VStack(spacing: 12) {
                                         ZStack {
@@ -1704,9 +1797,9 @@ struct BankTransferSheetView: View {
 
                                         Text("Subir Comprobante")
                                             .font(.system(size: 16, weight: .semibold))
-                                            .foregroundColor(.llegoPrimary)
+                                            .foregroundColor(transferId.isEmpty ? .gray : .llegoPrimary)
 
-                                        Text("Toca para seleccionar una imagen")
+                                        Text(transferId.isEmpty ? "Primero introduce el identificador" : "Toca para seleccionar una imagen")
                                             .font(.system(size: 13, weight: .medium))
                                             .foregroundColor(.gray)
                                     }
@@ -1726,7 +1819,7 @@ struct BankTransferSheetView: View {
 
                         // Confirm Button
                         Button(action: {
-                            onConfirm()
+                            onConfirm(currentAmountText)
                             dismiss()
                         }) {
                             HStack(spacing: 12) {
@@ -1757,8 +1850,8 @@ struct BankTransferSheetView: View {
                                 y: 6
                             )
                         }
-                        .disabled(validationState != .validated)
-                        .opacity(validationState == .validated ? 1.0 : 0.4)
+                        .disabled(validationState != .validated || !isAmountProvided)
+                        .opacity(validationState == .validated && isAmountProvided ? 1.0 : 0.4)
                         .padding(.horizontal, 20)
                         .padding(.bottom, 20)
                     }
@@ -1778,20 +1871,205 @@ struct BankTransferSheetView: View {
             }
             .sheet(isPresented: $showImagePicker) {
                 ImagePicker(image: $selectedImage, onImageSelected: {
-                    // Iniciar validación simulada
+                    // Iniciar validación con el servicio REST de pagos
                     validateReceipt()
                 })
+            }
+            .alert("Error de Validación", isPresented: $showValidationError) {
+                Button("OK", role: .cancel) {
+                    showValidationError = false
+                }
+            } message: {
+                Text(validationError)
             }
         }
     }
 
-    private func validateReceipt() {
-        validationState = .validating
+    private var headerSection: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color.llegoSecondary.opacity(0.2),
+                            Color.llegoSecondary.opacity(0.1)
+                        ]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 120, height: 120)
 
-        // Simular validación con delay de 3 segundos
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                validationState = .validated
+            Image(systemName: "building.columns.fill")
+                .font(.system(size: 60, weight: .medium))
+                .foregroundColor(Color.llegoSecondary)
+        }
+        .padding(.top, 20)
+    }
+
+    private var titleSection: some View {
+        VStack(spacing: 8) {
+            Text("Transferencia Bancaria")
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .foregroundColor(.llegoPrimary)
+
+            Text("Realiza tu transferencia y sube el comprobante")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(.gray)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 30)
+        }
+    }
+
+    private func strokeColorForValidationState() -> Color {
+        switch validationState {
+        case .validated:
+            return Color.llegoAccent
+        case .failed:
+            return Color.red
+        default:
+            return Color.gray.opacity(0.3)
+        }
+    }
+
+    private func validationResultSummary(result: PaymentValidationResult) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: result.matched ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(result.matched ? .llegoAccent : .red)
+
+                Text(result.matched ? "Transferencia validada" : "Verifica el identificador")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(result.matched ? .llegoAccent : .red)
+
+                Spacer()
+            }
+
+            if let detected = result.detectedTransferId, !detected.isEmpty {
+                validationDetailRow(title: "ID detectado", value: detected)
+            }
+
+            if let data = result.extractedData {
+                if let banco = data.banco, !banco.isEmpty {
+                    validationDetailRow(title: "Banco", value: banco)
+                }
+                if let quienEnvio = data.quienEnvio, !quienEnvio.isEmpty {
+                    validationDetailRow(title: "Quién envió", value: quienEnvio)
+                }
+                if let fecha = data.fecha, !fecha.isEmpty {
+                    validationDetailRow(title: "Fecha", value: fecha)
+                }
+                if let monto = data.cantidadTransferida {
+                    validationDetailRow(title: "Monto detectado", value: String(format: "%.2f CUP", monto))
+                }
+                if let numero = data.numeroTransferencia, !numero.isEmpty {
+                    validationDetailRow(title: "Número en comprobante", value: numero)
+                }
+            }
+
+            if let savedId = result.savedPayment?.id, !savedId.isEmpty {
+                validationDetailRow(title: "Registro guardado", value: savedId)
+            }
+
+            Text(result.message)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.gray)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.secondarySystemBackground))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(
+                    result.matched ? Color.llegoAccent.opacity(0.4) : Color.red.opacity(0.4),
+                    lineWidth: 1.5
+                )
+        )
+    }
+
+    private func validationDetailRow(title: String, value: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Text(title)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.gray)
+
+            Spacer()
+
+            Text(value)
+                .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                .foregroundColor(.llegoPrimary)
+        }
+    }
+
+    private func validateReceipt() {
+        guard let image = selectedImage else { return }
+        guard !transferId.isEmpty else {
+            validationError = "Debes introducir el identificador de transferencia primero"
+            showValidationError = true
+            return
+        }
+
+        validationState = .validating
+        lastValidationResult = nil
+
+        // Llamar al repository para validar la imagen
+        cartRepository.validatePaymentImage(image: image, transferId: transferId) { result in
+            switch result {
+            case .success(let paymentResult):
+                lastValidationResult = paymentResult
+
+                if let isBankMessage = paymentResult.extractedData?.esMensajeBanco, isBankMessage == false {
+                    let errorMsg = "La imagen no parece ser un mensaje de banco válido."
+                    validationState = .failed(errorMsg)
+                    validationError = errorMsg
+                    showValidationError = true
+                    print("❌ Validación fallida: \(errorMsg)")
+                    return
+                }
+
+                guard paymentResult.matched else {
+                    let detected = paymentResult.detectedTransferId ?? paymentResult.extractedData?.numeroTransferencia ?? "no detectado"
+                    let errorMsg = """
+El identificador no coincide.
+Ingresado: \(transferId)
+Detectado: \(detected)
+\(paymentResult.message)
+"""
+                    validationState = .failed(errorMsg)
+                    validationError = errorMsg
+                    showValidationError = true
+                    print("❌ Validación fallida: \(errorMsg)")
+                    return
+                }
+
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                    validationState = .validated
+                }
+                showValidationError = false
+                validationError = ""
+
+                print("✅ Validación exitosa!")
+                print("   Message: \(paymentResult.message)")
+                print("   Detectado: \(paymentResult.detectedTransferId ?? "n/a")")
+                if let banco = paymentResult.extractedData?.banco {
+                    print("   Banco: \(banco)")
+                }
+                if let monto = paymentResult.extractedData?.cantidadTransferida {
+                    print("   Monto: \(monto)")
+                }
+
+            case .failure(let error):
+                lastValidationResult = nil
+                let errorMsg = "Error al validar: \(error.localizedDescription)"
+                validationState = .failed(errorMsg)
+                validationError = errorMsg
+                showValidationError = true
+                print("❌ Error de validación: \(errorMsg)")
             }
         }
     }

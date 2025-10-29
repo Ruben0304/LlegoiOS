@@ -7,14 +7,10 @@ final class ApolloClientManager: @unchecked Sendable {
 
     private(set) lazy var apollo: ApolloClient = {
         let url = URL(string: "https://llegobackend-production.up.railway.app/graphql")!
-
-        // Create Apollo Client with SQLite cache
         let store = ApolloStore(cache: cache)
-
         return ApolloClient(url: url)
     }()
 
-    // 3. Create SQLite cache
     private lazy var cache: SQLiteNormalizedCache = {
         let documentsPath = NSSearchPathForDirectoriesInDomains(
             .documentDirectory,

@@ -4,8 +4,9 @@ import PassKit
 struct WalletView: View {
     @StateObject private var viewModel = WalletViewModel()
     @Environment(\.dismiss) private var dismiss
-    @State private var cardOffset: CGFloat = 0
-    @State private var cardRotation: Double = 0
+    @State private var selectedCurrency: WalletCurrency = .usd
+    @State private var animateContent: Bool = false
+    @State private var showCupTransferSheet: Bool = false
 
     var body: some View {
         ZStack {
@@ -22,143 +23,97 @@ struct WalletView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 20) {
-                    // Main Balance Card (estilo wallet moderna)
-                    ZStack {
-                        // Card Background con gradiente
-                        RoundedRectangle(cornerRadius: 24)
-                            .fill(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        Color.llegoPrimary,
-                                        Color.llegoPrimary.opacity(0.8)
-                                    ]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
+                    // Main Balance Cards
+                    VStack(spacing: 14) {
+                        TabView(selection: $selectedCurrency) {
+                            ForEach(WalletCurrency.allCases) { currency in
+                                WalletAccountCard(
+                                    currency: currency,
+                                    amount: viewModel.balance(for: currency),
+                                    onReimburseTap: currency == .cup ? {
+                                        viewModel.showRefundSheet = true
+                                    } : nil
                                 )
-                            )
-                            .shadow(color: Color.llegoPrimary.opacity(0.3), radius: 20, x: 0, y: 10)
-
-                        // Decorative circles (estilo Apple Card)
-                        Circle()
-                            .fill(Color.white.opacity(0.1))
-                            .frame(width: 200, height: 200)
-                            .offset(x: 100, y: -80)
-                            .blur(radius: 20)
-
-                        Circle()
-                            .fill(Color.llegoSecondary.opacity(0.2))
-                            .frame(width: 150, height: 150)
-                            .offset(x: -80, y: 100)
-                            .blur(radius: 15)
-
-                        // Card Content
-                        VStack(alignment: .leading, spacing: 20) {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("Llego Wallet")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(.white.opacity(0.9))
-
-                                    Text("Balance disponible")
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundColor(.white.opacity(0.7))
-                                }
-
-                                Spacer()
-
-                                // Wallet Icon
-                                Image(systemName: "wallet.pass.fill")
-                                    .font(.system(size: 28))
-                                    .foregroundColor(.llegoSecondary)
+                                .tag(currency)
+                                .padding(.horizontal, 20)
+                                .padding(.top, 20)
                             }
-
-                            Spacer()
-
-                            // Balance Amount
-                            HStack(alignment: .firstTextBaseline, spacing: 2) {
-                                Text("$")
-                                    .font(.system(size: 24, weight: .semibold, design: .rounded))
-                                    .foregroundColor(.white)
-
-                                Text(String(format: "%.2f", viewModel.balance))
-                                    .font(.system(size: 44, weight: .bold, design: .rounded))
-                                    .foregroundColor(.white)
-
-                                Spacer()
-
-                                Text("USD")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.white.opacity(0.8))
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
-                                    .background(
-                                        Capsule()
-                                            .fill(Color.white.opacity(0.2))
-                                    )
-                            }
-
-                            // Card Number Decoration (opcional, estilo tarjeta)
-                            HStack(spacing: 12) {
-                                ForEach(0..<4) { _ in
-                                    Circle()
-                                        .fill(Color.white.opacity(0.4))
-                                        .frame(width: 8, height: 8)
-                                }
-
-                                Circle()
-                                    .fill(Color.white.opacity(0.4))
-                                    .frame(width: 8, height: 8)
-
-                                Circle()
-                                    .fill(Color.white.opacity(0.4))
-                                    .frame(width: 8, height: 8)
-
-                                Circle()
-                                    .fill(Color.white.opacity(0.4))
-                                    .frame(width: 8, height: 8)
-
-                                Circle()
-                                    .fill(Color.white.opacity(0.4))
-                                    .frame(width: 8, height: 8)
-
-                                Spacer()
-                            }
-                            .padding(.top, 8)
                         }
-                        .padding(24)
+                        .frame(height: 240)
+                        .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: selectedCurrency)
+
+                        HStack(spacing: 12) {
+                            ForEach(WalletCurrency.allCases) { currency in
+                                Button(action: {
+                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                                        selectedCurrency = currency
+                                    }
+                                }) {
+                                    Text(currency.switcherTitle)
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(selectedCurrency == currency ? .white : .primary.opacity(0.7))
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 8)
+                                        .background(
+                                            Capsule()
+                                                .fill(
+                                                    selectedCurrency == currency ?
+                                                        currency.activeColor :
+                                                        Color(.systemGray6)
+                                                )
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.horizontal, 20)
                     }
-                    .frame(height: 220)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                    .rotation3DEffect(
-                        .degrees(cardRotation),
-                        axis: (x: 0, y: 1, z: 0)
-                    )
-                    .offset(x: cardOffset)
+                    .opacity(animateContent ? 1 : 0)
+                    .offset(y: animateContent ? 0 : 24)
+                    .animation(.easeOut(duration: 0.55).delay(0.05), value: animateContent)
 
                     // Quick Actions Grid
                     VStack(spacing: 16) {
-                        Text("Acciones rápidas")
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(.primary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 20)
-                            .padding(.top, 8)
+                        HStack {
+                            Text("Acciones rápidas")
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundColor(.primary)
+
+                            Spacer()
+
+                            Text(selectedCurrency.currencyCode)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(
+                                    Capsule()
+                                        .fill(Color(.systemGray6))
+                                )
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 8)
 
                         HStack(spacing: 12) {
                             // Recargar Action
                             Button(action: {
+                                viewModel.rechargeAmount = ""
+                                if selectedCurrency == .cup {
+                                    selectedCurrency = .cup
+                                }
                                 viewModel.showRechargeSheet = true
                             }) {
                                 VStack(spacing: 12) {
                                     ZStack {
                                         Circle()
-                                            .fill(Color.llegoPrimary.opacity(0.15))
+                                            .fill(selectedCurrency.activeColor.opacity(0.15))
                                             .frame(width: 56, height: 56)
 
                                         Image(systemName: "plus.circle.fill")
                                             .font(.system(size: 28))
-                                            .foregroundColor(.llegoPrimary)
+                                            .foregroundColor(selectedCurrency.activeColor)
                                     }
 
                                     Text("Recargar")
@@ -210,7 +165,7 @@ struct WalletView: View {
                         HStack(spacing: 12) {
                             // Transferir Action
                             Button(action: {
-                                // TODO: Implementar transferencia
+                                viewModel.presentTransferSheet()
                             }) {
                                 VStack(spacing: 12) {
                                     ZStack {
@@ -268,6 +223,9 @@ struct WalletView: View {
                         }
                         .padding(.horizontal, 20)
                     }
+                    .opacity(animateContent ? 1 : 0)
+                    .offset(y: animateContent ? 0 : 24)
+                    .animation(.easeOut(duration: 0.55).delay(0.15), value: animateContent)
 
                     // Info Cards
                     VStack(spacing: 12) {
@@ -327,6 +285,9 @@ struct WalletView: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 8)
+                    .opacity(animateContent ? 1 : 0)
+                    .offset(y: animateContent ? 0 : 16)
+                    .animation(.easeOut(duration: 0.55).delay(0.25), value: animateContent)
 
                     Spacer(minLength: 40)
                 }
@@ -371,15 +332,244 @@ struct WalletView: View {
             }
         }
         .sheet(isPresented: $viewModel.showRechargeSheet) {
-            LocalRechargeSheet(viewModel: viewModel)
-                .presentationDetents([.height(350)])
+            LocalRechargeSheet(
+                viewModel: viewModel,
+                selectedCurrency: $selectedCurrency,
+                onCupTransferTap: { amountText in
+                    viewModel.prepareCupTransfer(amountText: amountText)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showCupTransferSheet = true
+                    }
+                }
+            )
+                .presentationDetents([.height(380)])
         }
         .sheet(isPresented: $viewModel.showForeignRechargeSheet) {
             ForeignRechargeSheet(viewModel: viewModel)
                 .presentationDetents([.medium])
         }
+        .sheet(isPresented: $viewModel.showTransferSheet) {
+            WalletTransferSheet(
+                viewModel: viewModel,
+                selectedCurrency: selectedCurrency
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showCupTransferSheet) {
+            BankTransferSheetView(
+                totalAmount: viewModel.cupTransferAmountDisplay,
+                allowAmountEditing: true,
+                onConfirm: { amountText in
+                    viewModel.completeCupTransferRecharge(amountString: amountText)
+                    showCupTransferSheet = false
+                },
+                onDismiss: {
+                    showCupTransferSheet = false
+                }
+            )
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $viewModel.showRefundSheet) {
+            RefundInfoSheet(currency: .cup)
+                .presentationDetents([.height(260)])
+        }
         .onAppear {
+            animateContent = false
+            DispatchQueue.main.async {
+                animateContent = true
+            }
             viewModel.loadBalance()
+        }
+        .onDisappear {
+            animateContent = false
+        }
+    }
+}
+
+// MARK: - Wallet Account Card
+private struct WalletAccountCard: View {
+    let currency: WalletCurrency
+    let amount: Double
+    var onReimburseTap: (() -> Void)?
+
+    var body: some View {
+        ZStack(alignment: .bottomTrailing) {
+            RoundedRectangle(cornerRadius: 24)
+                .fill(currency.cardGradient)
+                .shadow(color: currency.shadowColor, radius: 20, x: 0, y: 12)
+
+            Circle()
+                .fill(currency.primaryDecorationColor)
+                .frame(width: 200, height: 200)
+                .offset(x: 110, y: -90)
+                .blur(radius: 20)
+
+            Circle()
+                .fill(currency.secondaryDecorationColor)
+                .frame(width: 150, height: 150)
+                .offset(x: -90, y: 110)
+                .blur(radius: 15)
+
+            VStack(alignment: .leading, spacing: 20) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Llego Wallet")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.9))
+
+                        Text(currency.cardSubtitle)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "wallet.pass.fill")
+                        .font(.system(size: 28))
+                        .foregroundColor(currency.accentIconColor)
+                }
+
+                Spacer()
+
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(currency.symbol)
+                        .font(.system(size: 24, weight: .semibold, design: .rounded))
+                        .foregroundColor(.white)
+
+                    Text(String(format: "%.2f", amount))
+                        .font(.system(size: 44, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+
+                    Spacer()
+
+                    Text(currency.currencyCode)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.85))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill(Color.white.opacity(0.18))
+                        )
+                }
+
+                HStack(spacing: 12) {
+                    ForEach(0..<6, id: \.self) { index in
+                        Circle()
+                            .fill(Color.white.opacity(index.isMultiple(of: 2) ? 0.35 : 0.25))
+                            .frame(width: 8, height: 8)
+                    }
+
+                    Spacer()
+                }
+                .padding(.top, 8)
+            }
+            .padding(24)
+
+            if let onReimburseTap, currency == .cup {
+                Button(action: onReimburseTap) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.uturn.backward.circle.fill")
+                            .font(.system(size: 18))
+                        Text("Reembolsar")
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    .foregroundColor(.white.opacity(0.92))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(
+                        Capsule()
+                            .fill(Color.white.opacity(0.18))
+                    )
+                }
+                .buttonStyle(.plain)
+                .padding(24)
+            }
+        }
+        .frame(height: 220)
+    }
+}
+
+private extension WalletCurrency {
+    var cardGradient: LinearGradient {
+        switch self {
+        case .usd:
+            return LinearGradient(
+                colors: [Color.llegoPrimary, Color.llegoPrimary.opacity(0.85)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        case .cup:
+            return LinearGradient(
+                colors: [Color.llegoTertiary, Color.llegoTertiary.opacity(0.82)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+    }
+
+    var cardSubtitle: String {
+        switch self {
+        case .usd:
+            return "Balance disponible"
+        case .cup:
+            return "Saldo en CUP"
+        }
+    }
+
+    var accentIconColor: Color {
+        switch self {
+        case .usd:
+            return .llegoSecondary
+        case .cup:
+            return .llegoSecondary
+        }
+    }
+
+    var activeColor: Color {
+        switch self {
+        case .usd:
+            return .llegoPrimary
+        case .cup:
+            return .llegoTertiary
+        }
+    }
+
+    var switcherTitle: String {
+        switch self {
+        case .usd:
+            return "Cuenta USD"
+        case .cup:
+            return "Cuenta CUP"
+        }
+    }
+
+    var primaryDecorationColor: Color {
+        switch self {
+        case .usd:
+            return Color.white.opacity(0.12)
+        case .cup:
+            return Color.llegoSecondary.opacity(0.28)
+        }
+    }
+
+    var secondaryDecorationColor: Color {
+        switch self {
+        case .usd:
+            return Color.llegoSecondary.opacity(0.18)
+        case .cup:
+            return Color.llegoAccent.opacity(0.18)
+        }
+    }
+
+    var shadowColor: Color {
+        switch self {
+        case .usd:
+            return Color.llegoPrimary.opacity(0.3)
+        case .cup:
+            return Color.llegoTertiary.opacity(0.32)
         }
     }
 }
@@ -396,6 +586,8 @@ struct ScaleButtonStyle: ButtonStyle {
 // MARK: - Local Recharge Sheet
 struct LocalRechargeSheet: View {
     @ObservedObject var viewModel: WalletViewModel
+    @Binding var selectedCurrency: WalletCurrency
+    var onCupTransferTap: (String) -> Void
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isAmountFocused: Bool
 
@@ -404,6 +596,21 @@ struct LocalRechargeSheet: View {
             VStack(spacing: 24) {
                 Spacer()
 
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Moneda")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+
+                    Picker("Moneda", selection: $selectedCurrency) {
+                        ForEach(WalletCurrency.allCases) { currency in
+                            Text(currency.currencyCode)
+                                .tag(currency)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+                .padding(.horizontal)
+
                 // Amount Input
                 VStack(spacing: 8) {
                     Text("Monto a recargar")
@@ -411,7 +618,7 @@ struct LocalRechargeSheet: View {
                         .foregroundColor(.secondary)
 
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text("$")
+                        Text(selectedCurrency.symbol)
                             .font(.system(size: 24, weight: .semibold))
                             .foregroundColor(.primary)
 
@@ -435,14 +642,14 @@ struct LocalRechargeSheet: View {
                         Button(action: {
                             viewModel.rechargeAmount = String(format: "%.0f", amount)
                         }) {
-                            Text("$\(Int(amount))")
+                            Text("\(selectedCurrency.symbol)\(Int(amount))")
                                 .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.llegoPrimary)
+                                .foregroundColor(selectedCurrency.activeColor)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
                                 .background(
                                     RoundedRectangle(cornerRadius: 10)
-                                        .fill(Color.llegoPrimary.opacity(0.1))
+                                        .fill(selectedCurrency.activeColor.opacity(0.12))
                                 )
                         }
                     }
@@ -452,27 +659,67 @@ struct LocalRechargeSheet: View {
                 Spacer()
 
                 // Apple Pay Button
-                if let amount = Double(viewModel.rechargeAmount), amount > 0 {
-                    Button(action: {
-                        viewModel.processLocalRecharge()
-                    }) {
-                        HStack {
-                            Image(systemName: "apple.logo")
-                                .font(.system(size: 20))
-                            Text("Pagar con Apple Pay")
-                                .font(.system(size: 17, weight: .semibold))
+                let sanitizedAmount = viewModel.rechargeAmount.replacingOccurrences(of: ",", with: ".")
+                if let amount = Double(sanitizedAmount), amount > 0 {
+                    if selectedCurrency == .usd {
+                        Button(action: {
+                            viewModel.rechargeAmount = sanitizedAmount
+                            viewModel.processLocalRecharge(for: selectedCurrency)
+                        }) {
+                            HStack {
+                                Image(systemName: "apple.logo")
+                                    .font(.system(size: 20))
+                                Text("Pagar con Apple Pay")
+                                    .font(.system(size: 17, weight: .semibold))
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .fill(Color.black)
+                            )
                         }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: 14)
-                                .fill(Color.black)
-                        )
+                        .padding(.horizontal)
+                        .padding(.bottom, 32)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    } else {
+                        Button(action: {
+                            let amountText = sanitizedAmount
+                            viewModel.rechargeAmount = amountText
+                            dismiss()
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                onCupTransferTap(amountText)
+                            }
+                        }) {
+                            HStack(spacing: 10) {
+                                Image(systemName: "building.columns.fill")
+                                    .font(.system(size: 18))
+                                Text("Continuar con transferencia CUP")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .lineLimit(1)
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [
+                                                selectedCurrency.activeColor,
+                                                selectedCurrency.activeColor.opacity(0.8)
+                                            ],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                            )
+                        }
+                        .padding(.horizontal)
+                        .padding(.bottom, 32)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
-                    .padding(.horizontal)
-                    .padding(.bottom, 32)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
             .navigationTitle("Recargar Wallet")
@@ -564,6 +811,231 @@ struct ForeignRechargeSheet: View {
             }
             .padding(.vertical)
             .navigationTitle("Recarga Internacional")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cerrar") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Wallet Transfer Sheet
+struct WalletTransferSheet: View {
+    @ObservedObject var viewModel: WalletViewModel
+    let selectedCurrency: WalletCurrency
+    @Environment(\.dismiss) private var dismiss
+    @FocusState private var focusedField: Field?
+
+    private let quickAmounts: [Double] = [10, 25, 50, 100]
+
+    private enum Field {
+        case username
+        case amount
+    }
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                Spacer(minLength: 12)
+
+                VStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(selectedCurrency.activeColor.opacity(0.15))
+                            .frame(width: 80, height: 80)
+
+                        Image(systemName: "arrow.left.arrow.right.circle.fill")
+                            .font(.system(size: 36))
+                            .foregroundColor(selectedCurrency.activeColor)
+                    }
+
+                    Text("Transferir saldo")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.primary)
+
+                    Text("Envía dinero a otro usuario de Llego de forma segura y rápida.")
+                        .font(.system(size: 15))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
+
+                VStack(spacing: 18) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Usuario destino")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.secondary)
+
+                        TextField("ej. juan.perez", text: $viewModel.transferUsername)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled(true)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 14)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color(.systemGray6))
+                            )
+                            .focused($focusedField, equals: .username)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Monto a transferir")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.secondary)
+
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Text(selectedCurrency.symbol)
+                                .font(.system(size: 24, weight: .semibold))
+                                .foregroundColor(.primary)
+
+                            TextField("0.00", text: $viewModel.transferAmount)
+                                .keyboardType(.decimalPad)
+                                .font(.system(size: 42, weight: .bold, design: .rounded))
+                                .multilineTextAlignment(.leading)
+                                .focused($focusedField, equals: .amount)
+                        }
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color(.systemGray6))
+                        )
+
+                        Text("Saldo en \(selectedCurrency.currencyCode)")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(selectedCurrency.activeColor)
+                    }
+
+                    HStack(spacing: 12) {
+                        ForEach(quickAmounts, id: \.self) { amount in
+                            Button(action: {
+                                viewModel.transferAmount = String(format: "%.0f", amount)
+                                viewModel.sanitizeTransferAmount()
+                                focusedField = .amount
+                            }) {
+                                Text("\(selectedCurrency.symbol)\(Int(amount))")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(selectedCurrency.activeColor)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(selectedCurrency.activeColor.opacity(0.12))
+                                    )
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal)
+
+                Spacer()
+
+                Button(action: {
+                    viewModel.performTransfer(for: selectedCurrency)
+                }) {
+                    ZStack {
+                        if viewModel.isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        } else {
+                            HStack(spacing: 10) {
+                                Image(systemName: "paperplane.fill")
+                                    .font(.system(size: 18, weight: .semibold))
+                                Text("Transferir ahora")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .foregroundColor(.white)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        selectedCurrency.activeColor,
+                                        selectedCurrency.activeColor.opacity(0.85)
+                                    ],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                    )
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 32)
+                .disabled(!viewModel.isTransferFormValid || viewModel.isLoading)
+                .opacity(viewModel.isTransferFormValid ? 1 : 0.6)
+                .animation(.easeInOut(duration: 0.2), value: viewModel.isLoading)
+            }
+            .padding(.vertical)
+            .navigationTitle("Transferir")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cerrar") {
+                        viewModel.showTransferSheet = false
+                        dismiss()
+                    }
+                }
+            }
+            .onAppear {
+                focusedField = .username
+            }
+            .onChange(of: viewModel.transferAmount) { _ in
+                viewModel.sanitizeTransferAmount()
+            }
+        }
+    }
+}
+
+// MARK: - Refund Info Sheet
+struct RefundInfoSheet: View {
+    let currency: WalletCurrency
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                Spacer()
+
+                Image(systemName: "arrow.uturn.backward.circle.fill")
+                    .font(.system(size: 56))
+                    .foregroundColor(currency.activeColor)
+
+                Text("Solicitar reembolso")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(.primary)
+
+                Text("Podrás solicitar un reembolso de tu saldo en \(currency.currencyCode). Nuestro equipo te guiará para completar el proceso en pocos minutos.")
+                    .font(.system(size: 15))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+
+                Button(action: {
+                    dismiss()
+                }) {
+                    Text("Entendido")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(currency.activeColor)
+                        )
+                }
+                .padding(.horizontal)
+
+                Spacer()
+            }
+            .padding(.vertical)
+            .navigationTitle("Reembolsar")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {

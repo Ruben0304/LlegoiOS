@@ -1,0 +1,14 @@
+mutation ValidatePaymentImage($file: Upload!) {
+  validatePaymentImage(file: $file) {
+    id
+    quienEnvio
+    banco
+    fecha
+    esMensajeBanco
+    cantidadTransferida
+    numeroTransferencia
+    primeros4Tarjeta
+    ultimos4Tarjeta
+    createdAt
+  }
+}

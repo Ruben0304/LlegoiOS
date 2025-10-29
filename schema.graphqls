@@ -6,6 +6,7 @@ schema {
 scalar DateTime
 "The `JSON` scalar type represents JSON values as specified by [ECMA-404](https://ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf)."
 scalar JSON
+scalar Upload
 type Query {
   "Lista de usuarios"
   users: [UserType!]!
@@ -26,11 +27,15 @@ type Query {
   "Buscar sucursales"
   searchBranches(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true): [BranchType!]!
   "Lista de productos"
-  products(ids: [String!] = null, branchId: String = null, availableOnly: Boolean! = false): [ProductType!]!
+  products(ids: [String!] = null, branchId: String = null, categoryId: String = null, availableOnly: Boolean! = false): [ProductType!]!
   "Obtener producto por ID"
   product(id: String!): ProductType
   "Buscar productos"
   searchProducts(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true): [ProductType!]!
+  "Lista de categorías con subcategorías"
+  categories: [CategoryType!]!
+  "Obtener categoría por ID"
+  category(id: String!): CategoryType
   "Saludo de ejemplo"
   hello: String!
   "Saluda por nombre"
@@ -77,13 +82,27 @@ type ProductType {
   currency: String!
   image: String!
   availability: Boolean!
+  categoryId: String
   createdAt: DateTime!
+}
+type CategoryType {
+  id: String!
+  name: String!
+  imageUrl: String!
+  subcategories: [SubcategoryType!]!
+  createdAt: DateTime!
+}
+type SubcategoryType {
+  name: String!
+  imageUrl: String!
 }
 type Mutation {
   "Register a new user"
   register(input: RegisterInput!): AuthResponse!
   "Login with email and password"
   login(input: LoginInput!): AuthResponse!
+  "Validar una imagen de transferencia bancaria usando Gemini OCR"
+  validatePaymentImage(file: Upload!): PaymentType!
 }
 type AuthResponse {
   accessToken: String!
@@ -97,6 +116,18 @@ type UserData {
   phone: String
   role: String!
   createdAt: String!
+}
+type PaymentType {
+  id: String!
+  quienEnvio: String!
+  banco: String!
+  fecha: DateTime!
+  esMensajeBanco: Boolean!
+  cantidadTransferida: Float!
+  numeroTransferencia: String!
+  primeros4Tarjeta: String!
+  ultimos4Tarjeta: String!
+  createdAt: DateTime!
 }
 input RegisterInput {
   name: String!

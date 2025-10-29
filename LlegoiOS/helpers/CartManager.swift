@@ -2,8 +2,9 @@ import Foundation
 import Combine
 
 /// Singleton para gestionar el carrito globalmente desde cualquier parte de la app
+@MainActor
 class CartManager: ObservableObject {
-    nonisolated(unsafe) static let shared = CartManager()
+    static let shared = CartManager()
 
     @Published private(set) var cartItemCount: Int = 0
     @Published private(set) var localItems: [CartItemLocal] = []

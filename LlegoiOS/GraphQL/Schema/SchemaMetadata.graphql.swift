@@ -33,6 +33,7 @@ public extension LlegoAPI {
       case "BranchType": return LlegoAPI.Objects.BranchType
       case "CoordinatesType": return LlegoAPI.Objects.CoordinatesType
       case "Mutation": return LlegoAPI.Objects.Mutation
+      case "PaymentType": return LlegoAPI.Objects.PaymentType
       case "ProductType": return LlegoAPI.Objects.ProductType
       case "Query": return LlegoAPI.Objects.Query
       case "UserData": return LlegoAPI.Objects.UserData

@@ -1,12 +1,5 @@
 import SwiftUI
 
-struct CartPositionKey: PreferenceKey {
-    nonisolated(unsafe) static var defaultValue: CGPoint = .zero
-    static func reduce(value: inout CGPoint, nextValue: () -> CGPoint) {
-        value = nextValue()
-    }
-}
-
 struct ScrollOffsetPreferenceKey: PreferenceKey {
     nonisolated(unsafe) static var defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
@@ -150,11 +143,9 @@ private enum DayMoment: String, CaseIterable, Identifiable {
 struct HomeView: View {
     @StateObject private var viewModel = HomeViewModel()
     @StateObject private var walletViewModel = WalletViewModel()
+    @ObservedObject private var cartManager = CartManager.shared
     @State private var productCounts: [String: Int] = [:]
     @State private var searchText: String = ""
-    @State private var animationTrigger: AnimationData? = nil
-    @State private var cartPosition: CGPoint = .zero
-    @State private var triggerCartBounce = false
     @State private var navigateToPlans = false
     @State private var navigateToCart = false
     @State private var navigateToWallet = false
@@ -166,10 +157,6 @@ struct HomeView: View {
     @State private var navigateToShop = false
     @State private var shopInitialCategory: String? = nil
     @State private var scrollOffset: CGFloat = 0
-
-    private var totalCartItems: Int {
-        productCounts.values.reduce(0, +)
-    }
 
     private var momentProducts: [Product] {
         products(for: selectedMoment)
@@ -291,15 +278,6 @@ struct HomeView: View {
                                             shopInitialCategory = nil
                                             navigateToShop = true
                                         },
-                                        onAddToCartAnimation: { imageUrl, startPosition in
-                                            print("📥 Received in HomeView - Start: \(startPosition), Cart: \(cartPosition)")
-                                            animationTrigger = AnimationData(
-                                                imageUrl: imageUrl,
-                                                startPosition: startPosition,
-                                                endPosition: cartPosition
-                                            )
-                                            print("✅ AnimationData created - Start: \(animationTrigger!.startPosition), End: \(animationTrigger!.endPosition)")
-                                        },
                                         onProductTap: { product in
                                             selectedProduct = product
                                         }
@@ -322,15 +300,6 @@ struct HomeView: View {
                                         productCounts: $productCounts,
                                         onSeeMoreTap: {
                                             print("Ver todo \(selectedMoment.displayName)")
-                                        },
-                                        onAddToCartAnimation: { imageUrl, startPosition in
-                                            print("📥 Received in MomentOfDay - Start: \(startPosition), Cart: \(cartPosition)")
-                                            animationTrigger = AnimationData(
-                                                imageUrl: imageUrl,
-                                                startPosition: startPosition,
-                                                endPosition: cartPosition
-                                            )
-                                            print("✅ MomentOfDay AnimationData created - Start: \(animationTrigger!.startPosition), End: \(animationTrigger!.endPosition)")
                                         },
                                         onProductTap: { product in
                                             selectedProduct = product
@@ -388,10 +357,6 @@ struct HomeView: View {
                         .position(x: UIScreen.main.bounds.width / 2, y: 90)
                         .zIndex(2)
                 }
-                .onPreferenceChange(CartPositionKey.self) { position in
-                    cartPosition = position
-                    print("🛒 Cart position updated: \(position)")
-                }
                 .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
                     let currentOffset = -offset
                     if scrollOffset != currentOffset {
@@ -420,18 +385,16 @@ struct HomeView: View {
                 }
                 
                 // Botón del carrito a la derecha
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem {
                     Button(action: {
                         navigateToCart = true
                     }) {
-                        
-                            Image(systemName: "cart.fill")
-                           
-                    }.badge(totalCartItems)
+                        Image(systemName: "cart.fill")
+                    }.badge(cartManager.cartItemCount)
                 }
-                
+                ToolbarSpacer(.fixed)
                 // Botón de perfil a la derecha
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem{
                     Button(action: {
                         navigateToProfile = true
                     }) {
@@ -440,14 +403,19 @@ struct HomeView: View {
                 }
             }
             .navigationBarBackButtonHidden(true)
-            .addToCartOverlay(animationTrigger: $animationTrigger) {
-                triggerCartBounce = true
-            }
             .onAppear {
                 if case .idle = viewModel.state {
                     viewModel.loadHomeData()
                 }
                 walletViewModel.loadBalance()
+                productCounts = cartManager.localItems.reduce(into: [:]) { result, item in
+                    result[item.productId] = item.quantity
+                }
+            }
+            .onReceive(cartManager.$localItems) { items in
+                productCounts = items.reduce(into: [:]) { result, item in
+                    result[item.productId] = item.quantity
+                }
             }
 
         }
@@ -510,7 +478,6 @@ private struct MomentOfDayDiscoverySection: View {
     let products: [Product]
     @Binding var productCounts: [String: Int]
     let onSeeMoreTap: () -> Void
-    var onAddToCartAnimation: ((String, CGPoint) -> Void)?
     var onProductTap: ((Product) -> Void)?
 
     private let titleColor = Color(red: 27/255, green: 27/255, blue: 27/255)
@@ -533,7 +500,6 @@ private struct MomentOfDayDiscoverySection: View {
                     cardWidth: 155,
                     cardHeight: 310,
                     onSeeMoreClick: onSeeMoreTap,
-                    onAddToCartAnimation: onAddToCartAnimation,
                     onProductTap: { product in
                         onProductTap?(product)
                     },
