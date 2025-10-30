@@ -17,6 +17,7 @@ class HomeViewModel: ObservableObject {
     @Published var state: HomeViewState = .idle
     @Published var products: [Product] = []
     @Published var stores: [Store] = []
+    @Published var tutorials: [Tutorial] = []
     @Published var errorMessage: String?
 
     // MARK: - Computed Properties
@@ -70,8 +71,11 @@ class HomeViewModel: ObservableObject {
                         )
                     }
 
+                    // Load mock tutorials
+                    self.loadTutorials()
+
                     self.state = .success
-                    print("✅ HomeViewModel: Loaded \(self.products.count) products and \(self.stores.count) stores")
+                    print("✅ HomeViewModel: Loaded \(self.products.count) products, \(self.stores.count) stores, and \(self.tutorials.count) tutorials")
 
                 case .failure(let error):
                     let message = "Error al cargar datos: \(error.localizedDescription)"
@@ -104,5 +108,49 @@ class HomeViewModel: ObservableObject {
         // TODO: Implement proper ETA calculation based on user's location
         // For now, return a random value between 15 and 45 minutes
         return Int.random(in: 15...45)
+    }
+
+    private func loadTutorials() {
+        // Mock tutorials data - En producción esto vendría de GraphQL
+        let baseThumbnailUrl = "https://bucket-production-435ad.up.railway.app/tutoriales/Captura de pantalla 2025-10-30 a la(s) 12.17.10 p.m..png"
+
+        tutorials = [
+            Tutorial(
+                id: "1",
+                title: "Cómo hacer tu primer pedido",
+                description: "Aprende a navegar por la app y realizar tu primera compra de manera fácil y rápida.",
+                duration: "3:45",
+                thumbnailUrl: baseThumbnailUrl,
+                videoUrl: "https://bucket-production-435ad.up.railway.app/tutoriales/Generated video 1-2.mp4",
+                category: "Primeros pasos"
+            ),
+            Tutorial(
+                id: "2",
+                title: "Tips para ahorrar en tus compras",
+                description: "Descubre cómo aprovechar las promociones y ofertas especiales de Llego.",
+                duration: "5:12",
+                thumbnailUrl: baseThumbnailUrl,
+                videoUrl: "https://bucket-production-435ad.up.railway.app/tutoriales/Generated video 1-2.mp4",
+                category: "Consejos"
+            ),
+            Tutorial(
+                id: "3",
+                title: "Rastrea tu pedido en tiempo real",
+                description: "Conoce todas las funciones del seguimiento de pedidos en vivo.",
+                duration: "4:30",
+                thumbnailUrl: baseThumbnailUrl,
+                videoUrl: "https://bucket-production-435ad.up.railway.app/tutoriales/Generated video 1-2.mp4",
+                category: "Funciones avanzadas"
+            ),
+            Tutorial(
+                id: "4",
+                title: "Métodos de pago disponibles",
+                description: "Conoce todas las formas de pago que puedes usar en Llego.",
+                duration: "3:20",
+                thumbnailUrl: baseThumbnailUrl,
+                videoUrl: "https://bucket-production-435ad.up.railway.app/tutoriales/Generated video 1-2.mp4",
+                category: "Pagos"
+            )
+        ]
     }
 }

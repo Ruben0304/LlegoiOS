@@ -63,27 +63,30 @@ struct ProfileView: View {
                 Color.llegoBackground.ignoresSafeArea()
 
                 ScrollView {
-                    VStack(spacing: 24) {
-                        // Header simple con avatar y nombre
-                        profileHeaderSection
+                    VStack(spacing: 0) {
+                        // Header futurista con mapa como portada y avatar flotante
+                        futuristicProfileHeader
 
-                        // Sección principal: Ubicación con mapa
-                        locationMapSection
+                        VStack(spacing: 24) {
+                            // Información de ubicación compacta
+                            compactLocationSection
 
-                        // Información mínima
-                        minimalInfoSection
+                            // Información mínima
+                            minimalInfoSection
 
-                        // Botón de cerrar sesión
-                        signOutButton
+                            // Botón de cerrar sesión
+                            signOutButton
 
-                        Spacer(minLength: 60)
+                            Spacer(minLength: 60)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 24)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
                 }
+                .ignoresSafeArea(edges: .top)
             }
-            .navigationTitle("Mi Cuenta")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -176,140 +179,210 @@ struct ProfileView: View {
         .buttonStyle(PlainButtonStyle())
     }
 
-    private var profileHeaderSection: some View {
-        HStack(spacing: 16) {
-            // Avatar minimalista
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            gradient: Gradient(colors: [Color.llegoAccent.opacity(0.2), Color.llegoPrimary.opacity(0.15)]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+    // MARK: - Futuristic Profile Header con Mapa como Portada
+    private var futuristicProfileHeader: some View {
+        ZStack(alignment: .bottom) {
+            // Mapa como portada de fondo
+            Map(coordinateRegion: .constant(region), interactionModes: [])
+                .frame(height: 340)
+                .opacity(0.6) // Opacidad base del mapa
+                .overlay(
+                    // Gradient overlay para efecto de desvanecimiento progresivo
+                    LinearGradient(
+                        gradient: Gradient(stops: [
+                            .init(color: Color.llegoBackground.opacity(0.3), location: 0.0),
+                            .init(color: Color.clear, location: 0.25),
+                            .init(color: Color.clear, location: 0.5),
+                            .init(color: Color.llegoBackground.opacity(0.4), location: 0.85),
+                            .init(color: Color.llegoBackground, location: 1.0)
+                        ]),
+                        startPoint: .top,
+                        endPoint: .bottom
                     )
-                    .frame(width: 70, height: 70)
+                )
+                .overlay(
+                    // Efecto de blur sutil en los bordes
+                    VStack(spacing: 0) {
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color.black.opacity(0.2),
+                                Color.clear
+                            ]),
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                        .frame(height: 100)
 
-                Image(systemName: "person.fill")
-                    .font(.system(size: 32, weight: .medium))
-                    .foregroundColor(.llegoPrimary)
-            }
+                        Spacer()
+                    }
+                )
+                .disabled(true)
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text(viewModel.currentUser?.fullName ?? "Usuario")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundColor(.llegoPrimary)
-
-                Text(viewModel.currentUser?.email ?? "")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.gray)
-            }
-
-            Spacer()
-
-            Button(action: {
-                showingEditName = true
-            }) {
+            // Contenedor del avatar y nombre (flotante)
+            VStack(spacing: 16) {
+                // Avatar flotante con efecto de profundidad
                 ZStack {
+                    // Shadow exterior para profundidad
                     Circle()
-                        .fill(Color.white)
-                        .frame(width: 40, height: 40)
+                        .fill(Color.black.opacity(0.15))
+                        .frame(width: 128, height: 128)
+                        .blur(radius: 20)
+                        .offset(y: 8)
 
-                    Image(systemName: "pencil")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.llegoAccent)
+                    // Border con gradient
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    Color.white,
+                                    Color.llegoBackground.opacity(0.8)
+                                ]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 124, height: 124)
+
+                    // Avatar principal
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    Color.llegoAccent.opacity(0.3),
+                                    Color.llegoPrimary.opacity(0.2)
+                                ]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 116, height: 116)
+                        .overlay(
+                            Image(systemName: "person.fill")
+                                .font(.system(size: 48, weight: .medium))
+                                .foregroundColor(.llegoPrimary)
+                        )
+
+                    // Botón de editar superpuesto
+                    VStack {
+                        Spacer()
+                        HStack {
+                            Spacer()
+                            Button(action: {
+                                showingEditName = true
+                            }) {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.llegoPrimary)
+                                        .frame(width: 38, height: 38)
+                                        .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
+
+                                    Image(systemName: "pencil")
+                                        .font(.system(size: 16, weight: .bold))
+                                        .foregroundColor(.white)
+                                }
+                            }
+                            .offset(x: 8, y: 8)
+                        }
+                    }
+                    .frame(width: 116, height: 116)
                 }
+                .padding(.bottom, 12)
+
+                // Información del usuario
+                VStack(spacing: 8) {
+                    Text(viewModel.currentUser?.fullName ?? "Usuario")
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundColor(.llegoPrimary)
+                        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+
+                    HStack(spacing: 6) {
+                        Image(systemName: "envelope.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.llegoAccent)
+
+                        Text(viewModel.currentUser?.email ?? "")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.gray)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 8)
+                    .background(
+                        Capsule()
+                            .fill(Color.white.opacity(0.9))
+                            .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
+                    )
+                }
+                .padding(.bottom, 30)
             }
         }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color.white)
-                .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 4)
-        )
     }
 
-    private var locationMapSection: some View {
-        VStack(spacing: 16) {
+    // MARK: - Compact Location Section
+    private var compactLocationSection: some View {
+        VStack(spacing: 14) {
             HStack {
                 Image(systemName: "mappin.circle.fill")
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(.llegoPrimary)
 
                 Text("Ubicación de entrega")
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundColor(.llegoPrimary)
 
                 Spacer()
             }
 
-            VStack(spacing: 0) {
-                // Mapa personalizado
-                Map(coordinateRegion: .constant(region), interactionModes: [])
-                    .frame(height: 220)
-                    .cornerRadius(20)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(Color.llegoAccent.opacity(0.3), lineWidth: 2)
-                    )
-                    .overlay(
-                        // Pin central minimalista
-                        VStack {
-                            Spacer()
-                            Image(systemName: "mappin.circle.fill")
-                                .font(.system(size: 40))
-                                .foregroundColor(.llegoPrimary)
-                                .shadow(color: Color.black.opacity(0.2), radius: 4, x: 0, y: 2)
-                            Spacer()
-                        }
-                    )
-                    .disabled(true)
+            VStack(spacing: 14) {
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.llegoAccent.opacity(0.15))
+                            .frame(width: 48, height: 48)
 
-                // Información de dirección
-                VStack(spacing: 12) {
-                    HStack(spacing: 10) {
                         Image(systemName: "location.fill")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 20, weight: .semibold))
                             .foregroundColor(.llegoAccent)
-
-                        Text(locationManager.address)
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
-                            .foregroundColor(.llegoPrimary)
-                            .lineLimit(2)
-
-                        Spacer()
                     }
 
-                    Button(action: {
-                        showingLocationPicker = true
-                    }) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "map")
-                                .font(.system(size: 16, weight: .semibold))
-
-                            Text("Cambiar ubicación")
-                                .font(.system(size: 16, weight: .bold, design: .rounded))
-                        }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .background(
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.llegoPrimary, Color.llegoPrimary.opacity(0.85)]),
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .cornerRadius(25)
-                        .shadow(color: Color.llegoPrimary.opacity(0.3), radius: 8, x: 0, y: 4)
-                    }
+                    Text(locationManager.address)
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundColor(.llegoPrimary)
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding(20)
+
+                Button(action: {
+                    showingLocationPicker = true
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "map")
+                            .font(.system(size: 16, weight: .semibold))
+
+                        Text("Cambiar ubicación")
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color.llegoPrimary,
+                                Color.llegoPrimary.opacity(0.85)
+                            ]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .cornerRadius(26)
+                    .shadow(color: Color.llegoPrimary.opacity(0.3), radius: 12, x: 0, y: 6)
+                }
             }
+            .padding(18)
             .background(
-                RoundedRectangle(cornerRadius: 24)
+                RoundedRectangle(cornerRadius: 20)
                     .fill(Color.white)
-                    .shadow(color: Color.black.opacity(0.08), radius: 15, x: 0, y: 5)
+                    .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 4)
             )
         }
     }

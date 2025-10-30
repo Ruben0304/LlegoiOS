@@ -157,6 +157,8 @@ struct HomeView: View {
     @State private var navigateToShop = false
     @State private var shopInitialCategory: String? = nil
     @State private var scrollOffset: CGFloat = 0
+    @State private var navigateToTutorials = false
+    @State private var selectedTutorial: Tutorial? = nil
 
     private var momentProducts: [Product] {
         products(for: selectedMoment)
@@ -293,6 +295,20 @@ struct HomeView: View {
                                             selectedStore = store
                                         }
                                     )
+
+                                    // Tutorial Section
+                                    TutorialSection(
+                                        tutorials: viewModel.tutorials,
+                                        cardWidth: 200,
+                                        cardHeight: 220,
+                                        onSeeMoreClick: {
+                                            navigateToTutorials = true
+                                        },
+                                        onTutorialTap: { tutorial in
+                                            selectedTutorial = tutorial
+                                        }
+                                    )
+                                    .padding(.top, 8)
 
                                     MomentOfDayDiscoverySection(
                                         selectedMoment: $selectedMoment,
@@ -468,6 +484,21 @@ struct HomeView: View {
                 ShopView(category: shopInitialCategory)
             }
             .navigationViewStyle(StackNavigationViewStyle())
+        }
+
+        // Present TutorialsView modally
+        .fullScreenCover(isPresented: $navigateToTutorials) {
+            NavigationView {
+                TutorialsView()
+            }
+            .navigationViewStyle(StackNavigationViewStyle())
+        }
+
+        // Present individual tutorial video player modally
+        .fullScreenCover(item: $selectedTutorial) { tutorial in
+            VideoPlayerView(tutorial: tutorial, onDismiss: {
+                selectedTutorial = nil
+            })
         }
 
     }
