@@ -44,7 +44,7 @@ struct TutorialCard: View {
                         // Play button overlay
                         ZStack {
                             Circle()
-                                .fill(Color.black.opacity(0.6))
+                                .glassEffect(.regular.interactive())
                                 .frame(width: playButtonSize, height: playButtonSize)
 
                             Image(systemName: "play.fill")

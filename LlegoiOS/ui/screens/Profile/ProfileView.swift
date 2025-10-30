@@ -14,6 +14,7 @@ struct ProfileView: View {
     @StateObject private var locationManager = LocationManager()
     @State private var showingLocationPicker = false
     @State private var showingEditName = false
+    @State private var showingPaymentMethods = false
 
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 23.1136, longitude: -82.3666),
@@ -71,8 +72,17 @@ struct ProfileView: View {
                             // Información de ubicación compacta
                             compactLocationSection
 
-                            // Información mínima
-                            minimalInfoSection
+                            // Nivel del cliente con progreso
+                            customerLevelSection
+
+                            // Vista previa de pedidos recientes
+                            recentOrdersSection
+
+                            // Método de pago preferido
+                            preferredPaymentMethodSection
+
+                            // Notificaciones
+                            notificationsSection
 
                             // Botón de cerrar sesión
                             signOutButton
@@ -104,6 +114,9 @@ struct ProfileView: View {
                 get: { viewModel.currentUser?.fullName ?? "Usuario" },
                 set: { _ in }
             ))
+        }
+        .sheet(isPresented: $showingPaymentMethods) {
+            PaymentMethodsSheet()
         }
     }
 
@@ -387,34 +400,240 @@ struct ProfileView: View {
         }
     }
 
-    private var minimalInfoSection: some View {
-        VStack(spacing: 12) {
-            SimpleInfoCard(
-                icon: "clock.arrow.circlepath",
-                title: "Historial",
-                subtitle: "27 pedidos",
-                color: .llegoAccent
-            ) {
-                // Acción para historial
+    // MARK: - Customer Level Section
+    private var customerLevelSection: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Image(systemName: "star.circle.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.llegoSecondary)
+
+                Text("Nivel de Cliente")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundColor(.llegoPrimary)
+
+                Spacer()
             }
 
-            SimpleInfoCard(
-                icon: "creditcard.fill",
-                title: "Métodos de pago",
-                subtitle: "2 tarjetas guardadas",
-                color: .llegoPrimary
-            ) {
-                // Acción para métodos de pago
+            VStack(spacing: 16) {
+                // Badge de nivel actual
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [
+                                        Color.llegoSecondary.opacity(0.3),
+                                        Color.llegoSecondary.opacity(0.1)
+                                    ]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 56, height: 56)
+
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 26, weight: .semibold))
+                            .foregroundColor(.llegoSecondary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Cliente Oro")
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundColor(.llegoPrimary)
+
+                        Text("847 puntos de 1,000")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.gray)
+                    }
+
+                    Spacer()
+
+                    // Indicador de siguiente nivel
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("153")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.llegoAccent)
+
+                        Text("para Platino")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.gray)
+                    }
+                }
+
+                // Barra de progreso nativa de iOS
+                VStack(spacing: 8) {
+                    ProgressView(value: 0.847)
+                        .tint(
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    Color.llegoSecondary,
+                                    Color.llegoAccent
+                                ]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .scaleEffect(x: 1, y: 2, anchor: .center)
+
+                    // Indicadores de niveles
+                    HStack(spacing: 4) {
+                        ForEach(CustomerLevel.allCases, id: \.self) { level in
+                            VStack(spacing: 4) {
+                                Circle()
+                                    .fill(level.rawValue <= 3 ? level.color : Color.gray.opacity(0.3))
+                                    .frame(width: 8, height: 8)
+
+                                Text(level.name)
+                                    .font(.system(size: 9, weight: .semibold))
+                                    .foregroundColor(level.rawValue <= 3 ? .llegoPrimary : .gray.opacity(0.6))
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                    }
+                }
+            }
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.white)
+                    .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 4)
+            )
+        }
+    }
+
+    // MARK: - Recent Orders Preview Section
+    private var recentOrdersSection: some View {
+        VStack(spacing: 14) {
+            HStack {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.llegoAccent)
+
+                Text("Pedidos Recientes")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundColor(.llegoPrimary)
+
+                Spacer()
+
+                NavigationLink(destination: OrderHistoryView()) {
+                    HStack(spacing: 4) {
+                        Text("Ver todos")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.llegoAccent)
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.llegoAccent)
+                    }
+                }
             }
 
-            SimpleInfoCard(
-                icon: "bell.fill",
-                title: "Notificaciones",
-                subtitle: "Configurar preferencias",
-                color: .llegoSecondary
-            ) {
-                // Acción para notificaciones
+            VStack(spacing: 10) {
+                ForEach(sampleRecentOrders) { order in
+                    RecentOrderCard(order: order)
+                }
             }
+        }
+    }
+
+    // MARK: - Preferred Payment Method Section
+    private var preferredPaymentMethodSection: some View {
+        VStack(spacing: 14) {
+            HStack {
+                Image(systemName: "creditcard.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.llegoPrimary)
+
+                Text("Método de Pago Preferido")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundColor(.llegoPrimary)
+
+                Spacer()
+            }
+
+            Button(action: {
+                showingPaymentMethods = true
+            }) {
+                HStack(spacing: 16) {
+                    // Ícono de tarjeta
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [
+                                        Color.llegoPrimary,
+                                        Color.llegoPrimary.opacity(0.8)
+                                    ]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 56, height: 56)
+
+                        Image(systemName: "creditcard.fill")
+                            .font(.system(size: 24, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 8) {
+                            Text("Visa")
+                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                                .foregroundColor(.llegoPrimary)
+
+                            // Badge de preferido
+                            Text("PREFERIDA")
+                                .font(.system(size: 9, weight: .heavy))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(
+                                    Capsule()
+                                        .fill(Color.llegoAccent)
+                                )
+                        }
+
+                        HStack(spacing: 4) {
+                            Text("•••• •••• •••• 4532")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.gray)
+
+                            Text("•")
+                                .foregroundColor(.gray.opacity(0.5))
+
+                            Text("Vence 08/26")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.gray.opacity(0.8))
+                        }
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.gray.opacity(0.5))
+                }
+                .padding(18)
+                .background(
+                    RoundedRectangle(cornerRadius: 18)
+                        .fill(Color.white)
+                        .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 4)
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+    }
+
+    // MARK: - Notifications Section
+    private var notificationsSection: some View {
+        SimpleInfoCard(
+            icon: "bell.fill",
+            title: "Notificaciones",
+            subtitle: "Configurar preferencias",
+            color: .llegoAccent
+        ) {
+            // Acción para notificaciones
         }
     }
 
@@ -547,6 +766,345 @@ struct EditNameView: View {
         }
     }
 }
+
+// MARK: - Customer Level Enum
+enum CustomerLevel: Int, CaseIterable {
+    case basic = 0
+    case bronze = 1
+    case silver = 2
+    case gold = 3
+    case platinum = 4
+
+    var name: String {
+        switch self {
+        case .basic: return "Básico"
+        case .bronze: return "Bronze"
+        case .silver: return "Plata"
+        case .gold: return "Oro"
+        case .platinum: return "Platino"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .basic: return Color.gray.opacity(0.6)
+        case .bronze: return Color(red: 0.72, green: 0.45, blue: 0.20)
+        case .silver: return Color(red: 0.75, green: 0.75, blue: 0.75)
+        case .gold: return Color.llegoSecondary
+        case .platinum: return Color(red: 0.53, green: 0.48, blue: 0.63)
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .basic: return "circle"
+        case .bronze: return "circle.fill"
+        case .silver: return "sparkle"
+        case .gold: return "star.fill"
+        case .platinum: return "crown.fill"
+        }
+    }
+}
+
+// MARK: - Recent Order Model
+struct RecentOrder: Identifiable {
+    let id: String
+    let storeName: String
+    let date: String
+    let total: String
+    let status: OrderStatus
+    let itemCount: Int
+
+    enum OrderStatus {
+        case delivered
+        case inProgress
+        case cancelled
+
+        var text: String {
+            switch self {
+            case .delivered: return "Entregado"
+            case .inProgress: return "En camino"
+            case .cancelled: return "Cancelado"
+            }
+        }
+
+        var color: Color {
+            switch self {
+            case .delivered: return .llegoAccent
+            case .inProgress: return .llegoSecondary
+            case .cancelled: return .red
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .delivered: return "checkmark.circle.fill"
+            case .inProgress: return "shippingbox.fill"
+            case .cancelled: return "xmark.circle.fill"
+            }
+        }
+    }
+}
+
+// MARK: - Recent Order Card Component
+struct RecentOrderCard: View {
+    let order: RecentOrder
+
+    var body: some View {
+        HStack(spacing: 14) {
+            // Status icon
+            ZStack {
+                Circle()
+                    .fill(order.status.color.opacity(0.15))
+                    .frame(width: 48, height: 48)
+
+                Image(systemName: order.status.icon)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(order.status.color)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(order.storeName)
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .foregroundColor(.llegoPrimary)
+
+                HStack(spacing: 6) {
+                    Text(order.date)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.gray)
+
+                    Text("•")
+                        .foregroundColor(.gray.opacity(0.5))
+
+                    Text("\(order.itemCount) productos")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.gray)
+                }
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(order.total)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.llegoPrimary)
+
+                Text(order.status.text)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(order.status.color)
+            }
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white)
+                .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+        )
+    }
+}
+
+// MARK: - Payment Methods Sheet
+struct PaymentMethodsSheet: View {
+    @Environment(\.presentationMode) var presentationMode
+
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color.llegoBackground.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 16) {
+                        // Tarjeta actual
+                        PaymentCardView(
+                            type: "Visa",
+                            lastFour: "4532",
+                            expiryDate: "08/26",
+                            isPreferred: true,
+                            cardColor: .llegoPrimary
+                        )
+
+                        PaymentCardView(
+                            type: "Mastercard",
+                            lastFour: "8821",
+                            expiryDate: "12/25",
+                            isPreferred: false,
+                            cardColor: .llegoTertiary
+                        )
+
+                        // Botón para agregar tarjeta
+                        Button(action: {
+                            // Acción para agregar tarjeta
+                        }) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.system(size: 22, weight: .semibold))
+                                    .foregroundColor(.llegoAccent)
+
+                                Text("Agregar método de pago")
+                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                    .foregroundColor(.llegoPrimary)
+
+                                Spacer()
+                            }
+                            .padding(20)
+                            .background(
+                                RoundedRectangle(cornerRadius: 18)
+                                    .stroke(Color.llegoAccent.opacity(0.3), lineWidth: 2)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 18)
+                                            .fill(Color.white)
+                                    )
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                    .padding(20)
+                }
+            }
+            .navigationTitle("Métodos de Pago")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    CloseButton {
+                        presentationMode.wrappedValue.dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Payment Card View Component
+struct PaymentCardView: View {
+    let type: String
+    let lastFour: String
+    let expiryDate: String
+    let isPreferred: Bool
+    let cardColor: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack {
+                Image(systemName: cardIcon)
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundColor(.white)
+
+                Spacer()
+
+                if isPreferred {
+                    Text("PREFERIDA")
+                        .font(.system(size: 10, weight: .heavy))
+                        .foregroundColor(cardColor)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .fill(Color.white)
+                        )
+                }
+            }
+
+            Spacer()
+
+            Text("•••• •••• •••• \(lastFour)")
+                .font(.system(size: 20, weight: .semibold, design: .monospaced))
+                .foregroundColor(.white)
+
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("VENCE")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundColor(.white.opacity(0.7))
+
+                    Text(expiryDate)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white)
+                }
+
+                Spacer()
+
+                Text(type)
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(.white)
+            }
+        }
+        .padding(24)
+        .frame(height: 200)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            cardColor,
+                            cardColor.opacity(0.7)
+                        ]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .shadow(color: cardColor.opacity(0.4), radius: 20, x: 0, y: 10)
+        )
+    }
+
+    private var cardIcon: String {
+        switch type.lowercased() {
+        case "visa":
+            return "creditcard.fill"
+        case "mastercard":
+            return "creditcard.circle.fill"
+        default:
+            return "creditcard.fill"
+        }
+    }
+}
+
+// MARK: - Order History View (Stub)
+struct OrderHistoryView: View {
+    var body: some View {
+        ZStack {
+            Color.llegoBackground.ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: 16) {
+                    ForEach(sampleRecentOrders) { order in
+                        RecentOrderCard(order: order)
+                    }
+                }
+                .padding(20)
+            }
+        }
+        .navigationTitle("Historial de Pedidos")
+        .navigationBarTitleDisplayMode(.large)
+    }
+}
+
+// MARK: - Sample Data
+private let sampleRecentOrders = [
+    RecentOrder(
+        id: "1",
+        storeName: "Supermercado Plaza",
+        date: "Hace 2 días",
+        total: "$45.50",
+        status: .delivered,
+        itemCount: 12
+    ),
+    RecentOrder(
+        id: "2",
+        storeName: "Farmacia Central",
+        date: "Hace 5 días",
+        total: "$28.30",
+        status: .delivered,
+        itemCount: 5
+    ),
+    RecentOrder(
+        id: "3",
+        storeName: "Panadería La Estrella",
+        date: "Hace 1 semana",
+        total: "$15.80",
+        status: .delivered,
+        itemCount: 8
+    )
+]
 
 #Preview {
     ProfileView()
