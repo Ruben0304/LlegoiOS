@@ -4,10 +4,20 @@ struct TestProductView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var imageLoaded = false
     @State private var showStoreSelector = false
-    @State private var selectedStore: Store?
+    @State private var showVariantsSheet = false
+    @State private var navigateToSimilar = false
+    @State private var selectedStore: Store? = Store(
+        id: "3",
+        name: "TropicalFresh Market",
+        etaMinutes: 20,
+        logoUrl: "https://images.unsplash.com/photo-1534723328310-e82dad3ee43f?w=200&h=200&fit=crop&crop=center",
+        bannerUrl: "https://images.unsplash.com/photo-1506617420156-8e4536971650?w=500&h=200&fit=crop&crop=center",
+        address: "Calle 10 #234, Plaza",
+        rating: 4.9
+    )
 
     // URL de la imagen de prueba
-    private let imageURL = "https://cdn.apartmenttherapy.info/image/upload/f_jpg,q_auto:eco,c_fill,g_auto,w_1500,ar_1:1/k%2FPhoto%2FRecipes%2F2019-08-Better-Than-Delivery-Pepperoni-Pizza%2FBetter-Than-Delivery-Pepperoni-Pizza_014"
+    private let imageURL = "https://recetasdecocina.elmundo.es/wp-content/uploads/2025/02/brocoli-al-vapor.jpg"
 
     var body: some View {
         NavigationStack {
@@ -59,15 +69,32 @@ struct TestProductView: View {
                             showStoreSelector = true
                         }) {
                             HStack(spacing: 12) {
-                                // Store icon or logo
-                                ZStack {
-                                    Circle()
-                                        .fill(Color.white.opacity(0.2))
-                                        .frame(width: 60, height: 60)
+                                // Store logo or icon
+                                if let store = selectedStore {
+                                    AsyncImage(url: URL(string: store.logoUrl)) { image in
+                                        image
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                    } placeholder: {
+                                        Circle()
+                                            .fill(Color.white.opacity(0.2))
+                                            .overlay(
+                                                ProgressView()
+                                                    .tint(.white)
+                                            )
+                                    }
+                                    .frame(width: 60, height: 60)
+                                    .clipShape(Circle())
+                                } else {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color.white.opacity(0.2))
+                                            .frame(width: 60, height: 60)
 
-                                    Image(systemName: "storefront.fill")
-                                        .font(.system(size: 24, weight: .medium))
-                                        .foregroundColor(.white)
+                                        Image(systemName: "storefront.fill")
+                                            .font(.system(size: 24, weight: .medium))
+                                            .foregroundColor(.white)
+                                    }
                                 }
 
                                 VStack(alignment: .leading, spacing: 4) {
@@ -95,30 +122,35 @@ struct TestProductView: View {
                         // Action buttons
                         HStack(spacing: 12) {
                             ActionButton(
-                                icon: "hand.thumbsup",
-                                title: "Cook",
-                                style: .primary
+                                icon: "cart.fill",
+                                title: "Agregar",
+                                style: .secondary,
+                                action: {
+                                    // Agregar al carrito
+                                    print("Producto agregado al carrito")
+                                }
                             )
 
                             ActionButton(
-                                icon: "bookmark",
-                                title: "Save",
-                                style: .secondary
+                                icon: "rectangle.grid.2x2",
+                                title: "Similares",
+                                style: .secondary,
+                                action: {
+                                    navigateToSimilar = true
+                                }
                             )
 
                             ActionButton(
-                                icon: "square.and.arrow.up",
-                                title: "Share",
-                                style: .secondary
+                                icon: "slider.horizontal.3",
+                                title: "Variantes",
+                                style: .secondary,
+                                action: {
+                                    showVariantsSheet = true
+                                }
                             )
                         }
 
-                        // Bottom indicator
-                        Capsule()
-                            .fill(.white.opacity(0.3))
-                            .frame(width: 40, height: 5)
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 8)
+                       
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 75)
@@ -144,6 +176,15 @@ struct TestProductView: View {
         }
         .sheet(isPresented: $showStoreSelector) {
             StoreSelectorSheet(selectedStore: $selectedStore)
+        }
+        .sheet(isPresented: $showVariantsSheet) {
+            VariantsSheet()
+        }
+        .fullScreenCover(isPresented: $navigateToSimilar) {
+            NavigationView {
+                ShopView(category: nil)
+            }
+            .navigationViewStyle(StackNavigationViewStyle())
         }
     }
 }
@@ -254,6 +295,7 @@ struct ActionButton: View {
     let icon: String
     let title: String
     let style: ActionButtonStyle
+    var action: (() -> Void)? = nil
 
     enum ActionButtonStyle {
         case primary
@@ -262,7 +304,7 @@ struct ActionButton: View {
 
     var body: some View {
         Button {
-            // Action
+            action?()
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: icon)
@@ -410,6 +452,148 @@ struct StoreSelectorSheet: View {
                     Button("Cerrar") {
                         dismiss()
                     }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Variants Sheet
+struct VariantsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedSize = "Mediano"
+    @State private var selectedExtras: Set<String> = []
+
+    private let sizes = ["Pequeño", "Mediano", "Grande"]
+    private let extras = [
+        ("Queso extra", "$2.00"),
+        ("Aceitunas", "$1.50"),
+        ("Champiñones", "$2.50"),
+        ("Pepperoni extra", "$3.00"),
+        ("Jalapeños", "$1.00")
+    ]
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.llegoBackground.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
+                        // Size section
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Tamaño")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(.llegoPrimary)
+
+                            VStack(spacing: 8) {
+                                ForEach(sizes, id: \.self) { size in
+                                    Button(action: {
+                                        selectedSize = size
+                                    }) {
+                                        HStack {
+                                            Text(size)
+                                                .font(.system(size: 16, weight: .medium))
+                                                .foregroundColor(.primary)
+
+                                            Spacer()
+
+                                            if selectedSize == size {
+                                                Image(systemName: "checkmark.circle.fill")
+                                                    .foregroundColor(.llegoAccent)
+                                            } else {
+                                                Image(systemName: "circle")
+                                                    .foregroundColor(.gray.opacity(0.3))
+                                            }
+                                        }
+                                        .padding(16)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .fill(selectedSize == size ? Color.llegoAccent.opacity(0.1) : Color.white)
+                                        )
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(selectedSize == size ? Color.llegoAccent : Color.gray.opacity(0.2), lineWidth: 1)
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+
+                        // Extras section
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Agregados (Opcional)")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(.llegoPrimary)
+
+                            VStack(spacing: 8) {
+                                ForEach(extras, id: \.0) { extra in
+                                    Button(action: {
+                                        if selectedExtras.contains(extra.0) {
+                                            selectedExtras.remove(extra.0)
+                                        } else {
+                                            selectedExtras.insert(extra.0)
+                                        }
+                                    }) {
+                                        HStack {
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text(extra.0)
+                                                    .font(.system(size: 16, weight: .medium))
+                                                    .foregroundColor(.primary)
+
+                                                Text(extra.1)
+                                                    .font(.system(size: 14, weight: .regular))
+                                                    .foregroundColor(.gray)
+                                            }
+
+                                            Spacer()
+
+                                            if selectedExtras.contains(extra.0) {
+                                                Image(systemName: "checkmark.square.fill")
+                                                    .font(.system(size: 24))
+                                                    .foregroundColor(.llegoAccent)
+                                            } else {
+                                                Image(systemName: "square")
+                                                    .font(.system(size: 24))
+                                                    .foregroundColor(.gray.opacity(0.3))
+                                            }
+                                        }
+                                        .padding(16)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .fill(selectedExtras.contains(extra.0) ? Color.llegoAccent.opacity(0.1) : Color.white)
+                                        )
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(selectedExtras.contains(extra.0) ? Color.llegoAccent : Color.gray.opacity(0.2), lineWidth: 1)
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                    }
+                    .padding(20)
+                }
+            }
+            .navigationTitle("Variantes del Producto")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancelar") {
+                        dismiss()
+                    }
+                }
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Aplicar") {
+                        // Apply variants
+                        print("Tamaño: \(selectedSize)")
+                        print("Extras: \(selectedExtras)")
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
                 }
             }
         }
