@@ -52,7 +52,7 @@ struct LoginView: View {
 
     var body: some View {
         NavigationView {
-            ZStack(alignment: .topLeading) {
+            ZStack(alignment: .top) {
                 // Fondo primary completo
                 Color.llegoPrimary
                     .ignoresSafeArea()
@@ -60,9 +60,10 @@ struct LoginView: View {
                 VStack(spacing: 0) {
                     // Parte superior con header - Más arriba sin centrado vertical
                     headerSection
-                        .frame(maxWidth: .infinity)
+                        .frame(maxWidth: .infinity,alignment: .top)
                         .padding(.horizontal, 24)
-                        .padding(.bottom, 40)
+                        .padding(.top,20)
+//                        .padding(.bottom, 200)
                     
                     // Parte blanca inferior - Ocupa el resto del espacio
                     ScrollView(showsIndicators: false) {
