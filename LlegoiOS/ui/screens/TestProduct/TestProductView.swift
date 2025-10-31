@@ -5,7 +5,7 @@ struct TestProductView: View {
     @State private var imageLoaded = false
 
     // URL de la imagen de prueba
-    private let imageURL = "https://www.the-girl-who-ate-everything.com/wp-content/uploads/2018/06/taco-pizza-recipe-003.jpg"
+    private let imageURL = "https://cdn.apartmenttherapy.info/image/upload/f_jpg,q_auto:eco,c_fill,g_auto,w_1500,ar_1:1/k%2FPhoto%2FRecipes%2F2019-08-Better-Than-Delivery-Pepperoni-Pizza%2FBetter-Than-Delivery-Pepperoni-Pizza_014"
 
     var body: some View {
         ZStack {
@@ -146,7 +146,7 @@ struct BackgroundImageWithBlur: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // Imagen inferior (CON blur) - Ocupa toda la pantalla
+                // Imagen inferior (CON blur) - INVERTIDA para efecto de reflejo
                 AsyncImage(url: URL(string: imageURL)) { phase in
                     switch phase {
                     case .empty:
@@ -156,6 +156,10 @@ struct BackgroundImageWithBlur: View {
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                             .frame(width: geometry.size.width, height: geometry.size.height)
+                            .rotation3DEffect(
+                                .degrees(180),
+                                axis: (x: 1, y: 0, z: 0)
+                            )
                             .blur(radius: 70) // Blur más pronunciado
                             .clipped()
                     case .failure:
@@ -165,34 +169,37 @@ struct BackgroundImageWithBlur: View {
                     }
                 }
 
-                // Imagen superior (SIN blur) - Con máscara de gradiente
-                AsyncImage(url: URL(string: imageURL)) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: geometry.size.width, height: geometry.size.height)
-                            .clipped()
-                            .mask {
-                                LinearGradient(
-                                    gradient: Gradient(stops: [
-                                        .init(color: .white, location: 0.0),
-                                        .init(color: .white, location: 0.35),
-                                        .init(color: .white.opacity(0.7), location: 0.45),
-                                        .init(color: .white.opacity(0.3), location: 0.55),
-                                        .init(color: .clear, location: 0.65)
-                                    ]),
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                            }
-                            .onAppear {
-                                imageLoaded = true
-                            }
-                    default:
-                        EmptyView()
+                // Imagen superior (SIN blur) - Solo ocupa el espacio visible
+                VStack {
+                    AsyncImage(url: URL(string: imageURL)) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: geometry.size.width)
+                                .clipped()
+                                .mask {
+                                    LinearGradient(
+                                        gradient: Gradient(stops: [
+                                            .init(color: .white, location: 0.0),
+                                            .init(color: .white, location: 0.5),
+                                            .init(color: .white.opacity(0.7), location: 0.65),
+                                            .init(color: .white.opacity(0.3), location: 0.80),
+                                            .init(color: .clear, location: 0.95)
+                                        ]),
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                }
+                                .onAppear {
+                                    imageLoaded = true
+                                }
+                        default:
+                            EmptyView()
+                        }
                     }
+                    Spacer()
                 }
             }
             .overlay {
