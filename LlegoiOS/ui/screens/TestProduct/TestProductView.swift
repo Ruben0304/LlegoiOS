@@ -3,138 +3,148 @@ import SwiftUI
 struct TestProductView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var imageLoaded = false
+    @State private var showStoreSelector = false
+    @State private var selectedStore: Store?
 
     // URL de la imagen de prueba
     private let imageURL = "https://cdn.apartmenttherapy.info/image/upload/f_jpg,q_auto:eco,c_fill,g_auto,w_1500,ar_1:1/k%2FPhoto%2FRecipes%2F2019-08-Better-Than-Delivery-Pepperoni-Pizza%2FBetter-Than-Delivery-Pepperoni-Pizza_014"
 
     var body: some View {
-        ZStack {
-            // Background with blur effect
-            BackgroundImageWithBlur(imageURL: imageURL, imageLoaded: $imageLoaded)
+        NavigationStack {
+            ZStack {
+                // Background with blur effect
+                BackgroundImageWithBlur(imageURL: imageURL, imageLoaded: $imageLoaded)
+                    .ignoresSafeArea()
 
-            // Content overlay
-//            VStack {
-//
-//                // Bottom content
-//                VStack(alignment: .leading, spacing: 16) {
-//                    // Brand/Source
-//                    Text("Serious Eats")
-//                        .font(.system(size: 14, weight: .medium))
-//                        .foregroundColor(.white.opacity(0.8))
-//
-//                    // Product title
-//                    Text("Foolproof Pan Pizza")
-//                        .font(.system(size: 36, weight: .bold))
-//                        .foregroundColor(.white)
-//                        .lineLimit(2)
-//
-//                    // Author
-//                    Text("J. Kenji López-Alt")
-//                        .font(.system(size: 16, weight: .regular))
-//                        .foregroundColor(.white.opacity(0.9))
-//
-//                    // Recipe info
-//                    HStack(spacing: 24) {
-//                        RecipeInfoItem(
-//                            label: "TOTAL TIME",
-//                            value: "10hr 45min"
-//                        )
-//
-//                        RecipeInfoItem(
-//                            label: "COOK TIME",
-//                            value: "20min"
-//                        )
-//
-//                        RecipeInfoItem(
-//                            label: "YIELD",
-//                            value: "4"
-//                        )
-//                    }
-//                    .padding(.vertical, 8)
-//
-//                    // Read the story card
-//                    Button(action: {
-//                        // Navigate to story
-//                    }) {
-//                        HStack(spacing: 12) {
-//                            // Thumbnail
-//                            AsyncImage(url: URL(string: imageURL)) { image in
-//                                image
-//                                    .resizable()
-//                                    .aspectRatio(contentMode: .fill)
-//                            } placeholder: {
-//                                Color.gray.opacity(0.3)
-//                            }
-//                            .frame(width: 60, height: 60)
-//                            .clipShape(RoundedRectangle(cornerRadius: 8))
-//
-//                            VStack(alignment: .leading, spacing: 4) {
-//                                Text("READ THE STORY")
-//                                    .font(.system(size: 12, weight: .semibold))
-//                                    .foregroundColor(.white.opacity(0.7))
-//
-//                                Text("Foolproof Pan Pizza")
-//                                    .font(.system(size: 16, weight: .semibold))
-//                                    .foregroundColor(.white)
-//                            }
-//
-//                            Spacer()
-//
-//                            Image(systemName: "chevron.right")
-//                                .font(.system(size: 14, weight: .semibold))
-//                                .foregroundColor(.white.opacity(0.5))
-//                        }
-//                        .padding(16)
-//                        .background(.ultraThinMaterial)
-//                        .clipShape(RoundedRectangle(cornerRadius: 12))
-//                    }
-//
-//                    // Action buttons
-//                    HStack(spacing: 12) {
-//                        ActionButton(
-//                            icon: "hand.thumbsup",
-//                            title: "Cook",
-//                            style: .primary
-//                        )
-//
-//                        ActionButton(
-//                            icon: "bookmark",
-//                            title: "Save",
-//                            style: .secondary
-//                        )
-//
-//                        ActionButton(
-//                            icon: "square.and.arrow.up",
-//                            title: "Share",
-//                            style: .secondary
-//                        )
-//                    }
-//
-//                    // Bottom indicator
-//                    Capsule()
-//                        .fill(.white.opacity(0.3))
-//                        .frame(width: 40, height: 5)
-//                        .frame(maxWidth: .infinity)
-//                        .padding(.top, 8)
-//                }
-//                .padding(.horizontal, 20)
-//                .padding(.bottom, 32)
-//            }
-        }
-        .navigationBarBackButtonHidden(true)
-        .toolbar{
-            ToolbarItem(placement: .navigationBarLeading) {
-                BackButton(action: {
-                    dismiss()
-                })
+            
+                    // Bottom content
+                    VStack(alignment: .leading, spacing: 16) {
+                        // Brand/Source
+                        Text("Serious Eats")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.white.opacity(0.8))
+
+                        // Product title
+                        Text("Foolproof Pan Pizza")
+                            .font(.system(size: 36, weight: .bold))
+                            .foregroundColor(.white)
+                            .lineLimit(2)
+
+                        // Author
+                        Text("J. Kenji López-Alt")
+                            .font(.system(size: 16, weight: .regular))
+                            .foregroundColor(.white.opacity(0.9))
+
+                        // Recipe info
+                        HStack(spacing: 24) {
+                            RecipeInfoItem(
+                                label: "TOTAL TIME",
+                                value: "10hr 45min"
+                            )
+
+                            RecipeInfoItem(
+                                label: "COOK TIME",
+                                value: "20min"
+                            )
+
+                            RecipeInfoItem(
+                                label: "YIELD",
+                                value: "4"
+                            )
+                        }
+                        .padding(.vertical, 8)
+
+                        // Store selector card
+                        Button(action: {
+                            showStoreSelector = true
+                        }) {
+                            HStack(spacing: 12) {
+                                // Store icon or logo
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.white.opacity(0.2))
+                                        .frame(width: 60, height: 60)
+
+                                    Image(systemName: "storefront.fill")
+                                        .font(.system(size: 24, weight: .medium))
+                                        .foregroundColor(.white)
+                                }
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("VENDEDOR")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundColor(.white.opacity(0.7))
+
+                                    Text(selectedStore?.name ?? "Seleccionar vendedor")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(.white)
+                                        .lineLimit(1)
+                                }
+
+                                Spacer()
+
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(.white.opacity(0.5))
+                            }
+                            .padding(16)
+                            .background(Color.white.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+
+                        // Action buttons
+                        HStack(spacing: 12) {
+                            ActionButton(
+                                icon: "hand.thumbsup",
+                                title: "Cook",
+                                style: .primary
+                            )
+
+                            ActionButton(
+                                icon: "bookmark",
+                                title: "Save",
+                                style: .secondary
+                            )
+
+                            ActionButton(
+                                icon: "square.and.arrow.up",
+                                title: "Share",
+                                style: .secondary
+                            )
+                        }
+
+                        // Bottom indicator
+                        Capsule()
+                            .fill(.white.opacity(0.3))
+                            .frame(width: 40, height: 5)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 8)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 75)
+                    .padding(.bottom, 32)
+                
             }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                CloseButton(action: {
-                    dismiss()
-                })
+            .navigationBarBackButtonHidden(true)
+            .toolbar{
+                ToolbarItem(placement: .navigationBarLeading) {
+                    BackButton(action: {
+                        dismiss()
+                    })
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        // Acción de opciones
+                    }) {
+                        Image(systemName: "ellipsis")
+                    }
+                }
             }
+            .ignoresSafeArea(edges: .bottom)
         }
-        .ignoresSafeArea()
+        .sheet(isPresented: $showStoreSelector) {
+            StoreSelectorSheet(selectedStore: $selectedStore)
+        }
     }
 }
 
@@ -183,9 +193,9 @@ struct BackgroundImageWithBlur: View {
                                     LinearGradient(
                                         gradient: Gradient(stops: [
                                             .init(color: .white, location: 0.0),
-                                            .init(color: .white, location: 0.5),
-                                            .init(color: .white.opacity(0.7), location: 0.65),
-                                            .init(color: .white.opacity(0.3), location: 0.80),
+                                            .init(color: .white, location: 0.60),
+                                            .init(color: .white.opacity(0.7), location: 0.72),
+                                            .init(color: .white.opacity(0.3), location: 0.85),
                                             .init(color: .clear, location: 0.95)
                                         ]),
                                         startPoint: .top,
@@ -264,8 +274,144 @@ struct ActionButton: View {
             .foregroundColor(style == .primary ? .black : .white)
             .frame(maxWidth: .infinity)
             .frame(height: 50)
-            .background(style == .primary ? .ultraThickMaterial : .ultraThinMaterial)
+            .background(style == .primary ? Color.white.opacity(0.25) : Color.white.opacity(0.08))
             .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+}
+
+// MARK: - Store Selector Sheet
+struct StoreSelectorSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var selectedStore: Store?
+    @State private var searchText = ""
+
+    private let allStores: [Store] = [
+        Store(id: "1", name: "FreshMart Premium", etaMinutes: 25,
+              logoUrl: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&h=200&fit=crop&crop=center",
+              bannerUrl: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&h=200&fit=crop&crop=center",
+              address: "Calle 23 #456, Vedado",
+              rating: 4.8),
+        Store(id: "2", name: "EcoFruit Orgánico", etaMinutes: 30,
+              logoUrl: "https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=200&h=200&fit=crop&crop=center",
+              bannerUrl: "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=500&h=200&fit=crop&crop=center",
+              address: "Av. 5ta #789, Miramar",
+              rating: 4.6),
+        Store(id: "3", name: "TropicalFresh Market", etaMinutes: 20,
+              logoUrl: "https://images.unsplash.com/photo-1534723328310-e82dad3ee43f?w=200&h=200&fit=crop&crop=center",
+              bannerUrl: "https://images.unsplash.com/photo-1506617420156-8e4536971650?w=500&h=200&fit=crop&crop=center",
+              address: "Calle 10 #234, Plaza",
+              rating: 4.9),
+        Store(id: "4", name: "Berry Farm Co.", etaMinutes: 35,
+              logoUrl: "https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=200&h=200&fit=crop&crop=center",
+              bannerUrl: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=500&h=200&fit=crop&crop=center",
+              address: "Calle L #567, Vedado",
+              rating: 4.5),
+        Store(id: "5", name: "CitrusMax Express", etaMinutes: 15,
+              logoUrl: "https://images.unsplash.com/photo-1587334207814-e80e8e0adf11?w=200&h=200&fit=crop&crop=center",
+              bannerUrl: "https://images.unsplash.com/photo-1597714026720-8f74c62310c9?w=500&h=200&fit=crop&crop=center",
+              address: "Av. Paseo #890, Nuevo Vedado",
+              rating: 4.7),
+        Store(id: "6", name: "GreenGarden Local", etaMinutes: 40,
+              logoUrl: "https://images.unsplash.com/photo-1516594798947-e65505dbb29d?w=200&h=200&fit=crop&crop=center",
+              bannerUrl: "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=500&h=200&fit=crop&crop=center",
+              address: "Calle 42 #123, Playa",
+              rating: 4.3)
+    ]
+
+    private var filteredStores: [Store] {
+        if searchText.isEmpty {
+            return allStores
+        }
+        return allStores.filter { store in
+            store.name.localizedCaseInsensitiveContains(searchText) ||
+            (store.address?.localizedCaseInsensitiveContains(searchText) ?? false)
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.llegoBackground.ignoresSafeArea()
+
+                VStack(spacing: 0) {
+                    // Search bar
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.gray)
+
+                        TextField("Buscar vendedor...", text: $searchText)
+                            .textFieldStyle(PlainTextFieldStyle())
+
+                        if !searchText.isEmpty {
+                            Button(action: {
+                                searchText = ""
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.gray)
+                            }
+                        }
+                    }
+                    .padding(12)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+
+                    // Stores list
+                    ScrollView {
+                        LazyVStack(spacing: 16) {
+                            ForEach(filteredStores) { store in
+                                Button(action: {
+                                    selectedStore = store
+                                    dismiss()
+                                }) {
+                                    StoreCard(
+                                        storeName: store.name,
+                                        etaMinutes: store.etaMinutes,
+                                        logoUrl: store.logoUrl,
+                                        bannerUrl: store.bannerUrl,
+                                        address: store.address,
+                                        rating: store.rating,
+                                        size: .expanded
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 8)
+                    }
+
+                    if filteredStores.isEmpty {
+                        VStack(spacing: 16) {
+                            Image(systemName: "storefront.fill")
+                                .font(.system(size: 60, weight: .light))
+                                .foregroundColor(.gray.opacity(0.5))
+
+                            Text("No se encontraron vendedores")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(.gray)
+
+                            Text("Intenta con otros términos de búsqueda")
+                                .font(.system(size: 14, weight: .regular))
+                                .foregroundColor(.gray.opacity(0.7))
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(.top, 80)
+                    }
+                }
+            }
+            .navigationTitle("Seleccionar Vendedor")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cerrar") {
+                        dismiss()
+                    }
+                }
+            }
         }
     }
 }
