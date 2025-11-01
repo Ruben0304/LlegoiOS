@@ -17,34 +17,33 @@ struct TestProductView: View {
     )
 
     // URL de la imagen de prueba
-    private let imageURL = "https://recetasdecocina.elmundo.es/wp-content/uploads/2025/02/brocoli-al-vapor.jpg"
+//    private let imageURL = "https://recetasdecocina.elmundo.es/wp-content/uploads/2025/02/brocoli-al-vapor.jpg"
+    private let imageURL = "https://www.the-girl-who-ate-everything.com/wp-content/uploads/2018/06/taco-pizza-recipe-003.jpg"
+   
+    
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                // Background with blur effect
-                BackgroundImageWithBlur(imageURL: imageURL, imageLoaded: $imageLoaded)
-                    .ignoresSafeArea()
-
-            
+           
+                ZStack {
+                    // Background with blur effect
+                    BackgroundImageWithBlur(imageURL: imageURL, imageLoaded: $imageLoaded)
+                        .ignoresSafeArea()
+                    
+                    
                     // Bottom content
                     VStack(alignment: .leading, spacing: 16) {
                         // Brand/Source
                         Text("Serious Eats")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.white.opacity(0.8))
-
+                        
                         // Product title
                         Text("Foolproof Pan Pizza")
                             .font(.system(size: 36, weight: .bold))
                             .foregroundColor(.white)
                             .lineLimit(2)
-
-                        // Author
-                        Text("J. Kenji López-Alt")
-                            .font(.system(size: 16, weight: .regular))
-                            .foregroundColor(.white.opacity(0.9))
-
+                        
                         // Recipe info
                         HStack(spacing: 24) {
                             RecipeInfoItem(
@@ -52,10 +51,18 @@ struct TestProductView: View {
                                 value: "10hr 45min"
                             )
 
+                            Divider()
+                                .background(Color.white.opacity(0.3))
+                                .frame(height: 40)
+
                             RecipeInfoItem(
                                 label: "COOK TIME",
                                 value: "20min"
                             )
+
+                            Divider()
+                                .background(Color.white.opacity(0.3))
+                                .frame(height: 40)
 
                             RecipeInfoItem(
                                 label: "YIELD",
@@ -63,7 +70,7 @@ struct TestProductView: View {
                             )
                         }
                         .padding(.vertical, 8)
-
+                        
                         // Store selector card
                         Button(action: {
                             showStoreSelector = true
@@ -90,26 +97,26 @@ struct TestProductView: View {
                                         Circle()
                                             .fill(Color.white.opacity(0.2))
                                             .frame(width: 60, height: 60)
-
+                                        
                                         Image(systemName: "storefront.fill")
                                             .font(.system(size: 24, weight: .medium))
                                             .foregroundColor(.white)
                                     }
                                 }
-
+                                
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("VENDEDOR")
                                         .font(.system(size: 12, weight: .semibold))
                                         .foregroundColor(.white.opacity(0.7))
-
+                                    
                                     Text(selectedStore?.name ?? "Seleccionar vendedor")
                                         .font(.system(size: 16, weight: .semibold))
                                         .foregroundColor(.white)
                                         .lineLimit(1)
                                 }
-
+                                
                                 Spacer()
-
+                                
                                 Image(systemName: "chevron.right")
                                     .font(.system(size: 14, weight: .semibold))
                                     .foregroundColor(.white.opacity(0.5))
@@ -118,7 +125,7 @@ struct TestProductView: View {
                             .background(Color.white.opacity(0.08))
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
-
+                        
                         // Action buttons
                         HStack(spacing: 12) {
                             ActionButton(
@@ -130,7 +137,7 @@ struct TestProductView: View {
                                     print("Producto agregado al carrito")
                                 }
                             )
-
+                            
                             ActionButton(
                                 icon: "rectangle.grid.2x2",
                                 title: "Similares",
@@ -139,7 +146,7 @@ struct TestProductView: View {
                                     navigateToSimilar = true
                                 }
                             )
-
+                            
                             ActionButton(
                                 icon: "slider.horizontal.3",
                                 title: "Variantes",
@@ -149,11 +156,11 @@ struct TestProductView: View {
                                 }
                             )
                         }
-
-                       
+                        
+                        
                     }
                     .padding(.horizontal, 20)
-                    .padding(.top, 75)
+                    .padding(.top, 320)
                     .padding(.bottom, 32)
                 
             }
@@ -172,7 +179,7 @@ struct TestProductView: View {
                     }
                 }
             }
-            .ignoresSafeArea(edges: .bottom)
+            .ignoresSafeArea()
         }
         .sheet(isPresented: $showStoreSelector) {
             StoreSelectorSheet(selectedStore: $selectedStore)
@@ -206,13 +213,14 @@ struct BackgroundImageWithBlur: View {
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                            .frame(width: geometry.size.width, height: geometry.size.height)
+                            .frame(width: geometry.size.width, height: geometry.size.height*0.7)
                             .rotation3DEffect(
                                 .degrees(180),
                                 axis: (x: 1, y: 0, z: 0)
                             )
                             .blur(radius: 70) // Blur más pronunciado
                             .clipped()
+                            .padding(.top,geometry.size.height*0.3)
                     case .failure:
                         Color.black
                     @unknown default:
@@ -227,8 +235,8 @@ struct BackgroundImageWithBlur: View {
                         case .success(let image):
                             image
                                 .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: geometry.size.width)
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: geometry.size.width, height: geometry.size.height/2)
                                 .clipped()
                                 .mask {
                                     LinearGradient(
@@ -243,6 +251,7 @@ struct BackgroundImageWithBlur: View {
                                         endPoint: .bottom
                                     )
                                 }
+                               
                                 .onAppear {
                                     imageLoaded = true
                                 }
