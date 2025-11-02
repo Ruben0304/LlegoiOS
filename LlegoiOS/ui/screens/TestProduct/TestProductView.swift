@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct TestProductView: View {
+    let product: Product
+
     @Environment(\.dismiss) private var dismiss
     @State private var imageLoaded = false
     @State private var showStoreSelector = false
@@ -15,31 +17,25 @@ struct TestProductView: View {
         address: "Calle 10 #234, Plaza",
         rating: 4.9
     )
-
-    // URL de la imagen de prueba
-//    private let imageURL = "https://recetasdecocina.elmundo.es/wp-content/uploads/2025/02/brocoli-al-vapor.jpg"
-    private let imageURL = "https://www.the-girl-who-ate-everything.com/wp-content/uploads/2018/06/taco-pizza-recipe-003.jpg"
    
     
 
     var body: some View {
-        NavigationStack {
-           
-                ZStack {
-                    // Background with blur effect
-                    BackgroundImageWithBlur(imageURL: imageURL, imageLoaded: $imageLoaded)
-                        .ignoresSafeArea()
-                    
-                    
-                    // Bottom content
-                    VStack(alignment: .leading, spacing: 16) {
+        ZStack {
+            // Background with blur effect
+            BackgroundImageWithBlur(imageURL: product.imageUrl, imageLoaded: $imageLoaded)
+                .ignoresSafeArea()
+
+
+            // Bottom content
+            VStack(alignment: .leading, spacing: 16) {
                         // Brand/Source
-                        Text("Serious Eats")
+                        Text(product.shop)
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.white.opacity(0.8))
-                        
+
                         // Product title
-                        Text("Foolproof Pan Pizza")
+                        Text(product.name)
                             .font(.system(size: 36, weight: .bold))
                             .foregroundColor(.white)
                             .lineLimit(2)
@@ -158,29 +154,28 @@ struct TestProductView: View {
                         }
                         
                         
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 320)
-                    .padding(.bottom, 32)
-                
-            }
-            .navigationBarBackButtonHidden(true)
-            .toolbar{
-                ToolbarItem(placement: .navigationBarLeading) {
-                    BackButton(action: {
-                        dismiss()
-                    })
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        // Acción de opciones
-                    }) {
-                        Image(systemName: "ellipsis")
-                    }
-                }
-            }
-            .ignoresSafeArea()
+                .padding(.horizontal, 20)
+                .padding(.top, 320)
+                .padding(.bottom, 32)
+
         }
+        .navigationBarBackButtonHidden(true)
+        .toolbar{
+            ToolbarItem(placement: .navigationBarLeading) {
+                BackButton(action: {
+                    dismiss()
+                })
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    // Acción de opciones
+                }) {
+                    Image(systemName: "ellipsis")
+                }
+            }
+        }
+        .ignoresSafeArea()
         .sheet(isPresented: $showStoreSelector) {
             StoreSelectorSheet(selectedStore: $selectedStore)
         }
@@ -607,9 +602,4 @@ struct VariantsSheet: View {
             }
         }
     }
-}
-
-// MARK: - Preview
-#Preview {
-    TestProductView()
 }

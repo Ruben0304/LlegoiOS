@@ -106,10 +106,6 @@ struct MainAppView: View {
                             MapView()
                                 .ignoresSafeArea(.container, edges: .bottom)
                         }
-
-                        Tab("Test", systemImage: "fork.knife") {
-                            TestProductView()
-                        }
                     }
                     
 
@@ -149,7 +145,7 @@ struct MainAppView: View {
                         Text("Buscar")
                     }
                     .tag(-1) // Use negative tag for search to avoid conflicts
-                    
+
                     HomeView()
                         .ignoresSafeArea(.container, edges: .bottom)
                         .tabItem {
@@ -181,13 +177,6 @@ struct MainAppView: View {
                             Text("Cuenta")
                         }
                         .tag(3)
-
-                    TestProductView()
-                        .tabItem {
-                            Image(systemName: "fork.knife")
-                            Text("Test")
-                        }
-                        .tag(4)
                 }
                 .accentColor(Color.llegoPrimary)
                 .toolbarBackground(.hidden, for: .tabBar)

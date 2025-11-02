@@ -6,6 +6,7 @@ struct iOSApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .preferredColorScheme(.light) // Fuerza el modo claro siempre
                 .onOpenURL { url in
                     // Manejar URLs de Stripe para autenticación
                     let stripeHandled = StripeAPI.handleURLCallback(with: url)

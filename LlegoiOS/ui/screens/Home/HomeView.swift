@@ -454,12 +454,9 @@ struct HomeView: View {
             .navigationViewStyle(StackNavigationViewStyle())
         }
 
-        // Present Product detail modally when a product is selected
-        .fullScreenCover(item: $selectedProduct) { product in
-            NavigationView {
-                ProductDetailView(product: product)
-            }
-            .navigationViewStyle(StackNavigationViewStyle())
+        // Navigate to Product detail when a product is selected
+        .navigationDestination(item: $selectedProduct) { product in
+            TestProductView(product: product)
         }
 
         // Present Store detail modally when a store is selected
