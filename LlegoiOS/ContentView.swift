@@ -94,7 +94,7 @@ struct MainAppView: View {
                                 .ignoresSafeArea(.container, edges: .bottom)
                         }
                         Tab("Tiendas", systemImage: "storefront") {
-                            HomeView()
+                            ShopTabLandingView()
                         }
 //                        Tab("Cuenta", systemImage: "person") {
 //                            HomeView()
@@ -202,4 +202,3 @@ struct MainAppView: View {
         }
     }
 }
-

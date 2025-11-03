@@ -13,20 +13,19 @@ struct SharedGradientBackground: View {
     }
 
     private var gradientStops: [Gradient.Stop] {
-        // Colores base del gradiente
-        let darkGreen = Color(red: 45/255, green: 85/255, blue: 65/255)
-        let mediumGreen = Color(red: 80/255, green: 120/255, blue: 95/255)
-        let lightGreen = Color(red: 150/255, green: 190/255, blue: 165/255)
-        let veryLightGreen = Color(red: 180/255, green: 210/255, blue: 185/255)
-        let lightGray = Color(red: 235/255, green: 235/255, blue: 235/255)
-        let lighterGray = Color(red: 240/255, green: 240/255, blue: 240/255)
+        // Colores tomados del degradado de WelcomeView
+        let deepGreen = Color(red: 0.05, green: 0.30, blue: 0.25)
+        let emeraldGreen = Color(red: 0.10, green: 0.45, blue: 0.38)
+        let softGreen = Color(red: 0.40, green: 0.65, blue: 0.55)
+        let paleMint = Color(red: 0.85, green: 0.92, blue: 0.88)
+        let softMint = Color(red: 0.95, green: 0.98, blue: 0.96)
 
-        // Estado inicial (expansionProgress = 0.0) - Gradiente original con verde arriba y gris abajo
-        // Verde oscuro → Verde medio → Verde claro → Gris claro → Gris más claro
+        // Estado inicial (expansionProgress = 0.0) - Gradiente original con verde arriba y menta suave abajo
+        // Verde profundo → Verde esmeralda → Verde suave → Menta suave → Menta suave
         // Ubicaciones: 0%, 25%, 40%, 50%, 100%
 
         // Estado final (expansionProgress = 1.0) - Todo verde, el verde baja hasta cubrir todo
-        // Verde oscuro → Verde medio → Verde claro → Verde muy claro → Verde muy claro
+        // Verde profundo → Verde esmeralda → Verde suave → Menta pálida → Menta pálida
         // Ubicaciones: 0%, 30%, 60%, 90%, 100%
 
         // Interpolar las ubicaciones de los stops
@@ -36,14 +35,14 @@ struct SharedGradientBackground: View {
         let loc3 = 0.5 + (0.9 - 0.5) * expansionProgress
         let loc4 = 1.0
 
-        // Interpolar los colores: en progress 0-0.5 usamos grises, en 0.5-1.0 transicionamos a verdes
-        let color3 = expansionProgress < 0.5 ? lightGray : veryLightGreen
-        let color4 = expansionProgress < 0.5 ? lighterGray : veryLightGreen
+        // Interpolar los colores: en progress 0-0.5 usamos menta suave, en 0.5-1.0 transicionamos a menta pálida
+        let color3 = expansionProgress < 0.5 ? softMint : paleMint
+        let color4 = expansionProgress < 0.5 ? softMint : paleMint
 
         return [
-            .init(color: darkGreen, location: loc0),
-            .init(color: mediumGreen, location: loc1),
-            .init(color: lightGreen, location: loc2),
+            .init(color: deepGreen, location: loc0),
+            .init(color: emeraldGreen, location: loc1),
+            .init(color: softGreen, location: loc2),
             .init(color: color3, location: loc3),
             .init(color: color4, location: loc4)
         ]

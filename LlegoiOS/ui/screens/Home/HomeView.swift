@@ -18,6 +18,7 @@ struct HomeView: View {
     @State private var showSearchResults: Bool = false
     @State private var searchResultsOffset: CGFloat = -50
     @State private var searchDebounceTask: Task<Void, Never>? = nil
+    @State private var isFilterSheetPresented: Bool = false
 
     // Resultados filtrados de búsqueda
     @State private var filteredCategories: [(String, String)] = []
@@ -34,7 +35,6 @@ struct HomeView: View {
             product.shop.localizedCaseInsensitiveContains(searchText)
         }
     }
-
     // Función de búsqueda
     private func performSearch() {
         guard !searchText.isEmpty else {
@@ -75,6 +75,17 @@ struct HomeView: View {
                 searchResultsOffset = 0
             }
         }
+    }
+
+    private func applyCategoryFilter(_ category: String) {
+        searchDebounceTask?.cancel()
+        searchText = category
+        isSearchExpanded = true
+        isSearchFocused = false
+        isSearchLoading = true
+        showSearchResults = false
+        searchResultsOffset = -50
+        performSearch()
     }
 
     var body: some View {
@@ -180,6 +191,15 @@ struct HomeView: View {
                         }
                     }
                 }
+//                ToolbarItem(placement: .bottomBar) {
+//                    Button {
+//                        isFilterSheetPresented = true
+//                    } label: {
+//                        Image(systemName: "line.3.horizontal.decrease.circle")
+//                            .font(.system(size: 20, weight: .semibold))
+//                    }
+////                    .accessibilityLabel("Filtrar categorías")
+//                }
             }
             .navigationBarBackButtonHidden(true)
             .onAppear {
@@ -260,91 +280,77 @@ struct HomeView: View {
             }
             .navigationViewStyle(StackNavigationViewStyle())
         }
+        .sheet(isPresented: $isFilterSheetPresented) {
+            CategoryFilterSheet(
+                categories: semicircularCategories
+            ) { category in
+                isFilterSheetPresented = false
+                applyCategoryFilter(category)
+            }
+            .presentationDetents([.fraction(0.3), .medium])
+            .presentationDragIndicator(.visible)
+        }
     }
 
     // MARK: - Products Grid
     private var productsGrid: some View {
         ScrollView {
-//            VStack(spacing: 8) {
-//                Text("Ubicación actual")
-//                    .font(.system(size: 14, weight: .medium))
-//                    .foregroundColor(.white.opacity(0.9))
-//
-//                HStack(spacing: 6) {
-//                    Image(systemName: "location.fill")
-//                        .foregroundColor(.white)
-//                        .font(.system(size: 14))
-//
-//                    Text("La Habana, Cuba")
-//                        .font(.system(size: 18, weight: .bold, design: .rounded))
-//                        .foregroundColor(.white)
-//                }
-//            }
-//            .padding(.top, 16)
-//            .padding(.bottom, 20)
-
-            // Sección de categorías
-//            CategoryGridSection { category in
-//                print("Categoría seleccionada: \(category)")
-//                // TODO: Navegar a la vista de categoría o filtrar productos
-//            }
-//            .padding(.top, 20)
-//            .padding(.bottom, 16)
-
-            LazyVGrid(
-                columns: [
-                    GridItem(.flexible(), spacing: 14),
-                    GridItem(.flexible(), spacing: 14)
-                ],
-                alignment: .center,
-                spacing: 18
-            ) {
-                ForEach(Array(filteredProducts.enumerated()), id: \.element.id) { index, product in
-                    ProductCard(
-                        product: product,
-                        count: Binding(
-                            get: { productCounts[product.id] ?? 0 },
-                            set: { newValue in
-                                if newValue > 0 {
-                                    productCounts[product.id] = newValue
-                                } else {
-                                    productCounts.removeValue(forKey: product.id)
-                                }
-                            }
-                        ),
-                        onIncrement: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                productCounts[product.id] = (productCounts[product.id] ?? 0) + 1
-                            }
-                        },
-                        onDecrement: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                let currentCount = productCounts[product.id] ?? 0
-                                if currentCount > 0 {
-                                    if currentCount == 1 {
-                                        productCounts.removeValue(forKey: product.id)
+            VStack(alignment: .leading, spacing: 18) {
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(), spacing: 14),
+                        GridItem(.flexible(), spacing: 14)
+                    ],
+                    alignment: .center,
+                    spacing: 18
+                ) {
+                    ForEach(Array(filteredProducts.enumerated()), id: \.element.id) { index, product in
+                        ProductCard(
+                            product: product,
+                            count: Binding(
+                                get: { productCounts[product.id] ?? 0 },
+                                set: { newValue in
+                                    if newValue > 0 {
+                                        productCounts[product.id] = newValue
                                     } else {
-                                        productCounts[product.id] = currentCount - 1
+                                        productCounts.removeValue(forKey: product.id)
+                                    }
+                                }
+                            ),
+                            onIncrement: {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    productCounts[product.id] = (productCounts[product.id] ?? 0) + 1
+                                }
+                            },
+                            onDecrement: {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    let currentCount = productCounts[product.id] ?? 0
+                                    if currentCount > 0 {
+                                        if currentCount == 1 {
+                                            productCounts.removeValue(forKey: product.id)
+                                        } else {
+                                            productCounts[product.id] = currentCount - 1
+                                        }
                                     }
                                 }
                             }
+                        )
+                        .aspectRatio(0.68, contentMode: .fit)
+                        .opacity(animationDelay > Double(index) * 0.1 ? 1 : 0)
+                        .scaleEffect(animationDelay > Double(index) * 0.1 ? 1 : 0.95)
+                        .offset(y: animationDelay > Double(index) * 0.1 ? 0 : 10)
+                        .animation(
+                            .easeOut(duration: 0.8)
+                            .delay(0.8 + Double(index) * 0.08),
+                            value: animationDelay
+                        )
+                        .onTapGesture {
+                            selectedProduct = product
                         }
-                    )
-                    .aspectRatio(0.68, contentMode: .fit)
-                    .opacity(animationDelay > Double(index) * 0.1 ? 1 : 0)
-                    .scaleEffect(animationDelay > Double(index) * 0.1 ? 1 : 0.95)
-                    .offset(y: animationDelay > Double(index) * 0.1 ? 0 : 10)
-                    .animation(
-                        .easeOut(duration: 0.8)
-                        .delay(0.8 + Double(index) * 0.08),
-                        value: animationDelay
-                    )
-                    .onTapGesture {
-                        selectedProduct = product
                     }
                 }
+                .padding(.horizontal, 20)
             }
-            .padding(.horizontal, 20)
             .padding(.top, 8)
         }
         .onAppear {
@@ -677,4 +683,81 @@ struct HomeView: View {
             rating: 4.9
         )
     ]
+}
+
+private struct CategoryFilterSheet: View {
+    let categories: [(String, String)]
+    let onCategorySelect: (String) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Capsule()
+                .fill(Color.gray.opacity(0.3))
+                .frame(width: 40, height: 4)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 8)
+
+            Text("Filtrar por categoría")
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundColor(.primary)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(categories, id: \.0) { category in
+                        FilterCategoryChip(
+                            title: category.0,
+                            imageName: category.1,
+                            action: {
+                                onCategorySelect(category.0)
+                            }
+                        )
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 24)
+        .background(Color(.systemBackground))
+    }
+}
+
+private struct FilterCategoryChip: View {
+    let title: String
+    let imageName: String
+    let action: () -> Void
+
+    private let imageSize: CGFloat = 42
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                Image(imageName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: imageSize, height: imageSize)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                Text(title)
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+            }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 14)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color(.secondarySystemBackground))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.primary.opacity(0.05), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
 }
