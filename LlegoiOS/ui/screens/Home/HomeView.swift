@@ -10,23 +10,25 @@ struct HomeView: View {
     @State private var selectedProduct: Product? = nil
     @State private var navigateToProfile = false
     @State private var animationDelay: Double = 0
+    @State private var gradientExpansion: Double = 0.0
+    @State private var searchText = ""
+
+    // Productos filtrados por búsqueda
+    private var filteredProducts: [Product] {
+        if searchText.isEmpty {
+            return viewModel.products
+        }
+        return viewModel.products.filter { product in
+            product.name.localizedCaseInsensitiveContains(searchText) ||
+            product.shop.localizedCaseInsensitiveContains(searchText)
+        }
+    }
 
     var body: some View {
         NavigationStack {
             ZStack {
-                // Fondo degradado elegante: verde oscuro arriba, grisáceo abajo
-                LinearGradient(
-                    gradient: Gradient(stops: [
-                        .init(color: Color(red: 45/255, green: 85/255, blue: 65/255), location: 0.0),
-                        .init(color: Color(red: 80/255, green: 120/255, blue: 95/255), location: 0.25),
-                        .init(color: Color(red: 150/255, green: 190/255, blue: 165/255), location: 0.4),
-                        .init(color: Color(red: 235/255, green: 235/255, blue: 235/255), location: 0.5),
-                        .init(color: Color(red: 240/255, green: 240/255, blue: 240/255), location: 1.0)
-                    ]),
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
+                // Fondo degradado que se expande suavemente al aparecer
+                SharedGradientBackground(expansionProgress: gradientExpansion)
 
                 VStack(spacing: 0) {
                     // Ubicación
@@ -37,7 +39,7 @@ struct HomeView: View {
                         loadingState
                     } else if case .error(let message) = viewModel.state {
                         errorState(message: message)
-                    } else if viewModel.products.isEmpty {
+                    } else if filteredProducts.isEmpty {
                         emptyState
                     } else {
                         productsGrid
@@ -45,43 +47,55 @@ struct HomeView: View {
                 }
             }
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(action: {
-                        navigateToWallet = true
-                    }) {
-                        HStack(spacing: 4) {
-                            Image("cerdito")
-                                .renderingMode(.original)
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 20, height: 20)
+                ToolbarItem(placement: .topBarTrailing) {
 
-                            Text("$\(String(format: "%.2f", walletViewModel.balance))")
-                                .font(.system(size: 14, weight: .medium))
+                    // Barra de búsqueda personalizada
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.gray)
+                            .font(.system(size: 14))
+
+                        TextField("Buscar productos...", text: $searchText)
+                            .font(.system(size: 15))
+                            .autocorrectionDisabled()
+
+                        if !searchText.isEmpty {
+                            Button(action: {
+                                searchText = ""
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.gray)
+                                    .font(.system(size: 14))
+                            }
                         }
                     }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .cornerRadius(10)
+                    .frame(maxWidth: .infinity)
                 }
-
-                ToolbarItem {
+                ToolbarSpacer(.fixed,placement: .topBarTrailing)
+                ToolbarItem(placement: .topBarTrailing) {
+                    // Botón de carrito
                     Button(action: {
                         navigateToCart = true
                     }) {
-                        Image(systemName: "cart.fill")
-                    }.badge(cartManager.cartItemCount)
+                            Image(systemName: "cart.fill")
+                                .foregroundColor(.llegoPrimary)
+                    
+                        }
+                    
                 }
-
-                ToolbarSpacer(.fixed)
-
-                ToolbarItem {
-                    Button(action: {
-                        navigateToProfile = true
-                    }) {
-                        Image(systemName: "person.circle")
-                    }
-                }
+                
+                
             }
             .navigationBarBackButtonHidden(true)
             .onAppear {
+                // Animar el gradiente verde bajando suavemente
+                withAnimation(.easeInOut(duration: 1.2)) {
+                    gradientExpansion = 1.0
+                }
+
                 if case .idle = viewModel.state {
                     viewModel.loadHomeData()
                 }
@@ -156,7 +170,7 @@ struct HomeView: View {
                 alignment: .center,
                 spacing: 20
             ) {
-                ForEach(Array(viewModel.products.enumerated()), id: \.element.id) { index, product in
+                ForEach(Array(filteredProducts.enumerated()), id: \.element.id) { index, product in
                     ProductCard(
                         product: product,
                         count: Binding(
@@ -193,7 +207,7 @@ struct HomeView: View {
                     .offset(y: animationDelay > Double(index) * 0.1 ? 0 : 10)
                     .animation(
                         .easeOut(duration: 0.8)
-                        .delay(Double(index) * 0.05),
+                        .delay(0.8 + Double(index) * 0.08),
                         value: animationDelay
                     )
                     .onTapGesture {
@@ -205,12 +219,12 @@ struct HomeView: View {
             .padding(.top, 8)
         }
         .onAppear {
-            animationDelay = Double(viewModel.products.count) * 0.1 + 0.1
+            animationDelay = Double(filteredProducts.count) * 0.1 + 0.1
         }
-        .onChange(of: viewModel.products.count) { _ in
+        .onChange(of: filteredProducts.count) { _ in
             animationDelay = 0
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                animationDelay = Double(viewModel.products.count) * 0.1 + 0.1
+                animationDelay = Double(filteredProducts.count) * 0.1 + 0.1
             }
         }
     }
@@ -268,7 +282,7 @@ struct HomeView: View {
                     )
                     .frame(width: 180, height: 180)
 
-                Image(systemName: "cart")
+                Image(systemName: searchText.isEmpty ? "cart" : "magnifyingglass")
                     .font(.system(size: 70, weight: .light))
                     .foregroundStyle(
                         LinearGradient(
@@ -283,12 +297,12 @@ struct HomeView: View {
             }
             .padding(.bottom, 8)
 
-            Text("No hay productos disponibles")
+            Text(searchText.isEmpty ? "No hay productos disponibles" : "No se encontraron resultados")
                 .font(.system(size: 24, weight: .bold))
                 .foregroundColor(.llegoPrimary)
                 .multilineTextAlignment(.center)
 
-            Text("Vuelve a revisar más tarde")
+            Text(searchText.isEmpty ? "Vuelve a revisar más tarde" : "Intenta con otra búsqueda")
                 .font(.system(size: 16, weight: .regular))
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)

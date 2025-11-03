@@ -21,16 +21,8 @@ struct CategorySelectionView: View {
 
     var body: some View {
         ZStack {
-            // Background gradient que cubre toda la pantalla
-            LinearGradient(
-                gradient: Gradient(colors: [
-                    Color.llegoBackground,
-                    Color.llegoSecondary.opacity(0.1)
-                ]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea(.all) // Ignora todas las safe areas
+            // Background gradient verde/gris (igual que el inicial de HomeView)
+            SharedGradientBackground(expansionProgress: 0.0)
 
             VStack(spacing: 0) {
                 // Header con safe area top
@@ -165,7 +157,7 @@ struct CategorySelectionView: View {
         withAnimation(.easeInOut(duration: 3.0).repeatForever(autoreverses: true)) {
             floatOffset = -8
         }
-        
+
         // Pulso muy sutil para el fondo
         withAnimation(.easeInOut(duration: 4.0).repeatForever(autoreverses: true)) {
             pulseScale = 1.03
