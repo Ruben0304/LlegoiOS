@@ -21,7 +21,19 @@ struct ShopView: View {
 
     var body: some View {
         ZStack {
-            Color.llegoBackground.ignoresSafeArea()
+            // Fondo degradado elegante: verde oscuro arriba, blanco abajo
+            LinearGradient(
+                gradient: Gradient(stops: [
+                    .init(color: Color(red: 45/255, green: 85/255, blue: 65/255), location: 0.0),
+                    .init(color: Color(red: 80/255, green: 120/255, blue: 95/255), location: 0.25),
+                    .init(color: Color(red: 150/255, green: 190/255, blue: 165/255), location: 0.4),
+                    .init(color: Color.white, location: 0.5),
+                    .init(color: Color.white, location: 1.0)
+                ]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
 
 
                

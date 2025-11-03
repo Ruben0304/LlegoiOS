@@ -14,7 +14,8 @@ struct ComposeView: UIViewControllerRepresentable {
 
 struct ContentView: View {
     @State private var selectedTab = 0
-    @State private var isOnboardingCompleted = OnboardingHelper.isOnboardingCompleted
+    // @State private var isOnboardingCompleted = OnboardingHelper.isOnboardingCompleted
+    @State private var isOnboardingCompleted = true
     private let productRepository = ProductRepository()
 
     var body: some View {
