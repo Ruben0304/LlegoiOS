@@ -61,6 +61,13 @@ struct Tutorial: Identifiable, Hashable {
     }
 }
 
+// MARK: - Category Model
+struct Category: Identifiable, Hashable {
+    let id: String
+    let name: String
+    let imageName: String
+}
+
 // MARK: - Search Category
 enum SearchCategory: String, CaseIterable {
     case products = "Productos"

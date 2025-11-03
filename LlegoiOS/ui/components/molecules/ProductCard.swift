@@ -24,197 +24,173 @@ struct ProductCard: View {
     let onDecrement: () -> Void
     var onAddToCartAnimation: ((String, CGPoint) -> Void)? = nil
     var onProductTap: (() -> Void)? = nil
-
+    
     @State private var imagePosition: CGPoint = .zero
     @State private var isPressed: Bool = false
-
+    
     // CartManager singleton para añadir al carrito globalmente
     private let cartManager = CartManager.shared
-
+    
     var body: some View {
-        GeometryReader { containerGeometry in
-            let cardWidth = containerGeometry.size.width
-            let cardHeight = containerGeometry.size.height
-
-            // Calculate proportional sizes based on original 155x290 dimensions
-            let scaleFactor = cardWidth / 155.0
-            let imageSize = 130 * scaleFactor
-            let nameFontSize = 15 * scaleFactor
-            let shopFontSize = 12 * scaleFactor
-            let priceFontSize = 17 * scaleFactor
-            let nameHeight = 40 * scaleFactor
-            let horizontalPadding = 10 * scaleFactor
-            let topPadding = 10 * scaleFactor
-            let spacingAfterImage = 8 * scaleFactor
-            let buttonFontSize = 20 * scaleFactor
-            let counterFontSize = 16 * scaleFactor
-            let buttonSize = 25 * scaleFactor
-
-            VStack(alignment: .center, spacing: 0) {
-                // Main content
-                VStack(alignment: .center, spacing: 0) {
-                    // Product image with cache
-                    CachedAsyncImage(
-                        url: URL(string: product.imageUrl),
-                        content: { image in
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                        },
-                        placeholder: {
+        VStack(alignment: .leading, spacing: 0) {
+            // Image section with rating badge
+            ZStack(alignment: .topLeading) {
+                CachedAsyncImage(
+                    url: URL(string: product.imageUrl),
+                    content: { image in
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    },
+                    placeholder: {
+                        ZStack {
+                            Color.gray.opacity(0.06)
                             ProgressView()
-                                .frame(width: 24 * scaleFactor, height: 24 * scaleFactor)
-                        }
-                    )
-                    .frame(width: imageSize, height: imageSize)
-                    .background(
-                        GeometryReader { imageGeometry in
-                            Color.clear.preference(
-                                key: ImagePositionKey.self,
-                                value: imageGeometry.frame(in: .global).center
-                            )
-                        }
-                    )
-
-                Spacer().frame(height: spacingAfterImage)
-
-                // Product name with fixed height for 2 lines
-                VStack {
-                    Text(product.name)
-                        .font(.system(size: nameFontSize, weight: .bold, design: .default))
-                        .foregroundColor(Color(red: 97/255, green: 97/255, blue: 97/255))
-                        .multilineTextAlignment(.center)
-                        .lineLimit(2)
-                        .frame(height: nameHeight, alignment: .center)
-                        .frame(maxWidth: .infinity)
-                }
-
-                // Shop name
-                Text("(\(product.shop))")
-                    .font(.system(size: shopFontSize, weight: .regular, design: .default))
-                    .foregroundColor(Color(red: 97/255, green: 97/255, blue: 97/255))
-                    .multilineTextAlignment(.center)
-
-                Spacer().frame(height: 2 * scaleFactor)
-
-                // Price
-                Text(product.price)
-                    .font(.system(size: priceFontSize, weight: .bold, design: .default))
-                    .foregroundColor(Color(red: 97/255, green: 97/255, blue: 97/255))
-            }
-            .padding(.horizontal, horizontalPadding)
-            .padding(.top, topPadding)
-
-            Spacer()
-
-            // Counter controls at bottom - matching Compose design exactly
-            VStack {
-                if count == 0 {
-                    // Initial state: just "+" symbol without circle
-                    Button(action: {
-                        // Añadir al carrito usando CartManager
-                        cartManager.addToCart(productId: product.id, quantity: 1)
-                        onIncrement()
-                        print("🔄 Sending position from ProductCard: \(imagePosition)")
-                        onAddToCartAnimation?(product.imageUrl, imagePosition)
-                    }) {
-                        Text("+")
-                            .font(.system(size: buttonFontSize, weight: .bold, design: .default))
-                            .foregroundColor(Color(red: 27/255, green: 27/255, blue: 27/255)) // onSurface
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 26 * scaleFactor)
-                    }
-                    .offset(y: 9 * scaleFactor)
-                    .padding(.horizontal, 12 * scaleFactor)
-                    .padding(.bottom, 12 * scaleFactor)
-                    .background(
-                        CounterControlsShape()
-                            .fill(Color(red: 236/255, green: 240/255, blue: 233/255)) // surfaceVariant
-                    )
-                } else {
-                    // State with counter and buttons
-                    HStack {
-                        // Decrement pill button
-                        Button(action: {
-                            // Decrementar en CartManager
-                            let currentQty = cartManager.getQuantity(for: product.id)
-                            cartManager.updateQuantity(productId: product.id, quantity: currentQty - 1)
-                            onDecrement()
-                        }) {
-                            Text("–")
-                                .font(.system(size: counterFontSize, weight: .bold, design: .default))
-                                .foregroundColor(Color(red: 19/255, green: 45/255, blue: 47/255)) // onSurfaceVariant
-                                .frame(width: buttonSize, height: buttonSize)
-                                .background(Color(red: 243/255, green: 243/255, blue: 243/255)) // background
-                                .clipShape(Circle())
-                        }
-
-                        Spacer()
-
-                        // Count display
-                        Text("\(count)")
-                            .font(.system(size: counterFontSize, weight: .bold, design: .default))
-                            .foregroundColor(Color(red: 27/255, green: 27/255, blue: 27/255)) // onBackground
-
-                        Spacer()
-
-                        // Increment pill button
-                        Button(action: {
-                            // Incrementar en CartManager
-                            cartManager.addToCart(productId: product.id, quantity: 1)
-                            onIncrement()
-                            onAddToCartAnimation?(product.imageUrl, imagePosition)
-                        }) {
-                            Text("+")
-                                .font(.system(size: counterFontSize, weight: .bold, design: .default))
-                                .foregroundColor(Color(red: 19/255, green: 45/255, blue: 47/255)) // onSurfaceVariant
-                                .frame(width: buttonSize, height: buttonSize)
-                                .background(Color(red: 243/255, green: 243/255, blue: 243/255)) // background
-                                .clipShape(Circle())
+                                .tint(.llegoPrimary)
                         }
                     }
-                    .frame(height: 26 * scaleFactor)
-                    .offset(y: 7 * scaleFactor)
-                    .padding(.horizontal, 12 * scaleFactor)
-                    .padding(.bottom, 12 * scaleFactor)
-                    .background(
-                        CounterControlsShape()
-                            .fill(Color(red: 225/255, green: 199/255, blue: 142/255)) // secondary
-                    )
+                )
+                .frame(height: 180)
+                .frame(maxWidth: .infinity)
+                .clipped()
+                .background(
+                    GeometryReader { imageGeometry in
+                        Color.clear.preference(
+                            key: ImagePositionKey.self,
+                            value: imageGeometry.frame(in: .global).center
+                        )
+                    }
+                )
+
+                // Rating badge (floating)
+                HStack(spacing: 3) {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.orange)
+
+                    Text("4.8")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.primary)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    Capsule()
+                )
+                .glassEffect(.regular)
+                .padding(10)
+            }
+
+            // Product info section
+            VStack(alignment: .leading, spacing: 6) {
+                Text(product.name)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.9)
+                    .frame(height: 40, alignment: .top)
+
+                Text(product.shop)
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+
+                Spacer(minLength: 6)
+
+                // Price and cart section
+                HStack(alignment: .center) {
+                    Text(product.price)
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.llegoPrimary)
+
+                    Spacer()
+
+                    // Add to cart button
+                    if count == 0 {
+                        Button(action: {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
+                                cartManager.addToCart(productId: product.id, quantity: 1)
+                                onIncrement()
+                                onAddToCartAnimation?(product.imageUrl, imagePosition)
+                            }
+                        }) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.white)
+                                .frame(width: 36, height: 36)
+                                .background(
+                                    Circle()
+                                        .fill(Color.llegoPrimary)
+                                )
+                        }
+                    } else {
+                        // Counter
+                        HStack(spacing: 12) {
+                            Button(action: {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
+                                    let currentQty = cartManager.getQuantity(for: product.id)
+                                    cartManager.updateQuantity(productId: product.id, quantity: currentQty - 1)
+                                    onDecrement()
+                                }
+                            }) {
+                                Image(systemName: "minus")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(.llegoPrimary)
+                                    .frame(width: 32, height: 32)
+                                    .background(
+                                        Circle()
+                                            .fill(Color.llegoAccent.opacity(0.25))
+                                    )
+                            }
+
+                            Text("\(count)")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.primary)
+                                .frame(minWidth: 24)
+
+                            Button(action: {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
+                                    cartManager.addToCart(productId: product.id, quantity: 1)
+                                    onIncrement()
+                                    onAddToCartAnimation?(product.imageUrl, imagePosition)
+                                }
+                            }) {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .frame(width: 32, height: 32)
+                                    .background(
+                                        Circle()
+                                            .fill(Color.llegoPrimary)
+                                    )
+                            }
+                        }
+                    }
                 }
             }
-            .padding(.horizontal, 4 * scaleFactor)
-            .padding(.bottom, 4 * scaleFactor)
-
-
-            }
-            .scaleEffect(isPressed ? 0.95 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
-            .onPreferenceChange(ImagePositionKey.self) { position in
-                imagePosition = position
-                print("📍 Product \(product.id) image position updated: \(position)")
-            }
+            .padding(.horizontal, 14)
+            .padding(.top, 14)
+            .padding(.bottom, 16)
         }
-        .aspectRatio(155.0/290.0, contentMode: .fit)
-        .background(
-            CurvedBottomShape()
-                .fill(Color.white)
-                .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 2)
-        )
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 4)
         .overlay(
-            CurvedBottomShape()
-                .stroke(Color.llegoPrimary.opacity(isPressed ? 0.6 : 0), lineWidth: 3)
-                .animation(.easeInOut(duration: 0.15), value: isPressed)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.gray.opacity(isPressed ? 0.2 : 0.08), lineWidth: 1)
         )
-        .contentShape(Rectangle())
+        .scaleEffect(isPressed ? 0.98 : 1.0)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
+        .onPreferenceChange(ImagePositionKey.self) { position in
+            imagePosition = position
+        }
         .onTapGesture {
             onProductTap?()
         }
         .onLongPressGesture(minimumDuration: 0.0, maximumDistance: .infinity, pressing: { pressing in
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 isPressed = pressing
             }
         }, perform: {})
-
     }
 }

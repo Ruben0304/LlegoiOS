@@ -86,27 +86,40 @@ struct MainAppView: View {
 
                     TabView() {
                         Tab("Inicio", systemImage: "house") {
+                            WelcomeView()
+                                .ignoresSafeArea(.container, edges: .bottom)
+                        }
+                        Tab("Productos", systemImage: "bag") {
                             HomeView()
                                 .ignoresSafeArea(.container, edges: .bottom)
                         }
-                        Tab(role: .search) {
-                            NavigationStack {
-                                                   SearchView(searchText: $searchText)
-                                                   }.searchable(
-                                                    text: $searchText,
-                                                    placement: .toolbar,
-                                                    prompt: "Buscar productos o negocios..."
-                                                )
+                        Tab("Tiendas", systemImage: "storefront") {
+                            HomeView()
                         }
-                        Tab("Categorías", systemImage: "square.grid.2x2") {
-                            CategoriesView()
-                                .ignoresSafeArea(.container, edges: .bottom)
-                        }
-
-                        Tab("Lugares", systemImage: "map") {
-                            MapView()
-                                .ignoresSafeArea(.container, edges: .bottom)
-                        }
+//                        Tab("Cuenta", systemImage: "person") {
+//                            HomeView()
+//                        }
+//                        Tab("Tutoriales", systemImage: "play.rectangle") {
+//                            HomeView()
+//                        }
+//                        Tab(role: .search) {
+//                            NavigationStack {
+//                                                   SearchView(searchText: $searchText)
+//                                                   }.searchable(
+//                                                    text: $searchText,
+//                                                    placement: .toolbar,
+//                                                    prompt: "Buscar productos o negocios..."
+//                                                )
+//                        }
+//                        Tab("Categorías", systemImage: "square.grid.2x2") {
+//                            CategoriesView()
+//                                .ignoresSafeArea(.container, edges: .bottom)
+//                        }
+//
+//                        Tab("Lugares", systemImage: "map") {
+//                            MapView()
+//                                .ignoresSafeArea(.container, edges: .bottom)
+//                        }
                     }
                     
 
@@ -189,3 +202,4 @@ struct MainAppView: View {
         }
     }
 }
+

@@ -17,6 +17,7 @@ class SearchViewModel: ObservableObject {
     @Published var state: SearchViewState = .idle
     @Published var products: [Product] = []
     @Published var stores: [Store] = []
+    @Published var categories: [Category] = []
     @Published var errorMessage: String?
 
     // MARK: - Computed Properties
@@ -38,6 +39,18 @@ class SearchViewModel: ObservableObject {
     private var searchTask: Task<Void, Never>?
 
     // MARK: - Public Methods
+
+    /// Load mock categories
+    func loadCategories() {
+        categories = [
+            Category(id: "1", name: "Frutas", imageName: "frutas"),
+            Category(id: "2", name: "Vegetales", imageName: "vegetales"),
+            Category(id: "3", name: "Carnes", imageName: "carnes"),
+            Category(id: "4", name: "Lácteos", imageName: "lacteos"),
+            Category(id: "5", name: "Panadería", imageName: "panaderia"),
+            Category(id: "6", name: "Bebidas", imageName: "bebidas")
+        ]
+    }
 
     /// Search products by query
     func searchProducts(query: String) {
