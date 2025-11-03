@@ -504,7 +504,7 @@ struct ConversationalSearchView: View {
         let shipping = 15.0 // Simulado
         let currency = currencyValue ?? "CUP"
 
-        return "Vale, el costo total del envío es \(total) \(currency) y el envío es \(shipping) \(currency), ¿quieres confirmar?"
+        return "Vale, el costo total del producto es \(total) \(currency) y el envío es \(shipping) \(currency), ¿quieres confirmar?"
     }
 
     // MARK: - Selection Handlers
