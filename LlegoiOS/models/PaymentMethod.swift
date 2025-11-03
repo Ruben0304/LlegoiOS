@@ -1,7 +1,7 @@
 import SwiftUI
 
 // MARK: - Payment Method Model
-struct PaymentMethod: Equatable {
+struct PaymentMethod: Identifiable, Equatable {
     enum ImageType: Equatable {
         case systemIcon(String)
         case assetImage(String)
