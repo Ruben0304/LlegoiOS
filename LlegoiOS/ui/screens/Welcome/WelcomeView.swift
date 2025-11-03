@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct WelcomeView: View {
     // Animation states
@@ -16,6 +17,10 @@ struct WelcomeView: View {
     // Category selection
     @State private var selectedCategory: CategoryType = .restaurant
 
+    // Ripple effect and navigation
+    @State private var ripplePoints: [RipplePoint] = []
+    @State private var navigateToConversationalSearch: Bool = false
+
     enum CategoryType {
         case restaurant
         case supermarket
@@ -31,10 +36,10 @@ struct WelcomeView: View {
                 // Custom green gradient background - dark green top-right, white/light elsewhere
                 WelcomeGradientBackground()
                     .ignoresSafeArea()
-                
+
                 VStack(alignment: .leading, spacing: 0) {
                     Spacer()
-                    
+
                     // Main content - left aligned but vertically centered
                     VStack(alignment: .leading, spacing: 24) {
                         // Greeting title with elegant typography
@@ -44,14 +49,14 @@ struct WelcomeView: View {
                                 .foregroundColor(Color.black.opacity(0.7))
                                 .offset(y: titleAppeared ? titleFloat : 50)
                                 .opacity(titleAppeared ? 1 : 0)
-                            
+
                             Text("Bienvenido")
                                 .font(.system(size: 58, weight: .semibold, design: .rounded))
                                 .foregroundColor(Color.black.opacity(0.7))
                                 .offset(y: subtitleAppeared ? titleFloat : 50)
                                 .opacity(subtitleAppeared ? 1 : 0)
                         }
-                        
+
                         // Minimal category selector
                         HStack(spacing: 12) {
                             // Restaurant pill
@@ -64,7 +69,8 @@ struct WelcomeView: View {
                                     selectedCategory = .restaurant
                                 }
                             }
-                            
+                            .allowsHitTesting(true)
+
                             // Supermarket pill
                             CategoryPill(
                                 title: "Supermercado",
@@ -75,13 +81,14 @@ struct WelcomeView: View {
                                     selectedCategory = .supermarket
                                 }
                             }
+                            .allowsHitTesting(true)
                         }
                         .offset(y: categorySelectorAppeared ? categoryFloat : 50)
                         .opacity(categorySelectorAppeared ? 1 : 0)
 
                     }
                     .padding(.horizontal, 32)
-                    
+
                     Spacer()
 
                     Text("Presiona para encontrar lo que buscas...")
@@ -92,6 +99,16 @@ struct WelcomeView: View {
                         .padding(.horizontal, 32)
                         .padding(.bottom, 40)
                 }
+
+                // Ripple overlay
+                RippleOverlay(ripplePoints: $ripplePoints)
+            }
+            .contentShape(Rectangle())
+            .onTapGesture(coordinateSpace: .local) { location in
+                handleTap(at: location)
+            }
+            .navigationDestination(isPresented: $navigateToConversationalSearch) {
+                ConversationalSearchView()
             }
             .toolbar {
                 // Avatar with floating animation
@@ -204,6 +221,27 @@ struct WelcomeView: View {
             .delay(1.3)
         ) {
             balanceFloat = -5
+        }
+    }
+
+    // MARK: - Tap Handler with Haptics
+    private func handleTap(at location: CGPoint) {
+        // Generar feedback háptico elegante
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
+
+        // Añadir ripple en el punto de toque
+        let newRipple = RipplePoint(location: location)
+        ripplePoints.append(newRipple)
+
+        // Limitar a máximo 5 ripples activos
+        if ripplePoints.count > 5 {
+            ripplePoints.removeFirst()
+        }
+
+        // Navegar después del delay para ver el ripple
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            navigateToConversationalSearch = true
         }
     }
 }
