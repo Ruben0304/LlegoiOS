@@ -4,13 +4,11 @@ struct WelcomeView: View {
     // Animation states
     @State private var titleAppeared = false
     @State private var subtitleAppeared = false
-    @State private var ctaAppeared = false
     @State private var toolbarAppeared = false
     @State private var categorySelectorAppeared = false
 
     // Floating animations
     @State private var titleFloat: CGFloat = 0
-    @State private var ctaFloat: CGFloat = 0
     @State private var avatarFloat: CGFloat = 0
     @State private var balanceFloat: CGFloat = 0
     @State private var categoryFloat: CGFloat = 0
@@ -43,22 +41,13 @@ struct WelcomeView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Hola \(userName),")
                                 .font(.system(size: 38, weight: .light, design: .rounded))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        colors: [
-                                            Color.white.opacity(0.95),
-                                            Color.white.opacity(0.8)
-                                        ],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
+                                .foregroundColor(Color.black.opacity(0.7))
                                 .offset(y: titleAppeared ? titleFloat : 50)
                                 .opacity(titleAppeared ? 1 : 0)
                             
                             Text("Bienvenido")
-                                .font(.system(size: 58, weight: .bold, design: .rounded))
-                                .foregroundColor(.white)
+                                .font(.system(size: 58, weight: .semibold, design: .rounded))
+                                .foregroundColor(Color.black.opacity(0.7))
                                 .offset(y: subtitleAppeared ? titleFloat : 50)
                                 .opacity(subtitleAppeared ? 1 : 0)
                         }
@@ -89,69 +78,19 @@ struct WelcomeView: View {
                         }
                         .offset(y: categorySelectorAppeared ? categoryFloat : 50)
                         .opacity(categorySelectorAppeared ? 1 : 0)
+
                     }
                     .padding(.horizontal, 32)
                     
                     Spacer()
-                    
-                    // CTA Button - Minimal and elegant
-                    Button(action: {
-                        // Action to start first purchase
-                        print("Starting first purchase for \(selectedCategory)...")
-                    }) {
-                        HStack(spacing: 12) {
-                            Text("Presiona aquí para hacer tu primera compra en segundos")
-                                .font(.system(size: 16, weight: .medium, design: .rounded))
-                                .multilineTextAlignment(.center)
-                            
-                            Image(systemName: "arrow.right.circle.fill")
-                                .font(.system(size: 22, weight: .semibold))
-                        }
-                        .foregroundColor(.white)
+
+                    Text("Presiona para encontrar lo que buscas...")
+                        .font(.system(size: 24, weight: .light, design: .rounded))
+                        .foregroundColor(Color(red: 0.32, green: 0.35, blue: 0.4))
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.horizontal, 32)
-                        .padding(.vertical, 20)
-                        .background(
-                            ZStack {
-                                // Glass effect background
-                                RoundedRectangle(cornerRadius: 25)
-                                    .fill(.ultraThinMaterial)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 25)
-                                            .stroke(
-                                                LinearGradient(
-                                                    colors: [
-                                                        Color.white.opacity(0.6),
-                                                        Color.white.opacity(0.2)
-                                                    ],
-                                                    startPoint: .topLeading,
-                                                    endPoint: .bottomTrailing
-                                                ),
-                                                lineWidth: 1.5
-                                            )
-                                    )
-                                
-                                // Subtle inner glow
-                                RoundedRectangle(cornerRadius: 25)
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [
-                                                Color.white.opacity(0.15),
-                                                Color.clear
-                                            ],
-                                            startPoint: .top,
-                                            endPoint: .bottom
-                                        )
-                                    )
-                            }
-                        )
-                        .shadow(color: Color.black.opacity(0.15), radius: 20, x: 0, y: 10)
-                        .shadow(color: Color.white.opacity(0.1), radius: 10, x: 0, y: -5)
-                    }
-                    .offset(y: ctaAppeared ? ctaFloat : 80)
-                    .opacity(ctaAppeared ? 1 : 0)
-                    .scaleEffect(ctaAppeared ? 1 : 0.9)
-                    .padding(.horizontal, 32)
-                    .padding(.bottom, 60)
+                        .padding(.bottom, 40)
                 }
             }
             .toolbar {
@@ -223,11 +162,6 @@ struct WelcomeView: View {
             categorySelectorAppeared = true
         }
 
-        // CTA animation - smooth bounce
-        withAnimation(.spring(response: 0.9, dampingFraction: 0.7).delay(0.8)) {
-            ctaAppeared = true
-        }
-
         // Toolbar items animation - elegant slide from top
         withAnimation(.spring(response: 0.7, dampingFraction: 0.8).delay(0.5)) {
             toolbarAppeared = true
@@ -252,15 +186,6 @@ struct WelcomeView: View {
             .delay(1.1)
         ) {
             categoryFloat = -5
-        }
-
-        // CTA floating - gentle bounce
-        withAnimation(
-            .easeInOut(duration: 3.5)
-            .repeatForever(autoreverses: true)
-            .delay(1.3)
-        ) {
-            ctaFloat = -8
         }
 
         // Avatar floating - smooth and slow
@@ -371,4 +296,3 @@ struct CategoryPill: View {
         WelcomeView()
     }
 }
-
