@@ -50,21 +50,44 @@ struct LoginView: View {
         case password
     }
 
+    // Altura esperada del título completo para evitar saltos de layout
+    // Usamos el ancho de pantalla menos los paddings horizontales del header (24 + 24)
+    private var expectedTitleHeight: CGFloat {
+        let availableWidth = UIScreen.main.bounds.width - 48
+        // Medimos el alto del texto completo con la misma fuente y lineSpacing
+        let label = UILabel()
+        label.numberOfLines = 0
+        label.text = fullText
+        label.font = UIFont.systemFont(ofSize: 48, weight: .bold)
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineSpacing = 6
+        let attributed = NSAttributedString(
+            string: fullText,
+            attributes: [
+                .font: label.font as Any,
+                .paragraphStyle: paragraph
+            ]
+        )
+        label.attributedText = attributed
+        let size = label.sizeThatFits(CGSize(width: availableWidth, height: .greatestFiniteMagnitude))
+        // Añadimos un pequeño margen para el cursor y variaciones
+        return ceil(size.height) + 4
+    }
+
     var body: some View {
         NavigationView {
             ZStack(alignment: .top) {
                 // Fondo primary completo
-                Color.llegoPrimary
+                WelcomeGradientBackground()
                     .ignoresSafeArea()
 
                 VStack(spacing: 0) {
                     // Parte superior con header - Más arriba sin centrado vertical
                     headerSection
-                        .frame(maxWidth: .infinity,alignment: .top)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
                         .padding(.horizontal, 24)
-                        .padding(.top,20)
-//                        .padding(.bottom, 200)
-                    
+                        .padding(.top, 20)
+                        .padding(.bottom, 30)
                     // Parte blanca inferior - Ocupa el resto del espacio
                     ScrollView(showsIndicators: false) {
                         VStack(alignment: .leading, spacing: 32) {
@@ -74,6 +97,7 @@ struct LoginView: View {
                         .padding(.top, 28)
                         .padding(.bottom, 60)
                     }
+                    .padding(.top,32)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(
                         Color.white
@@ -86,7 +110,7 @@ struct LoginView: View {
                                     style: .continuous
                                 )
                             )
-                            .ignoresSafeArea(edges: .bottom)
+                            .ignoresSafeArea()
                     )
                     .ignoresSafeArea(.keyboard, edges: .bottom)
                 }
@@ -96,15 +120,6 @@ struct LoginView: View {
                 }
             }
             .navigationBarBackButtonHidden(true)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.hidden, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    CloseButton {
-                        dismiss()
-                    }
-                }
-            }
             .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
                 Button("OK") {
                     viewModel.errorMessage = nil
@@ -167,6 +182,7 @@ struct LoginView: View {
                     .font(.system(size: 48, weight: .bold))
                     .foregroundColor(.white)
                     .lineSpacing(6)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 if showCursor && displayedText.count < fullText.count {
                     Text("|")
@@ -175,15 +191,10 @@ struct LoginView: View {
                         .opacity(showCursor ? 1 : 0)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            // Reservamos el alto del texto completo desde el inicio para evitar saltos
+            .frame(minHeight: expectedTitleHeight, alignment: .leading)
 
-            // Subtítulo
-            Text("Inicia sesión para disfrutar\nde la mejor experiencia")
-                .font(.system(size: 18, weight: .regular))
-                .foregroundColor(Color.white.opacity(0.95))
-                .lineSpacing(4)
-                .opacity(displayedText == fullText ? 1 : 0)
-                .animation(.easeIn(duration: 0.5), value: displayedText)
+            // Subtítulo eliminado
         }
         .onAppear {
             startTypewriterEffect()

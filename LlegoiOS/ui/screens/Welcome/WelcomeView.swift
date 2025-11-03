@@ -20,6 +20,7 @@ struct WelcomeView: View {
     // Ripple effect and navigation
     @State private var ripplePoints: [RipplePoint] = []
     @State private var navigateToConversationalSearch: Bool = false
+    @State private var navigateToLogin: Bool = false
 
     enum CategoryType {
         case restaurant
@@ -110,6 +111,9 @@ struct WelcomeView: View {
             .navigationDestination(isPresented: $navigateToConversationalSearch) {
                 ConversationalSearchView()
             }
+            .navigationDestination(isPresented: $navigateToLogin) {
+                LoginView(viewModel: ProfileViewModel())
+            }
             .toolbar {
                 // Avatar with floating animation
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -125,7 +129,7 @@ struct WelcomeView: View {
             ToolbarSpacer(.fixed,placement: .navigationBarTrailing)
             ToolbarItem(placement: .navigationBarTrailing) {
                 // Avatar
-                Button(action: {}) {
+                Button(action: { navigateToLogin = true }) {
                     AsyncImage(url: URL(string: "https://i.pravatar.cc/100?img=3")) { phase in
                         switch phase {
                         case .empty:
