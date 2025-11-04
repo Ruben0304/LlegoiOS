@@ -333,6 +333,9 @@ struct HomeView: View {
                                         }
                                     }
                                 }
+                            },
+                            onProductTap: {
+                                selectedProduct = product
                             }
                         )
                         .aspectRatio(0.68, contentMode: .fit)
@@ -344,9 +347,6 @@ struct HomeView: View {
                             .delay(0.8 + Double(index) * 0.08),
                             value: animationDelay
                         )
-                        .onTapGesture {
-                            selectedProduct = product
-                        }
                     }
                 }
                 .padding(.horizontal, 20)

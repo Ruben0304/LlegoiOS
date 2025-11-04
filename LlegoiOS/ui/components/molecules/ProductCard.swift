@@ -24,16 +24,15 @@ struct ProductCard: View {
     let onDecrement: () -> Void
     var onAddToCartAnimation: ((String, CGPoint) -> Void)? = nil
     var onProductTap: (() -> Void)? = nil
-    
+
     @State private var imagePosition: CGPoint = .zero
-    @State private var isPressed: Bool = false
-    
+
     // CartManager singleton para añadir al carrito globalmente
     private let cartManager = CartManager.shared
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Image section with rating badge
+            // Image section with rating badge (tappable para navegar)
             ZStack(alignment: .topLeading) {
                 CachedAsyncImage(
                     url: URL(string: product.imageUrl),
@@ -79,6 +78,10 @@ struct ProductCard: View {
                 )
                 .glassEffect(.regular)
                 .padding(10)
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                onProductTap?()
             }
 
             // Product info section
@@ -177,20 +180,10 @@ struct ProductCard: View {
         .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 4)
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.gray.opacity(isPressed ? 0.2 : 0.08), lineWidth: 1)
+                .stroke(Color.gray.opacity(0.08), lineWidth: 1)
         )
-        .scaleEffect(isPressed ? 0.98 : 1.0)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isPressed)
         .onPreferenceChange(ImagePositionKey.self) { position in
             imagePosition = position
         }
-        .onTapGesture {
-            onProductTap?()
-        }
-        .onLongPressGesture(minimumDuration: 0.0, maximumDistance: .infinity, pressing: { pressing in
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                isPressed = pressing
-            }
-        }, perform: {})
     }
 }

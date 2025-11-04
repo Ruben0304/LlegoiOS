@@ -21,10 +21,12 @@ struct TestProductView: View {
     
 
     var body: some View {
+        NavigationStack {
         ZStack {
             // Background with blur effect
             BackgroundImageWithBlur(imageURL: product.imageUrl, imageLoaded: $imageLoaded)
-                .ignoresSafeArea()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .ignoresSafeArea(.all, edges: .all)
 
 
             // Bottom content
@@ -167,6 +169,14 @@ struct TestProductView: View {
                     dismiss()
                 })
             }
+             ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    // Acción de agregar al carrito
+                }) {
+                    Image(systemName: "cart.badge.plus")
+                        .foregroundColor(.white)
+                }
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: {
                     // Acción de opciones
@@ -174,6 +184,7 @@ struct TestProductView: View {
                     Image(systemName: "ellipsis")
                 }
             }
+           
         }
         .ignoresSafeArea()
         .sheet(isPresented: $showStoreSelector) {
@@ -188,6 +199,7 @@ struct TestProductView: View {
             }
             .navigationViewStyle(StackNavigationViewStyle())
         }
+        }
     }
 }
 
@@ -196,82 +208,75 @@ struct BackgroundImageWithBlur: View {
     let imageURL: String
     @Binding var imageLoaded: Bool
 
+    // Foto de prueba alternativa
+    private let testImageURL = "https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=800"
+
     var body: some View {
         GeometryReader { geometry in
-            ZStack {
-                // Imagen inferior (CON blur) - INVERTIDA para efecto de reflejo
-                AsyncImage(url: URL(string: imageURL)) { phase in
-                    switch phase {
-                    case .empty:
-                        Color.black
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: geometry.size.width, height: geometry.size.height*0.7)
-                            .rotation3DEffect(
-                                .degrees(180),
-                                axis: (x: 1, y: 0, z: 0)
-                            )
-                            .blur(radius: 70) // Blur más pronunciado
-                            .clipped()
-                            .padding(.top,geometry.size.height*0.3)
-                    case .failure:
-                        Color.black
-                    @unknown default:
-                        Color.black
-                    }
-                }
-
-                // Imagen superior (SIN blur) - Solo ocupa el espacio visible
-                VStack {
-                    AsyncImage(url: URL(string: imageURL)) { phase in
+            ZStack(alignment: .top) {
+                Color.clear
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                // Imagen superior (50% altura)
+                VStack(spacing: 0) {
+                    AsyncImage(url: URL(string: testImageURL)) { phase in
                         switch phase {
+                        case .empty:
+                            Color.black
                         case .success(let image):
                             image
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
-                                .frame(width: geometry.size.width, height: geometry.size.height/2)
+                                .frame(width: geometry.size.width, height: geometry.size.height * 0.5)
                                 .clipped()
-                                .mask {
-                                    LinearGradient(
-                                        gradient: Gradient(stops: [
-                                            .init(color: .white, location: 0.0),
-                                            .init(color: .white, location: 0.60),
-                                            .init(color: .white.opacity(0.7), location: 0.72),
-                                            .init(color: .white.opacity(0.3), location: 0.85),
-                                            .init(color: .clear, location: 0.95)
-                                        ]),
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    )
-                                }
-                               
                                 .onAppear {
                                     imageLoaded = true
                                 }
-                        default:
-                            EmptyView()
+                        case .failure:
+                            Color.black
+                        @unknown default:
+                            Color.black
                         }
                     }
+
                     Spacer()
                 }
-            }
-            .overlay {
-                // Gradient overlay for better text readability
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        .clear,
-                        .clear,
-                        .black.opacity(0.3),
-                        .black.opacity(0.7),
-                        .black.opacity(0.85)
-                    ]),
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
+
+                // Imagen inferior (50% altura) - Misma foto
+                VStack(spacing: 0) {
+                    Spacer()
+
+                    AsyncImage(url: URL(string: testImageURL)) { phase in
+                        switch phase {
+                        case .empty:
+                            Color.black.opacity(0.8)
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: geometry.size.width, height: geometry.size.height * 0.5)
+                                .clipped()
+                        case .failure:
+                            Color.black.opacity(0.8)
+                        @unknown default:
+                            Color.black.opacity(0.8)
+                        }
+                    }
+                }
+
+                // TransparentBlurView encima de la foto inferior y parte de la superior, debajo del contenido
+                ZStack {
+                    TransparentBlurView(removeAllFilters: false)
+                        .frame(width: geometry.size.width + 100, height: geometry.size.height * 0.68)
+
+                    // Overlay oscuro para mejorar contraste
+                    Color.black.opacity(0.25)
+                        .frame(width: geometry.size.width + 100, height: geometry.size.height * 0.68)
+                }
+                .blur(radius: 15)
+                .position(x: geometry.size.width / 2, y: geometry.size.height * 0.38 + (geometry.size.height * 0.68) / 2)
             }
         }
+        .ignoresSafeArea(.all)
     }
 }
 
