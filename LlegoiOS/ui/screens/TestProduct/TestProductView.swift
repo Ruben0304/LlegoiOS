@@ -120,7 +120,7 @@ struct TestProductView: View {
                                     .foregroundColor(.white.opacity(0.5))
                             }
                             .padding(16)
-                            .background(Color.white.opacity(0.08))
+                            .glassEffect(.clear.interactive(),in: .rect(cornerRadius: 12))
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                         
@@ -208,9 +208,6 @@ struct BackgroundImageWithBlur: View {
     let imageURL: String
     @Binding var imageLoaded: Bool
 
-    // Foto de prueba alternativa
-    private let testImageURL = "https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=800"
-
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .top) {
@@ -218,7 +215,7 @@ struct BackgroundImageWithBlur: View {
                     .frame(width: geometry.size.width, height: geometry.size.height)
                 // Imagen superior (50% altura)
                 VStack(spacing: 0) {
-                    AsyncImage(url: URL(string: testImageURL)) { phase in
+                    AsyncImage(url: URL(string: imageURL)) { phase in
                         switch phase {
                         case .empty:
                             Color.black
@@ -245,7 +242,7 @@ struct BackgroundImageWithBlur: View {
                 VStack(spacing: 0) {
                     Spacer()
 
-                    AsyncImage(url: URL(string: testImageURL)) { phase in
+                    AsyncImage(url: URL(string: imageURL)) { phase in
                         switch phase {
                         case .empty:
                             Color.black.opacity(0.8)
@@ -325,8 +322,8 @@ struct ActionButton: View {
             .foregroundColor(style == .primary ? .black : .white)
             .frame(maxWidth: .infinity)
             .frame(height: 50)
-            .background(style == .primary ? Color.white.opacity(0.25) : Color.white.opacity(0.08))
             .clipShape(RoundedRectangle(cornerRadius: 12))
+            .glassEffect(.clear.interactive(),in: .rect(cornerRadius: 12))
         }
     }
 }

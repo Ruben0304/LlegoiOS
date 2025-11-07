@@ -96,17 +96,6 @@ struct MainAppView: View {
                         Tab("Tiendas", systemImage: "storefront") {
                             ShopTabLandingView()
                         }
-                        Tab("Test", systemImage: "star.fill") {
-                            TestProductView(product: Product(
-                                id: "test-1",
-                                name: "Aguacate Orgánico Premium",
-                                shop: "FreshMart",
-                                weight: "500g",
-                                price: "$2.50",
-                                imageUrl: "https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=400"
-                            ))
-                            .ignoresSafeArea()
-                        }
 //                        Tab("Cuenta", systemImage: "person") {
 //                            HomeView()
 //                        }
@@ -136,19 +125,19 @@ struct MainAppView: View {
 
 
                                 .searchToolbarBehavior(.minimize)
-                    .tabViewBottomAccessory {
-                        // Solo mostrar si hay pedido activo
-                        if hasActiveOrder {
-                            OrderTrackingCard(
-                                orderManager: orderManager,
-                                onTap: {
-                                    print("🔵 OrderTrackingCard tapped")
-                                    showTrackingFullScreen = true
-                                }
-                            )
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
-                        }
-                    }
+//                    .tabViewBottomAccessory {
+//                        // Solo mostrar si hay pedido activo
+//                        if hasActiveOrder {
+//                            OrderTrackingCard(
+//                                orderManager: orderManager,
+//                                onTap: {
+//                                    print("🔵 OrderTrackingCard tapped")
+//                                    showTrackingFullScreen = true
+//                                }
+//                            )
+//                            .transition(.move(edge: .bottom).combined(with: .opacity))
+//                        }
+//                    }
                     .tabBarMinimizeBehavior(.onScrollDown)
                     .accentColor(Color.llegoPrimary)
                     .fullScreenCover(isPresented: $showTrackingFullScreen) {
@@ -202,21 +191,6 @@ struct MainAppView: View {
                             Text("Cuenta")
                         }
                         .tag(3)
-
-                    TestProductView(product: Product(
-                        id: "test-1",
-                        name: "Aguacate Orgánico Premium",
-                        shop: "FreshMart",
-                        weight: "500g",
-                        price: "$2.50",
-                        imageUrl: "https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?w=400"
-                    ))
-                    .ignoresSafeArea()
-                    .tabItem {
-                        Image(systemName: "star.fill")
-                        Text("Test")
-                    }
-                    .tag(4)
                 }
                 .accentColor(Color.llegoPrimary)
                 .toolbarBackground(.hidden, for: .tabBar)

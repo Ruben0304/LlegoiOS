@@ -29,11 +29,13 @@ struct ProductCard: View {
 
     // CartManager singleton para añadir al carrito globalmente
     private let cartManager = CartManager.shared
-    
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Image section with rating badge (tappable para navegar)
-            ZStack(alignment: .topLeading) {
+        Button(action: {
+            onProductTap?()
+        }) {
+            VStack(alignment: .leading, spacing: 8) {
+                // Image section - Más compacta
                 CachedAsyncImage(
                     url: URL(string: product.imageUrl),
                     content: { image in
@@ -49,9 +51,10 @@ struct ProductCard: View {
                         }
                     }
                 )
-                .frame(height: 180)
+                .frame(height: 140)
                 .frame(maxWidth: .infinity)
                 .clipped()
+                .cornerRadius(10)
                 .background(
                     GeometryReader { imageGeometry in
                         Color.clear.preference(
@@ -61,54 +64,30 @@ struct ProductCard: View {
                     }
                 )
 
-                // Rating badge (floating)
-                HStack(spacing: 3) {
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.orange)
-
-                    Text("4.8")
-                        .font(.system(size: 11, weight: .bold))
+                // Product info section - Más compacto
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(product.name)
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.primary)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.9)
+                        .frame(height: 36, alignment: .topLeading)
+
+                    Text(product.shop)
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(
-                    Capsule()
-                )
-                .glassEffect(.regular)
-                .padding(10)
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                onProductTap?()
-            }
 
-            // Product info section
-            VStack(alignment: .leading, spacing: 6) {
-                Text(product.name)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.primary)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.9)
-                    .frame(height: 40, alignment: .top)
-
-                Text(product.shop)
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-
-                Spacer(minLength: 6)
-
-                // Price and cart section
-                HStack(alignment: .center) {
+                // Price and cart section - Más compacto
+                HStack(alignment: .center, spacing: 6) {
                     Text(product.price)
-                        .font(.system(size: 18, weight: .bold))
+                        .font(.system(size: 16, weight: .bold))
                         .foregroundColor(.llegoPrimary)
 
                     Spacer()
 
-                    // Add to cart button
+                    // Add to cart button - Más pequeño
                     if count == 0 {
                         Button(action: {
                             withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
@@ -118,17 +97,18 @@ struct ProductCard: View {
                             }
                         }) {
                             Image(systemName: "plus")
-                                .font(.system(size: 14, weight: .bold))
+                                .font(.system(size: 12, weight: .bold))
                                 .foregroundColor(.white)
-                                .frame(width: 36, height: 36)
+                                .frame(width: 30, height: 30)
                                 .background(
                                     Circle()
                                         .fill(Color.llegoPrimary)
                                 )
                         }
+                        .buttonStyle(.plain)
                     } else {
-                        // Counter
-                        HStack(spacing: 12) {
+                        // Counter - Más compacto
+                        HStack(spacing: 8) {
                             Button(action: {
                                 withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
                                     let currentQty = cartManager.getQuantity(for: product.id)
@@ -137,19 +117,20 @@ struct ProductCard: View {
                                 }
                             }) {
                                 Image(systemName: "minus")
-                                    .font(.system(size: 12, weight: .bold))
+                                    .font(.system(size: 10, weight: .bold))
                                     .foregroundColor(.llegoPrimary)
-                                    .frame(width: 32, height: 32)
+                                    .frame(width: 26, height: 26)
                                     .background(
                                         Circle()
                                             .fill(Color.llegoAccent.opacity(0.25))
                                     )
                             }
+                            .buttonStyle(.plain)
 
                             Text("\(count)")
-                                .font(.system(size: 16, weight: .bold))
+                                .font(.system(size: 14, weight: .bold))
                                 .foregroundColor(.primary)
-                                .frame(minWidth: 24)
+                                .frame(minWidth: 20)
 
                             Button(action: {
                                 withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
@@ -159,28 +140,28 @@ struct ProductCard: View {
                                 }
                             }) {
                                 Image(systemName: "plus")
-                                    .font(.system(size: 12, weight: .bold))
+                                    .font(.system(size: 10, weight: .bold))
                                     .foregroundColor(.white)
-                                    .frame(width: 32, height: 32)
+                                    .frame(width: 26, height: 26)
                                     .background(
                                         Circle()
                                             .fill(Color.llegoPrimary)
                                     )
                             }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.top, 14)
-            .padding(.bottom, 16)
+            .padding(10)
         }
+        .buttonStyle(.plain)
         .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 4)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.gray.opacity(0.08), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.gray.opacity(0.06), lineWidth: 1)
         )
         .onPreferenceChange(ImagePositionKey.self) { position in
             imagePosition = position

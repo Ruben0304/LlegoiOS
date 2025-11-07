@@ -271,7 +271,7 @@ struct HomeView: View {
             }
             .navigationViewStyle(StackNavigationViewStyle())
         }
-        .navigationDestination(item: $selectedProduct) { product in
+        .fullScreenCover(item: $selectedProduct) { product in
             TestProductView(product: product)
         }
         .fullScreenCover(isPresented: $navigateToProfile) {
@@ -338,7 +338,7 @@ struct HomeView: View {
                                 selectedProduct = product
                             }
                         )
-                        .aspectRatio(0.68, contentMode: .fit)
+                        .aspectRatio(0.75, contentMode: .fit)
                         .opacity(animationDelay > Double(index) * 0.1 ? 1 : 0)
                         .scaleEffect(animationDelay > Double(index) * 0.1 ? 1 : 0.95)
                         .offset(y: animationDelay > Double(index) * 0.1 ? 0 : 10)
