@@ -148,3 +148,54 @@ struct OrderTimelineEvent: Identifiable {
     let message: String
     let isCompleted: Bool
 }
+
+// MARK: - Instagram Stories Models
+struct StoryData: Identifiable {
+    let id: String
+    let store: Store
+    let items: [StoryItem]
+    var currentIndex: Int = 0
+    var isViewed: Bool = false
+    var isLiked: Bool = false
+
+    mutating func nextItem() -> Bool {
+        if currentIndex < items.count - 1 {
+            currentIndex += 1
+            return true
+        }
+        return false
+    }
+
+    mutating func previousItem() -> Bool {
+        if currentIndex > 0 {
+            currentIndex -= 1
+            return true
+        }
+        return false
+    }
+
+    var currentItem: StoryItem {
+        items[currentIndex]
+    }
+}
+
+struct StoryItem: Identifiable {
+    let id: String
+    let mediaUrl: String
+    let mediaType: StoryMediaType
+    let duration: TimeInterval // En segundos
+    let timestamp: Date
+
+    init(id: String = UUID().uuidString, mediaUrl: String, mediaType: StoryMediaType, duration: TimeInterval = 5.0, timestamp: Date = Date()) {
+        self.id = id
+        self.mediaUrl = mediaUrl
+        self.mediaType = mediaType
+        self.duration = duration
+        self.timestamp = timestamp
+    }
+}
+
+enum StoryMediaType {
+    case image
+    case video
+}

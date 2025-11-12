@@ -19,6 +19,9 @@ struct HomeView: View {
     @State private var searchResultsOffset: CGFloat = -50
     @State private var searchDebounceTask: Task<Void, Never>? = nil
     @State private var isFilterSheetPresented: Bool = false
+    @State private var selectedCategory: String = "Todos"
+    @State private var scrollOffset: CGFloat = 0
+    @State private var lastScrollOffset: CGFloat = 0
 
     // Resultados filtrados de búsqueda
     @State private var filteredCategories: [(String, String)] = []
@@ -292,18 +295,34 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - Products Grid
+    // MARK: - Products List
     private var productsGrid: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                LazyVGrid(
-                    columns: [
-                        GridItem(.flexible(), spacing: 14),
-                        GridItem(.flexible(), spacing: 14)
-                    ],
-                    alignment: .center,
-                    spacing: 18
-                ) {
+            LazyVStack(spacing: 0) {
+                // Categories Section
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(foodCategories, id: \.self) { category in
+                            CategoryChip(
+                                title: category,
+                                isSelected: selectedCategory == category
+                            ) {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                                    selectedCategory = category
+                                    // Haptic feedback
+                                    let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                                    impactFeedback.impactOccurred()
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                }
+               
+
+                // Products List
+                LazyVStack(spacing: 20) {
                     ForEach(Array(filteredProducts.enumerated()), id: \.element.id) { index, product in
                         ProductCard(
                             product: product,
@@ -336,33 +355,41 @@ struct HomeView: View {
                             },
                             onProductTap: {
                                 selectedProduct = product
+                                // Haptic feedback
+                                let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                                impactFeedback.impactOccurred()
                             }
                         )
-                        .aspectRatio(0.75, contentMode: .fit)
-                        .opacity(animationDelay > Double(index) * 0.1 ? 1 : 0)
-                        .scaleEffect(animationDelay > Double(index) * 0.1 ? 1 : 0.95)
-                        .offset(y: animationDelay > Double(index) * 0.1 ? 0 : 10)
+                        .opacity(animationDelay > Double(index) * 0.08 ? 1 : 0)
+                        .scaleEffect(animationDelay > Double(index) * 0.08 ? 1 : 0.9)
+                        .offset(x: animationDelay > Double(index) * 0.08 ? 0 : -50)
+                        .rotationEffect(.degrees(animationDelay > Double(index) * 0.08 ? 0 : -5))
                         .animation(
-                            .easeOut(duration: 0.8)
-                            .delay(0.8 + Double(index) * 0.08),
+                            .spring(response: 0.7, dampingFraction: 0.7)
+                            .delay(0.3 + Double(index) * 0.08),
                             value: animationDelay
                         )
                     }
                 }
                 .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .padding(.bottom, 20)
             }
-            .padding(.top, 8)
         }
+        .coordinateSpace(name: "scroll")
         .onAppear {
-            animationDelay = Double(filteredProducts.count) * 0.1 + 0.1
+            animationDelay = Double(filteredProducts.count) * 0.08 + 0.1
         }
         .onChange(of: filteredProducts.count) { _ in
             animationDelay = 0
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                animationDelay = Double(filteredProducts.count) * 0.1 + 0.1
+                animationDelay = Double(filteredProducts.count) * 0.08 + 0.1
             }
         }
     }
+
+    // Food categories
+    private let foodCategories = ["Todos", "Entrantes", "Platos Fuertes", "Postres", "Bebidas", "Ensaladas", "Sopas"]
 
     // MARK: - Loading State
     private var loadingState: some View {
@@ -757,6 +784,32 @@ private struct FilterCategoryChip: View {
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .stroke(Color.primary.opacity(0.05), lineWidth: 1)
             )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Category Chip Component
+private struct CategoryChip: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 15, weight: isSelected ? .bold : .medium))
+                .foregroundColor(isSelected ? .white : .white.opacity(0.7))
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+                .background(
+                    Capsule()
+                        .fill(isSelected ? Color.llegoPrimary : Color.clear)
+                )
+                .overlay(
+                    Capsule()
+                        .stroke(isSelected ? Color.clear : Color.gray.opacity(0.2), lineWidth: 1.5)
+                )
         }
         .buttonStyle(.plain)
     }

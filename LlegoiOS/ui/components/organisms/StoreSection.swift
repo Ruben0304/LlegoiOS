@@ -13,7 +13,10 @@ struct StoreSection: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 16) {
+            // Stories Section (Instagram-style)
+            StoreStories(stores: stores, onStoryTap: onStoreTap)
+
             // Section Header
             HStack {
                 Text("Tiendas cerca de ti")

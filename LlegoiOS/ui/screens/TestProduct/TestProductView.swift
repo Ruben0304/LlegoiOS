@@ -158,7 +158,7 @@ struct TestProductView: View {
                         
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 320)
+                .padding(.top, 420)
                 .padding(.bottom, 32)
 
         }
@@ -213,7 +213,7 @@ struct BackgroundImageWithBlur: View {
             ZStack(alignment: .top) {
                 Color.clear
                     .frame(width: geometry.size.width, height: geometry.size.height)
-                // Imagen superior (50% altura)
+                // Imagen superior (65% altura)
                 VStack(spacing: 0) {
                     AsyncImage(url: URL(string: imageURL)) { phase in
                         switch phase {
@@ -223,7 +223,7 @@ struct BackgroundImageWithBlur: View {
                             image
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
-                                .frame(width: geometry.size.width, height: geometry.size.height * 0.5)
+                                .frame(width: geometry.size.width, height: geometry.size.height * 0.65)
                                 .clipped()
                                 .onAppear {
                                     imageLoaded = true
@@ -238,7 +238,7 @@ struct BackgroundImageWithBlur: View {
                     Spacer()
                 }
 
-                // Imagen inferior (50% altura) - Misma foto
+                // Imagen inferior (35% altura) - Misma foto
                 VStack(spacing: 0) {
                     Spacer()
 
@@ -250,7 +250,7 @@ struct BackgroundImageWithBlur: View {
                             image
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
-                                .frame(width: geometry.size.width, height: geometry.size.height * 0.5)
+                                .frame(width: geometry.size.width, height: geometry.size.height * 0.35)
                                 .clipped()
                         case .failure:
                             Color.black.opacity(0.8)
@@ -263,14 +263,14 @@ struct BackgroundImageWithBlur: View {
                 // TransparentBlurView encima de la foto inferior y parte de la superior, debajo del contenido
                 ZStack {
                     TransparentBlurView(removeAllFilters: false)
-                        .frame(width: geometry.size.width + 100, height: geometry.size.height * 0.68)
+                        .frame(width: geometry.size.width + 100, height: geometry.size.height * 0.55)
 
                     // Overlay oscuro para mejorar contraste
                     Color.black.opacity(0.25)
-                        .frame(width: geometry.size.width + 100, height: geometry.size.height * 0.68)
+                        .frame(width: geometry.size.width + 100, height: geometry.size.height * 0.55)
                 }
                 .blur(radius: 15)
-                .position(x: geometry.size.width / 2, y: geometry.size.height * 0.38 + (geometry.size.height * 0.68) / 2)
+                .position(x: geometry.size.width / 2, y: geometry.size.height * 0.45 + (geometry.size.height * 0.55) / 2)
             }
         }
         .ignoresSafeArea(.all)

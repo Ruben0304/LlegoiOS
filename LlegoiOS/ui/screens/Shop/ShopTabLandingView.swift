@@ -22,6 +22,11 @@ struct ShopTabLandingView: View {
     @State private var navigateToStoreDetail: Bool = false
     @State private var navigateToHome: Bool = false
 
+    // Instagram Stories Viewer
+    @State private var showStoryViewer: Bool = false
+    @State private var storyData: [StoryData] = []
+    @State private var currentStoryIndex: Int = 0
+
     // Región del mapa compartida
     @State private var mapRegion = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 23.1345, longitude: -82.3589),
@@ -31,24 +36,45 @@ struct ShopTabLandingView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Mapa siempre visible como fondo
-                if !isMapFullScreen {
-                    VStack {
-                        Spacer(minLength: 40)
+                Color.llegoBackground.ignoresSafeArea()
 
+                // HISTORIAS Y MAPA (no superpuestos)
+                if !isMapFullScreen {
+                    VStack(spacing: 0) {
+                        // Stories Section (Instagram-style) - Arriba
+                        if !storyData.isEmpty {
+                            StoreStories(
+                                storyData: storyData,
+                                onStoryTap: { store in
+                                    // Abrir Instagram Story Viewer a pantalla completa
+                                    if let index = storyData.firstIndex(where: { $0.store.id == store.id }) {
+                                        currentStoryIndex = index
+                                        showStoryViewer = true
+                                    }
+                                }
+                            )
+                            .background(Color.llegoBackground)
+                            .zIndex(1)
+                        }
+
+                        // Spacer para separar historias del mapa
+                        Spacer()
+                            .frame(height: 16)
+
+                        // Mapa justo debajo de las historias (sin superposición)
                         RadialShopMapView(
-                            isFullScreen: $isMapFullScreen,
-//                            region: $mapRegion
+                                isFullScreen: $isMapFullScreen
                         )
                         .frame(height: 360)
+                        .clipped()
+                        .zIndex(0)
 
-                        Spacer(minLength: 24)
+                        Spacer()
                     }
-                    .transition(.opacity)
                 } else {
+                    // Mapa en pantalla completa
                     RadialShopMapView(
-                        isFullScreen: $isMapFullScreen,
-//                        region: $mapRegion
+                        isFullScreen: $isMapFullScreen
                     )
                     .ignoresSafeArea()
                     .transition(.opacity)
@@ -164,6 +190,52 @@ struct ShopTabLandingView: View {
                     HomeView()
                 }
             }
+            .fullScreenCover(isPresented: $showStoryViewer) {
+                InstagramStoryViewer(
+                    stories: $storyData,
+                    currentStoryIndex: $currentStoryIndex,
+                    isPresented: $showStoryViewer
+                )
+            }
+            .onAppear {
+                // Inicializar historias mock
+                initializeMockStories()
+            }
+        }
+    }
+
+    // MARK: - Initialize Mock Stories
+    private func initializeMockStories() {
+        storyData = mockStores.map { storeWithCoords in
+            let store = storeWithCoords.toStore()
+
+            // Crear múltiples items de historia por tienda (2-3 historias)
+            let storyItems: [StoryItem] = [
+                StoryItem(
+                    mediaUrl: storeWithCoords.bannerUrl,
+                    mediaType: .image,
+                    duration: 5.0,
+                    timestamp: Date().addingTimeInterval(-3600)
+                ),
+                StoryItem(
+                    mediaUrl: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1080&h=1920&fit=crop",
+                    mediaType: .image,
+                    duration: 5.0,
+                    timestamp: Date().addingTimeInterval(-1800)
+                ),
+                StoryItem(
+                    mediaUrl: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=1080&h=1920&fit=crop",
+                    mediaType: .image,
+                    duration: 5.0,
+                    timestamp: Date().addingTimeInterval(-900)
+                )
+            ]
+
+            return StoryData(
+                id: store.id,
+                store: store,
+                items: storyItems
+            )
         }
     }
 

@@ -34,8 +34,8 @@ struct ProductCard: View {
         Button(action: {
             onProductTap?()
         }) {
-            VStack(alignment: .leading, spacing: 8) {
-                // Image section - Más compacta
+            HStack(spacing: 14) {
+                // Image section - Cuadrada a la izquierda
                 CachedAsyncImage(
                     url: URL(string: product.imageUrl),
                     content: { image in
@@ -51,10 +51,8 @@ struct ProductCard: View {
                         }
                     }
                 )
-                .frame(height: 140)
-                .frame(maxWidth: .infinity)
-                .clipped()
-                .cornerRadius(10)
+                .frame(width: 100, height: 100)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .background(
                     GeometryReader { imageGeometry in
                         Color.clear.preference(
@@ -64,104 +62,128 @@ struct ProductCard: View {
                     }
                 )
 
-                // Product info section - Más compacto
-                VStack(alignment: .leading, spacing: 4) {
+                // Product info section - A la derecha
+                VStack(alignment: .leading, spacing: 6) {
                     Text(product.name)
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.primary)
                         .lineLimit(2)
                         .minimumScaleFactor(0.9)
-                        .frame(height: 36, alignment: .topLeading)
 
                     Text(product.shop)
-                        .font(.system(size: 11, weight: .regular))
+                        .font(.system(size: 13, weight: .regular))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
-                }
-
-                // Price and cart section - Más compacto
-                HStack(alignment: .center, spacing: 6) {
-                    Text(product.price)
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.llegoPrimary)
 
                     Spacer()
 
-                    // Add to cart button - Más pequeño
-                    if count == 0 {
-                        Button(action: {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
-                                cartManager.addToCart(productId: product.id, quantity: 1)
-                                onIncrement()
-                                onAddToCartAnimation?(product.imageUrl, imagePosition)
-                            }
-                        }) {
-                            Image(systemName: "plus")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundColor(.white)
-                                .frame(width: 30, height: 30)
-                                .background(
-                                    Circle()
-                                        .fill(Color.llegoPrimary)
-                                )
-                        }
-                        .buttonStyle(.plain)
-                    } else {
-                        // Counter - Más compacto
-                        HStack(spacing: 8) {
-                            Button(action: {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
-                                    let currentQty = cartManager.getQuantity(for: product.id)
-                                    cartManager.updateQuantity(productId: product.id, quantity: currentQty - 1)
-                                    onDecrement()
-                                }
-                            }) {
-                                Image(systemName: "minus")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundColor(.llegoPrimary)
-                                    .frame(width: 26, height: 26)
-                                    .background(
-                                        Circle()
-                                            .fill(Color.llegoAccent.opacity(0.25))
-                                    )
-                            }
-                            .buttonStyle(.plain)
+                    // Price and cart section
+                    HStack(alignment: .center, spacing: 8) {
+                        Text(product.price)
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.llegoPrimary)
 
-                            Text("\(count)")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(.primary)
-                                .frame(minWidth: 20)
+                        Spacer()
 
+                        // Add to cart button
+                        if count == 0 {
                             Button(action: {
                                 withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
                                     cartManager.addToCart(productId: product.id, quantity: 1)
                                     onIncrement()
                                     onAddToCartAnimation?(product.imageUrl, imagePosition)
+                                    // Haptic feedback
+                                    let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                                    impactFeedback.impactOccurred()
                                 }
                             }) {
                                 Image(systemName: "plus")
-                                    .font(.system(size: 10, weight: .bold))
+                                    .font(.system(size: 14, weight: .bold))
                                     .foregroundColor(.white)
-                                    .frame(width: 26, height: 26)
+                                    .frame(width: 36, height: 36)
                                     .background(
                                         Circle()
                                             .fill(Color.llegoPrimary)
                                     )
                             }
                             .buttonStyle(.plain)
+                        } else {
+                            // Counter
+                            HStack(spacing: 10) {
+                                Button(action: {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
+                                        let currentQty = cartManager.getQuantity(for: product.id)
+                                        cartManager.updateQuantity(productId: product.id, quantity: currentQty - 1)
+                                        onDecrement()
+                                        // Haptic feedback
+                                        let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                                        impactFeedback.impactOccurred()
+                                    }
+                                }) {
+                                    Image(systemName: "minus")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(.llegoPrimary)
+                                        .frame(width: 30, height: 30)
+                                        .background(
+                                            Circle()
+                                                .fill(Color.llegoAccent.opacity(0.25))
+                                        )
+                                }
+                                .buttonStyle(.plain)
+
+                                Text("\(count)")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(.primary)
+                                    .frame(minWidth: 24)
+
+                                Button(action: {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.65)) {
+                                        cartManager.addToCart(productId: product.id, quantity: 1)
+                                        onIncrement()
+                                        onAddToCartAnimation?(product.imageUrl, imagePosition)
+                                        // Haptic feedback
+                                        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+                                        impactFeedback.impactOccurred()
+                                    }
+                                }) {
+                                    Image(systemName: "plus")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .frame(width: 30, height: 30)
+                                        .background(
+                                            Circle()
+                                                .fill(Color.llegoPrimary)
+                                        )
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(10)
+            .padding(14)
         }
         .buttonStyle(.plain)
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+        .frame(height: 128)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.white.opacity(0.6))
+                .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+        )
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.gray.opacity(0.06), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color.white.opacity(0.8),
+                            Color.white.opacity(0.2)
+                        ]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
         )
         .onPreferenceChange(ImagePositionKey.self) { position in
             imagePosition = position
