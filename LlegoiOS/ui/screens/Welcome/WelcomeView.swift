@@ -21,6 +21,7 @@ struct WelcomeView: View {
     @State private var ripplePoints: [RipplePoint] = []
     @State private var navigateToConversationalSearch: Bool = false
     @State private var navigateToLogin: Bool = false
+    @State private var showWallet: Bool = false
 
     enum CategoryType {
         case restaurant
@@ -117,14 +118,14 @@ struct WelcomeView: View {
             .toolbar {
                 // Avatar with floating animation
                 ToolbarItem(placement: .navigationBarTrailing) {
-
-
-                        
+                    Button(action: {
+                        let impact = UIImpactFeedbackGenerator(style: .light)
+                        impact.impactOccurred()
+                        showWallet = true
+                    }) {
                         Text(balance)
-                            .font(.system(size: 15, weight: .bold))
-                            .padding()
-                           
                     }
+                }
                    
             ToolbarSpacer(.fixed,placement: .navigationBarTrailing)
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -162,6 +163,9 @@ struct WelcomeView: View {
             .onAppear {
                 startEntranceAnimations()
                 startFloatingAnimations()
+            }
+            .fullScreenCover(isPresented: $showWallet) {
+                WalletView()
             }
         }
     }
