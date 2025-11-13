@@ -26,7 +26,7 @@ struct ConversationalSearchView: View {
     @Environment(\.dismiss) private var dismiss
 
     // Conversation flow
-    @State private var currentStep: ConversationStep = .welcome
+    @State private var currentStep: ConversationStep = .selectingProductAndStore
     @State private var state: ConversationalSearchState = .idle
 
     // User selections
@@ -43,12 +43,7 @@ struct ConversationalSearchView: View {
     @State private var currencyExpanded: Bool = false
     @State private var paymentMethodExpanded: Bool = false
 
-    // Welcome message state
-    @State private var showWelcomeAvatar: Bool = false
-    @State private var showWelcomeMessage: Bool = false
-    @State private var welcomeMessageVisible: Bool = true
-
-    // Streaming animation
+    // Streaming animation (solo para cliente)
     @State private var showAvatar: Bool = false
     @State private var showBubble: Bool = false
     @State private var startStreaming: Bool = false
@@ -67,17 +62,9 @@ struct ConversationalSearchView: View {
                 Spacer()
                     .frame(height: 100) // Offset hacia arriba desde el centro
 
-                // Mensaje de bienvenida inicial
-                if welcomeMessageVisible {
-                    welcomeBubbleView
-                        .transition(.opacity)
-                }
-
-                // Avatar y burbuja de conversación del usuario
-                if !welcomeMessageVisible {
-                    chatBubbleView
-                        .transition(.opacity)
-                }
+                // Avatar y burbuja de conversación del cliente
+                chatBubbleView
+                    .transition(.opacity)
 
                 Spacer()
             }
@@ -241,46 +228,6 @@ struct ConversationalSearchView: View {
         }
     }
 
-    // MARK: - Welcome Bubble View
-    private var welcomeBubbleView: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Avatar del icono de la app
-            if showWelcomeAvatar {
-                Image("icon")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 48, height: 48)
-                    .clipShape(Circle())
-                    .padding(.leading, 32)
-                    .shadow(color: .black.opacity(0.14), radius: 12, y: 6)
-                    .transition(
-                        .scale(scale: 0.85)
-                        .combined(with: .opacity)
-                    )
-            }
-
-            // Mensaje de bienvenida con streaming text
-            if showWelcomeMessage {
-                StreamingTextView(
-                    segments: [
-                        .text("Hola, ¿qué quieres que haga por ti?")
-                    ],
-                    font: .system(size: 28, weight: .medium),
-                    color: Color.primary.opacity(0.75),
-                    wordDelay: 0.15,
-                    onComplete: { }
-                )
-                .padding(.horizontal, 32)
-                .transition(
-                    .scale(scale: 0.98)
-                    .combined(with: .opacity)
-                )
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
     // MARK: - Chat Bubble View
     private var chatBubbleView: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -318,47 +265,35 @@ struct ConversationalSearchView: View {
         .onChange(of: paymentMethodValue) { _ in handlePaymentMethodSelection() }
     }
 
-    // Avatar que cambia según el paso
+    // Avatar del cliente (siempre el mismo)
     private var avatarView: some View {
-        Group {
-            if currentStep == .askingPaymentMethod || currentStep == .showingConfirmation {
-                // Logo de la app
-                Image("icon")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 48, height: 48)
-                    .clipShape(Circle())
-            } else {
-                // Avatar del usuario
-                AsyncImage(url: URL(string: "https://i.pravatar.cc/100?img=3")) { phase in
-                    ZStack {
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 48, height: 48)
-                                .clipShape(Circle())
-                        case .failure:
-                            Circle()
-                                .fill(Color.llegoAccent.opacity(0.45))
-                                .overlay(
-                                    Image(systemName: "person.fill")
-                                        .font(.system(size: 22))
-                                        .foregroundColor(.white.opacity(0.95))
-                                )
-                        default:
-                            Circle()
-                                .fill(Color.llegoAccent.opacity(0.3))
-                                .overlay(
-                                    ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .white.opacity(0.85)))
-                                )
-                        }
-                    }
-                    .frame(width: 48, height: 48)
+        AsyncImage(url: URL(string: "https://i.pravatar.cc/100?img=3")) { phase in
+            ZStack {
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 48, height: 48)
+                        .clipShape(Circle())
+                case .failure:
+                    Circle()
+                        .fill(Color.llegoAccent.opacity(0.45))
+                        .overlay(
+                            Image(systemName: "person.fill")
+                                .font(.system(size: 22))
+                                .foregroundColor(.white.opacity(0.95))
+                        )
+                default:
+                    Circle()
+                        .fill(Color.llegoAccent.opacity(0.3))
+                        .overlay(
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white.opacity(0.85)))
+                        )
                 }
             }
+            .frame(width: 48, height: 48)
         }
     }
 
@@ -366,11 +301,8 @@ struct ConversationalSearchView: View {
     @ViewBuilder
     private var conversationContent: some View {
         switch currentStep {
-        case .welcome:
-            EmptyView()
-
         case .selectingProductAndStore:
-            // "Quiero ordenar [producto] del vendedor [store]"
+            // Cliente: "Quiero ordenar [producto] del vendedor [store]"
             // AMBOS selectores aparecen juntos desde el inicio
             StreamingTextView(
                 segments: productAndStoreSegments,
@@ -382,24 +314,6 @@ struct ConversationalSearchView: View {
                 }
             )
             .id("products_store_\(firstProductValue ?? "")_\(secondProductValue ?? "")_\(storeValue ?? "")")
-
-        case .askingPaymentMethod:
-            // La app pregunta: "¿Qué método de pago usarás?"
-            StreamingTextView(
-                segments: [
-                    .text("¿Qué método de pago usarás?")
-                ],
-                font: .system(size: 28, weight: .medium),
-                color: Color.primary.opacity(0.75),
-                wordDelay: 0.15,
-                onComplete: {
-                    // Después de que la app pregunta, transicionar al usuario respondiendo
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        transitionToUserPaymentResponse()
-                    }
-                }
-            )
-            .id("asking_payment_\(currentStep)")
 
         case .selectingPayment:
             // El usuario responde: "Usaré la moneda [escoger] usando la vía [escoger]"
@@ -539,31 +453,13 @@ struct ConversationalSearchView: View {
 
     // Función auxiliar para avanzar al paso de pago
     private func advanceToPaymentStep() {
-        // Resetear vista y mostrar mensaje de la app
+        // Resetear vista y mostrar mensaje del cliente
         showAvatar = false
         showBubble = false
-        welcomeMessageVisible = false
 
-        // Esperar un momento y mostrar el nuevo mensaje de la app
+        // Esperar un momento y mostrar el mensaje del cliente seleccionando pago
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            currentStep = .askingPaymentMethod
-            withAnimation(.spring(response: 0.8, dampingFraction: 0.85)) {
-                showAvatar = true
-            }
-            withAnimation(.spring(response: 0.9, dampingFraction: 0.88).delay(0.3)) {
-                showBubble = true
-                startStreaming = true
-            }
-        }
-    }
-
-    private func transitionToUserPaymentResponse() {
-        // Resetear vista para cambiar de app a usuario
-        showAvatar = false
-        showBubble = false
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            currentStep = .selectingPayment // Usar el paso combinado
+            currentStep = .selectingPayment
             withAnimation(.spring(response: 0.8, dampingFraction: 0.85)) {
                 showAvatar = true
             }
@@ -614,46 +510,23 @@ struct ConversationalSearchView: View {
 
     // MARK: - Animations
     private func startEntranceAnimation() {
-        // FASE 1: Mensaje de bienvenida de la app
-        currentStep = .welcome
+        // Comenzar directamente con el mensaje del cliente
+        currentStep = .selectingProductAndStore
 
-        // Avatar de la app aparece primero
+        // Avatar del cliente aparece
         withAnimation(.spring(response: 0.8, dampingFraction: 0.85).delay(0.3)) {
-            showWelcomeAvatar = true
+            showAvatar = true
         }
 
-        // Mensaje de bienvenida aparece
+        // Burbuja del cliente aparece
         withAnimation(.spring(response: 0.9, dampingFraction: 0.88).delay(0.6)) {
-            showWelcomeMessage = true
+            showBubble = true
         }
 
-        // FASE 2: Transición al mensaje del usuario
-        // Desvanece el mensaje de bienvenida después de 2 segundos
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-            withAnimation(.easeOut(duration: 0.4)) {
-                welcomeMessageVisible = false
-            }
-
-            // Espera un momento antes de mostrar el contenido del usuario
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                currentStep = .selectingProductAndStore // Paso combinado
-
-                // Avatar del usuario aparece
-                withAnimation(.spring(response: 0.8, dampingFraction: 0.85)) {
-                    showAvatar = true
-                }
-
-                // Burbuja del usuario aparece
-                withAnimation(.spring(response: 0.9, dampingFraction: 0.88).delay(0.3)) {
-                    showBubble = true
-                }
-
-                // Streaming empieza
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                    startStreaming = true
-                    state = .streaming
-                }
-            }
+        // Streaming empieza
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+            startStreaming = true
+            state = .streaming
         }
     }
 
