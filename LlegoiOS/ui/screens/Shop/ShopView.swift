@@ -2,7 +2,6 @@ import SwiftUI
 
 struct ShopView: View {
     @StateObject private var viewModel = ShopViewModel()
-    @Environment(\.dismiss) private var dismiss
     @State private var productCounts: [String: Int] = [:]
     @State private var showFiltersSheet = false
     @State private var showSortOptions = false
@@ -21,19 +20,8 @@ struct ShopView: View {
 
     var body: some View {
         ZStack {
-            // Fondo degradado elegante: verde oscuro arriba, blanco abajo
-            LinearGradient(
-                gradient: Gradient(stops: [
-                    .init(color: Color(red: 45/255, green: 85/255, blue: 65/255), location: 0.0),
-                    .init(color: Color(red: 80/255, green: 120/255, blue: 95/255), location: 0.25),
-                    .init(color: Color(red: 150/255, green: 190/255, blue: 165/255), location: 0.4),
-                    .init(color: Color.white, location: 0.5),
-                    .init(color: Color.white, location: 1.0)
-                ]),
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            WelcomeGradientBackground()
+                .ignoresSafeArea()
 
 
                
@@ -84,11 +72,6 @@ struct ShopView: View {
             .presentationDragIndicator(.visible)
         }
         .toolbar{
-            ToolbarItem(placement: .topBarLeading){
-                BackButton(action: {
-                    dismiss()
-                })
-            }
             ToolbarItem{
                 Button(action: {
                     showFiltersSheet = true
@@ -173,7 +156,6 @@ struct ShopView: View {
                             }
                         }
                     )
-                    .aspectRatio(155.0/310.0, contentMode: .fit)
                     .opacity(animationDelay > Double(index) * 0.1 ? 1 : 0)
                     .scaleEffect(animationDelay > Double(index) * 0.1 ? 1 : 0.95)
                     .offset(y: animationDelay > Double(index) * 0.1 ? 0 : 10)

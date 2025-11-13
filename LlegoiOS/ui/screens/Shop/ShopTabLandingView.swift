@@ -1,6 +1,12 @@
 import SwiftUI
 import MapKit
 
+// MARK: - View Mode
+enum ShopViewMode {
+    case list    // Modo listado: stories + listado de tiendas
+    case map     // Modo mapa: solo mapa a pantalla completa
+}
+
 struct ShopTabLandingView: View {
     @State private var searchText = ""
     @FocusState private var isSearchFocused: Bool
@@ -10,6 +16,9 @@ struct ShopTabLandingView: View {
     @State private var showSearchResults: Bool = false
     @State private var searchResultsOffset: CGFloat = -50
     @State private var searchDebounceTask: Task<Void, Never>? = nil
+
+    // Modo de visualización
+    @State private var viewMode: ShopViewMode = .list
 
     // Resultados filtrados de búsqueda (solo vendedores)
     @State private var filteredSearchStores: [StoreWithCoordinates] = []
@@ -38,49 +47,63 @@ struct ShopTabLandingView: View {
             ZStack {
                 Color.llegoBackground.ignoresSafeArea()
 
-                // HISTORIAS Y MAPA (no superpuestos)
-                if !isMapFullScreen {
-                    VStack(spacing: 0) {
-                        // Stories Section (Instagram-style) - Arriba
-                        if !storyData.isEmpty {
-                            StoreStories(
-                                storyData: storyData,
-                                onStoryTap: { store in
-                                    // Abrir Instagram Story Viewer a pantalla completa
-                                    if let index = storyData.firstIndex(where: { $0.store.id == store.id }) {
-                                        currentStoryIndex = index
-                                        showStoryViewer = true
+                // Contenido según el modo de visualización
+                if viewMode == .list {
+                    // MODO LISTADO: Stories + Lista de tiendas
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            // Stories Section (Instagram-style) - Arriba
+                            if !storyData.isEmpty {
+                                StoreStories(
+                                    storyData: storyData,
+                                    onStoryTap: { store in
+                                        // Abrir Instagram Story Viewer a pantalla completa
+                                        if let index = storyData.firstIndex(where: { $0.store.id == store.id }) {
+                                            currentStoryIndex = index
+                                            showStoryViewer = true
+                                        }
                                     }
+                                )
+                                .background(Color.llegoBackground)
+                                .padding(.bottom, 16)
+                            }
+
+                            // Listado de tiendas
+                            VStack(spacing: 12) {
+                                ForEach(mockStores, id: \.id) { store in
+                                    Button(action: {
+                                        selectedStore = store
+                                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                            showStoreOptionsModal = true
+                                        }
+                                    }) {
+                                        StoreListCard(store: store)
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
                                 }
-                            )
-                            .background(Color.llegoBackground)
-                            .zIndex(1)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 24)
                         }
-
-                        // Spacer para separar historias del mapa
-                        Spacer()
-                            .frame(height: 16)
-
-                        // Mapa justo debajo de las historias (sin superposición)
-                        RadialShopMapView(
-                                isFullScreen: $isMapFullScreen
-                        )
-                        .frame(height: 360)
-                        .clipped()
-                        .zIndex(0)
-
-                        Spacer()
                     }
+                    .transition(.opacity.combined(with: .move(edge: .leading)))
                 } else {
-                    // Mapa en pantalla completa
-                    RadialShopMapView(
-                        isFullScreen: $isMapFullScreen
+                    // MODO MAPA: Solo mapa a pantalla completa
+                    FullScreenMapView(
+                        mapRegion: $mapRegion,
+                        mockStores: mockStores,
+                        onStoreSelected: { store in
+                            selectedStore = store
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                showStoreOptionsModal = true
+                            }
+                        }
                     )
                     .ignoresSafeArea()
-                    .transition(.opacity)
+                    .transition(.opacity.combined(with: .move(edge: .trailing)))
                 }
 
-                // Card de búsqueda como overlay flotante
+                // Card de búsqueda como overlay flotante (visible en ambos modos)
                 if isSearchExpanded {
                     VStack {
                         ScrollView {
@@ -105,6 +128,7 @@ struct ShopTabLandingView: View {
                         insertion: .scale(scale: 0.95).combined(with: .opacity),
                         removal: .scale(scale: 0.95).combined(with: .opacity)
                     ))
+                    .zIndex(10) // Asegurar que esté sobre el contenido
                 }
 
                 // Modal de opciones de tienda
@@ -139,6 +163,19 @@ struct ShopTabLandingView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     searchToolbar
+                }
+                ToolbarSpacer(.fixed)
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button(action: {
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                            viewMode = viewMode == .list ? .map : .list
+                        }
+                    }) {
+                        Image(systemName: viewMode == .list ? "map.fill" : "list.bullet")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.llegoPrimary)
+                            .frame(width: 30, height: 30)
+                    }
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -276,16 +313,23 @@ struct ShopTabLandingView: View {
         isSearchExpanded = false
         showSearchResults = false
 
+        // Cambiar a modo mapa
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+            viewMode = .map
+        }
+
         // Animar mapa a la ubicación con animación fluida y lenta
-        withAnimation(.spring(response: 1.2, dampingFraction: 0.7)) {
-            mapRegion = MKCoordinateRegion(
-                center: store.coordinate,
-                span: MKCoordinateSpan(latitudeDelta: 0.003, longitudeDelta: 0.003)
-            )
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            withAnimation(.spring(response: 1.2, dampingFraction: 0.7)) {
+                mapRegion = MKCoordinateRegion(
+                    center: store.coordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 0.003, longitudeDelta: 0.003)
+                )
+            }
         }
 
         // Mostrar modal después de la animación
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
             withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                 showStoreOptionsModal = true
             }
@@ -923,6 +967,160 @@ private struct ShopMapCenterIndicator: View {
                 .shadow(color: Color.llegoPrimary.opacity(0.4), radius: 10, x: 0, y: 5)
         }
         .animation(.easeInOut(duration: 1.8).repeatForever(autoreverses: false), value: isPulsing)
+    }
+}
+
+// MARK: - Store List Card
+private struct StoreListCard: View {
+    let store: StoreWithCoordinates
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Logo de la tienda
+            AsyncImage(url: URL(string: store.logoUrl)) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                case .empty, .failure:
+                    Color.gray.opacity(0.3)
+                @unknown default:
+                    Color.gray.opacity(0.3)
+                }
+            }
+            .frame(width: 70, height: 70)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.llegoSecondary.opacity(0.3), lineWidth: 1.5)
+            )
+
+            // Información de la tienda
+            VStack(alignment: .leading, spacing: 6) {
+                Text(store.name)
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundColor(.llegoPrimary)
+                    .lineLimit(1)
+
+                if let address = store.address {
+                    HStack(spacing: 4) {
+                        Image(systemName: "location.fill")
+                            .font(.system(size: 11))
+                            .foregroundColor(.gray)
+                        Text(address)
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+
+                HStack(spacing: 12) {
+                    // Rating
+                    if let rating = store.rating {
+                        HStack(spacing: 3) {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 11))
+                                .foregroundColor(.orange)
+                            Text(String(format: "%.1f", rating))
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.primary)
+                        }
+                    }
+
+                    // ETA
+                    HStack(spacing: 3) {
+                        Image(systemName: "clock.fill")
+                            .font(.system(size: 11))
+                            .foregroundColor(.llegoAccent)
+                        Text("\(store.etaMinutes) min")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.primary)
+                    }
+                }
+            }
+
+            Spacer()
+
+            // Chevron
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.gray.opacity(0.5))
+        }
+        .padding(12)
+        .background(Color.white)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
+    }
+}
+
+// MARK: - Full Screen Map View
+private struct FullScreenMapView: View {
+    @Binding var mapRegion: MKCoordinateRegion
+    let mockStores: [StoreWithCoordinates]
+    let onStoreSelected: (StoreWithCoordinates) -> Void
+
+    var body: some View {
+        Map(
+            coordinateRegion: $mapRegion,
+            annotationItems: mockStores
+        ) { store in
+            MapAnnotation(coordinate: store.coordinate) {
+                Button(action: {
+                    onStoreSelected(store)
+                }) {
+                    VStack(spacing: 0) {
+                        // Pin head con logo
+                        ZStack {
+                            Circle()
+                                .fill(Color.llegoPrimary)
+                                .frame(width: 50, height: 50)
+
+                            AsyncImage(url: URL(string: store.logoUrl)) { phase in
+                                switch phase {
+                                case .success(let image):
+                                    image
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(width: 42, height: 42)
+                                        .clipShape(Circle())
+                                case .empty, .failure:
+                                    Image(systemName: "storefront.fill")
+                                        .font(.system(size: 20, weight: .semibold))
+                                        .foregroundColor(.white)
+                                @unknown default:
+                                    EmptyView()
+                                }
+                            }
+                        }
+                        .shadow(color: Color.llegoPrimary.opacity(0.4), radius: 8, x: 0, y: 4)
+
+                        // Pin point
+                        PinTriangle()
+                            .fill(Color.llegoPrimary)
+                            .frame(width: 16, height: 12)
+                            .offset(y: -1)
+
+                        // Shadow
+                        Ellipse()
+                            .fill(
+                                RadialGradient(
+                                    gradient: Gradient(colors: [
+                                        Color.black.opacity(0.25),
+                                        Color.black.opacity(0)
+                                    ]),
+                                    center: .center,
+                                    startRadius: 0,
+                                    endRadius: 15
+                                )
+                            )
+                            .frame(width: 30, height: 8)
+                            .offset(y: 4)
+                    }
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
     }
 }
 
