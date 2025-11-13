@@ -17,9 +17,7 @@ enum ConversationalSearchState {
 }
 
 enum ConversationStep {
-    case welcome
     case selectingProductAndStore
-    case askingPaymentMethod
     case selectingPayment
     case showingConfirmation
 }

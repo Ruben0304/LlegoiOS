@@ -15,6 +15,7 @@
 		87CB529B2E90242F00618C59 /* ApolloSQLite in Frameworks */ = {isa = PBXBuildFile; productRef = 87CB529A2E90242F00618C59 /* ApolloSQLite */; };
 		87CB529D2E90242F00618C59 /* ApolloWebSocket in Frameworks */ = {isa = PBXBuildFile; productRef = 87CB529C2E90242F00618C59 /* ApolloWebSocket */; };
 		87D766B02E91C0B5003D2461 /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = 87D766AF2E91C0B5003D2461 /* Lottie */; };
+		87E724AF2EC6635600E583D9 /* intro_video.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 87E724AE2EC6635600E583D9 /* intro_video.mp4 */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -32,6 +33,7 @@
 
 /* Begin PBXFileReference section */
 		87B147A52E9346C400A515EF /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
+		87E724AE2EC6635600E583D9 /* intro_video.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = intro_video.mp4; sourceTree = "<group>"; };
 		87F968CD2E8F622A00EC1A7C /* LlegoiOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LlegoiOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -94,6 +96,7 @@
 				87F968CE2E8F622A00EC1A7C /* Products */,
 				095875A3AD4E80E59A68CD27 /* Pods */,
 				87B147A52E9346C400A515EF /* AppIcon.icon */,
+				87E724AE2EC6635600E583D9 /* intro_video.mp4 */,
 			);
 			sourceTree = "<group>";
 		};
@@ -182,6 +185,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				87E724AF2EC6635600E583D9 /* intro_video.mp4 in Resources */,
 				87B147A62E9346C400A515EF /* AppIcon.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

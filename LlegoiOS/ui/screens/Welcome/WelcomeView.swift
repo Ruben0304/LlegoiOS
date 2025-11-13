@@ -19,7 +19,7 @@ struct WelcomeView: View {
 
     // Ripple effect and navigation
     @State private var ripplePoints: [RipplePoint] = []
-    @State private var navigateToConversationalSearch: Bool = false
+    @State private var navigateToIntroVideo: Bool = false
     @State private var navigateToLogin: Bool = false
     @State private var showWallet: Bool = false
 
@@ -109,8 +109,8 @@ struct WelcomeView: View {
             .onTapGesture(coordinateSpace: .local) { location in
                 handleTap(at: location)
             }
-            .navigationDestination(isPresented: $navigateToConversationalSearch) {
-                ConversationalSearchView()
+            .navigationDestination(isPresented: $navigateToIntroVideo) {
+                IntroVideoView()
             }
             .navigationDestination(isPresented: $navigateToLogin) {
                 LoginView(viewModel: ProfileViewModel())
@@ -249,7 +249,7 @@ struct WelcomeView: View {
 
         // Navegar después del delay para ver el ripple
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            navigateToConversationalSearch = true
+            navigateToIntroVideo = true
         }
     }
 }
