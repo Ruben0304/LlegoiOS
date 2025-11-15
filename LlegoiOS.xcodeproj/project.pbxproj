@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		870E85362EC8DFAF0099A0C9 /* cridit_card.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 870E85352EC8DFAE0099A0C9 /* cridit_card.usdz */; };
+		870E853F2EC8FC4F0099A0C9 /* mercadito.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 870E853E2EC8FC4E0099A0C9 /* mercadito.usdz */; };
+		870E86922EC9393C0099A0C9 /* restaurant.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 870E86912EC9393C0099A0C9 /* restaurant.usdz */; };
 		879D684B2EB004D60045F86E /* Stripe in Frameworks */ = {isa = PBXBuildFile; productRef = 879D684A2EB004D60045F86E /* Stripe */; };
 		879D684D2EB004D60045F86E /* StripePaymentSheet in Frameworks */ = {isa = PBXBuildFile; productRef = 879D684C2EB004D60045F86E /* StripePaymentSheet */; };
 		87B147A62E9346C400A515EF /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 87B147A52E9346C400A515EF /* AppIcon.icon */; };
@@ -17,9 +19,8 @@
 		87CB529D2E90242F00618C59 /* ApolloWebSocket in Frameworks */ = {isa = PBXBuildFile; productRef = 87CB529C2E90242F00618C59 /* ApolloWebSocket */; };
 		87D766B02E91C0B5003D2461 /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = 87D766AF2E91C0B5003D2461 /* Lottie */; };
 		87E724AF2EC6635600E583D9 /* intro_video.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 87E724AE2EC6635600E583D9 /* intro_video.mp4 */; };
-		87E725FB2EC681FD00E583D9 /* Adidas_display_-_Visual_Merchandising_guideline.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 87E725F82EC681FD00E583D9 /* Adidas_display_-_Visual_Merchandising_guideline.usdz */; };
-		87E725FC2EC681FD00E583D9 /* Fruit_Veg_Market.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 87E725F92EC681FD00E583D9 /* Fruit_Veg_Market.usdz */; };
-		87E725FD2EC681FD00E583D9 /* Snack_Shelf.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 87E725FA2EC681FD00E583D9 /* Snack_Shelf.usdz */; };
+		87E725FB2EC681FD00E583D9 /* ropa.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 87E725F82EC681FD00E583D9 /* ropa.usdz */; };
+		87E725FC2EC681FD00E583D9 /* agro.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 87E725F92EC681FD00E583D9 /* agro.usdz */; };
 		87E726042EC693E100E583D9 /* metodopago.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 87E726032EC693E100E583D9 /* metodopago.mp4 */; };
 		87E7260A2EC6955300E583D9 /* agradecimiento.mov in Resources */ = {isa = PBXBuildFile; fileRef = 87E726092EC6955300E583D9 /* agradecimiento.mov */; };
 /* End PBXBuildFile section */
@@ -39,11 +40,12 @@
 
 /* Begin PBXFileReference section */
 		870E85352EC8DFAE0099A0C9 /* cridit_card.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = cridit_card.usdz; sourceTree = "<group>"; };
+		870E853E2EC8FC4E0099A0C9 /* mercadito.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = mercadito.usdz; sourceTree = "<group>"; };
+		870E86912EC9393C0099A0C9 /* restaurant.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = restaurant.usdz; sourceTree = "<group>"; };
 		87B147A52E9346C400A515EF /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		87E724AE2EC6635600E583D9 /* intro_video.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = intro_video.mp4; sourceTree = "<group>"; };
-		87E725F82EC681FD00E583D9 /* Adidas_display_-_Visual_Merchandising_guideline.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Adidas_display_-_Visual_Merchandising_guideline.usdz"; sourceTree = "<group>"; };
-		87E725F92EC681FD00E583D9 /* Fruit_Veg_Market.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Fruit_Veg_Market.usdz; sourceTree = "<group>"; };
-		87E725FA2EC681FD00E583D9 /* Snack_Shelf.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = Snack_Shelf.usdz; sourceTree = "<group>"; };
+		87E725F82EC681FD00E583D9 /* ropa.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = ropa.usdz; sourceTree = "<group>"; };
+		87E725F92EC681FD00E583D9 /* agro.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = agro.usdz; sourceTree = "<group>"; };
 		87E726032EC693E100E583D9 /* metodopago.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = metodopago.mp4; sourceTree = "<group>"; };
 		87E726092EC6955300E583D9 /* agradecimiento.mov */ = {isa = PBXFileReference; lastKnownFileType = video.quicktime; path = agradecimiento.mov; sourceTree = "<group>"; };
 		87F968CD2E8F622A00EC1A7C /* LlegoiOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LlegoiOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -109,12 +111,13 @@
 				095875A3AD4E80E59A68CD27 /* Pods */,
 				87B147A52E9346C400A515EF /* AppIcon.icon */,
 				87E724AE2EC6635600E583D9 /* intro_video.mp4 */,
-				87E725F82EC681FD00E583D9 /* Adidas_display_-_Visual_Merchandising_guideline.usdz */,
-				87E725F92EC681FD00E583D9 /* Fruit_Veg_Market.usdz */,
-				87E725FA2EC681FD00E583D9 /* Snack_Shelf.usdz */,
+				87E725F82EC681FD00E583D9 /* ropa.usdz */,
+				87E725F92EC681FD00E583D9 /* agro.usdz */,
 				87E726032EC693E100E583D9 /* metodopago.mp4 */,
 				87E726092EC6955300E583D9 /* agradecimiento.mov */,
 				870E85352EC8DFAE0099A0C9 /* cridit_card.usdz */,
+				870E853E2EC8FC4E0099A0C9 /* mercadito.usdz */,
+				870E86912EC9393C0099A0C9 /* restaurant.usdz */,
 			);
 			sourceTree = "<group>";
 		};
@@ -206,11 +209,12 @@
 				870E85362EC8DFAF0099A0C9 /* cridit_card.usdz in Resources */,
 				87E7260A2EC6955300E583D9 /* agradecimiento.mov in Resources */,
 				87E724AF2EC6635600E583D9 /* intro_video.mp4 in Resources */,
+				870E86922EC9393C0099A0C9 /* restaurant.usdz in Resources */,
 				87B147A62E9346C400A515EF /* AppIcon.icon in Resources */,
 				87E726042EC693E100E583D9 /* metodopago.mp4 in Resources */,
-				87E725FB2EC681FD00E583D9 /* Adidas_display_-_Visual_Merchandising_guideline.usdz in Resources */,
-				87E725FC2EC681FD00E583D9 /* Fruit_Veg_Market.usdz in Resources */,
-				87E725FD2EC681FD00E583D9 /* Snack_Shelf.usdz in Resources */,
+				87E725FB2EC681FD00E583D9 /* ropa.usdz in Resources */,
+				87E725FC2EC681FD00E583D9 /* agro.usdz in Resources */,
+				870E853F2EC8FC4F0099A0C9 /* mercadito.usdz in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

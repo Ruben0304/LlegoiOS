@@ -11,7 +11,9 @@ struct Model3DCarousel: View {
             name: "Mercadito",
             fileName: "Fruit_Veg_Market.usdz",
             description: "Frutas y Vegetales Frescos",
-            icon: "cart.fill"
+            icon: "cart.fill",
+            cameraPosition: SCNVector3(x: 0, y: 1.5, z: 3.2), // Elevar cámara
+            cameraEulerAngles: SCNVector3(x: -.pi / 6, y: 0, z: 0) // Ángulo intermedio: ~30 grados desde arriba
         ),
         CategoryModel3D(
             name: "Tienda de Ropa",
@@ -30,7 +32,11 @@ struct Model3DCarousel: View {
     var body: some View {
         VStack(spacing: 40) {
             // 3D Model Display Area
-            SceneKitView(modelName: models[currentIndex].fileName)
+            SceneKitView(
+                modelName: models[currentIndex].fileName,
+                cameraPosition: models[currentIndex].cameraPosition,
+                cameraEulerAngles: models[currentIndex].cameraEulerAngles
+            )
                 .frame(height: 520)
                 .frame(maxWidth: .infinity)
                 .scaleEffect(scaleEffect)
@@ -171,11 +177,16 @@ struct ArrowScaleButtonStyle: ButtonStyle {
 // MARK: - SceneKit View
 struct SceneKitView: UIViewRepresentable {
     let modelName: String
+    var allowsCameraControl: Bool = true
+    var isAnimated: Bool = true
+    var cameraPosition: SCNVector3?
+    var cameraEulerAngles: SCNVector3?
+    var sceneCustomizer: ((SCNScene) -> Void)?
 
     func makeUIView(context: Context) -> SCNView {
         let sceneView = SCNView()
         sceneView.backgroundColor = .clear
-        sceneView.allowsCameraControl = true
+        sceneView.allowsCameraControl = allowsCameraControl
         sceneView.autoenablesDefaultLighting = true
         sceneView.antialiasingMode = .multisampling4X
         sceneView.clipsToBounds = false
@@ -185,7 +196,12 @@ struct SceneKitView: UIViewRepresentable {
         let cameraNode = SCNNode()
         cameraNode.camera = SCNCamera()
         cameraNode.camera?.fieldOfView = 50  // Reduced FOV for more zoom
-        cameraNode.position = SCNVector3(x: 0, y: 0, z: 3.2)  // Centered vertically
+
+        // Lock zoom by setting fixed distance constraints
+        cameraNode.camera?.zNear = 0.1
+        cameraNode.camera?.zFar = 100
+
+        configureCamera(cameraNode)
 
         // Create scene
         let scene = SCNScene()
@@ -218,15 +234,17 @@ struct SceneKitView: UIViewRepresentable {
 
                 scene.rootNode.addChildNode(modelNode)
 
-                // Add oscillating rotation animation (back and forth)
-                let rotateLeft = SCNAction.rotateBy(x: 0, y: CGFloat.pi / 6, z: 0, duration: 3.0)
-                let rotateRight = SCNAction.rotateBy(x: 0, y: -CGFloat.pi / 6, z: 0, duration: 3.0)
-                let sequence = SCNAction.sequence([rotateLeft, rotateRight])
-                let repeatOscillation = SCNAction.repeatForever(sequence)
-                modelNode.runAction(repeatOscillation)
+                if isAnimated {
+                    let rotateLeft = SCNAction.rotateBy(x: 0, y: CGFloat.pi / 6, z: 0, duration: 25.0)
+                    let rotateRight = SCNAction.rotateBy(x: 0, y: -CGFloat.pi / 6, z: 0, duration: 25.0)
+                    let sequence = SCNAction.sequence([rotateLeft, rotateRight])
+                    let repeatOscillation = SCNAction.repeatForever(sequence)
+                    modelNode.runAction(repeatOscillation)
+                }
             }
         }
 
+        sceneCustomizer?(scene)
         sceneView.scene = scene
         return sceneView
     }
@@ -234,6 +252,12 @@ struct SceneKitView: UIViewRepresentable {
     func updateUIView(_ uiView: SCNView, context: Context) {
         // Update the model when modelName changes
         guard let scene = uiView.scene else { return }
+
+        uiView.allowsCameraControl = allowsCameraControl
+
+        if let cameraNode = scene.rootNode.childNodes.first(where: { $0.camera != nil }) {
+            configureCamera(cameraNode)
+        }
 
         // Remove previous model
         scene.rootNode.childNodes.forEach { node in
@@ -269,14 +293,39 @@ struct SceneKitView: UIViewRepresentable {
 
                 scene.rootNode.addChildNode(modelNode)
 
-                // Add oscillating rotation animation (back and forth)
-                let rotateLeft = SCNAction.rotateBy(x: 0, y: CGFloat.pi / 6, z: 0, duration: 3.0)
-                let rotateRight = SCNAction.rotateBy(x: 0, y: -CGFloat.pi / 6, z: 0, duration: 3.0)
-                let sequence = SCNAction.sequence([rotateLeft, rotateRight])
-                let repeatOscillation = SCNAction.repeatForever(sequence)
-                modelNode.runAction(repeatOscillation)
+                if isAnimated {
+                    let rotateLeft = SCNAction.rotateBy(x: 0, y: CGFloat.pi / 6, z: 0, duration: 25.0)
+                    let rotateRight = SCNAction.rotateBy(x: 0, y: -CGFloat.pi / 6, z: 0, duration: 25.0)
+                    let sequence = SCNAction.sequence([rotateLeft, rotateRight])
+                    let repeatOscillation = SCNAction.repeatForever(sequence)
+                    modelNode.runAction(repeatOscillation)
+                }
             }
         }
+
+        sceneCustomizer?(scene)
+    }
+
+    private func configureCamera(_ cameraNode: SCNNode) {
+        let defaultPosition = SCNVector3(x: 0, y: 0, z: 3.2)
+        cameraNode.position = cameraPosition ?? defaultPosition
+
+        if let cameraEulerAngles = cameraEulerAngles {
+            cameraNode.eulerAngles = cameraEulerAngles
+        } else {
+            cameraNode.eulerAngles = SCNVector3Zero
+        }
+
+        // Add distance constraint to lock zoom
+        let distance = sqrt(
+            pow(cameraNode.position.x, 2) +
+            pow(cameraNode.position.y, 2) +
+            pow(cameraNode.position.z, 2)
+        )
+        let distanceConstraint = SCNDistanceConstraint(target: nil)
+        distanceConstraint.minimumDistance = CGFloat(distance)
+        distanceConstraint.maximumDistance = CGFloat(distance)
+        cameraNode.constraints = [distanceConstraint]
     }
 }
 
@@ -287,6 +336,24 @@ struct CategoryModel3D: Identifiable {
     let fileName: String
     let description: String
     let icon: String
+    let cameraPosition: SCNVector3?
+    let cameraEulerAngles: SCNVector3?
+
+    init(
+        name: String,
+        fileName: String,
+        description: String,
+        icon: String,
+        cameraPosition: SCNVector3? = nil,
+        cameraEulerAngles: SCNVector3? = nil
+    ) {
+        self.name = name
+        self.fileName = fileName
+        self.description = description
+        self.icon = icon
+        self.cameraPosition = cameraPosition
+        self.cameraEulerAngles = cameraEulerAngles
+    }
 }
 
 #Preview {

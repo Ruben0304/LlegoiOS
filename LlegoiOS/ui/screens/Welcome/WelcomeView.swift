@@ -29,25 +29,35 @@ struct WelcomeView: View {
     // User data (placeholder)
     let balance: String = "3.99$"
     
-    // Models data - Orden: Tienda de Ropa, Agro, Mercadito
+    // Models data - Orden: Restaurantes, Tienda de Ropa, Agro, Mercadito
     let models: [CategoryModel3D] = [
         CategoryModel3D(
-            name: "Tienda de Ropa",
-            fileName: "Adidas_display_-_Visual_Merchandising_guideline.usdz",
+            name: "Restaurantes",
+            fileName: "restaurant.usdz",
+            description: "Comida y Bebidas",
+            icon: "fork.knife",
+            cameraPosition: SCNVector3(x: 0, y: 1.5, z: 3.2), // Elevar cámara
+            cameraEulerAngles: SCNVector3(x: -.pi / 6, y: 0, z: 0) // Ángulo intermedio: ~30 grados desde arriba
+        ),
+        CategoryModel3D(
+            name: "Ropa",
+            fileName: "ropa.usdz",
             description: "Moda y Accesorios",
             icon: "tshirt.fill"
         ),
         CategoryModel3D(
-            name: "Agro",
-            fileName: "Snack_Shelf.usdz",
+            name: "Mercado",
+            fileName: "mercadito.usdz",
             description: "Productos Agrícolas",
             icon: "leaf.fill"
         ),
         CategoryModel3D(
-            name: "Mercadito",
-            fileName: "Fruit_Veg_Market.usdz",
+            name: "Agro",
+            fileName: "agro.usdz",
             description: "Frutas y Vegetales Frescos",
-            icon: "cart.fill"
+            icon: "cart.fill",
+            cameraPosition: SCNVector3(x: 0, y: 1.5, z: 3.2), // Elevar cámara
+            cameraEulerAngles: SCNVector3(x: -.pi / 6, y: 0, z: 0) // Ángulo intermedio: ~30 grados desde arriba
         )
     ]
 
@@ -61,7 +71,11 @@ struct WelcomeView: View {
                 
                 VStack(alignment: .center, spacing: 0) {
                     // Componente 3D - Justo debajo del toolbar
-                    SceneKitView(modelName: models[currentIndex].fileName)
+                    SceneKitView(
+                        modelName: models[currentIndex].fileName,
+                        cameraPosition: models[currentIndex].cameraPosition,
+                        cameraEulerAngles: models[currentIndex].cameraEulerAngles
+                    )
                         .frame(height: 400)
                         .frame(maxWidth: .infinity)
                         .scaleEffect(scaleEffect)
@@ -215,7 +229,7 @@ struct WelcomeView: View {
     private func startFloatingAnimations() {
         // Carousel floating - very subtle and elegant
         withAnimation(
-            .easeInOut(duration: 5.0)
+            .easeInOut(duration: 30.0)
             .repeatForever(autoreverses: true)
             .delay(1.0)
         ) {
@@ -224,7 +238,7 @@ struct WelcomeView: View {
 
         // Avatar floating - smooth and slow
         withAnimation(
-            .easeInOut(duration: 3.8)
+            .easeInOut(duration: 20.0)
             .repeatForever(autoreverses: true)
             .delay(1.5)
         ) {
@@ -233,7 +247,7 @@ struct WelcomeView: View {
 
         // Balance floating - slightly offset from avatar
         withAnimation(
-            .easeInOut(duration: 4.2)
+            .easeInOut(duration: 22.0)
             .repeatForever(autoreverses: true)
             .delay(1.3)
         ) {
@@ -279,7 +293,15 @@ struct WelcomeGradientBackground: View {
     // Color palettes for each category
     private var colorPalette: (dark: Color, medium: Color, light: Color, veryLight: Color, overlay: Color) {
         switch gradientManager.currentCategoryIndex {
-        case 0: // Tienda de Ropa - Verde
+        case 0: // Restaurantes - Rojo-naranja terracota comida
+            return (
+                dark: Color(red: 0.5, green: 0.15, blue: 0.1),
+                medium: Color(red: 0.7, green: 0.25, blue: 0.15),
+                light: Color(red: 0.85, green: 0.45, blue: 0.3),
+                veryLight: Color(red: 0.95, green: 0.88, blue: 0.85),
+                overlay: Color(red: 0.45, green: 0.12, blue: 0.08)
+            )
+        case 1: // Tienda de Ropa - Verde
             return (
                 dark: Color(red: 0.05, green: 0.3, blue: 0.25),
                 medium: Color(red: 0.1, green: 0.45, blue: 0.38),
@@ -287,7 +309,7 @@ struct WelcomeGradientBackground: View {
                 veryLight: Color(red: 0.85, green: 0.92, blue: 0.88),
                 overlay: Color(red: 0.05, green: 0.25, blue: 0.2)
             )
-        case 1: // Agro - Azul
+        case 2: // Mercado - Azul
             return (
                 dark: Color(red: 0.05, green: 0.2, blue: 0.3),
                 medium: Color(red: 0.1, green: 0.35, blue: 0.45),
@@ -295,7 +317,7 @@ struct WelcomeGradientBackground: View {
                 veryLight: Color(red: 0.85, green: 0.9, blue: 0.92),
                 overlay: Color(red: 0.05, green: 0.15, blue: 0.25)
             )
-        case 2: // Mercadito - Amarillo
+        case 3: // Agro - Amarillo
             return (
                 dark: Color(red: 0.3, green: 0.25, blue: 0.05),
                 medium: Color(red: 0.45, green: 0.38, blue: 0.1),
@@ -303,13 +325,13 @@ struct WelcomeGradientBackground: View {
                 veryLight: Color(red: 0.92, green: 0.9, blue: 0.85),
                 overlay: Color(red: 0.25, green: 0.2, blue: 0.05)
             )
-        default: // Default to green
+        default: // Default to rojo-naranja terracota (restaurantes)
             return (
-                dark: Color(red: 0.05, green: 0.3, blue: 0.25),
-                medium: Color(red: 0.1, green: 0.45, blue: 0.38),
-                light: Color(red: 0.4, green: 0.65, blue: 0.55),
-                veryLight: Color(red: 0.85, green: 0.92, blue: 0.88),
-                overlay: Color(red: 0.05, green: 0.25, blue: 0.2)
+                dark: Color(red: 0.5, green: 0.15, blue: 0.1),
+                medium: Color(red: 0.7, green: 0.25, blue: 0.15),
+                light: Color(red: 0.85, green: 0.45, blue: 0.3),
+                veryLight: Color(red: 0.95, green: 0.88, blue: 0.85),
+                overlay: Color(red: 0.45, green: 0.12, blue: 0.08)
             )
         }
     }

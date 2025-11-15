@@ -96,6 +96,7 @@ struct MainAppView: View {
                         Tab("Tiendas", systemImage: "storefront") {
                             ShopTabLandingView()
                         }
+                        
 //                        Tab("Cuenta", systemImage: "person") {
 //                            HomeView()
 //                        }
@@ -191,6 +192,8 @@ struct MainAppView: View {
                             Text("Cuenta")
                         }
                         .tag(3)
+
+                    
                 }
                 .accentColor(Color.llegoPrimary)
                 .toolbarBackground(.hidden, for: .tabBar)
