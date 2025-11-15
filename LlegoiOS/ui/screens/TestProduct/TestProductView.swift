@@ -194,10 +194,7 @@ struct TestProductView: View {
             VariantsSheet()
         }
         .fullScreenCover(isPresented: $navigateToSimilar) {
-            NavigationView {
-                ShopView(category: nil)
-            }
-            .navigationViewStyle(StackNavigationViewStyle())
+            ShopView(category: nil)
         }
         }
     }

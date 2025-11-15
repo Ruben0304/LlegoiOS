@@ -19,12 +19,11 @@ struct ShopView: View {
     }
 
     var body: some View {
-        ZStack {
-            WelcomeGradientBackground()
-                .ignoresSafeArea()
+        NavigationStack {
+            ZStack {
+                WelcomeGradientBackground()
+                    .ignoresSafeArea()
 
-
-               
                 // Contador de resultados
                 if !viewModel.isLoading {
                   
@@ -40,74 +39,74 @@ struct ShopView: View {
                 } else {
                     productsGrid
                 }
-            
-        }
-        .onAppear {
-            if let category = initialCategory {
-                viewModel.selectedCategory = category
             }
-            viewModel.loadProducts()
-        }
-        .sheet(isPresented: $showFiltersSheet) {
-            FiltersSheet(
-                maxDistance: $viewModel.maxDistance,
-                selectedCategory: $viewModel.selectedCategory,
-                onApply: {
-                    showFiltersSheet = false
-                    viewModel.applyFilters()
+            .onAppear {
+                if let category = initialCategory {
+                    viewModel.selectedCategory = category
                 }
-            )
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $showSortOptions) {
-            SortOptionsSheet(
-                sortOption: $viewModel.sortOption,
-                onApply: {
-                    showSortOptions = false
-                    viewModel.applySort()
-                }
-            )
-            .presentationDetents([.height(240)])
-            .presentationDragIndicator(.visible)
-        }
-        .toolbar{
-            ToolbarItem{
-                Button(action: {
-                    showFiltersSheet = true
-                }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "slider.horizontal.3")
-                            .font(.system(size: 14, weight: .semibold))
-                        Text("Filtros")
-                            .font(.system(size: 14, weight: .semibold))
-                        if viewModel.hasActiveFilters {
-                            Circle()
-                                .fill(Color.llegoPrimary)
-                                .frame(width: 6, height: 6)
+                viewModel.loadProducts()
+            }
+            .sheet(isPresented: $showFiltersSheet) {
+                FiltersSheet(
+                    maxDistance: $viewModel.maxDistance,
+                    selectedCategory: $viewModel.selectedCategory,
+                    onApply: {
+                        showFiltersSheet = false
+                        viewModel.applyFilters()
+                    }
+                )
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showSortOptions) {
+                SortOptionsSheet(
+                    sortOption: $viewModel.sortOption,
+                    onApply: {
+                        showSortOptions = false
+                        viewModel.applySort()
+                    }
+                )
+                .presentationDetents([.height(240)])
+                .presentationDragIndicator(.visible)
+            }
+            .toolbar{
+                ToolbarItem{
+                    Button(action: {
+                        showFiltersSheet = true
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "slider.horizontal.3")
+                                .font(.system(size: 14, weight: .semibold))
+                            Text("Filtros")
+                                .font(.system(size: 14, weight: .semibold))
+                            if viewModel.hasActiveFilters {
+                                Circle()
+                                    .fill(Color.llegoPrimary)
+                                    .frame(width: 6, height: 6)
+                            }
                         }
                     }
                 }
-            }
-            ToolbarSpacer(.fixed)
-            ToolbarItem{
-                Button(action: {
-                    showSortOptions = true
-                }) {
-                    Image(systemName: "arrow.up.arrow.down")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.llegoPrimary)
-                        .frame(width: 30, height: 30)
+                ToolbarSpacer(.fixed)
+                ToolbarItem{
+                    Button(action: {
+                        showSortOptions = true
+                    }) {
+                        Image(systemName: "arrow.up.arrow.down")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.llegoPrimary)
+                            .frame(width: 30, height: 30)
+                    }
                 }
             }
+            .navigationTitle("Tienda")
+            .navigationBarTitleDisplayMode(.inline)
+            .searchable(
+                text: $viewModel.searchQuery,
+                placement: .toolbar,
+                prompt: "Buscar productos..."
+            )
         }
-        .navigationTitle("Tienda")
-        .navigationBarTitleDisplayMode(.inline)
-        .searchable(
-            text: $viewModel.searchQuery,
-            placement: .toolbar,
-            prompt: "Buscar productos..."
-        )
     }
 
  
@@ -126,36 +125,45 @@ struct ShopView: View {
                 spacing: 20
             ) {
                 ForEach(Array(viewModel.filteredProducts.enumerated()), id: \.element.id) { index, product in
-                    ProductCard(
-                        product: product,
-                        count: Binding(
-                            get: { productCounts[product.id] ?? 0 },
-                            set: { newValue in
-                                if newValue > 0 {
-                                    productCounts[product.id] = newValue
-                                } else {
-                                    productCounts.removeValue(forKey: product.id)
-                                }
-                            }
-                        ),
-                        onIncrement: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                productCounts[product.id] = (productCounts[product.id] ?? 0) + 1
-                            }
-                        },
-                        onDecrement: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                let currentCount = productCounts[product.id] ?? 0
-                                if currentCount > 0 {
-                                    if currentCount == 1 {
-                                        productCounts.removeValue(forKey: product.id)
+                    NavigationLink {
+                        TestProductView(product: product)
+                    } label: {
+                        ProductCard(
+                            product: product,
+                            count: Binding(
+                                get: { productCounts[product.id] ?? 0 },
+                                set: { newValue in
+                                    if newValue > 0 {
+                                        productCounts[product.id] = newValue
                                     } else {
-                                        productCounts[product.id] = currentCount - 1
+                                        productCounts.removeValue(forKey: product.id)
+                                    }
+                                }
+                            ),
+                            onIncrement: {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    productCounts[product.id] = (productCounts[product.id] ?? 0) + 1
+                                }
+                            },
+                            onDecrement: {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    let currentCount = productCounts[product.id] ?? 0
+                                    if currentCount > 0 {
+                                        if currentCount == 1 {
+                                            productCounts.removeValue(forKey: product.id)
+                                        } else {
+                                            productCounts[product.id] = currentCount - 1
+                                        }
                                     }
                                 }
                             }
-                        }
-                    )
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .simultaneousGesture(TapGesture().onEnded {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    })
+                    .buttonStyle(.plain)
                     .opacity(animationDelay > Double(index) * 0.1 ? 1 : 0)
                     .scaleEffect(animationDelay > Double(index) * 0.1 ? 1 : 0.95)
                     .offset(y: animationDelay > Double(index) * 0.1 ? 0 : 10)

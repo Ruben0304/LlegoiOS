@@ -90,10 +90,8 @@ struct MainAppView: View {
                                 .ignoresSafeArea(.container, edges: .bottom)
                         }
                         Tab("Productos", systemImage: "bag") {
-                            NavigationStack {
-                                ShopView()
-                                    .ignoresSafeArea(.container, edges: .bottom)
-                            }
+                            ShopView()
+                                .ignoresSafeArea(.container, edges: .bottom)
                         }
                         Tab("Tiendas", systemImage: "storefront") {
                             ShopTabLandingView()

@@ -2,66 +2,98 @@ import SwiftUI
 import AVKit
 import AVFoundation
 
+enum IntroVideoType {
+    case intro
+    case paymentMethod
+    case thanks
+}
+
 struct IntroVideoView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var player: AVPlayer?
-    @State private var navigateToChat = false
+    @State private var navigateToNext = false
+    
+    let videoType: IntroVideoType
+    let onVideoComplete: () -> Void
+    
+    init(videoType: IntroVideoType = .intro, onVideoComplete: @escaping () -> Void = {}) {
+        self.videoType = videoType
+        self.onVideoComplete = onVideoComplete
+    }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.black.ignoresSafeArea()
+        ZStack {
+            Color.black.ignoresSafeArea()
 
-                // Video Player
-                if let player = player {
-                    VideoPlayer(player: player)
-                        .ignoresSafeArea()
-                        .disabled(true) // Deshabilita los controles nativos
-                } else {
-                    // Placeholder mientras se carga el video
-                    ProgressView()
-                        .tint(.white)
-                        .scaleEffect(1.5)
-                }
+            // Video Player
+            if let player = player {
+                VideoPlayer(player: player)
+                    .ignoresSafeArea()
+                    .disabled(true) // Deshabilita los controles nativos
+            } else {
+                // Placeholder mientras se carga el video
+                ProgressView()
+                    .tint(.white)
+                    .scaleEffect(1.5)
             }
-            .navigationBarBackButtonHidden(true)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                // BackButton a la izquierda
-                ToolbarItem(placement: .navigationBarLeading) {
-                    BackButton()
-                }
+        }
+        .navigationBarBackButtonHidden(true)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            // BackButton a la izquierda
+            ToolbarItem(placement: .navigationBarLeading) {
+                BackButton()
+            }
 
-                // Botón "Omitir" a la derecha
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Omitir") {
-                        navigateToChat = true
-                    }
-                    .foregroundColor(.white)
-                    .font(.system(size: 16, weight: .medium))
+            // Botón "Omitir" a la derecha
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("Omitir") {
+                    navigateToNext = true
+                    onVideoComplete()
                 }
+                .foregroundColor(.white)
+                .font(.system(size: 16, weight: .medium))
             }
-            .toolbarBackground(.hidden, for: .navigationBar)
-            .navigationDestination(isPresented: $navigateToChat) {
-                ConversationalSearchView()
-            }
-            .onAppear {
-                setupPlayer()
-            }
-            .onDisappear {
-                cleanupPlayer()
+        }
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .onAppear {
+            setupPlayer()
+        }
+        .onDisappear {
+            cleanupPlayer()
+        }
+        .onChange(of: navigateToNext) { newValue in
+            if newValue {
+                onVideoComplete()
             }
         }
     }
 
     // MARK: - Setup Player
     private func setupPlayer() {
+        // Determinar qué video reproducir según el tipo
+        let videoFileName: String
+        let videoExtension: String
+        
+        switch videoType {
+        case .intro:
+            videoFileName = "intro_video"
+            videoExtension = "mp4"
+        case .paymentMethod:
+            videoFileName = "metodopago"
+            videoExtension = "mp4"
+        case .thanks:
+            videoFileName = "agradecimiento"
+            videoExtension = "mov"
+        }
+        
         // Obtener la ruta del video desde el bundle
-        guard let videoURL = Bundle.main.url(forResource: "intro_video", withExtension: "mp4") else {
-            print("⚠️ No se encontró el video 'intro_video.mp4' en el bundle")
-            // Si no se encuentra el video, ir directamente al chat
+        guard let videoURL = Bundle.main.url(forResource: videoFileName, withExtension: videoExtension) else {
+            print("⚠️ No se encontró el video '\(videoFileName).\(videoExtension)' en el bundle")
+            // Si no se encuentra el video, continuar con el flujo
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                navigateToChat = true
+                navigateToNext = true
+                onVideoComplete()
             }
             return
         }
@@ -84,8 +116,9 @@ struct IntroVideoView: View {
             object: playerItem,
             queue: .main
         ) { _ in
-            // Navegar al chat cuando termine el video
-            navigateToChat = true
+            // Continuar con el flujo cuando termine el video
+            navigateToNext = true
+            onVideoComplete()
         }
 
         // Iniciar reproducción automática
@@ -94,12 +127,14 @@ struct IntroVideoView: View {
 
     // MARK: - Cleanup Player
     private func cleanupPlayer() {
+        if let playerItem = player?.currentItem {
+            NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: playerItem)
+        }
         player?.pause()
         player = nil
-        NotificationCenter.default.removeObserver(self)
     }
 }
 
 #Preview {
-    IntroVideoView()
+    IntroVideoView(videoType: .intro)
 }

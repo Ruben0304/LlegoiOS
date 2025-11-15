@@ -43,10 +43,7 @@ struct CategoriesView: View {
             .navigationBarTitleDisplayMode(.large)
         }
         .fullScreenCover(isPresented: $navigateToShop) {
-            NavigationView {
-                ShopView(category: selectedCategory)
-            }
-            .navigationViewStyle(StackNavigationViewStyle())
+            ShopView(category: selectedCategory)
         }
     }
 }

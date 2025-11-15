@@ -1,21 +1,19 @@
 import SwiftUI
 import UIKit
+import SceneKit
 
 struct WelcomeView: View {
+    // Global gradient state manager
+    @StateObject private var gradientManager = GradientStateManager.shared
+
     // Animation states
-    @State private var titleAppeared = false
-    @State private var subtitleAppeared = false
+    @State private var carouselAppeared = false
     @State private var toolbarAppeared = false
-    @State private var categorySelectorAppeared = false
 
     // Floating animations
-    @State private var titleFloat: CGFloat = 0
+    @State private var carouselFloat: CGFloat = 0
     @State private var avatarFloat: CGFloat = 0
     @State private var balanceFloat: CGFloat = 0
-    @State private var categoryFloat: CGFloat = 0
-
-    // Category selection
-    @State private var selectedCategory: CategoryType = .restaurant
 
     // Ripple effect and navigation
     @State private var ripplePoints: [RipplePoint] = []
@@ -23,76 +21,104 @@ struct WelcomeView: View {
     @State private var navigateToLogin: Bool = false
     @State private var showWallet: Bool = false
 
-    enum CategoryType {
-        case restaurant
-        case supermarket
-    }
+    // Carousel state
+    @State private var currentIndex: Int = 0
+    @State private var dragOffset: CGFloat = 0
+    @State private var scaleEffect: CGFloat = 1.2
 
     // User data (placeholder)
-    let userName: String = "Usuario"
     let balance: String = "3.99$"
+    
+    // Models data - Orden: Tienda de Ropa, Agro, Mercadito
+    let models: [CategoryModel3D] = [
+        CategoryModel3D(
+            name: "Tienda de Ropa",
+            fileName: "Adidas_display_-_Visual_Merchandising_guideline.usdz",
+            description: "Moda y Accesorios",
+            icon: "tshirt.fill"
+        ),
+        CategoryModel3D(
+            name: "Agro",
+            fileName: "Snack_Shelf.usdz",
+            description: "Productos Agrícolas",
+            icon: "leaf.fill"
+        ),
+        CategoryModel3D(
+            name: "Mercadito",
+            fileName: "Fruit_Veg_Market.usdz",
+            description: "Frutas y Vegetales Frescos",
+            icon: "cart.fill"
+        )
+    ]
 
     var body: some View {
         NavigationStack{
-            ZStack {
-                // Custom green gradient background - dark green top-right, white/light elsewhere
+            ZStack(alignment: .top) {
+                // Dynamic gradient background that changes based on selected model
                 WelcomeGradientBackground()
                     .ignoresSafeArea()
+                    .animation(.easeInOut(duration: 0.8), value: gradientManager.currentCategoryIndex)
+                
+                VStack(alignment: .center, spacing: 0) {
+                    // Componente 3D - Justo debajo del toolbar
+                    SceneKitView(modelName: models[currentIndex].fileName)
+                        .frame(height: 400)
+                        .frame(maxWidth: .infinity)
+                        .scaleEffect(scaleEffect)
+                        .offset(x: dragOffset, y: carouselAppeared ? carouselFloat : 50)
+                        .opacity(carouselAppeared ? 1 : 0)
+                        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: scaleEffect)
+                        .padding(.horizontal, 24)
+                        .padding(.top, 24)
+                        .clipped()
+                        .contentShape(Rectangle())
+                    
+                    // Texto con flechas - Debajo del componente 3D (más pequeño y compacto)
+                    HStack(spacing: 12) {
+                        ArrowButton(direction: .left, size: .small) {
+                            // Feedback háptico pronunciado
+                            let impact = UIImpactFeedbackGenerator(style: .heavy)
+                            impact.impactOccurred()
 
-                VStack(alignment: .leading, spacing: 0) {
-                    Spacer()
-
-                    // Main content - left aligned but vertically centered
-                    VStack(alignment: .leading, spacing: 24) {
-                        // Greeting title with elegant typography
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Hola \(userName),")
-                                .font(.system(size: 38, weight: .light, design: .rounded))
-                                .foregroundColor(Color.black.opacity(0.7))
-                                .offset(y: titleAppeared ? titleFloat : 50)
-                                .opacity(titleAppeared ? 1 : 0)
-
-                            Text("Bienvenido")
-                                .font(.system(size: 58, weight: .semibold, design: .rounded))
-                                .foregroundColor(Color.black.opacity(0.7))
-                                .offset(y: subtitleAppeared ? titleFloat : 50)
-                                .opacity(subtitleAppeared ? 1 : 0)
-                        }
-
-                        // Minimal category selector
-                        HStack(spacing: 12) {
-                            // Restaurant pill
-                            CategoryPill(
-                                title: "Restaurante",
-                                icon: "fork.knife",
-                                isSelected: selectedCategory == .restaurant
-                            ) {
-                                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                                    selectedCategory = .restaurant
+                            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                                if currentIndex > 0 {
+                                    currentIndex -= 1
+                                    gradientManager.setCategoryIndex(currentIndex)
+                                    animateTransition()
                                 }
                             }
-                            .allowsHitTesting(true)
+                        }
+                        .opacity(currentIndex > 0 ? 1 : 0.3)
+                        .disabled(currentIndex == 0)
 
-                            // Supermarket pill
-                            CategoryPill(
-                                title: "Supermercado",
-                                icon: "cart",
-                                isSelected: selectedCategory == .supermarket
-                            ) {
-                                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                                    selectedCategory = .supermarket
+                        Text(models[currentIndex].name)
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .frame(width: 140)  // Más pequeño
+                            .multilineTextAlignment(.center)
+
+                        ArrowButton(direction: .right, size: .small) {
+                            // Feedback háptico pronunciado
+                            let impact = UIImpactFeedbackGenerator(style: .heavy)
+                            impact.impactOccurred()
+
+                            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                                if currentIndex < models.count - 1 {
+                                    currentIndex += 1
+                                    gradientManager.setCategoryIndex(currentIndex)
+                                    animateTransition()
                                 }
                             }
-                            .allowsHitTesting(true)
                         }
-                        .offset(y: categorySelectorAppeared ? categoryFloat : 50)
-                        .opacity(categorySelectorAppeared ? 1 : 0)
-
+                        .opacity(currentIndex < models.count - 1 ? 1 : 0.3)
+                        .disabled(currentIndex == models.count - 1)
                     }
-                    .padding(.horizontal, 32)
-
+                    .frame(maxWidth: .infinity, alignment: .center)  // Centrado
+                    .padding(.top, 12)
+                    
                     Spacer()
-
+                    
+                    // Texto "Presiona para encontrar lo que buscas..." pegado abajo
                     Text("Presiona para encontrar lo que buscas...")
                         .font(.system(size: 24, weight: .light, design: .rounded))
                         .foregroundColor(Color(red: 0.32, green: 0.35, blue: 0.4))
@@ -101,6 +127,8 @@ struct WelcomeView: View {
                         .padding(.horizontal, 32)
                         .padding(.bottom, 40)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .padding(.top, 0)
 
                 // Ripple overlay
                 RippleOverlay(ripplePoints: $ripplePoints)
@@ -110,7 +138,7 @@ struct WelcomeView: View {
                 handleTap(at: location)
             }
             .navigationDestination(isPresented: $navigateToIntroVideo) {
-                IntroVideoView()
+                OrderFlowCoordinatorView()
             }
             .navigationDestination(isPresented: $navigateToLogin) {
                 LoginView(viewModel: ProfileViewModel())
@@ -172,19 +200,9 @@ struct WelcomeView: View {
 
     // MARK: - Entrance Animations
     private func startEntranceAnimations() {
-        // Title animation - smooth slide and fade
-        withAnimation(.spring(response: 0.8, dampingFraction: 0.75).delay(0.2)) {
-            titleAppeared = true
-        }
-
-        // Subtitle animation - cascading effect
-        withAnimation(.spring(response: 0.8, dampingFraction: 0.75).delay(0.4)) {
-            subtitleAppeared = true
-        }
-
-        // Category selector animation
-        withAnimation(.spring(response: 0.9, dampingFraction: 0.7).delay(0.6)) {
-            categorySelectorAppeared = true
+        // 3D Carousel animation - elegant entrance
+        withAnimation(.spring(response: 0.9, dampingFraction: 0.7).delay(0.3)) {
+            carouselAppeared = true
         }
 
         // Toolbar items animation - elegant slide from top
@@ -195,22 +213,13 @@ struct WelcomeView: View {
 
     // MARK: - Floating Animations
     private func startFloatingAnimations() {
-        // Title floating - very subtle
+        // Carousel floating - very subtle and elegant
         withAnimation(
-            .easeInOut(duration: 4.0)
+            .easeInOut(duration: 5.0)
             .repeatForever(autoreverses: true)
             .delay(1.0)
         ) {
-            titleFloat = -6
-        }
-
-        // Category floating - gentle
-        withAnimation(
-            .easeInOut(duration: 3.8)
-            .repeatForever(autoreverses: true)
-            .delay(1.1)
-        ) {
-            categoryFloat = -5
+            carouselFloat = -8
         }
 
         // Avatar floating - smooth and slow
@@ -229,6 +238,15 @@ struct WelcomeView: View {
             .delay(1.3)
         ) {
             balanceFloat = -5
+        }
+    }
+
+    // MARK: - Carousel Transition Animation
+    private func animateTransition() {
+        // Scale animation for smooth transition
+        scaleEffect = 0.92
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            scaleEffect = 1.0
         }
     }
 
@@ -256,15 +274,57 @@ struct WelcomeView: View {
 
 // MARK: - Welcome Gradient Background
 struct WelcomeGradientBackground: View {
+    @ObservedObject private var gradientManager = GradientStateManager.shared
+
+    // Color palettes for each category
+    private var colorPalette: (dark: Color, medium: Color, light: Color, veryLight: Color, overlay: Color) {
+        switch gradientManager.currentCategoryIndex {
+        case 0: // Tienda de Ropa - Verde
+            return (
+                dark: Color(red: 0.05, green: 0.3, blue: 0.25),
+                medium: Color(red: 0.1, green: 0.45, blue: 0.38),
+                light: Color(red: 0.4, green: 0.65, blue: 0.55),
+                veryLight: Color(red: 0.85, green: 0.92, blue: 0.88),
+                overlay: Color(red: 0.05, green: 0.25, blue: 0.2)
+            )
+        case 1: // Agro - Azul
+            return (
+                dark: Color(red: 0.05, green: 0.2, blue: 0.3),
+                medium: Color(red: 0.1, green: 0.35, blue: 0.45),
+                light: Color(red: 0.4, green: 0.55, blue: 0.65),
+                veryLight: Color(red: 0.85, green: 0.9, blue: 0.92),
+                overlay: Color(red: 0.05, green: 0.15, blue: 0.25)
+            )
+        case 2: // Mercadito - Amarillo
+            return (
+                dark: Color(red: 0.3, green: 0.25, blue: 0.05),
+                medium: Color(red: 0.45, green: 0.38, blue: 0.1),
+                light: Color(red: 0.65, green: 0.6, blue: 0.4),
+                veryLight: Color(red: 0.92, green: 0.9, blue: 0.85),
+                overlay: Color(red: 0.25, green: 0.2, blue: 0.05)
+            )
+        default: // Default to green
+            return (
+                dark: Color(red: 0.05, green: 0.3, blue: 0.25),
+                medium: Color(red: 0.1, green: 0.45, blue: 0.38),
+                light: Color(red: 0.4, green: 0.65, blue: 0.55),
+                veryLight: Color(red: 0.85, green: 0.92, blue: 0.88),
+                overlay: Color(red: 0.05, green: 0.25, blue: 0.2)
+            )
+        }
+    }
+    
     var body: some View {
+        let palette = colorPalette
+        
         ZStack {
-            // Base gradient - dark green top-right to white/light
+            // Base gradient - dynamic colors based on category
             RadialGradient(
                 gradient: Gradient(stops: [
-                    .init(color: Color(red: 0.05, green: 0.3, blue: 0.25), location: 0.0),
-                    .init(color: Color(red: 0.1, green: 0.45, blue: 0.38), location: 0.2),
-                    .init(color: Color(red: 0.4, green: 0.65, blue: 0.55), location: 0.45),
-                    .init(color: Color(red: 0.85, green: 0.92, blue: 0.88), location: 0.7),
+                    .init(color: palette.dark, location: 0.0),
+                    .init(color: palette.medium, location: 0.2),
+                    .init(color: palette.light, location: 0.45),
+                    .init(color: palette.veryLight, location: 0.7),
                     .init(color: Color(red: 0.95, green: 0.98, blue: 0.96), location: 1.0)
                 ]),
                 center: UnitPoint(x: 0.85, y: 0.15),
@@ -275,64 +335,12 @@ struct WelcomeGradientBackground: View {
             // Secondary overlay for more depth
             LinearGradient(
                 gradient: Gradient(stops: [
-                    .init(color: Color(red: 0.05, green: 0.25, blue: 0.2).opacity(0.3), location: 0.0),
+                    .init(color: palette.overlay.opacity(0.3), location: 0.0),
                     .init(color: Color.clear, location: 0.5)
                 ]),
                 startPoint: .topTrailing,
                 endPoint: .bottomLeading
             )
-        }
-    }
-}
-
-// MARK: - Category Pill (Minimal Design)
-struct CategoryPill: View {
-    let title: String
-    let icon: String
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
-
-                Text(title)
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-            }
-            .foregroundColor(isSelected ? .white : .white.opacity(0.7))
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(
-                Capsule()
-                    .fill(
-                        isSelected
-                        ? AnyShapeStyle(.ultraThinMaterial)
-                        : AnyShapeStyle(Color.white.opacity(0.15))
-                    )
-                    .overlay(
-                        Capsule()
-                            .stroke(
-                                LinearGradient(
-                                    colors: isSelected
-                                    ? [Color.white.opacity(0.6), Color.white.opacity(0.3)]
-                                    : [Color.white.opacity(0.3), Color.white.opacity(0.1)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: isSelected ? 1.5 : 1
-                            )
-                    )
-            )
-            .shadow(
-                color: isSelected ? Color.white.opacity(0.2) : Color.clear,
-                radius: isSelected ? 10 : 0,
-                x: 0,
-                y: isSelected ? 4 : 0
-            )
-            .scaleEffect(isSelected ? 1.05 : 1.0)
-            .animation(.spring(response: 0.4, dampingFraction: 0.7), value: isSelected)
         }
     }
 }

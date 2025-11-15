@@ -56,9 +56,8 @@ struct ProductCard: View {
                     radius: 12, x: 0, y: 6
                 )
         )
-        .onTapGesture {
-            onProductTap?()
-        }
+        .contentShape(Rectangle())
+        .modifier(OptionalTapModifier(onTap: onProductTap))
     }
 
     private var imageSection: some View {
@@ -109,5 +108,17 @@ struct ProductCard: View {
         }
         .buttonStyle(.plain)
         .padding(10)
+    }
+}
+
+private struct OptionalTapModifier: ViewModifier {
+    let onTap: (() -> Void)?
+
+    func body(content: Content) -> some View {
+        if let onTap = onTap {
+            content.onTapGesture(perform: onTap)
+        } else {
+            content
+        }
     }
 }

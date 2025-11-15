@@ -25,9 +25,16 @@ enum ConversationStep {
 struct ConversationalSearchView: View {
     @Environment(\.dismiss) private var dismiss
 
+    // Initial step configuration
+    let initialStep: ConversationStep
+    let onComplete: () -> Void
+
     // Conversation flow
-    @State private var currentStep: ConversationStep = .selectingProductAndStore
+    @State private var currentStep: ConversationStep
     @State private var state: ConversationalSearchState = .idle
+    
+    // Track if we're showing confirmation after third video
+    @State private var isFinalConfirmation: Bool = false
 
     // User selections
     @State private var firstProductValue: String? = nil
@@ -50,6 +57,15 @@ struct ConversationalSearchView: View {
 
     // Confirmation button
     @State private var showConfirmButton: Bool = false
+    
+    // Navigation state
+    @State private var navigateToIntroVideo: Bool = false
+    
+    init(initialStep: ConversationStep = .selectingProductAndStore, onComplete: @escaping () -> Void = {}) {
+        self.initialStep = initialStep
+        self.onComplete = onComplete
+        _currentStep = State(initialValue: initialStep)
+    }
 
     var body: some View {
         ZStack {
@@ -223,6 +239,9 @@ struct ConversationalSearchView: View {
                 BackButton()
             }
         }
+        .navigationDestination(isPresented: $navigateToIntroVideo) {
+            EmptyView()
+        }
         .onAppear {
             startEntranceAnimation()
         }
@@ -231,8 +250,8 @@ struct ConversationalSearchView: View {
     // MARK: - Chat Bubble View
     private var chatBubbleView: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Avatar (cambia según el paso)
-            if showAvatar {
+            // Avatar (cambia según el paso - no mostrar si es confirmación final)
+            if showAvatar && !(isFinalConfirmation && currentStep == .showingConfirmation) {
                 avatarView
                     .padding(.leading, 32)
                     .shadow(color: .black.opacity(0.14), radius: 12, y: 6)
@@ -453,21 +472,8 @@ struct ConversationalSearchView: View {
 
     // Función auxiliar para avanzar al paso de pago
     private func advanceToPaymentStep() {
-        // Resetear vista y mostrar mensaje del cliente
-        showAvatar = false
-        showBubble = false
-
-        // Esperar un momento y mostrar el mensaje del cliente seleccionando pago
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            currentStep = .selectingPayment
-            withAnimation(.spring(response: 0.8, dampingFraction: 0.85)) {
-                showAvatar = true
-            }
-            withAnimation(.spring(response: 0.9, dampingFraction: 0.88).delay(0.3)) {
-                showBubble = true
-                startStreaming = true
-            }
-        }
+        // Cuando se completan productos + tienda, navegar a IntroVideo con metodopago
+        onComplete()
     }
 
     private func handleCurrencySelection() {
@@ -492,41 +498,42 @@ struct ConversationalSearchView: View {
 
     // Función auxiliar para avanzar al paso de confirmación
     private func advanceToConfirmationStep() {
-        // Resetear vista y mostrar confirmación
-        showAvatar = false
-        showBubble = false
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            currentStep = .showingConfirmation
-            withAnimation(.spring(response: 0.8, dampingFraction: 0.85)) {
-                showAvatar = true
-            }
-            withAnimation(.spring(response: 0.9, dampingFraction: 0.88).delay(0.3)) {
-                showBubble = true
-                startStreaming = true
-            }
-        }
+        // Cuando se completan moneda + método de pago, navegar a IntroVideo con agradecimiento
+        onComplete()
     }
 
     // MARK: - Animations
     private func startEntranceAnimation() {
-        // Comenzar directamente con el mensaje del cliente
-        currentStep = .selectingProductAndStore
+        // Comenzar con el step inicial configurado
+        currentStep = initialStep
+        
+        // Si viene del tercer video, mostrar confirmación final sin avatar
+        if initialStep == .showingConfirmation {
+            isFinalConfirmation = true
+            showAvatar = false
+            withAnimation(.spring(response: 0.9, dampingFraction: 0.88).delay(0.3)) {
+                showBubble = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                startStreaming = true
+                state = .streaming
+            }
+        } else {
+            // Avatar del cliente aparece
+            withAnimation(.spring(response: 0.8, dampingFraction: 0.85).delay(0.3)) {
+                showAvatar = true
+            }
 
-        // Avatar del cliente aparece
-        withAnimation(.spring(response: 0.8, dampingFraction: 0.85).delay(0.3)) {
-            showAvatar = true
-        }
+            // Burbuja del cliente aparece
+            withAnimation(.spring(response: 0.9, dampingFraction: 0.88).delay(0.6)) {
+                showBubble = true
+            }
 
-        // Burbuja del cliente aparece
-        withAnimation(.spring(response: 0.9, dampingFraction: 0.88).delay(0.6)) {
-            showBubble = true
-        }
-
-        // Streaming empieza
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
-            startStreaming = true
-            state = .streaming
+            // Streaming empieza
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+                startStreaming = true
+                state = .streaming
+            }
         }
     }
 
