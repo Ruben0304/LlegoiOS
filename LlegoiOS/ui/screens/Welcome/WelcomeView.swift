@@ -25,6 +25,8 @@ struct WelcomeView: View {
     @State private var currentIndex: Int = 0
     @State private var dragOffset: CGFloat = 0
     @State private var scaleEffect: CGFloat = 1.2
+    @State private var slideOffset: CGFloat = 0
+    @State private var modelOpacity: Double = 1.0
 
     // User data (placeholder)
     let balance: String = "3.99$"
@@ -38,6 +40,7 @@ struct WelcomeView: View {
             icon: "fork.knife",
             cameraPosition: SCNVector3(x: 0, y: 1.5, z: 3.2), // Elevar cámara
             cameraEulerAngles: SCNVector3(x: -.pi / 6, y: 0, z: 0) // Ángulo intermedio: ~30 grados desde arriba
+            
         ),
         CategoryModel3D(
             name: "Ropa",
@@ -70,66 +73,31 @@ struct WelcomeView: View {
                     .animation(.easeInOut(duration: 0.8), value: gradientManager.currentCategoryIndex)
                 
                 VStack(alignment: .center, spacing: 0) {
-                    // Componente 3D - Justo debajo del toolbar
-                    SceneKitView(
+                    // Componente 3D con animación direccional
+                    Animated3DModelView(
                         modelName: models[currentIndex].fileName,
                         cameraPosition: models[currentIndex].cameraPosition,
-                        cameraEulerAngles: models[currentIndex].cameraEulerAngles
+                        cameraEulerAngles: models[currentIndex].cameraEulerAngles,
+                        scaleEffect: scaleEffect,
+                        slideOffset: slideOffset,
+                        carouselFloat: carouselFloat,
+                        modelOpacity: modelOpacity,
+                        appeared: carouselAppeared
                     )
-                        .frame(height: 400)
-                        .frame(maxWidth: .infinity)
-                        .scaleEffect(scaleEffect)
-                        .offset(x: dragOffset, y: carouselAppeared ? carouselFloat : 50)
-                        .opacity(carouselAppeared ? 1 : 0)
-                        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: scaleEffect)
-                        .padding(.horizontal, 24)
-                        .padding(.top, 24)
-                        .clipped()
-                        .contentShape(Rectangle())
-                    
-                    // Texto con flechas - Debajo del componente 3D (más pequeño y compacto)
-                    HStack(spacing: 12) {
-                        ArrowButton(direction: .left, size: .small) {
-                            // Feedback háptico pronunciado
-                            let impact = UIImpactFeedbackGenerator(style: .heavy)
-                            impact.impactOccurred()
 
-                            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                                if currentIndex > 0 {
-                                    currentIndex -= 1
-                                    gradientManager.setCategoryIndex(currentIndex)
-                                    animateTransition()
-                                }
-                            }
-                        }
-                        .opacity(currentIndex > 0 ? 1 : 0.3)
-                        .disabled(currentIndex == 0)
+                    // Selector de categorías moderno
+                    ModernCategorySelector(
+                        currentIndex: currentIndex,
+                        totalCount: models.count,
+                        categoryName: models[currentIndex].name,
+                        categoryDescription: models[currentIndex].description,
+                        slideOffset: slideOffset,
+                        canGoPrevious: currentIndex > 0,
+                        canGoNext: currentIndex < models.count - 1,
+                        onPrevious: previousModel,
+                        onNext: nextModel
+                    )
 
-                        Text(models[currentIndex].name)
-                            .font(.system(size: 22, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
-                            .frame(width: 140)  // Más pequeño
-                            .multilineTextAlignment(.center)
-
-                        ArrowButton(direction: .right, size: .small) {
-                            // Feedback háptico pronunciado
-                            let impact = UIImpactFeedbackGenerator(style: .heavy)
-                            impact.impactOccurred()
-
-                            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                                if currentIndex < models.count - 1 {
-                                    currentIndex += 1
-                                    gradientManager.setCategoryIndex(currentIndex)
-                                    animateTransition()
-                                }
-                            }
-                        }
-                        .opacity(currentIndex < models.count - 1 ? 1 : 0.3)
-                        .disabled(currentIndex == models.count - 1)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .center)  // Centrado
-                    .padding(.top, 12)
-                    
                     Spacer()
                     
                     // Texto "Presiona para encontrar lo que buscas..." pegado abajo
@@ -255,13 +223,61 @@ struct WelcomeView: View {
         }
     }
 
-    // MARK: - Carousel Transition Animation
-    private func animateTransition() {
-        // Scale animation for smooth transition
-        scaleEffect = 0.92
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-            scaleEffect = 1.0
+    // MARK: - Navigation Functions
+    private func previousModel() {
+        guard currentIndex > 0 else { return }
+
+        // Feedback háptico
+        let impact = UIImpactFeedbackGenerator(style: .heavy)
+        impact.impactOccurred()
+
+        animateModelTransition(direction: .left) {
+            currentIndex -= 1
+            gradientManager.setCategoryIndex(currentIndex)
         }
+    }
+
+    private func nextModel() {
+        guard currentIndex < models.count - 1 else { return }
+
+        // Feedback háptico
+        let impact = UIImpactFeedbackGenerator(style: .heavy)
+        impact.impactOccurred()
+
+        animateModelTransition(direction: .right) {
+            currentIndex += 1
+            gradientManager.setCategoryIndex(currentIndex)
+        }
+    }
+
+    // MARK: - Carousel Transition Animation
+    private func animateModelTransition(direction: Direction, completion: @escaping () -> Void) {
+        let screenWidth = UIScreen.main.bounds.width
+        let slideDistance: CGFloat = screenWidth * 0.5
+
+        // Fase 1: Deslizar hacia fuera y desvanecer
+        withAnimation(.easeIn(duration: 0.25)) {
+            slideOffset = direction == .left ? slideDistance : -slideDistance
+            modelOpacity = 0.0
+            scaleEffect = 0.85
+        }
+
+        // Fase 2: Cambiar el índice y resetear posición al lado opuesto
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            completion()
+            slideOffset = direction == .left ? -slideDistance : slideDistance
+
+            // Fase 3: Deslizar hacia dentro y aparecer
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.75)) {
+                slideOffset = 0
+                modelOpacity = 1.0
+                scaleEffect = 1.0
+            }
+        }
+    }
+
+    enum Direction {
+        case left, right
     }
 
     // MARK: - Tap Handler with Haptics
