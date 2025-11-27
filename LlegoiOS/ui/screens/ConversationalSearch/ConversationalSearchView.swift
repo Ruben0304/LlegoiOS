@@ -2,153 +2,261 @@
 //  ConversationalSearchView.swift
 //  LlegoiOS
 //
-//  Búsqueda conversacional - Escribe tu consulta en lenguaje natural
+//  Pantalla de búsqueda conversacional minimalista
+//  Input estilo iMessage + selector de modo
 //
 
 import SwiftUI
 
+enum SearchMode {
+    case quick
+    case manual
+}
+
 struct ConversationalSearchView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var queryText: String = ""
-    @State private var isTextFieldFocused: Bool = false
-    @FocusState private var textFieldFocused: Bool
+
+    // Search mode
+    @State private var searchMode: SearchMode = .quick
+
+    // Message input
+    @State private var messageText: String = ""
+    @State private var messages: [ChatMessage] = []
+
+    // Loading states
+    @State private var isTyping: Bool = false
 
     var body: some View {
         ZStack {
-            // Fondo gradiente elegante
+            // Background estilo WelcomeView
             WelcomeGradientBackground()
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
-                Spacer()
+                // Messages ScrollView
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            if messages.isEmpty {
+                                // Estado vacío minimalista
+                                VStack(spacing: 12) {
+                                    Image(systemName: "magnifyingglass")
+                                        .font(.system(size: 48, weight: .ultraLight))
+                                        .foregroundColor(.secondary.opacity(0.3))
 
-                // Contenedor principal
-                VStack(spacing: 24) {
-                    // Título
-                    Text("¿Qué necesitas hoy?")
-                        .font(.system(size: 32, weight: .semibold))
-                        .foregroundColor(.primary.opacity(0.9))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
+                                    Text("¿Qué estás buscando?")
+                                        .font(.system(size: 20, weight: .light))
+                                        .foregroundColor(.secondary.opacity(0.6))
+                                }
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .padding(.top, 120)
+                            } else {
+                                ForEach(messages) { message in
+                                    MessageBubble(message: message)
+                                        .id(message.id)
+                                }
 
-                    // Campo de texto elegante
-                    HStack(spacing: 16) {
-                        // Input field
-                        TextField("Escribe tu consulta aquí...", text: $queryText, axis: .vertical)
-                            .font(.system(size: 18, weight: .regular))
-                            .foregroundColor(.primary)
-                            .lineLimit(1...5)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 24)
-                                    .fill(Color.white)
-                                    .shadow(color: .black.opacity(0.08), radius: 20, y: 10)
-                            )
-                            .focused($textFieldFocused)
-                            .onChange(of: textFieldFocused) { newValue in
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                    isTextFieldFocused = newValue
+                                // Typing indicator
+                                if isTyping {
+                                    TypingIndicator()
                                 }
                             }
-
-                        // Botón de enviar
-                        Button(action: sendQuery) {
-                            Image(systemName: "arrow.up.circle.fill")
-                                .font(.system(size: 44, weight: .semibold))
-                                .foregroundColor(queryText.isEmpty ? .gray.opacity(0.3) : .llegoPrimary)
-                                .scaleEffect(queryText.isEmpty ? 1.0 : 1.05)
-                                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: queryText.isEmpty)
                         }
-                        .disabled(queryText.isEmpty)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 20)
                     }
-                    .padding(.horizontal, 32)
-
-                    // Sugerencias
-                    if !isTextFieldFocused {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Ejemplos:")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.secondary.opacity(0.7))
-
-                            VStack(spacing: 10) {
-                                SuggestionButton(text: "Quiero 2 kg de arroz", queryText: $queryText)
-                                SuggestionButton(text: "Necesito vegetales frescos para hoy", queryText: $queryText)
-                                SuggestionButton(text: "Busco una bodega cerca de mi casa", queryText: $queryText)
+                    .onChange(of: messages.count) { _ in
+                        if let lastMessage = messages.last {
+                            withAnimation {
+                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
                             }
                         }
-                        .padding(.horizontal, 32)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
                     }
                 }
 
-                Spacer()
-                Spacer()
+                // Input estilo iMessage
+                iMessageStyleInput
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        Color(uiColor: .systemBackground)
+                            .opacity(0.95)
+                            .ignoresSafeArea(edges: .bottom)
+                    )
             }
         }
         .navigationBarBackButtonHidden(true)
         .toolbar {
+            // Back button
             ToolbarItem(placement: .navigationBarLeading) {
-                BackButton()
+                Button(action: { dismiss() }) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.primary)
+                }
+            }
+
+            // Mode selector - estilo simple como WelcomeView
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        searchMode = searchMode == .quick ? .manual : .quick
+                    }
+                }) {
+                    Text(searchMode == .quick ? "Rápido" : "Manual")
+                        .font(.system(size: 15, weight: .medium))
+                }
             }
         }
         .onAppear {
-            // Auto-focus después de un pequeño delay
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                textFieldFocused = true
+            // Mensaje inicial del asistente
+            if messages.isEmpty {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    withAnimation {
+                        messages.append(ChatMessage(
+                            text: searchMode == .quick ?
+                                "Hola! Dime qué producto buscas y te ayudo a encontrarlo 😊" :
+                                "Modo manual activado. Busca productos escribiendo aquí abajo.",
+                            isUser: false
+                        ))
+                    }
+                }
             }
+        }
+    }
+
+    // MARK: - iMessage Style Input
+    private var iMessageStyleInput: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            // Input field
+            HStack(spacing: 8) {
+                TextField("Mensaje", text: $messageText, axis: .vertical)
+                    .font(.system(size: 16))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .lineLimit(1...5)
+
+                // Attach button (opcional)
+                Button(action: {}) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.secondary.opacity(0.5))
+                }
+                .padding(.trailing, 8)
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color(uiColor: .secondarySystemBackground))
+            )
+
+            // Send button
+            Button(action: sendMessage) {
+                Image(systemName: messageText.isEmpty ? "arrow.up.circle" : "arrow.up.circle.fill")
+                    .font(.system(size: 32))
+                    .foregroundColor(messageText.isEmpty ? .secondary.opacity(0.3) : .blue)
+            }
+            .disabled(messageText.isEmpty)
         }
     }
 
     // MARK: - Actions
-    private func sendQuery() {
-        guard !queryText.isEmpty else { return }
+    private func sendMessage() {
+        guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
 
-        print("📤 Consulta enviada: \(queryText)")
+        let userMessage = ChatMessage(text: messageText, isUser: true)
 
-        // Aquí iría la lógica de procesamiento de la consulta
-        // Por ejemplo: enviar al backend, analizar con IA, etc.
-
-        // Animación de feedback
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-            queryText = ""
+        withAnimation {
+            messages.append(userMessage)
         }
 
-        // TODO: Navegar a resultados o mostrar respuesta
+        messageText = ""
+
+        // Simular respuesta del asistente
+        simulateAssistantResponse(to: userMessage.text)
+    }
+
+    private func simulateAssistantResponse(to query: String) {
+        isTyping = true
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            isTyping = false
+
+            withAnimation {
+                messages.append(ChatMessage(
+                    text: "Encontré varios productos para ti. ¿Te gustaría ver los resultados?",
+                    isUser: false
+                ))
+            }
+        }
     }
 }
 
-// MARK: - Supporting Views
-struct SuggestionButton: View {
+// MARK: - Supporting Components
+
+struct ChatMessage: Identifiable {
+    let id = UUID()
     let text: String
-    @Binding var queryText: String
+    let isUser: Bool
+    let timestamp = Date()
+}
+
+struct MessageBubble: View {
+    let message: ChatMessage
 
     var body: some View {
-        Button(action: {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                queryText = text
-            }
-        }) {
-            HStack {
-                Text(text)
-                    .font(.system(size: 15, weight: .regular))
-                    .foregroundColor(.primary.opacity(0.7))
-                    .multilineTextAlignment(.leading)
-
+        HStack {
+            if message.isUser {
                 Spacer()
-
-                Image(systemName: "arrow.up.left")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.secondary.opacity(0.5))
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.white.opacity(0.6))
-            )
+
+            Text(message.text)
+                .font(.system(size: 16))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 18)
+                        .fill(message.isUser ?
+                            Color.blue :
+                            Color(uiColor: .secondarySystemBackground)
+                        )
+                )
+                .foregroundColor(message.isUser ? .white : .primary)
+
+            if !message.isUser {
+                Spacer()
+            }
         }
-        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+struct TypingIndicator: View {
+    @State private var animationPhase: Int = 0
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(0..<3) { index in
+                Circle()
+                    .fill(Color.secondary.opacity(0.5))
+                    .frame(width: 8, height: 8)
+                    .scaleEffect(animationPhase == index ? 1.2 : 1.0)
+                    .animation(
+                        .easeInOut(duration: 0.6)
+                        .repeatForever(autoreverses: true)
+                        .delay(Double(index) * 0.2),
+                        value: animationPhase
+                    )
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(Color(uiColor: .secondarySystemBackground))
+        )
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .onAppear {
+            animationPhase = 1
+        }
     }
 }
 
