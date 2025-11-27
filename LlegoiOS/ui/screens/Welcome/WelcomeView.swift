@@ -146,7 +146,7 @@ struct WelcomeView: View {
             .onTapGesture(coordinateSpace: .local) { location in
                 handleTap(at: location)
             }
-            .navigationDestination(isPresented: $navigateToIntroVideo) {
+            .fullScreenCover(isPresented: $navigateToIntroVideo) {
                 OrderFlowCoordinatorView()
             }
             .navigationDestination(isPresented: $navigateToLogin) {
@@ -323,6 +323,9 @@ struct WelcomeView: View {
 struct WelcomeGradientBackground: View {
     @ObservedObject private var gradientManager = GradientStateManager.shared
 
+    // Control para expansión del degradado (usado en ConversationalSearchView)
+    var isExpanded: Bool = false
+
     // Color palettes for each category
     private var colorPalette: (dark: Color, medium: Color, light: Color, veryLight: Color, overlay: Color) {
         switch gradientManager.currentCategoryIndex {
@@ -368,30 +371,31 @@ struct WelcomeGradientBackground: View {
             )
         }
     }
-    
+
     var body: some View {
         let palette = colorPalette
-        
+
         ZStack {
             // Base gradient - dynamic colors based on category
+            // Cuando isExpanded = true, el degradado se extiende hasta abajo
             RadialGradient(
                 gradient: Gradient(stops: [
                     .init(color: palette.dark, location: 0.0),
-                    .init(color: palette.medium, location: 0.2),
-                    .init(color: palette.light, location: 0.45),
-                    .init(color: palette.veryLight, location: 0.7),
-                    .init(color: Color(red: 0.95, green: 0.98, blue: 0.96), location: 1.0)
+                    .init(color: palette.medium, location: isExpanded ? 0.3 : 0.2),
+                    .init(color: palette.light, location: isExpanded ? 0.6 : 0.45),
+                    .init(color: palette.veryLight, location: isExpanded ? 0.85 : 0.7),
+                    .init(color: isExpanded ? palette.veryLight.opacity(0.8) : Color(red: 0.95, green: 0.98, blue: 0.96), location: 1.0)
                 ]),
                 center: UnitPoint(x: 0.85, y: 0.15),
                 startRadius: 10,
-                endRadius: 800
+                endRadius: isExpanded ? 1200 : 800
             )
 
             // Secondary overlay for more depth
             LinearGradient(
                 gradient: Gradient(stops: [
                     .init(color: palette.overlay.opacity(0.3), location: 0.0),
-                    .init(color: Color.clear, location: 0.5)
+                    .init(color: Color.clear, location: isExpanded ? 0.7 : 0.5)
                 ]),
                 startPoint: .topTrailing,
                 endPoint: .bottomLeading

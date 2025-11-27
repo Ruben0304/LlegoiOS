@@ -22,15 +22,20 @@ struct ConversationalSearchView: View {
     // Message input
     @State private var messageText: String = ""
     @State private var messages: [ChatMessage] = []
+    @FocusState private var isMessageFocused: Bool
 
     // Loading states
     @State private var isTyping: Bool = false
 
+    // Gradient animation state
+    @State private var isGradientExpanded: Bool = false
+
     var body: some View {
         ZStack {
-            // Background estilo WelcomeView
-            WelcomeGradientBackground()
+            // Background estilo WelcomeView con animación de expansión
+            WelcomeGradientBackground(isExpanded: isGradientExpanded)
                 .ignoresSafeArea()
+                .animation(.easeInOut(duration: 0.6), value: isGradientExpanded)
 
             VStack(spacing: 0) {
                 // Messages ScrollView
@@ -73,23 +78,22 @@ struct ConversationalSearchView: View {
                         }
                     }
                 }
-
-                // Input estilo iMessage
-                iMessageStyleInput
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(
-                        Color(uiColor: .systemBackground)
-                            .opacity(0.95)
-                            .ignoresSafeArea(edges: .bottom)
-                    )
             }
         }
         .navigationBarBackButtonHidden(true)
         .toolbar {
-            // Back button
+            // Back button con animación de gradiente al regresar
             ToolbarItem(placement: .navigationBarLeading) {
-                Button(action: { dismiss() }) {
+                Button(action: {
+                    // Primero animar el gradiente de vuelta
+                    withAnimation(.easeInOut(duration: 0.4)) {
+                        isGradientExpanded = false
+                    }
+                    // Luego dismiss con un pequeño delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        dismiss()
+                    }
+                }) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(.primary)
@@ -107,17 +111,43 @@ struct ConversationalSearchView: View {
                         .font(.system(size: 15, weight: .medium))
                 }
             }
+
+            // Botón plus en el toolbar inferior
+            ToolbarItem(placement: .bottomBar) {
+                Button(action: {
+                    // Acción para el botón plus (adjuntar archivos, etc.)
+                }) {
+                    Image(systemName: "plus")
+                        .foregroundColor(.llegoPrimary)
+                        .fontWeight(.semibold)
+                }
+            }
+
+            ToolbarSpacer(.fixed, placement: .bottomBar)
+
+            // Input en el toolbar inferior
+            ToolbarItem(placement: .bottomBar) {
+                messageInputToolbar
+            }
         }
         .onAppear {
+            // Esperar a que termine la animación de presentación antes de expandir el gradiente
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                withAnimation(.easeInOut(duration: 0.6)) {
+                    isGradientExpanded = true
+                }
+            }
+
             // Mensaje inicial del asistente
             if messages.isEmpty {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
                     withAnimation {
                         messages.append(ChatMessage(
                             text: searchMode == .quick ?
                                 "Hola! Dime qué producto buscas y te ayudo a encontrarlo 😊" :
                                 "Modo manual activado. Busca productos escribiendo aquí abajo.",
-                            isUser: false
+                            isFromUser: false,
+                            timestamp: Date()
                         ))
                     }
                 }
@@ -125,45 +155,45 @@ struct ConversationalSearchView: View {
         }
     }
 
-    // MARK: - iMessage Style Input
-    private var iMessageStyleInput: some View {
-        HStack(alignment: .bottom, spacing: 8) {
-            // Input field
-            HStack(spacing: 8) {
-                TextField("Mensaje", text: $messageText, axis: .vertical)
-                    .font(.system(size: 16))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .lineLimit(1...5)
-
-                // Attach button (opcional)
-                Button(action: {}) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(.secondary.opacity(0.5))
+    // MARK: - Message Input Toolbar (estilo ShopTabLandingView)
+    private var messageInputToolbar: some View {
+        HStack(spacing: 8) {
+            TextField("Mensaje", text: $messageText)
+                .autocorrectionDisabled()
+                .focused($isMessageFocused)
+                .submitLabel(.send)
+                .onSubmit {
+                    if !messageText.isEmpty {
+                        sendMessage()
+                    }
                 }
-                .padding(.trailing, 8)
-            }
-            .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color(uiColor: .secondarySystemBackground))
-            )
 
-            // Send button
-            Button(action: sendMessage) {
-                Image(systemName: messageText.isEmpty ? "arrow.up.circle" : "arrow.up.circle.fill")
-                    .font(.system(size: 32))
-                    .foregroundColor(messageText.isEmpty ? .secondary.opacity(0.3) : .blue)
+            if !messageText.isEmpty {
+//                Button(action: {
+//                    messageText = ""
+//                }) {
+//                    Image(systemName: "xmark.circle.fill")
+//                        .foregroundColor(.gray)
+//                        .font(.system(size: 14))
+//                }
+
+                Button(action: sendMessage) {
+                    Image(systemName: "arrow.up.circle.fill")
+//                        .font(.system(size: 20))
+                        .foregroundColor(.llegoPrimary)
+                        .fontWeight(.semibold)
+                }
             }
-            .disabled(messageText.isEmpty)
         }
+        .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Actions
     private func sendMessage() {
         guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
 
-        let userMessage = ChatMessage(text: messageText, isUser: true)
+        let userMessage = ChatMessage(text: messageText, isFromUser: true, timestamp: Date())
 
         withAnimation {
             messages.append(userMessage)
@@ -184,7 +214,8 @@ struct ConversationalSearchView: View {
             withAnimation {
                 messages.append(ChatMessage(
                     text: "Encontré varios productos para ti. ¿Te gustaría ver los resultados?",
-                    isUser: false
+                    isFromUser: false,
+                    timestamp: Date()
                 ))
             }
         }
@@ -193,19 +224,12 @@ struct ConversationalSearchView: View {
 
 // MARK: - Supporting Components
 
-struct ChatMessage: Identifiable {
-    let id = UUID()
-    let text: String
-    let isUser: Bool
-    let timestamp = Date()
-}
-
 struct MessageBubble: View {
     let message: ChatMessage
 
     var body: some View {
         HStack {
-            if message.isUser {
+            if message.isFromUser {
                 Spacer()
             }
 
@@ -215,14 +239,14 @@ struct MessageBubble: View {
                 .padding(.vertical, 10)
                 .background(
                     RoundedRectangle(cornerRadius: 18)
-                        .fill(message.isUser ?
-                            Color.blue :
+                        .fill(message.isFromUser ?
+                            Color.llegoPrimary :
                             Color(uiColor: .secondarySystemBackground)
                         )
                 )
-                .foregroundColor(message.isUser ? .white : .primary)
+                .foregroundColor(message.isFromUser ? .white : .primary)
 
-            if !message.isUser {
+            if !message.isFromUser {
                 Spacer()
             }
         }
