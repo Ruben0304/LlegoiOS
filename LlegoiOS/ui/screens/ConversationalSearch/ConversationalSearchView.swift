@@ -2,605 +2,262 @@
 //  ConversationalSearchView.swift
 //  LlegoiOS
 //
-//  Pantalla de búsqueda conversacional premium
-//  Inspirada en Gleb Kuznetsov y Apple Design Awards
+//  Pantalla de búsqueda conversacional minimalista
+//  Input estilo iMessage + selector de modo
 //
 
 import SwiftUI
 
-enum ConversationalSearchState {
-    case idle
-    case streaming
-    case waitingInput
-    case searching
-    case completed
-}
-
-enum ConversationStep {
-    case selectingProductAndStore
-    case selectingPayment
-    case showingConfirmation
+enum SearchMode {
+    case quick
+    case manual
 }
 
 struct ConversationalSearchView: View {
     @Environment(\.dismiss) private var dismiss
 
-    // Initial step configuration
-    let initialStep: ConversationStep
-    let onComplete: () -> Void
+    // Search mode
+    @State private var searchMode: SearchMode = .quick
 
-    // Conversation flow
-    @State private var currentStep: ConversationStep
-    @State private var state: ConversationalSearchState = .idle
-    
-    // Track if we're showing confirmation after third video
-    @State private var isFinalConfirmation: Bool = false
+    // Message input
+    @State private var messageText: String = ""
+    @State private var messages: [ChatMessage] = []
 
-    // User selections
-    @State private var firstProductValue: String? = nil
-    @State private var secondProductValue: String? = nil
-    @State private var storeValue: String? = nil
-    @State private var currencyValue: String? = nil
-    @State private var paymentMethodValue: String? = nil
-
-    // UI expansion states
-    @State private var firstProductExpanded: Bool = false
-    @State private var secondProductExpanded: Bool = false
-    @State private var storeExpanded: Bool = false
-    @State private var currencyExpanded: Bool = false
-    @State private var paymentMethodExpanded: Bool = false
-
-    // Streaming animation (solo para cliente)
-    @State private var showAvatar: Bool = false
-    @State private var showBubble: Bool = false
-    @State private var startStreaming: Bool = false
-
-    // Confirmation button
-    @State private var showConfirmButton: Bool = false
-    
-    // Navigation state
-    @State private var navigateToIntroVideo: Bool = false
-    
-    init(initialStep: ConversationStep = .selectingProductAndStore, onComplete: @escaping () -> Void = {}) {
-        self.initialStep = initialStep
-        self.onComplete = onComplete
-        _currentStep = State(initialValue: initialStep)
-    }
+    // Loading states
+    @State private var isTyping: Bool = false
 
     var body: some View {
         ZStack {
-            // Mismo fondo que WelcomeView
+            // Background estilo WelcomeView
             WelcomeGradientBackground()
                 .ignoresSafeArea()
 
-            // Contenido principal centrado
-            VStack {
-                Spacer()
-                    .frame(height: 100) // Offset hacia arriba desde el centro
+            VStack(spacing: 0) {
+                // Messages ScrollView
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            if messages.isEmpty {
+                                // Estado vacío minimalista
+                                VStack(spacing: 12) {
+                                    Image(systemName: "magnifyingglass")
+                                        .font(.system(size: 48, weight: .ultraLight))
+                                        .foregroundColor(.secondary.opacity(0.3))
 
-                // Avatar y burbuja de conversación del cliente
-                chatBubbleView
-                    .transition(.opacity)
+                                    Text("¿Qué estás buscando?")
+                                        .font(.system(size: 20, weight: .light))
+                                        .foregroundColor(.secondary.opacity(0.6))
+                                }
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .padding(.top, 120)
+                            } else {
+                                ForEach(messages) { message in
+                                    MessageBubble(message: message)
+                                        .id(message.id)
+                                }
 
-                Spacer()
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            // Overlay oscuro cuando algún picker está expandido
-            if firstProductExpanded || secondProductExpanded || storeExpanded ||
-               currencyExpanded || paymentMethodExpanded {
-                Color.black.opacity(0.3)
-                    .ignoresSafeArea()
-                    .transition(.opacity)
-                    .onTapGesture {
-                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                            closeAllPickers()
+                                // Typing indicator
+                                if isTyping {
+                                    TypingIndicator()
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 20)
+                    }
+                    .onChange(of: messages.count) { _ in
+                        if let lastMessage = messages.last {
+                            withAnimation {
+                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                            }
                         }
                     }
-            }
+                }
 
-            // Cards y pickers flotantes
-            VStack {
-                Spacer()
-                    .frame(height: 80)
-
-                // Picker del primer producto
-                if firstProductExpanded {
-                    FloatingSearchCard(
-                        type: .products,
-                        selectedValue: $firstProductValue,
-                        isVisible: $firstProductExpanded
+                // Input estilo iMessage
+                iMessageStyleInput
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        Color(uiColor: .systemBackground)
+                            .opacity(0.95)
+                            .ignoresSafeArea(edges: .bottom)
                     )
-                    .transition(.asymmetric(
-                        insertion: .scale(scale: 0.95).combined(with: .opacity),
-                        removal: .scale(scale: 0.95).combined(with: .opacity)
-                    ))
-                }
-
-                // Picker del segundo producto (con opción "más nada")
-                if secondProductExpanded {
-                    FloatingSearchCard(
-                        type: .products,
-                        selectedValue: $secondProductValue,
-                        isVisible: $secondProductExpanded,
-                        showNothingElseOption: true
-                    )
-                    .transition(.asymmetric(
-                        insertion: .scale(scale: 0.95).combined(with: .opacity),
-                        removal: .scale(scale: 0.95).combined(with: .opacity)
-                    ))
-                }
-
-                // Picker del vendedor
-                if storeExpanded {
-                    FloatingSearchCard(
-                        type: .stores,
-                        selectedValue: $storeValue,
-                        isVisible: $storeExpanded
-                    )
-                    .transition(.asymmetric(
-                        insertion: .scale(scale: 0.95).combined(with: .opacity),
-                        removal: .scale(scale: 0.95).combined(with: .opacity)
-                    ))
-                }
-
-                // Picker de moneda
-                if currencyExpanded {
-                    FloatingSimpleListPicker(
-                        title: "Selecciona la moneda",
-                        items: [
-                            SimpleCurrency(id: "CUP", name: "CUP", flag: "🇨🇺"),
-                            SimpleCurrency(id: "USD", name: "USD", flag: "🇺🇸")
-                        ],
-                        itemLabel: { $0.name },
-                        itemIcon: { currency in
-                            AnyView(
-                                Text(currency.flag)
-                                    .font(.system(size: 32))
-                            )
-                        },
-                        selectedValue: $currencyValue,
-                        isVisible: $currencyExpanded
-                    )
-                    .transition(.asymmetric(
-                        insertion: .scale(scale: 0.95).combined(with: .opacity),
-                        removal: .scale(scale: 0.95).combined(with: .opacity)
-                    ))
-                }
-
-                // Picker de método de pago
-                if paymentMethodExpanded {
-                    FloatingSimpleListPicker(
-                        title: "Selecciona método de pago",
-                        items: paymentMethods,
-                        itemLabel: { $0.name },
-                        itemIcon: { method in
-                            AnyView(
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .fill(method.color.opacity(0.15))
-                                        .frame(width: 44, height: 44)
-
-                                    switch method.imageType {
-                                    case .systemIcon(let iconName):
-                                        Image(systemName: iconName)
-                                            .font(.system(size: 20, weight: .semibold))
-                                            .foregroundColor(method.color)
-                                    case .assetImage(let imageName):
-                                        Image(imageName)
-                                            .resizable()
-                                            .scaledToFit()
-                                            .frame(width: 24, height: 24)
-                                    }
-                                }
-                            )
-                        },
-                        selectedValue: $paymentMethodValue,
-                        isVisible: $paymentMethodExpanded
-                    )
-                    .transition(.asymmetric(
-                        insertion: .scale(scale: 0.95).combined(with: .opacity),
-                        removal: .scale(scale: 0.95).combined(with: .opacity)
-                    ))
-                }
-
-                Spacer()
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            // Botón de confirmación (aparece al final)
-            if showConfirmButton {
-                VStack {
-                    Spacer()
-
-                    Button(action: {
-                        confirmOrder()
-                    }) {
-                        Text("Confirmar")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 56)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .fill(Color.llegoPrimary)
-                            )
-                            .shadow(color: Color.llegoPrimary.opacity(0.3), radius: 12, y: 6)
-                    }
-                    .padding(.horizontal, 40)
-                    .padding(.bottom, 40)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
             }
         }
         .navigationBarBackButtonHidden(true)
         .toolbar {
+            // Back button
             ToolbarItem(placement: .navigationBarLeading) {
-                BackButton()
+                Button(action: { dismiss() }) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.primary)
+                }
             }
-        }
-        .navigationDestination(isPresented: $navigateToIntroVideo) {
-            EmptyView()
+
+            // Mode selector - estilo simple como WelcomeView
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        searchMode = searchMode == .quick ? .manual : .quick
+                    }
+                }) {
+                    Text(searchMode == .quick ? "Rápido" : "Manual")
+                        .font(.system(size: 15, weight: .medium))
+                }
+            }
         }
         .onAppear {
-            startEntranceAnimation()
-        }
-    }
-
-    // MARK: - Chat Bubble View
-    private var chatBubbleView: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Avatar (cambia según el paso - no mostrar si es confirmación final)
-            if showAvatar && !(isFinalConfirmation && currentStep == .showingConfirmation) {
-                avatarView
-                    .padding(.leading, 32)
-                    .shadow(color: .black.opacity(0.14), radius: 12, y: 6)
-                    .transition(
-                        .scale(scale: 0.85)
-                        .combined(with: .opacity)
-                    )
-            }
-
-            // Texto conversacional dinámico
-            if showBubble {
-                VStack(alignment: .leading, spacing: 16) {
-                    if startStreaming {
-                        conversationContent
+            // Mensaje inicial del asistente
+            if messages.isEmpty {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    withAnimation {
+                        messages.append(ChatMessage(
+                            text: searchMode == .quick ?
+                                "Hola! Dime qué producto buscas y te ayudo a encontrarlo 😊" :
+                                "Modo manual activado. Busca productos escribiendo aquí abajo.",
+                            isUser: false
+                        ))
                     }
                 }
-                .padding(.horizontal, 32)
-                .transition(
-                    .scale(scale: 0.98)
-                    .combined(with: .opacity)
-                )
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .onChange(of: firstProductValue) { _ in handleFirstProductSelection() }
-        .onChange(of: secondProductValue) { _ in handleSecondProductSelection() }
-        .onChange(of: storeValue) { _ in handleStoreSelection() }
-        .onChange(of: currencyValue) { _ in handleCurrencySelection() }
-        .onChange(of: paymentMethodValue) { _ in handlePaymentMethodSelection() }
     }
 
-    // Avatar del cliente (siempre el mismo)
-    private var avatarView: some View {
-        AsyncImage(url: URL(string: "https://i.pravatar.cc/100?img=3")) { phase in
-            ZStack {
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 48, height: 48)
-                        .clipShape(Circle())
-                case .failure:
-                    Circle()
-                        .fill(Color.llegoAccent.opacity(0.45))
-                        .overlay(
-                            Image(systemName: "person.fill")
-                                .font(.system(size: 22))
-                                .foregroundColor(.white.opacity(0.95))
-                        )
-                default:
-                    Circle()
-                        .fill(Color.llegoAccent.opacity(0.3))
-                        .overlay(
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white.opacity(0.85)))
-                        )
+    // MARK: - iMessage Style Input
+    private var iMessageStyleInput: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            // Input field
+            HStack(spacing: 8) {
+                TextField("Mensaje", text: $messageText, axis: .vertical)
+                    .font(.system(size: 16))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .lineLimit(1...5)
+
+                // Attach button (opcional)
+                Button(action: {}) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.secondary.opacity(0.5))
                 }
+                .padding(.trailing, 8)
             }
-            .frame(width: 48, height: 48)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color(uiColor: .secondarySystemBackground))
+            )
+
+            // Send button
+            Button(action: sendMessage) {
+                Image(systemName: messageText.isEmpty ? "arrow.up.circle" : "arrow.up.circle.fill")
+                    .font(.system(size: 32))
+                    .foregroundColor(messageText.isEmpty ? .secondary.opacity(0.3) : .blue)
+            }
+            .disabled(messageText.isEmpty)
         }
     }
 
-    // Contenido dinámico según el paso de la conversación
-    @ViewBuilder
-    private var conversationContent: some View {
-        switch currentStep {
-        case .selectingProductAndStore:
-            // Cliente: "Quiero ordenar [producto] del vendedor [store]"
-            // AMBOS selectores aparecen juntos desde el inicio
-            StreamingTextView(
-                segments: productAndStoreSegments,
-                font: .system(size: 28, weight: .medium),
-                color: Color.primary.opacity(0.75),
-                wordDelay: 0.2,
-                onComplete: {
-                    state = .waitingInput
-                }
-            )
-            .id("products_store_\(firstProductValue ?? "")_\(secondProductValue ?? "")_\(storeValue ?? "")")
+    // MARK: - Actions
+    private func sendMessage() {
+        guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
 
-        case .selectingPayment:
-            // El usuario responde: "Usaré la moneda [escoger] usando la vía [escoger]"
-            // AMBOS selectores aparecen juntos desde el inicio
-            StreamingTextView(
-                segments: paymentSegments,
-                font: .system(size: 28, weight: .medium),
-                color: Color.primary.opacity(0.75),
-                wordDelay: 0.15,
-                onComplete: {
-                    state = .waitingInput
-                }
-            )
-            .id("payment_\(currencyValue ?? "")_\(paymentMethodValue ?? "")")
+        let userMessage = ChatMessage(text: messageText, isUser: true)
 
-        case .showingConfirmation:
-            // "Vale, el costo total del envío es X en [moneda] y el envío es X, ¿quieres confirmar?"
-            StreamingTextView(
-                segments: [
-                    .text(confirmationText)
-                ],
-                font: .system(size: 28, weight: .medium),
-                color: Color.primary.opacity(0.75),
-                wordDelay: 0.15,
-                onComplete: {
-                    // Mostrar botón de confirmación con fade
-                    withAnimation(.easeIn(duration: 0.4).delay(0.3)) {
-                        showConfirmButton = true
-                    }
-                }
-            )
-            .id("confirmation_\(currentStep)")
-        }
-    }
-
-    // Segmentos para producto y vendedor (AMBOS aparecen juntos)
-    private var productAndStoreSegments: [TextSegment] {
-        var segments: [TextSegment] = [
-            .text("Quiero ordenar"),
-            .component(id: "first_product", AnyView(
-                InlineSelectField(
-                    type: .products,
-                    selectedValue: $firstProductValue,
-                    isExpanded: $firstProductExpanded
-                )
-            ))
-        ]
-
-        // Si ya se seleccionó el primer producto, mostrar "y" y segundo selector
-        if firstProductValue != nil {
-            segments.append(.text(" y"))
-            segments.append(.component(id: "second_product", AnyView(
-                InlineSelectField(
-                    type: .products,
-                    selectedValue: $secondProductValue,
-                    isExpanded: $secondProductExpanded
-                )
-            )))
+        withAnimation {
+            messages.append(userMessage)
         }
 
-        // SIEMPRE mostrar el selector de vendedor desde el inicio
-        segments.append(.text(" del vendedor"))
-        segments.append(.component(id: "store", AnyView(
-            InlineSelectField(
-                type: .stores,
-                selectedValue: $storeValue,
-                isExpanded: $storeExpanded
-            )
-        )))
+        messageText = ""
 
-        return segments
+        // Simular respuesta del asistente
+        simulateAssistantResponse(to: userMessage.text)
     }
 
-    // Segmentos para método de pago (AMBOS selectores aparecen juntos)
-    private var paymentSegments: [TextSegment] {
-        // SIEMPRE mostrar AMBOS selectores desde el inicio
-        [
-            .text("Usaré la moneda"),
-            .component(id: "currency", AnyView(
-                InlineSelectField(
-                    type: .products, // Reutilizamos el tipo pero lo usaremos para moneda
-                    selectedValue: $currencyValue,
-                    isExpanded: $currencyExpanded
-                )
-            )),
-            .text(" usando la vía"),
-            .component(id: "payment_method", AnyView(
-                InlineSelectField(
-                    type: .stores, // Reutilizamos el tipo pero lo usaremos para métodos
-                    selectedValue: $paymentMethodValue,
-                    isExpanded: $paymentMethodExpanded
-                )
-            ))
-        ]
-    }
+    private func simulateAssistantResponse(to query: String) {
+        isTyping = true
 
-    // Texto de confirmación
-    private var confirmationText: String {
-        let total = 125.50 // Simulado
-        let shipping = 15.0 // Simulado
-        let currency = currencyValue ?? "CUP"
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            isTyping = false
 
-        return "Vale, el costo total del producto es \(total) \(currency) y el envío es \(shipping) \(currency), ¿quieres confirmar?"
-    }
-
-    // MARK: - Selection Handlers
-    private func handleFirstProductSelection() {
-        guard firstProductValue != nil else { return }
-
-        // Reiniciar el streaming para mostrar el segundo selector de producto
-        startStreaming = false
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            startStreaming = true
-        }
-    }
-
-    private func handleSecondProductSelection() {
-        guard secondProductValue != nil else { return }
-
-        // Verificar si TAMBIÉN está seleccionado el vendedor
-        // Solo avanzar cuando AMBOS estén seleccionados
-        guard storeValue != nil else { return }
-
-        advanceToPaymentStep()
-    }
-
-    private func handleStoreSelection() {
-        guard storeValue != nil else { return }
-
-        // Verificar si TAMBIÉN están seleccionados los productos
-        // Solo avanzar cuando AMBOS estén seleccionados
-        guard firstProductValue != nil && secondProductValue != nil else { return }
-
-        advanceToPaymentStep()
-    }
-
-    // Función auxiliar para avanzar al paso de pago
-    private func advanceToPaymentStep() {
-        // Cuando se completan productos + tienda, navegar a IntroVideo con metodopago
-        onComplete()
-    }
-
-    private func handleCurrencySelection() {
-        guard currencyValue != nil else { return }
-
-        // Verificar si TAMBIÉN está seleccionado el método de pago
-        // Solo avanzar cuando AMBOS estén seleccionados
-        guard paymentMethodValue != nil else { return }
-
-        advanceToConfirmationStep()
-    }
-
-    private func handlePaymentMethodSelection() {
-        guard paymentMethodValue != nil else { return }
-
-        // Verificar si TAMBIÉN está seleccionada la moneda
-        // Solo avanzar cuando AMBOS estén seleccionados
-        guard currencyValue != nil else { return }
-
-        advanceToConfirmationStep()
-    }
-
-    // Función auxiliar para avanzar al paso de confirmación
-    private func advanceToConfirmationStep() {
-        // Cuando se completan moneda + método de pago, navegar a IntroVideo con agradecimiento
-        onComplete()
-    }
-
-    // MARK: - Animations
-    private func startEntranceAnimation() {
-        // Comenzar con el step inicial configurado
-        currentStep = initialStep
-        
-        // Si viene del tercer video, mostrar confirmación final sin avatar
-        if initialStep == .showingConfirmation {
-            isFinalConfirmation = true
-            showAvatar = false
-            withAnimation(.spring(response: 0.9, dampingFraction: 0.88).delay(0.3)) {
-                showBubble = true
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                startStreaming = true
-                state = .streaming
-            }
-        } else {
-            // Avatar del cliente aparece
-            withAnimation(.spring(response: 0.8, dampingFraction: 0.85).delay(0.3)) {
-                showAvatar = true
-            }
-
-            // Burbuja del cliente aparece
-            withAnimation(.spring(response: 0.9, dampingFraction: 0.88).delay(0.6)) {
-                showBubble = true
-            }
-
-            // Streaming empieza
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
-                startStreaming = true
-                state = .streaming
+            withAnimation {
+                messages.append(ChatMessage(
+                    text: "Encontré varios productos para ti. ¿Te gustaría ver los resultados?",
+                    isUser: false
+                ))
             }
         }
-    }
-
-    // MARK: - Helper Functions
-    private func closeAllPickers() {
-        firstProductExpanded = false
-        secondProductExpanded = false
-        storeExpanded = false
-        currencyExpanded = false
-        paymentMethodExpanded = false
-    }
-
-    private func confirmOrder() {
-        print("✅ Pedido confirmado:")
-        print("  - Producto 1: \(firstProductValue ?? "N/A")")
-        print("  - Producto 2: \(secondProductValue ?? "N/A")")
-        print("  - Vendedor: \(storeValue ?? "N/A")")
-        print("  - Moneda: \(currencyValue ?? "N/A")")
-        print("  - Método de pago: \(paymentMethodValue ?? "N/A")")
-        // Aquí iría la lógica real de confirmación
-        dismiss()
-    }
-
-    // MARK: - Payment Methods
-    private var paymentMethods: [PaymentMethod] {
-        [
-            PaymentMethod(
-                id: "cash_cup",
-                name: "Efectivo CUP",
-                description: "Pago al recibir",
-                imageType: .systemIcon("banknote"),
-                color: Color.llegoPrimary,
-                currency: "CUP"
-            ),
-            PaymentMethod(
-                id: "cash_usd",
-                name: "Efectivo USD",
-                description: "Pago al recibir",
-                imageType: .systemIcon("dollarsign.circle"),
-                color: Color.llegoAccent,
-                currency: "USD"
-            ),
-            PaymentMethod(
-                id: "bank_transfer",
-                name: "Transferencia",
-                description: "Transferencia bancaria",
-                imageType: .systemIcon("building.columns"),
-                color: Color.llegoSecondary,
-                currency: "CUP"
-            ),
-            PaymentMethod(
-                id: "credit_card",
-                name: "Tarjeta",
-                description: "Visa/Mastercard",
-                imageType: .systemIcon("creditcard"),
-                color: Color.llegoTertiary,
-                currency: "USD"
-            )
-        ]
     }
 }
 
-// MARK: - Supporting Types
-struct SimpleCurrency: Identifiable, Equatable {
-    let id: String
-    let name: String
-    let flag: String
+// MARK: - Supporting Components
+
+struct ChatMessage: Identifiable {
+    let id = UUID()
+    let text: String
+    let isUser: Bool
+    let timestamp = Date()
+}
+
+struct MessageBubble: View {
+    let message: ChatMessage
+
+    var body: some View {
+        HStack {
+            if message.isUser {
+                Spacer()
+            }
+
+            Text(message.text)
+                .font(.system(size: 16))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 18)
+                        .fill(message.isUser ?
+                            Color.blue :
+                            Color(uiColor: .secondarySystemBackground)
+                        )
+                )
+                .foregroundColor(message.isUser ? .white : .primary)
+
+            if !message.isUser {
+                Spacer()
+            }
+        }
+    }
+}
+
+struct TypingIndicator: View {
+    @State private var animationPhase: Int = 0
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(0..<3) { index in
+                Circle()
+                    .fill(Color.secondary.opacity(0.5))
+                    .frame(width: 8, height: 8)
+                    .scaleEffect(animationPhase == index ? 1.2 : 1.0)
+                    .animation(
+                        .easeInOut(duration: 0.6)
+                        .repeatForever(autoreverses: true)
+                        .delay(Double(index) * 0.2),
+                        value: animationPhase
+                    )
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(Color(uiColor: .secondarySystemBackground))
+        )
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .onAppear {
+            animationPhase = 1
+        }
+    }
 }
 
 // MARK: - Preview
@@ -608,19 +265,4 @@ struct SimpleCurrency: Identifiable, Equatable {
     NavigationStack {
         ConversationalSearchView()
     }
-}
-
-#Preview("With Selected Values") {
-    struct PreviewWithValues: View {
-        @State private var productValue: String? = "Frutas frescas"
-        @State private var storeValue: String? = "La Bodeguita"
-
-        var body: some View {
-            NavigationStack {
-                ConversationalSearchView()
-            }
-        }
-    }
-
-    return PreviewWithValues()
 }
