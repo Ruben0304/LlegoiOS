@@ -1,0 +1,39 @@
+query AIChat($message: String!, $sessionId: String!) {
+  aiChat(input: {
+    message: $message
+    sessionId: $sessionId
+  }) {
+    output {
+      type
+      AItext
+      ids
+      entities {
+        ... on PaymentMethodType {
+          id
+          currency
+          method
+        }
+        ... on ProductType {
+          id
+          name
+          description
+          price
+          currency
+          image
+          availability
+        }
+        ... on BranchType {
+          id
+          name
+          address
+          phone
+          status
+          coordinates {
+            type
+            coordinates
+          }
+        }
+      }
+    }
+  }
+}

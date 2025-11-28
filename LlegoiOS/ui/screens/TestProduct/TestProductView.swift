@@ -6,8 +6,6 @@ struct TestProductView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var imageLoaded = false
     @State private var showStoreSelector = false
-    @State private var showVariantsSheet = false
-    @State private var navigateToSimilar = false
     @State private var selectedStore: Store? = Store(
         id: "3",
         name: "TropicalFresh Market",
@@ -20,168 +18,194 @@ struct TestProductView: View {
    
     
 
+
     var body: some View {
-        NavigationStack {
-        ZStack {
-            // Background with blur effect
-            BackgroundImageWithBlur(imageURL: product.imageUrl, imageLoaded: $imageLoaded)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .ignoresSafeArea(.all, edges: .all)
-
-
-            // Bottom content
-            VStack(alignment: .leading, spacing: 16) {
-                        // Brand/Source
-                        Text(product.shop)
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.white.opacity(0.8))
-
-                        // Product title
-                        Text(product.name)
-                            .font(.system(size: 36, weight: .bold))
-                            .foregroundColor(.white)
-                            .lineLimit(2)
+        NavigationStack{
+            ZStack {
+                // Background with blur effect
+                BackgroundImageWithBlur(imageURL: product.imageUrl, imageLoaded: $imageLoaded)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .ignoresSafeArea(.all, edges: .all)
+                
+                
+                // Bottom content
+                VStack(alignment: .leading, spacing: 16) {
+                    // Brand/Source
+                    Text(product.shop)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.white.opacity(0.8))
+                    
+                    // Product title
+                    Text(product.name)
+                        .font(.system(size: 36, weight: .bold))
+                        .foregroundColor(.white)
+                        .lineLimit(2)
+                    
+                    // Recipe info
+                    HStack(spacing: 24) {
+                        RecipeInfoItem(
+                            label: "TOTAL TIME",
+                            value: "10hr 45min"
+                        )
                         
-                        // Recipe info
-                        HStack(spacing: 24) {
-                            RecipeInfoItem(
-                                label: "TOTAL TIME",
-                                value: "10hr 45min"
-                            )
-
-                            Divider()
-                                .background(Color.white.opacity(0.3))
-                                .frame(height: 40)
-
-                            RecipeInfoItem(
-                                label: "COOK TIME",
-                                value: "20min"
-                            )
-
-                            Divider()
-                                .background(Color.white.opacity(0.3))
-                                .frame(height: 40)
-
-                            RecipeInfoItem(
-                                label: "YIELD",
-                                value: "4"
-                            )
-                        }
-                        .padding(.vertical, 8)
+                        Divider()
+                            .background(Color.white.opacity(0.3))
+                            .frame(height: 40)
                         
-                        // Store selector card
-                        Button(action: {
-                            showStoreSelector = true
-                        }) {
-                            HStack(spacing: 12) {
-                                // Store logo or icon
-                                if let store = selectedStore {
-                                    AsyncImage(url: URL(string: store.logoUrl)) { image in
-                                        image
-                                            .resizable()
-                                            .aspectRatio(contentMode: .fill)
-                                    } placeholder: {
-                                        Circle()
-                                            .fill(Color.white.opacity(0.2))
-                                            .overlay(
-                                                ProgressView()
-                                                    .tint(.white)
-                                            )
-                                    }
-                                    .frame(width: 60, height: 60)
-                                    .clipShape(Circle())
-                                } else {
-                                    ZStack {
-                                        Circle()
-                                            .fill(Color.white.opacity(0.2))
-                                            .frame(width: 60, height: 60)
-                                        
-                                        Image(systemName: "storefront.fill")
-                                            .font(.system(size: 24, weight: .medium))
-                                            .foregroundColor(.white)
-                                    }
-                                }
-                                
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("VENDEDOR")
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .foregroundColor(.white.opacity(0.7))
-                                    
-                                    Text(selectedStore?.name ?? "Seleccionar vendedor")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(.white)
-                                        .lineLimit(1)
-                                }
-                                
-                                Spacer()
-                                
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.white.opacity(0.5))
-                            }
-                            .padding(16)
-                            .glassEffect(.clear.interactive(),in: .rect(cornerRadius: 12))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
+                        RecipeInfoItem(
+                            label: "COOK TIME",
+                            value: "20min"
+                        )
                         
-                        // Action buttons
+                        Divider()
+                            .background(Color.white.opacity(0.3))
+                            .frame(height: 40)
+                        
+                        RecipeInfoItem(
+                            label: "YIELD",
+                            value: "4"
+                        )
+                    }
+                    .padding(.vertical, 8)
+                    
+                    // Store selector card
+                    Button(action: {
+                        showStoreSelector = true
+                    }) {
                         HStack(spacing: 12) {
-                            ActionButton(
-                                icon: "cart.fill",
-                                title: "Agregar",
-                                style: .secondary,
-                                action: {
-                                    // Agregar al carrito
-                                    print("Producto agregado al carrito")
+                            // Store logo or icon
+                            if let store = selectedStore {
+                                AsyncImage(url: URL(string: store.logoUrl)) { image in
+                                    image
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                } placeholder: {
+                                    Circle()
+                                        .fill(Color.white.opacity(0.2))
+                                        .overlay(
+                                            ProgressView()
+                                                .tint(.white)
+                                        )
                                 }
-                            )
+                                .frame(width: 60, height: 60)
+                                .clipShape(Circle())
+                            } else {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.white.opacity(0.2))
+                                        .frame(width: 60, height: 60)
+                                    
+                                    Image(systemName: "storefront.fill")
+                                        .font(.system(size: 24, weight: .medium))
+                                        .foregroundColor(.white)
+                                }
+                            }
                             
-                            ActionButton(
-                                icon: "rectangle.grid.2x2",
-                                title: "Similares",
-                                style: .secondary,
-                                action: {
-                                    navigateToSimilar = true
-                                }
-                            )
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("VENDEDOR")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(.white.opacity(0.7))
+                                
+                                Text(selectedStore?.name ?? "Seleccionar vendedor")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .lineLimit(1)
+                            }
                             
-                            ActionButton(
-                                icon: "slider.horizontal.3",
-                                title: "Variantes",
-                                style: .secondary,
-                                action: {
-                                    showVariantsSheet = true
-                                }
-                            )
+                            Spacer()
+                            
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(.white.opacity(0.5))
                         }
-                        
-                        
+                        .padding(16)
+                        //                            .glassEffect(.clear.interactive(),in: .rect(cornerRadius: 12))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    
+                    
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 420)
-                .padding(.bottom, 32)
-
+                .padding(.bottom, 120) // Espacio para el floating card
+                
+                
+                // Floating Card estilo Apple en la parte inferior
+                VStack {
+                    Spacer()
+                    
+                    HStack(spacing: 12) {
+                        // Foto del producto (circular)
+                        AsyncImage(url: URL(string: product.imageUrl)) { image in
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            ZStack {
+                                Color.gray.opacity(0.2)
+                                ProgressView()
+                            }
+                        }
+                        .frame(width: 56, height: 56)
+                        .clipShape(Circle())
+                        
+                        // Nombre y vendedor
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(product.name)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.primary)
+                                .lineLimit(1)
+                            
+                            Text(product.shop)
+                                .font(.system(size: 13, weight: .regular))
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                        }
+                        
+                        Spacer()
+                        
+                        // Botón con precio
+                        Button(action: {
+                            // Acción de agregar al carrito
+                            print("Producto agregado al carrito")
+                        }) {
+                            Text(product.price)
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 20)
+                            .padding(.vertical, 12)
+                            .background(Color.llegoPrimary)
+                            .clipShape(Capsule())
+                        }
+                    }
+                    .padding(16)
+                    .background(.ultraThinMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 30)
+                    .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: -5)
+                }
+            }
         }
-        .navigationBarBackButtonHidden(true)
         .toolbar{
             ToolbarItem(placement: .navigationBarLeading) {
-                BackButton(action: {
+                Button(action: {
                     dismiss()
-                })
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 30))
+                        .foregroundColor(.white)
+                        .symbolRenderingMode(.hierarchical)
+                }
             }
              ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: {
-                    // Acción de agregar al carrito
+                    // Acción de compartir u opciones
                 }) {
-                    Image(systemName: "cart.badge.plus")
+                    Image(systemName: "ellipsis.circle.fill")
+                        .font(.system(size: 30))
                         .foregroundColor(.white)
-                }
-            }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    // Acción de opciones
-                }) {
-                    Image(systemName: "ellipsis")
+                        .symbolRenderingMode(.hierarchical)
                 }
             }
            
@@ -189,13 +213,6 @@ struct TestProductView: View {
         .ignoresSafeArea()
         .sheet(isPresented: $showStoreSelector) {
             StoreSelectorSheet(selectedStore: $selectedStore)
-        }
-        .sheet(isPresented: $showVariantsSheet) {
-            VariantsSheet()
-        }
-        .fullScreenCover(isPresented: $navigateToSimilar) {
-            ShopView(category: nil)
-        }
         }
     }
 }

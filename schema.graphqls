@@ -40,6 +40,8 @@ type Query {
   hello: String!
   "Saluda por nombre"
   greet(name: String! = "mundo"): String!
+  "Chat con IA"
+  aiChat(input: AIChatInput!): AIChatResponse!
 }
 type UserType {
   id: String!
@@ -146,3 +148,26 @@ directive @specifiedBy(
     url: String!
   ) on SCALAR
 
+input AIChatInput {
+  message: String!
+  sessionId: String!
+}
+
+type AIChatResponse {
+  output: AIChatOutput!
+}
+
+type AIChatOutput {
+  type: String!
+  AItext: String!
+  ids: [String!]!
+  entities: [Entity!]
+}
+
+union Entity = ProductType | BranchType | PaymentMethodType
+
+type PaymentMethodType {
+  id: String!
+  currency: String!
+  method: String!
+}

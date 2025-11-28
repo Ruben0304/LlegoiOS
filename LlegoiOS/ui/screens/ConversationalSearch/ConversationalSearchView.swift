@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import Combine
 
 enum SearchMode {
     case quick
@@ -15,17 +16,14 @@ enum SearchMode {
 
 struct ConversationalSearchView: View {
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var viewModel = ConversationalSearchViewModel()
 
     // Search mode
     @State private var searchMode: SearchMode = .quick
 
     // Message input
     @State private var messageText: String = ""
-    @State private var messages: [ChatMessage] = []
     @FocusState private var isMessageFocused: Bool
-
-    // Loading states
-    @State private var isTyping: Bool = false
 
     // Gradient animation state
     @State private var isGradientExpanded: Bool = false
@@ -42,7 +40,7 @@ struct ConversationalSearchView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         VStack(spacing: 16) {
-                            if messages.isEmpty {
+                            if $viewModel.messages.isEmpty {
                                 // Estado vacío minimalista
                                 VStack(spacing: 12) {
                                     Image(systemName: "magnifyingglass")
@@ -56,13 +54,13 @@ struct ConversationalSearchView: View {
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 .padding(.top, 120)
                             } else {
-                                ForEach(messages) { message in
+                                ForEach(viewModel.messages) { message in
                                     MessageBubble(message: message)
                                         .id(message.id)
                                 }
 
                                 // Typing indicator
-                                if isTyping {
+                                if viewModel.isTyping {
                                     TypingIndicator()
                                 }
                             }
@@ -70,8 +68,8 @@ struct ConversationalSearchView: View {
                         .padding(.horizontal, 16)
                         .padding(.vertical, 20)
                     }
-                    .onChange(of: messages.count) { _ in
-                        if let lastMessage = messages.last {
+                    .onChange(of: $viewModel.messages.count) { _ in
+                        if let lastMessage = $viewModel.messages.last {
                             withAnimation {
                                 proxy.scrollTo(lastMessage.id, anchor: .bottom)
                             }
@@ -80,6 +78,8 @@ struct ConversationalSearchView: View {
                 }
             }
         }
+        .navigationTitle("Llegó IA")
+        .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar {
             // Back button con animación de gradiente al regresar
@@ -139,16 +139,10 @@ struct ConversationalSearchView: View {
             }
 
             // Mensaje inicial del asistente
-            if messages.isEmpty {
+            if $viewModel.messages.isEmpty {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
                     withAnimation {
-                        messages.append(ChatMessage(
-                            text: searchMode == .quick ?
-                                "Hola! Dime qué producto buscas y te ayudo a encontrarlo 😊" :
-                                "Modo manual activado. Busca productos escribiendo aquí abajo.",
-                            isFromUser: false,
-                            timestamp: Date()
-                        ))
+                        viewModel.sendWelcomeMessage(mode: searchMode)
                     }
                 }
             }
@@ -193,61 +187,114 @@ struct ConversationalSearchView: View {
     private func sendMessage() {
         guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
 
-        let userMessage = ChatMessage(text: messageText, isFromUser: true, timestamp: Date())
-
-        withAnimation {
-            messages.append(userMessage)
-        }
-
+        let textToSend = messageText
         messageText = ""
 
-        // Simular respuesta del asistente
-        simulateAssistantResponse(to: userMessage.text)
-    }
-
-    private func simulateAssistantResponse(to query: String) {
-        isTyping = true
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            isTyping = false
-
-            withAnimation {
-                messages.append(ChatMessage(
-                    text: "Encontré varios productos para ti. ¿Te gustaría ver los resultados?",
-                    isFromUser: false,
-                    timestamp: Date()
-                ))
-            }
-        }
+        // Enviar al ViewModel
+        viewModel.sendMessage(textToSend)
     }
 }
 
 // MARK: - Supporting Components
 
 struct MessageBubble: View {
-    let message: ChatMessage
+    let message: ConversationalChatMessage
 
     var body: some View {
-        HStack {
-            if message.isFromUser {
-                Spacer()
+        VStack(alignment: message.isFromUser ? .trailing : .leading, spacing: 8) {
+            // Texto del mensaje
+            HStack {
+                if message.isFromUser {
+                    Spacer()
+                }
+
+                Text(message.text)
+                    .font(.system(size: 16))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background {
+                        if message.isFromUser {
+                            // Burbuja del usuario con color sólido sobre blur
+                            RoundedRectangle(cornerRadius: 18)
+                                .fill(Color.llegoPrimary.opacity(0.9))
+                                .background(
+                                    RoundedRectangle(cornerRadius: 18)
+                                        .fill(.ultraThinMaterial)
+                                )
+                        } else {
+                            // Burbuja del asistente con backdrop blur
+                            RoundedRectangle(cornerRadius: 18)
+                                .fill(.regularMaterial)
+                        }
+                    }
+                    .foregroundColor(message.isFromUser ? .white : .primary)
+
+                if !message.isFromUser {
+                    Spacer()
+                }
             }
+            
+            // Mostrar entidades según el tipo de respuesta
+            if !message.isFromUser, let responseType = message.responseType {
 
-            Text(message.text)
-                .font(.system(size: 16))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 18)
-                        .fill(message.isFromUser ?
-                            Color.llegoPrimary :
-                            Color(uiColor: .secondarySystemBackground)
-                        )
-                )
-                .foregroundColor(message.isFromUser ? .white : .primary)
+                // LOGS DE DEBUG
+                let _ = print("🔍 [DEBUG] Response Type: \(responseType)")
+                let _ = print("🔍 [DEBUG] Products count: \(message.productEntities?.count ?? 0)")
+                let _ = print("🔍 [DEBUG] Branches count: \(message.branchEntities?.count ?? 0)")
+                let _ = print("🔍 [DEBUG] Payments count: \(message.paymentEntities?.count ?? 0)")
 
-            if !message.isFromUser {
-                Spacer()
+                // PRODUCTOS
+                if responseType.lowercased() == "products",
+                   let productEntities = message.productEntities,
+                   !productEntities.isEmpty {
+
+                    let _ = print("✅ [RENDER] Renderizando \(productEntities.count) productos")
+
+                    VStack(spacing: 10) {
+                        ForEach(productEntities) { product in
+                            AIProductCard(product: product)
+                        }
+                    }
+                    .padding(.top, 4)
+                }
+
+                // TIENDAS / SUCURSALES
+                else if responseType.lowercased() == "businesses" || responseType.lowercased() == "branches",
+                        let branchEntities = message.branchEntities,
+                        !branchEntities.isEmpty {
+
+                    let _ = print("✅ [RENDER] Renderizando \(branchEntities.count) tiendas")
+
+                    VStack(spacing: 10) {
+                        ForEach(branchEntities) { branch in
+                            NavigationLink(destination: StoreDetailView(store: branch.toStore())) {
+                                AIStoreCard(branch: branch)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.top, 4)
+                }
+
+                // MÉTODOS DE PAGO
+                else if responseType.lowercased() == "payment_method" || responseType.lowercased() == "payment_methods",
+                        let paymentEntities = message.paymentEntities,
+                        !paymentEntities.isEmpty {
+
+                    let _ = print("✅ [RENDER] Renderizando \(paymentEntities.count) métodos de pago")
+
+                    VStack(spacing: 10) {
+                        ForEach(paymentEntities) { payment in
+                            AIPaymentMethodCard(paymentMethod: payment)
+                        }
+                    }
+                    .padding(.top, 4)
+                }
+
+                // MENSAJE (sin entidades - solo texto)
+                else {
+                    let _ = print("ℹ️ [RENDER] Tipo: \(responseType) - Solo texto, sin entidades")
+                }
             }
         }
     }

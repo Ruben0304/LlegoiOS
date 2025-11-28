@@ -6,6 +6,9 @@ struct WelcomeView: View {
     // Global gradient state manager
     @StateObject private var gradientManager = GradientStateManager.shared
 
+    // Cart manager
+    @StateObject private var cartManager = CartManager.shared
+
     // Animation states
     @State private var carouselAppeared = false
     @State private var toolbarAppeared = false
@@ -19,7 +22,7 @@ struct WelcomeView: View {
     @State private var ripplePoints: [RipplePoint] = []
     @State private var navigateToIntroVideo: Bool = false
     @State private var navigateToLogin: Bool = false
-    @State private var showWallet: Bool = false
+    @State private var navigateToCart: Bool = false
 
     // Carousel state
     @State private var currentIndex: Int = 0
@@ -87,40 +90,74 @@ struct WelcomeView: View {
                     // Selector simple con flechas (estilo original)
                     HStack(spacing: 12) {
                         // Flecha izquierda
-                        Button(action: previousModel) {
-                            Image(systemName: "chevron.left")
-                                .font(.system(size: 24, weight: .bold))
-                                .foregroundColor(.white)
-                                .frame(width: 44, height: 44)
-                                .background(
-                                    Circle()
-                                        .fill(Color.white.opacity(0.15))
-                                )
+                        if #available(iOS 26.0, *) {
+                            // iOS 26+: Sin fondo ni opacidad
+                            Button(action: previousModel) {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 24, weight: .bold))
+                                    .foregroundColor(.black)
+                                    .frame(width: 44, height: 44)
+                            }
+                            .glassEffect(.regular.interactive(), in: .circle)
+                            .disabled(currentIndex == 0)
+                        } else {
+                            // iOS anterior: Con fondo y opacidad
+                            Button(action: previousModel) {
+                                Image(systemName: "chevron.left")
+                                    .font(.system(size: 24, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .frame(width: 44, height: 44)
+                                    .background(
+                                        Circle()
+                                            .fill(Color.white.opacity(0.15))
+                                    )
+                            }
+                            .opacity(currentIndex > 0 ? 1 : 0.3)
+                            .disabled(currentIndex == 0)
                         }
-                        .opacity(currentIndex > 0 ? 1 : 0.3)
-                        .disabled(currentIndex == 0)
 
-                        // Nombre de la categoría
-                        Text(models[currentIndex].name)
-                            .font(.system(size: 26, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
-                            .frame(width: 180)
-                            .multilineTextAlignment(.center)
-                            .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                        // Nombre de la categoría con subtítulo
+                        VStack(spacing: 4) {
+                            Text(models[currentIndex].name)
+                                .font(.system(size: 26, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
+                                .multilineTextAlignment(.center)
+                                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                            
+                            Text(models[currentIndex].description)
+                                .font(.system(size: 14, weight: .regular, design: .rounded))
+                                .foregroundColor(.white.opacity(0.7))
+                                .multilineTextAlignment(.center)
+                                .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)
+                        }
+                        .frame(width: 180)
 
                         // Flecha derecha
-                        Button(action: nextModel) {
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 24, weight: .bold))
-                                .foregroundColor(.white)
-                                .frame(width: 44, height: 44)
-                                .background(
-                                    Circle()
-                                        .fill(Color.white.opacity(0.15))
-                                )
+                        if #available(iOS 26.0, *) {
+                            // iOS 26+: Sin fondo ni opacidad
+                            Button(action: nextModel) {
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 24, weight: .bold))
+                                    .foregroundColor(.black)
+                                    .frame(width: 44, height: 44)
+                            }
+                            .glassEffect(.regular.interactive(), in: .circle)
+                            .disabled(currentIndex == models.count - 1)
+                        } else {
+                            // iOS anterior: Con fondo y opacidad
+                            Button(action: nextModel) {
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 24, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .frame(width: 44, height: 44)
+                                    .background(
+                                        Circle()
+                                            .fill(Color.white.opacity(0.15))
+                                    )
+                            }
+                            .opacity(currentIndex < models.count - 1 ? 1 : 0.3)
+                            .disabled(currentIndex == models.count - 1)
                         }
-                        .opacity(currentIndex < models.count - 1 ? 1 : 0.3)
-                        .disabled(currentIndex == models.count - 1)
                     }
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.top, 12)
@@ -152,47 +189,59 @@ struct WelcomeView: View {
             .navigationDestination(isPresented: $navigateToLogin) {
                 LoginView(viewModel: ProfileViewModel())
             }
+            .navigationDestination(isPresented: $navigateToCart) {
+                CartView()
+            }
             .toolbar {
-                // Avatar with floating animation
+                // Cart button con badge
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         let impact = UIImpactFeedbackGenerator(style: .light)
                         impact.impactOccurred()
-                        showWallet = true
+                        navigateToCart = true
                     }) {
-                        Text(balance)
+                            Image(systemName: "cart")
+//                                .foregroundStyle(.secondary)
+                            
                     }
+                    .badge(cartManager.cartItemCount)
                 }
                    
             ToolbarSpacer(.fixed,placement: .navigationBarTrailing)
             ToolbarItem(placement: .navigationBarTrailing) {
                 // Avatar
                 Button(action: { navigateToLogin = true }) {
-                    AsyncImage(url: URL(string: "https://i.pravatar.cc/100?img=3")) { phase in
-                        switch phase {
-                        case .empty:
-                            // Simple placeholder circle
-                            Circle()
-                                .fill(Color.gray.opacity(0.3))
-                                .frame(width: 32, height: 32)
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 32, height: 32)
-                                .clipShape(Circle())
-                        case .failure:
-                            // System placeholder avatar
-                            Image(systemName: "person.fill")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 32, height: 32)
-                                .clipShape(Circle())
-                                .foregroundStyle(.secondary)
-                        @unknown default:
-                            EmptyView()
-                        }
-                    }
+                    Image(systemName: "person.fill")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 32, height: 32)
+                        .clipShape(Circle())
+//                        .foregroundStyle(.secondary)
+//                    AsyncImage(url: URL(string: "https://i.pravatar.cc/100?img=3")) { phase in
+//                        switch phase {
+//                        case .empty:
+//                            // Simple placeholder circle
+//                            Circle()
+//                                .fill(Color.gray.opacity(0.3))
+//                                .frame(width: 32, height: 32)
+//                        case .success(let image):
+//                            image
+//                                .resizable()
+//                                .scaledToFill()
+//                                .frame(width: 50, height: 50)
+//                                .clipShape(Circle())
+//                        case .failure:
+//                            // System placeholder avatar
+//                            Image(systemName: "person.fill")
+//                                .resizable()
+//                                .scaledToFit()
+//                                .frame(width: 32, height: 32)
+//                                .clipShape(Circle())
+//                                .foregroundStyle(.secondary)
+//                        @unknown default:
+//                            EmptyView()
+//                        }
+//                    }
                 }
                 .buttonStyle(.plain)
             }
@@ -200,9 +249,6 @@ struct WelcomeView: View {
             .onAppear {
                 startEntranceAnimations()
                 startFloatingAnimations()
-            }
-            .fullScreenCover(isPresented: $showWallet) {
-                WalletView()
             }
         }
     }

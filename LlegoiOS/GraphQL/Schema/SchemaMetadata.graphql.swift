@@ -29,10 +29,13 @@ public extension LlegoAPI {
 
     @_spi(Execution) public static func objectType(forTypename typename: String) -> ApolloAPI.Object? {
       switch typename {
+      case "AIChatOutput": return LlegoAPI.Objects.AIChatOutput
+      case "AIChatResponse": return LlegoAPI.Objects.AIChatResponse
       case "AuthResponse": return LlegoAPI.Objects.AuthResponse
       case "BranchType": return LlegoAPI.Objects.BranchType
       case "CoordinatesType": return LlegoAPI.Objects.CoordinatesType
       case "Mutation": return LlegoAPI.Objects.Mutation
+      case "PaymentMethodType": return LlegoAPI.Objects.PaymentMethodType
       case "PaymentType": return LlegoAPI.Objects.PaymentType
       case "ProductType": return LlegoAPI.Objects.ProductType
       case "Query": return LlegoAPI.Objects.Query

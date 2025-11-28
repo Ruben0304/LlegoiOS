@@ -107,17 +107,9 @@ struct CartView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .top) {
-                // Fondo con gradiente elegante
-                LinearGradient(
-                    gradient: Gradient(colors: [
-                        Color.llegoBackground,
-                        Color.white,
-                        Color.llegoBackground.opacity(0.3)
-                    ]),
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+                // Background moderno consistente con WelcomeView, ShopView, ConversationalSearchView
+                WelcomeGradientBackground()
+                    .ignoresSafeArea()
 
                 if case .loading = viewModel.state {
                     VStack(spacing: 20) {
@@ -158,8 +150,8 @@ struct CartView: View {
                 }
                 // Cart with items
                 else {
-                    ScrollView(.vertical, showsIndicators: true) {
-                        VStack(spacing: 16) {
+                    ScrollView(.vertical, showsIndicators: false) {
+                        VStack(spacing: 12) {
                             ForEach(Array(viewModel.cartItems.enumerated()), id: \.element.id) { index, item in
                                 CartItemCard(
                                     item: item,
@@ -188,87 +180,95 @@ struct CartView: View {
 
                             // Resumen de precios
                             priceBreakdown
-
-                            // Selector de método de pago
-                            // paymentMethodSelector
+                                .padding(.top, 8)
                         }
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, 120)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     .safeAreaInset(edge: .bottom) {
-                        VStack(spacing: 12) {
-                            HStack(spacing: 8) {
-                                Image(systemName: "lock.shield.fill")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(.llegoAccent)
-
-                                Text("Pago seguro y protegido")
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(.gray)
-                            }
-
-                            HStack(spacing: 12) {
-                                Button(action: {
-                                    showPaymentMethodPicker = true
-                                }) {
-                                    HStack(spacing: 8) {
-                                        if let method = selectedPaymentMethod {
-                                            switch method.imageType {
-                                            case .systemIcon(let iconName):
-                                                Image(systemName: iconName)
-                                                    .font(.system(size: 16, weight: .bold))
-                                            case .assetImage(let imageName):
-                                                Image(imageName)
-                                                    .resizable()
-                                                    .scaledToFit()
-                                                    .frame(width: 23, height: 23)
-                                            }
-
-                                            VStack(alignment: .leading, spacing: 2) {
-                                                Text("Pagar con")
-                                                    .font(.system(size: 13, weight: .medium))
-                                                Text(method.name)
-                                                    .font(.system(size: 14, weight: .bold))
-                                            }
-                                        } else {
-                                            Image(systemName: "creditcard")
-                                                .font(.system(size: 16, weight: .bold))
-                                            Text("Método de pago")
-                                                .font(.system(size: 14, weight: .bold))
-                                        }
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 40)
+                        VStack(spacing: 0) {
+                            // Línea divisoria sutil
+                            Divider()
+                                .background(Color.gray.opacity(0.2))
+                            
+                            VStack(spacing: 12) {
+                                // Seguridad badge
+                                HStack(spacing: 6) {
+                                    Image(systemName: "lock.shield.fill")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.llegoAccent)
+                                    
+                                    Text("Pago seguro y protegido")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.secondary.opacity(0.8))
                                 }
-                                .buttonStyle(.glass)
-
-                                Button(action: {
-                                    processPayment()
-                                }) {
-                                    HStack(spacing: 4) {
-                                        if selectedPaymentMethod?.id == "invoice_international" {
-                                            Text("Enviar factura")
-                                                .font(.system(size: 16, weight: .bold, design: .rounded))
-                                        } else {
-                                            Text("Pagar")
-                                                .font(.system(size: 16, weight: .bold, design: .rounded))
-                                            Text(viewModel.formattedTotal)
-                                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .padding(.top, 8)
+                                
+                                // Botones de acción
+                                HStack(spacing: 10) {
+                                    Button(action: {
+                                        showPaymentMethodPicker = true
+                                    }) {
+                                        HStack(spacing: 6) {
+                                            if let method = selectedPaymentMethod {
+                                                switch method.imageType {
+                                                case .systemIcon(let iconName):
+                                                    Image(systemName: iconName)
+                                                        .font(.system(size: 14, weight: .semibold))
+                                                case .assetImage(let imageName):
+                                                    Image(imageName)
+                                                        .resizable()
+                                                        .scaledToFit()
+                                                        .frame(width: 20, height: 20)
+                                                }
+                                                
+                                                VStack(alignment: .leading, spacing: 1) {
+                                                    Text("Pagar con")
+                                                        .font(.system(size: 11, weight: .medium))
+                                                    Text(method.name)
+                                                        .font(.system(size: 13, weight: .bold))
+                                                }
+                                            } else {
+                                                Image(systemName: "creditcard")
+                                                    .font(.system(size: 14, weight: .semibold))
+                                                Text("Método")
+                                                    .font(.system(size: 13, weight: .semibold))
+                                            }
                                         }
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 48)
                                     }
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 40)
+                                    .buttonStyle(.glass)
+                                    
+                                    Button(action: {
+                                        processPayment()
+                                    }) {
+                                        HStack(spacing: 6) {
+                                            if selectedPaymentMethod?.id == "invoice_international" {
+                                                Text("Enviar factura")
+                                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                                            } else {
+                                                Text("Pagar")
+                                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                                                Text(viewModel.formattedTotal)
+                                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                            }
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .frame(height: 48)
+                                    }
+                                    .disabled(selectedPaymentMethod == nil)
+                                    .opacity(selectedPaymentMethod == nil ? 0.5 : 1.0)
+                                    .buttonStyle(.glassProminent)
+                                    .tint(.llegoPrimary)
                                 }
-                                .disabled(selectedPaymentMethod == nil)
-                                .opacity(selectedPaymentMethod == nil ? 0.5 : 1.0)
-                                .buttonStyle(.glassProminent)
-                                .tint(.llegoPrimary)
                             }
-                            .frame(height: 60)
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 16)
+                            .background(.ultraThinMaterial)
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 16)
-                        .ignoresSafeArea(.keyboard, edges: .bottom)
                     }
 
                     NavigationLink(
@@ -754,12 +754,15 @@ struct CartView: View {
         VStack(spacing: 24) {
             Spacer()
 
-            // Icono grande animado
+            // Icono grande con gradiente
             ZStack {
                 Circle()
                     .fill(
                         LinearGradient(
-                            gradient: Gradient(colors: [Color.llegoAccent.opacity(0.2), Color.llegoPrimary.opacity(0.1)]),
+                            gradient: Gradient(colors: [
+                                Color.llegoPrimary.opacity(0.1),
+                                Color.llegoAccent.opacity(0.15)
+                            ]),
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -768,17 +771,26 @@ struct CartView: View {
 
                 Image(systemName: "cart")
                     .font(.system(size: 60, weight: .light))
-                    .foregroundColor(.llegoPrimary.opacity(0.6))
+                    .foregroundStyle(
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color.llegoPrimary.opacity(0.7),
+                                Color.llegoAccent.opacity(0.8)
+                            ]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
             }
 
             VStack(spacing: 12) {
                 Text("Tu carrito está vacío")
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
-                    .foregroundColor(.llegoPrimary)
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary)
 
                 Text("Agrega productos para comenzar tu pedido")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.gray)
+                    .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
             }
@@ -803,7 +815,7 @@ struct CartView: View {
                     )
                 )
                 .cornerRadius(28)
-                .shadow(color: Color.llegoAccent.opacity(0.4), radius: 12, x: 0, y: 6)
+                .shadow(color: Color.llegoPrimary.opacity(0.3), radius: 12, x: 0, y: 6)
             }
             .padding(.top, 16)
 
@@ -812,76 +824,62 @@ struct CartView: View {
     }
 
     private var priceBreakdown: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             // Subtotal
             HStack {
                 Text("Subtotal")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundColor(.gray)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.secondary)
 
                 Spacer()
 
                 Text(viewModel.formattedSubtotal)
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundColor(.llegoPrimary)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundColor(.primary)
             }
 
             // Envío
             HStack {
                 HStack(spacing: 6) {
                     Image(systemName: "truck.box.fill")
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.llegoAccent)
 
                     Text("Envío")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundColor(.gray)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.secondary)
                 }
 
                 Spacer()
 
                 Text(viewModel.formattedDeliveryFee)
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundColor(.llegoPrimary)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundColor(.primary)
             }
 
             shippingTipCard
 
             Divider()
-                .background(Color.gray.opacity(0.3))
+                .background(Color.gray.opacity(0.2))
                 .padding(.vertical, 4)
 
             // Total
             HStack {
                 Text("Total")
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundColor(.llegoPrimary)
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary)
 
                 Spacer()
 
                 Text(viewModel.formattedTotal)
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .foregroundColor(.llegoAccent)
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundColor(.llegoPrimary)
             }
         }
-        .padding(24)
-        .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(Color.white)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(
-                            LinearGradient(
-                                gradient: Gradient(colors: [Color.llegoAccent.opacity(0.3), Color.llegoPrimary.opacity(0.2)]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1.5
-                        )
-                )
-                .shadow(color: Color.black.opacity(0.08), radius: 15, x: 0, y: 5)
-        )
-        .padding(.top, 8)
+        .padding(20)
+        .background(.regularMaterial)
+        .cornerRadius(18)
+        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
     }
 
     private var tipAttributedString: AttributedString {
@@ -898,21 +896,16 @@ struct CartView: View {
     }
 
     private var shippingTipCard: some View {
-        HStack(alignment: .top, spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(Color.llegoAccent.opacity(0.12))
-                    .frame(width: 36, height: 36)
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "lightbulb.fill")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.llegoAccent)
+                .frame(width: 24, height: 24)
 
-                Image(systemName: "lightbulb.fill")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.llegoAccent)
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text("Tip")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.llegoPrimary)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(.secondary)
                     .textCase(.uppercase)
 
                 Button(action: {
@@ -924,15 +917,9 @@ struct CartView: View {
                 .buttonStyle(.plain)
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.llegoBackground.opacity(0.4))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.llegoAccent.opacity(0.15), lineWidth: 1)
-                )
-        )
+        .padding(12)
+        .background(.thinMaterial)
+        .cornerRadius(12)
     }
 
    
@@ -948,32 +935,34 @@ struct PaymentMethodPickerView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Fondo
-//                LinearGradient(
-//                    gradient: Gradient(colors: [
-//                        Color.llegoBackground,
-//                        Color.white
-//                    ]),
-//                    startPoint: .topLeading,
-//                    endPoint: .bottomTrailing
-//                )
-//                .ignoresSafeArea()
+                // Fondo moderno
+                WelcomeGradientBackground()
+                    .ignoresSafeArea()
 
                 ScrollView {
                     VStack(spacing: 16) {
-                        // Header
+                        // Header minimalista
                         VStack(spacing: 8) {
                             Image(systemName: "creditcard.circle.fill")
                                 .font(.system(size: 50, weight: .medium))
-                                .foregroundColor(.llegoAccent)
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [
+                                            Color.llegoAccent,
+                                            Color.llegoPrimary
+                                        ]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
 
                             Text("Selecciona tu método de pago")
                                 .font(.system(size: 20, weight: .bold, design: .rounded))
-                                .foregroundColor(.llegoPrimary)
+                                .foregroundColor(.primary)
 
                             Text("Elige cómo quieres pagar tu pedido")
                                 .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.gray)
+                                .foregroundColor(.secondary)
                         }
                         .padding(.top, 20)
                         .padding(.bottom, 10)
@@ -995,7 +984,7 @@ struct PaymentMethodPickerView: View {
                                 }
                             }
                         }
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal, 16)
                         .padding(.bottom, 40)
                     }
                 }
@@ -1021,47 +1010,47 @@ struct PaymentMethodRow: View {
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 16) {
+            HStack(spacing: 14) {
                 // Icono del método
                 ZStack {
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(method.color.opacity(0.1))
-                        .frame(width: 55, height: 55)
+                        .fill(method.color.opacity(0.12))
+                        .frame(width: 50, height: 50)
 
                     switch method.imageType {
                     case .systemIcon(let iconName):
                         Image(systemName: iconName)
-                            .font(.system(size: 24, weight: .semibold))
+                            .font(.system(size: 22, weight: .semibold))
                             .foregroundColor(method.color)
                     case .assetImage(let imageName):
                         Image(imageName)
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 32, height: 32)
+                            .frame(width: 28, height: 28)
                     }
                 }
 
                 // Información del método
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 5) {
                     Text(method.name)
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
-                        .foregroundColor(.llegoPrimary)
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundColor(.primary)
 
                     Text(method.description)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.gray)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.secondary)
 
                     // Moneda
                     HStack(spacing: 4) {
                         Image(systemName: "banknote")
-                            .font(.system(size: 11, weight: .medium))
+                            .font(.system(size: 10, weight: .medium))
                         Text(method.currency)
-                            .font(.system(size: 12, weight: .bold))
+                            .font(.system(size: 11, weight: .bold))
                     }
                     .foregroundColor(method.color)
-                    .padding(.horizontal, 8)
+                    .padding(.horizontal, 7)
                     .padding(.vertical, 3)
-                    .background(method.color.opacity(0.12))
+                    .background(method.color.opacity(0.10))
                     .cornerRadius(6)
                 }
 
@@ -1070,16 +1059,16 @@ struct PaymentMethodRow: View {
                 // Indicador de selección
                 ZStack {
                     Circle()
-                        .stroke(isSelected ? method.color : Color.gray.opacity(0.3), lineWidth: 2.5)
-                        .frame(width: 26, height: 26)
+                        .stroke(isSelected ? method.color : Color.secondary.opacity(0.2), lineWidth: 2)
+                        .frame(width: 24, height: 24)
 
                     if isSelected {
                         Circle()
                             .fill(method.color)
-                            .frame(width: 16, height: 16)
+                            .frame(width: 14, height: 14)
                             .overlay(
                                 Image(systemName: "checkmark")
-                                    .font(.system(size: 10, weight: .bold))
+                                    .font(.system(size: 9, weight: .bold))
                                     .foregroundColor(.white)
                             )
                             .scaleEffect(isSelected ? 1.0 : 0.0)
@@ -1087,25 +1076,25 @@ struct PaymentMethodRow: View {
                     }
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 18)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 16)
             .background(
-                RoundedRectangle(cornerRadius: 18)
-                    .fill(Color.white)
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(.regularMaterial)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 18)
+                        RoundedRectangle(cornerRadius: 16)
                             .stroke(
-                                isSelected ? method.color.opacity(0.5) : Color.clear,
-                                lineWidth: 2
+                                isSelected ? method.color.opacity(0.4) : Color.clear,
+                                lineWidth: 1.5
                             )
                     )
                     .shadow(
-                        color: isSelected ? method.color.opacity(0.25) : Color.black.opacity(0.06),
-                        radius: isSelected ? 12 : 6,
-                        x: 0, y: isSelected ? 6 : 3
+                        color: Color.black.opacity(0.04),
+                        radius: 8,
+                        x: 0, y: 2
                     )
             )
-            .scaleEffect(isSelected ? 1.02 : 1.0)
+            .scaleEffect(isSelected ? 1.01 : 1.0)
             .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isSelected)
         }
         .buttonStyle(PlainButtonStyle())
@@ -1122,7 +1111,7 @@ struct CartItemCard: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Imagen del producto - más pequeña
+            // Imagen del producto
             CachedAsyncImage(
                 url: URL(string: item.imageUrl),
                 content: { image in
@@ -1134,28 +1123,28 @@ struct CartItemCard: View {
                     ProgressView()
                 }
             )
-            .frame(width: 65, height: 65)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .frame(width: 70, height: 70)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
             .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.llegoBackground.opacity(0.5))
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(.thinMaterial)
             )
 
-            // Información del producto - compacta
-            VStack(alignment: .leading, spacing: 4) {
+            // Información del producto
+            VStack(alignment: .leading, spacing: 5) {
                 Text(item.name)
-                    .font(.system(size: 15, weight: .bold, design: .default))
-                    .foregroundColor(.llegoPrimary)
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(.primary)
                     .lineLimit(1)
 
                 HStack(spacing: 6) {
                     Text(item.shop)
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
 
                     Text("•")
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
 
                     Text(item.weight)
                         .font(.system(size: 11, weight: .medium))
@@ -1166,7 +1155,7 @@ struct CartItemCard: View {
                 HStack(spacing: 6) {
                     Text(item.formattedPrice)
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
 
                     Text("× \(item.quantity)")
                         .font(.system(size: 12, weight: .bold))
@@ -1174,66 +1163,64 @@ struct CartItemCard: View {
 
                     Text("=")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.gray)
+                        .foregroundColor(.secondary)
 
                     Text(item.formattedItemTotal)
                         .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .foregroundColor(.llegoAccent)
+                        .foregroundColor(.llegoPrimary)
                 }
             }
 
             Spacer()
 
-            // Controles compactos - horizontal
+            // Controles compactos
             VStack(spacing: 8) {
                 Button(action: onRemove) {
                     Image(systemName: "trash.fill")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.red.opacity(0.8))
-                        .frame(width: 26, height: 26)
+                        .frame(width: 28, height: 28)
                         .background(
                             Circle()
-                                .fill(Color.red.opacity(0.1))
+                                .fill(.ultraThinMaterial)
                         )
                 }
 
-                // Controles de cantidad horizontales
+                // Controles de cantidad
                 HStack(spacing: 6) {
                     Button(action: onDecrement) {
                         Image(systemName: "minus")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.llegoPrimary)
-                            .frame(width: 26, height: 26)
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.primary)
+                            .frame(width: 28, height: 28)
                             .background(
                                 Circle()
-                                    .fill(Color.llegoBackground)
+                                    .fill(.thinMaterial)
                             )
                     }
 
                     Text("\(item.quantity)")
                         .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(.primary)
                         .frame(width: 22)
 
                     Button(action: onIncrement) {
                         Image(systemName: "plus")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.llegoPrimary)
-                            .frame(width: 26, height: 26)
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.primary)
+                            .frame(width: 28, height: 28)
                             .background(
                                 Circle()
-                                    .fill(Color.llegoAccent.opacity(0.2))
+                                    .fill(.thinMaterial)
                             )
                     }
                 }
             }
         }
-        .padding(10)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white)
-                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-        )
+        .padding(12)
+        .background(.regularMaterial)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
     }
 }
 
@@ -1250,8 +1237,8 @@ struct PaymentLinkSheetView: View {
             colors = [Color.llegoAccent, Color.llegoAccent]
         } else {
             colors = [
-                Color(red: 0.2, green: 0.5, blue: 0.9),
-                Color(red: 0.15, green: 0.4, blue: 0.85)
+                Color.llegoPrimary,
+                Color.llegoAccent
             ]
         }
         return LinearGradient(
@@ -1264,7 +1251,7 @@ struct PaymentLinkSheetView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                Color.llegoBackground
+                WelcomeGradientBackground()
                     .ignoresSafeArea()
 
                 ScrollView {
@@ -1275,8 +1262,8 @@ struct PaymentLinkSheetView: View {
                                 .fill(
                                     LinearGradient(
                                         gradient: Gradient(colors: [
-                                            Color(red: 0.2, green: 0.5, blue: 0.9).opacity(0.2),
-                                            Color(red: 0.2, green: 0.5, blue: 0.9).opacity(0.1)
+                                            Color.llegoPrimary.opacity(0.15),
+                                            Color.llegoAccent.opacity(0.1)
                                         ]),
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
@@ -1286,7 +1273,16 @@ struct PaymentLinkSheetView: View {
 
                             Image(systemName: "link.circle.fill")
                                 .font(.system(size: 60, weight: .medium))
-                                .foregroundColor(Color(red: 0.2, green: 0.5, blue: 0.9))
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [
+                                            Color.llegoPrimary,
+                                            Color.llegoAccent
+                                        ]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
                         }
                         .padding(.top, 20)
 
@@ -1294,11 +1290,11 @@ struct PaymentLinkSheetView: View {
                         VStack(spacing: 12) {
                             Text("Link de Pago Generado")
                                 .font(.system(size: 24, weight: .bold, design: .rounded))
-                                .foregroundColor(.llegoPrimary)
+                                .foregroundColor(.primary)
 
                             Text("Comparte este link con alguien en el exterior para que pague tu pedido")
                                 .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(.gray)
+                                .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 30)
                         }
@@ -1308,26 +1304,20 @@ struct PaymentLinkSheetView: View {
                             // Link Display
                             HStack(spacing: 12) {
                                 Image(systemName: "link")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(Color(red: 0.2, green: 0.5, blue: 0.9))
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundColor(.llegoPrimary)
 
                                 Text(paymentLink)
-                                    .font(.system(size: 14, weight: .medium, design: .monospaced))
-                                    .foregroundColor(.llegoPrimary)
+                                    .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                    .foregroundColor(.primary)
                                     .lineLimit(2)
                                     .truncationMode(.middle)
 
                                 Spacer(minLength: 0)
                             }
-                            .padding(16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .fill(Color.white)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 16)
-                                            .stroke(Color(red: 0.2, green: 0.5, blue: 0.9).opacity(0.3), lineWidth: 1.5)
-                                    )
-                            )
+                            .padding(14)
+                            .background(.regularMaterial)
+                            .cornerRadius(14)
 
                             // Copy Button
                             Button(action: {
@@ -1354,13 +1344,13 @@ struct PaymentLinkSheetView: View {
                                 .background(copyButtonGradient)
                                 .cornerRadius(16)
                                 .shadow(
-                                    color: showCopiedMessage ? Color.llegoAccent.opacity(0.4) : Color(red: 0.2, green: 0.5, blue: 0.9).opacity(0.3),
-                                    radius: 12,
+                                    color: Color.llegoPrimary.opacity(0.3),
+                                    radius: 10,
                                     x: 0,
-                                    y: 6
+                                    y: 4
                                 )
                             }
-                            .scaleEffect(showCopiedMessage ? 1.05 : 1.0)
+                            .scaleEffect(showCopiedMessage ? 1.02 : 1.0)
                             .animation(.spring(response: 0.4, dampingFraction: 0.7), value: showCopiedMessage)
                         }
                         .padding(.horizontal, 20)
@@ -1370,12 +1360,12 @@ struct PaymentLinkSheetView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack(spacing: 8) {
                                 Image(systemName: "info.circle.fill")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(Color(red: 0.2, green: 0.5, blue: 0.9))
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundColor(.llegoPrimary)
 
                                 Text("Instrucciones")
                                     .font(.system(size: 15, weight: .bold))
-                                    .foregroundColor(.llegoPrimary)
+                                    .foregroundColor(.primary)
                             }
 
                             VStack(alignment: .leading, spacing: 8) {
@@ -1385,12 +1375,9 @@ struct PaymentLinkSheetView: View {
                                 InstructionRow(number: "4", text: "Recibirás una notificación cuando se complete el pago")
                             }
                         }
-                        .padding(20)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Color.white)
-                                .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-                        )
+                        .padding(18)
+                        .background(.regularMaterial)
+                        .cornerRadius(16)
                         .padding(.horizontal, 20)
 
                         Spacer()
@@ -1422,17 +1409,17 @@ struct InstructionRow: View {
         HStack(alignment: .top, spacing: 12) {
             ZStack {
                 Circle()
-                    .fill(Color(red: 0.2, green: 0.5, blue: 0.9).opacity(0.15))
-                    .frame(width: 28, height: 28)
+                    .fill(Color.llegoPrimary.opacity(0.12))
+                    .frame(width: 26, height: 26)
 
                 Text(number)
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundColor(Color(red: 0.2, green: 0.5, blue: 0.9))
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundColor(.llegoPrimary)
             }
 
             Text(text)
                 .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.gray)
+                .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
     }

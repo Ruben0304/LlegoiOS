@@ -6,6 +6,7 @@ struct ShopView: View {
     @State private var showFiltersSheet = false
     @State private var showSortOptions = false
     @State private var animationDelay: Double = 0
+    @State private var selectedProduct: Product? = nil
 
     // Parámetros opcionales para filtrado inicial
     let initialCategory: String?
@@ -113,8 +114,7 @@ struct ShopView: View {
     // MARK: - Results Counter
     
 
-    // MARK: - Products Grid
-    private var productsGrid: some View {
+     private var productsGrid: some View {
         ScrollView {
             LazyVGrid(
                 columns: [
@@ -125,45 +125,41 @@ struct ShopView: View {
                 spacing: 20
             ) {
                 ForEach(Array(viewModel.filteredProducts.enumerated()), id: \.element.id) { index, product in
-                    NavigationLink {
-                        TestProductView(product: product)
-                    } label: {
-                        ProductCard(
-                            product: product,
-                            count: Binding(
-                                get: { productCounts[product.id] ?? 0 },
-                                set: { newValue in
-                                    if newValue > 0 {
-                                        productCounts[product.id] = newValue
-                                    } else {
+                    ProductCard(
+                        product: product,
+                        count: Binding(
+                            get: { productCounts[product.id] ?? 0 },
+                            set: { newValue in
+                                if newValue > 0 {
+                                    productCounts[product.id] = newValue
+                                } else {
+                                    productCounts.removeValue(forKey: product.id)
+                                }
+                            }
+                        ),
+                        onIncrement: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                productCounts[product.id] = (productCounts[product.id] ?? 0) + 1
+                            }
+                        },
+                        onDecrement: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                let currentCount = productCounts[product.id] ?? 0
+                                if currentCount > 0 {
+                                    if currentCount == 1 {
                                         productCounts.removeValue(forKey: product.id)
-                                    }
-                                }
-                            ),
-                            onIncrement: {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                    productCounts[product.id] = (productCounts[product.id] ?? 0) + 1
-                                }
-                            },
-                            onDecrement: {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                    let currentCount = productCounts[product.id] ?? 0
-                                    if currentCount > 0 {
-                                        if currentCount == 1 {
-                                            productCounts.removeValue(forKey: product.id)
-                                        } else {
-                                            productCounts[product.id] = currentCount - 1
-                                        }
+                                    } else {
+                                        productCounts[product.id] = currentCount - 1
                                     }
                                 }
                             }
-                        )
-                        .contentShape(Rectangle())
-                    }
-                    .simultaneousGesture(TapGesture().onEnded {
+                        }
+                    )
+                    .contentShape(Rectangle())
+                    .onTapGesture {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    })
-                    .buttonStyle(.plain)
+                        selectedProduct = product
+                    }
                     .opacity(animationDelay > Double(index) * 0.1 ? 1 : 0)
                     .scaleEffect(animationDelay > Double(index) * 0.1 ? 1 : 0.95)
                     .offset(y: animationDelay > Double(index) * 0.1 ? 0 : 10)
@@ -185,6 +181,9 @@ struct ShopView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                 animationDelay = Double(viewModel.filteredProducts.count) * 0.1 + 0.1
             }
+        }
+        .fullScreenCover(item: $selectedProduct) { product in
+            TestProductView(product: product)
         }
     }
 
