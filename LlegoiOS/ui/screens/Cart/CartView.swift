@@ -1,5 +1,7 @@
 import SwiftUI
 import StripePaymentSheet
+import LocalAuthentication
+import AudioToolbox
 
 enum Currency: String, CaseIterable {
     case CUP = "CUP"
@@ -43,6 +45,7 @@ struct CartView: View {
     @State private var generatedPaymentLink: String?
     @State private var showPaymentLinkSheet = false
     @State private var showBankTransferSheet = false
+    @State private var showOrderConfirmation = false
     private let paymentRepository = PaymentRepository()
 
     let paymentMethods: [PaymentMethod] = [
@@ -259,8 +262,6 @@ struct CartView: View {
                                         .frame(maxWidth: .infinity)
                                         .frame(height: 48)
                                     }
-                                    .disabled(selectedPaymentMethod == nil)
-                                    .opacity(selectedPaymentMethod == nil ? 0.5 : 1.0)
                                     .buttonStyle(.glassProminent)
                                     .tint(.llegoPrimary)
                                 }
@@ -280,122 +281,132 @@ struct CartView: View {
                     .hidden()
                 }
             }
-        }
-        .navigationTitle("Carrito")
-        .navigationBarBackButtonHidden(true)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                BackButton(action: {
-                    dismiss()
-                })
-            }
+            .navigationTitle("Carrito")
+            .navigationBarBackButtonHidden(true)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    BackButton(action: {
+                        dismiss()
+                    })
+                }
 
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Menu {
-                    ForEach(Currency.allCases, id: \.self) { currency in
-                        Button(action: {
-                            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                                selectedCurrency = currency
-                            }
-                        }) {
-                            HStack {
-                                Text(currency.flag)
-                                    .font(.system(size: 20))
-                                Text(currency.rawValue)
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                if selectedCurrency == currency {
-                                    Image(systemName: "checkmark")
-                                        .font(.system(size: 14, weight: .bold))
-                                        .foregroundColor(.llegoAccent)
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
+                        ForEach(Currency.allCases, id: \.self) { currency in
+                            Button(action: {
+                                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                                    selectedCurrency = currency
+                                }
+                            }) {
+                                HStack {
+                                    Text(currency.flag)
+                                        .font(.system(size: 20))
+                                    Text(currency.rawValue)
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(.primary)
+                                    Spacer()
+                                    if selectedCurrency == currency {
+                                        Image(systemName: "checkmark")
+                                            .font(.system(size: 14, weight: .bold))
+                                            .foregroundColor(.llegoAccent)
+                                    }
                                 }
                             }
                         }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text(selectedCurrency.flag)
+                                .font(.system(size: 18))
+                            Text(selectedCurrency.rawValue)
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.llegoPrimary)
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.llegoPrimary)
+                        }
+                        .frame(width: 85, height: 40)
                     }
-                } label: {
-                    HStack(spacing: 6) {
-                        Text(selectedCurrency.flag)
-                            .font(.system(size: 18))
-                        Text(selectedCurrency.rawValue)
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.llegoPrimary)
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(.llegoPrimary)
-                    }
-                    .frame(width: 85, height: 40)
                 }
             }
-        }
-        .sheet(isPresented: $showPaymentMethodPicker) {
-            PaymentMethodPickerView(
-                paymentMethods: paymentMethods,
-                selectedMethod: $selectedPaymentMethod
-            )
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $showPaymentLinkSheet) {
-            PaymentLinkSheetView(
-                paymentLink: generatedPaymentLink ?? "",
-                onDismiss: {
-                    showPaymentLinkSheet = false
-                }
-            )
-            .presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $showBankTransferSheet) {
-            BankTransferSheetView(
-                totalAmount: viewModel.formattedTotal,
-                onConfirm: { _ in
-                    showBankTransferSheet = false
-                    paymentAlertMessage = "¡Transferencia registrada! Estamos verificando tu pago. Te notificaremos cuando se confirme."
-                    showPaymentAlert = true
-
-                    // Limpiar carrito después de confirmar
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            .sheet(isPresented: $showPaymentMethodPicker) {
+                PaymentMethodPickerView(
+                    paymentMethods: paymentMethods,
+                    selectedMethod: $selectedPaymentMethod
+                )
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showPaymentLinkSheet) {
+                PaymentLinkSheetView(
+                    paymentLink: generatedPaymentLink ?? "",
+                    onDismiss: {
+                        showPaymentLinkSheet = false
+                    }
+                )
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showBankTransferSheet) {
+                BankTransferSheetView(
+                    totalAmount: viewModel.formattedTotal,
+                    onConfirm: { _ in
+                        showBankTransferSheet = false
+                        // Mostrar pantalla de confirmación (FullScreenCover)
+                        // Limpiar carrito después un momento o dejar que la confirmación lo maneje si fuera necesario,
+                        // pero aquí limpiamos los datos del ViewModel.
                         viewModel.clearCart()
+                        
+                        // Pequeño delay para una transición suave
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            showOrderConfirmation = true
+                        }
+                    },
+                    onDismiss: {
+                        showBankTransferSheet = false
                     }
-                },
-                onDismiss: {
-                    showBankTransferSheet = false
-                }
-            )
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
-        }
-        .alert("Estado del Pago", isPresented: $showPaymentAlert) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text(paymentAlertMessage)
-        }
-        .overlay {
-            if isLoadingPayment {
-                ZStack {
-                    Color.black.opacity(0.4)
-                        .ignoresSafeArea()
+                )
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
+            .alert("Estado del Pago", isPresented: $showPaymentAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(paymentAlertMessage)
+            }
+            .overlay {
+                if isLoadingPayment {
+                    ZStack {
+                        Color.black.opacity(0.4)
+                            .ignoresSafeArea()
 
-                    VStack(spacing: 20) {
-                        LottieView(name: "loading")
-                            .frame(width: 150, height: 150)
-                        Text("Preparando pago...")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.white)
+                        VStack(spacing: 20) {
+                            LottieView(name: "loading")
+                                .frame(width: 150, height: 150)
+                            Text("Preparando pago...")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.white)
+                        }
+                        .padding(40)
+                        .background(
+                            RoundedRectangle(cornerRadius: 20)
+                                .fill(Color.llegoBackground)
+                        )
                     }
-                    .padding(40)
-                    .background(
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(Color.llegoBackground)
-                    )
                 }
             }
+            .onAppear {
+                viewModel.loadCart()
+            }
+            .fullScreenCover(isPresented: $showOrderConfirmation) {
+                OrderConfirmationView(
+                    deliveryLocation: "Calle 23 #456, Vedado, La Habana", //TODO: Usar ubicación real del usuario
+                    selectedPaymentMethod: selectedPaymentMethod?.name ?? "Método de Pago"
+                )
+            }
         }
-        .onAppear {
-            viewModel.loadCart()
-        }
+        
+        
     }
 
     // MARK: - Payment Method Selector
@@ -509,8 +520,63 @@ struct CartView: View {
 
     // MARK: - Process Payment
     private func processPayment() {
-        guard let paymentMethod = selectedPaymentMethod else { return }
+        // Validaciones iniciales
+        if viewModel.cartItems.isEmpty {
+             paymentAlertMessage = "No hay productos en el carrito."
+             showPaymentAlert = true
+             return
+        }
 
+        guard let paymentMethod = selectedPaymentMethod else {
+             paymentAlertMessage = "Por favor selecciona un método de pago."
+             showPaymentAlert = true
+             return
+        }
+        
+        // Autenticación Biométrica (FaceID / TouchID)
+        authenticateAndPay(paymentMethod: paymentMethod)
+    }
+
+    private func authenticateAndPay(paymentMethod: PaymentMethod) {
+        let context = LAContext()
+        var error: NSError?
+
+        // Verificar si el dispositivo soporta biometría
+        if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
+            let reason = "Confirma tu identidad para realizar el pago de \(viewModel.formattedTotal)"
+
+            context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: reason) { success, authenticationError in
+                DispatchQueue.main.async {
+                    if success {
+                        // ✅ Éxito: Sonido, Haptic y Proceder
+                        playSuccessFeedback()
+                        executePaymentProcessing(paymentMethod: paymentMethod)
+                    } else {
+                        // ❌ Fallo o Cancelación
+                        if let error = authenticationError as? LAError {
+                             // Manejar errores específicos si es necesario
+                             print("Authentication failed: \(error.localizedDescription)")
+                        }
+                    }
+                }
+            }
+        } else {
+            // Si no hay biometría disponible, proceder directamente (o pedir PIN si implementáramos eso)
+            executePaymentProcessing(paymentMethod: paymentMethod)
+        }
+    }
+    
+    private func playSuccessFeedback() {
+        // Haptic Feedback
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+        
+        // System Sound (Simular el 'Ding' de confirmación)
+        // 1407: System Payment Success / Confirm
+        AudioServicesPlaySystemSound(1407)
+    }
+
+    private func executePaymentProcessing(paymentMethod: PaymentMethod) {
         // Si el método de pago es factura internacional, generar payment link
         if paymentMethod.id == "invoice_international" {
             generatePaymentLink()
@@ -523,12 +589,19 @@ struct CartView: View {
         else if paymentMethod.id == "credit_card" {
             initiateStripePayment()
         } else {
-            // Para otros métodos de pago, usar el flujo actual
-            print("💳 Procesando pago con: \(paymentMethod.name) - \(paymentMethod.currency)")
-            print("💰 Total: \(viewModel.formattedTotal)")
-
-            // Aquí iría la lógica para otros métodos de pago
-            // (QvaPay, TropiPay, Efectivo, etc.)
+            // Para otros métodos de pago (Efectivo, QvaPay, etc.) simular proceso
+            isLoadingPayment = true
+            
+            // Simular delay de red
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                isLoadingPayment = false
+                
+                // Limpiar carrito
+                viewModel.clearCart()
+                
+                // Mostrar confirmación
+                showOrderConfirmation = true
+            }
         }
     }
 
@@ -728,13 +801,12 @@ struct CartView: View {
         switch result {
         case .completed:
             print("✅ Pago completado exitosamente")
-            paymentAlertMessage = "¡Pago completado exitosamente! Tu pedido está siendo procesado."
-            showPaymentAlert = true
-
-            // Limpiar carrito después de pago exitoso
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                viewModel.clearCart()
-            }
+            
+            // Limpiar carrito
+            viewModel.clearCart()
+            
+            // Mostrar Confirmación
+            showOrderConfirmation = true
 
         case .canceled:
             print("⚠️ Pago cancelado por el usuario")
@@ -877,7 +949,7 @@ struct CartView: View {
             }
         }
         .padding(20)
-        .background(.regularMaterial)
+        .background(Color.white)
         .cornerRadius(18)
         .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
     }
@@ -918,7 +990,7 @@ struct CartView: View {
             }
         }
         .padding(12)
-        .background(.thinMaterial)
+        .background(Color.white)
         .cornerRadius(12)
     }
 
@@ -1218,7 +1290,7 @@ struct CartItemCard: View {
             }
         }
         .padding(12)
-        .background(.regularMaterial)
+        .background(Color.white)
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
     }
@@ -1651,7 +1723,7 @@ struct BankTransferSheetView: View {
                         .padding(20)
                         .background(
                             RoundedRectangle(cornerRadius: 20)
-                                .fill(Color.white)
+                                .fill(Color(UIColor.secondarySystemGroupedBackground))
                                 .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
                         )
                         .padding(.horizontal, 20)
@@ -1675,7 +1747,7 @@ struct BankTransferSheetView: View {
                                 .padding(16)
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.white)
+                                        .fill(Color(UIColor.secondarySystemGroupedBackground))
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 12)
                                                 .stroke(

@@ -189,7 +189,7 @@ struct WelcomeView: View {
             .navigationDestination(isPresented: $navigateToLogin) {
                 LoginView(viewModel: ProfileViewModel())
             }
-            .navigationDestination(isPresented: $navigateToCart) {
+            .fullScreenCover(isPresented: $navigateToCart) {
                 CartView()
             }
             .toolbar {

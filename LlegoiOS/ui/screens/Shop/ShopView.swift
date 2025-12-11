@@ -183,7 +183,7 @@ struct ShopView: View {
             }
         }
         .fullScreenCover(item: $selectedProduct) { product in
-            TestProductView(product: product)
+            ProductShowcaseView(product: product)
         }
     }
 
@@ -288,11 +288,12 @@ struct ShopView: View {
     // MARK: - Loading State
     private var loadingState: some View {
         VStack(spacing: 20) {
-            LottieView(name: "loader")
-                .frame(width: 150, height: 150)
-            Text("Cargando productos...")
+            ProgressView()
+                .controlSize(.large)
+                .tint(.white)
+            Text("Cargando...")
                 .font(.system(size: 16, weight: .medium))
-                .foregroundColor(.gray)
+                .foregroundColor(.white)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

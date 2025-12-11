@@ -1,4 +1,7 @@
 import SwiftUI
+import AuthenticationServices
+import GoogleSignIn
+import GoogleSignInSwift
 
 struct LoginView: View {
     @Environment(\.dismiss) private var dismiss
@@ -14,6 +17,7 @@ struct LoginView: View {
     // Typewriter effect states
     @State private var displayedText = ""
     @State private var showCursor = true
+    @State private var showEmailAuth = false // New state for toggling views
     private let fullText = "Bienvenido a\nLlego"
     private let hapticGenerator = UIImpactFeedbackGenerator(style: .light)
 
@@ -204,14 +208,121 @@ struct LoginView: View {
 
     private var authCard: some View {
         VStack(spacing: 24) {
-            segmentedControl
+            if showEmailAuth {
+                // Email Auth Flow
+                VStack(spacing: 24) {
+                    // Back button to return to social options
+                    Button {
+                        withAnimation {
+                            showEmailAuth = false
+                            // Reset state if needed, but keeping text is usually fine
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.left")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("Volver")
+                                .font(.system(size: 16, weight: .semibold))
+                            Spacer()
+                        }
+                        .foregroundColor(Color.black.opacity(0.7))
+                        .padding(.bottom, 8)
+                    }
+                    .buttonStyle(.plain)
 
-            if selectedTab == .login {
-                loginForm
+                    segmentedControl
+
+                    if selectedTab == .login {
+                        loginForm
+                    } else {
+                        registerForm
+                    }
+                }
+                .transition(.move(edge: .trailing))
             } else {
-                registerForm
+                // Landing Social Flow
+                VStack(spacing: 20) {
+                    // Apple Sign In
+                    SignInWithAppleButton(.continue) { request in
+                         request.requestedScopes = [.fullName, .email]
+                    } onCompletion: { result in
+                        switch result {
+                        case .success(let authResults):
+                            print("Apple Login Successful: \(authResults)")
+                            // viewModel.handleAppleLogin(authResults)
+                        case .failure(let error):
+                             print("Apple Login Failed: \(error.localizedDescription)")
+                        }
+                    }
+                    .signInWithAppleButtonStyle(.black)
+                    .environment(\.locale, Locale(identifier: "es"))
+                    .frame(height: 50)
+                    .frame(maxWidth: .infinity)
+                    .cornerRadius(8)
+                    
+                    // Google Sign In
+                    Button {
+                        handleSignInButton()
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image("gicon")
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(width: 22, height: 22)
+                            
+                            Text("Continuar con Google")
+                                .font(.system(size: 19, weight: .medium))
+                                .foregroundColor(.black.opacity(0.85))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(Color.white)
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.black.opacity(0.15), lineWidth: 1)
+                        )
+                        .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+                    }
+                    .buttonStyle(.plain)
+
+                    // Divider or Spacer
+                    HStack {
+                        Rectangle().fill(Color.gray.opacity(0.3)).frame(height: 1)
+                        Text("o")
+                            .font(.system(size: 14))
+                            .foregroundColor(.gray)
+                        Rectangle().fill(Color.gray.opacity(0.3)).frame(height: 1)
+                    }
+                    .padding(.vertical, 8)
+
+                    // Continue with Email
+                    Button {
+                        withAnimation {
+                            showEmailAuth = true
+                        }
+                    } label: {
+                        Text("O continuar con correo")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.black)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(Color.gray.opacity(0.1))
+                            .cornerRadius(8)
+                    }
+                    .buttonStyle(.plain)
+
+                    // Terms and Conditions Footer
+                    Text("Al iniciar sesión, aceptas nuestros [Términos y Condiciones](https://llego.app/terms) y nuestra [Política de Privacidad](https://llego.app/privacy).")
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(Color.black.opacity(0.5))
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(4)
+                        .padding(.top, 24)
+                        .accentColor(Color.black.opacity(0.8)) // Color for the links
+                }
+                .transition(.move(edge: .leading))
             }
-            socialSection
         }
     }
 
@@ -268,21 +379,26 @@ struct LoginView: View {
         }
     }
 
-    private var socialSection: some View {
-        VStack(alignment: .center, spacing: 18) {
-            Text("Or login with")
-                .font(.system(size: 15, weight: .medium))
-                .foregroundColor(Color.white.opacity(0.7))
+    // Old socialSection removed as requested
+    
+    private func handleSignInButton() {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let rootViewController = windowScene.windows.first(where: { $0.isKeyWindow })?.rootViewController else {
+            print("Error: Root View Controller not found")
+            return
+        }
 
-            HStack(spacing: 16) {
-                socialButton(title: "Google", accent: Color(red: 0.89, green: 0.25, blue: 0.21), symbol: "G") {
-                    print("Google login tapped")
+        GIDSignIn.sharedInstance.signIn(
+            withPresenting: rootViewController) { signInResult, error in
+            guard let result = signInResult else {
+                if let error = error {
+                     print("Google Sign In Error: \(error.localizedDescription)")
                 }
-
-                socialButton(title: "Facebook", accent: Color(red: 0.18, green: 0.38, blue: 0.78), symbol: "f") {
-                    print("Facebook login tapped")
-                }
+                return
             }
+            // If sign in succeeded, display the app's main content View.
+            print("Google Login Successful: \(result.user.profile?.email ?? "No Email")")
+            // viewModel.handleGoogleLogin(result)
         }
     }
 

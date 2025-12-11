@@ -25,16 +25,10 @@ struct ShopTabLandingView: View {
 
     // Selección de vendedor
     @State private var selectedStore: StoreWithCoordinates? = nil
-    @State private var showStoreOptionsModal: Bool = false
-
+    
     // Navegación
-    @State private var navigateToStoreDetail: Bool = false
-    @State private var navigateToHome: Bool = false
-
-    // Instagram Stories Viewer
-    @State private var showStoryViewer: Bool = false
-    @State private var storyData: [StoryData] = []
-    @State private var currentStoryIndex: Int = 0
+    @State private var navigationDestination: NavigationDestination? = nil
+    @State private var pendingDestination: NavigationDestination? = nil
 
     // Región del mapa compartida
     @State private var mapRegion = MKCoordinateRegion(
@@ -45,37 +39,19 @@ struct ShopTabLandingView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.llegoBackground.ignoresSafeArea()
+                WelcomeGradientBackground()
+                    .ignoresSafeArea()
 
                 // Contenido según el modo de visualización
                 if viewMode == .list {
-                    // MODO LISTADO: Stories + Lista de tiendas
+                    // MODO LISTADO: Lista de tiendas
                     ScrollView {
                         VStack(spacing: 0) {
-                            // Stories Section (Instagram-style) - Arriba
-                            if !storyData.isEmpty {
-                                StoreStories(
-                                    storyData: storyData,
-                                    onStoryTap: { store in
-                                        // Abrir Instagram Story Viewer a pantalla completa
-                                        if let index = storyData.firstIndex(where: { $0.store.id == store.id }) {
-                                            currentStoryIndex = index
-                                            showStoryViewer = true
-                                        }
-                                    }
-                                )
-                                .background(Color.llegoBackground)
-                                .padding(.bottom, 16)
-                            }
-
                             // Listado de tiendas
                             VStack(spacing: 12) {
                                 ForEach(mockStores, id: \.id) { store in
                                     Button(action: {
                                         selectedStore = store
-                                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                            showStoreOptionsModal = true
-                                        }
                                     }) {
                                         StoreListCard(store: store)
                                     }
@@ -94,9 +70,6 @@ struct ShopTabLandingView: View {
                         mockStores: mockStores,
                         onStoreSelected: { store in
                             selectedStore = store
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                showStoreOptionsModal = true
-                            }
                         }
                     )
                     .ignoresSafeArea()
@@ -129,35 +102,6 @@ struct ShopTabLandingView: View {
                         removal: .scale(scale: 0.95).combined(with: .opacity)
                     ))
                     .zIndex(10) // Asegurar que esté sobre el contenido
-                }
-
-                // Modal de opciones de tienda
-                if showStoreOptionsModal, let store = selectedStore {
-                    Color.black.opacity(0.4)
-                        .ignoresSafeArea()
-                        .onTapGesture {
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                showStoreOptionsModal = false
-                            }
-                        }
-
-                    StoreOptionsModal(
-                        store: store,
-                        onViewProfile: {
-                            showStoreOptionsModal = false
-                            navigateToStoreDetail = true
-                        },
-                        onViewProducts: {
-                            showStoreOptionsModal = false
-                            navigateToHome = true
-                        },
-                        onDismiss: {
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                showStoreOptionsModal = false
-                            }
-                        }
-                    )
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
             .toolbar {
@@ -217,62 +161,40 @@ struct ShopTabLandingView: View {
                     filteredSearchStores = []
                 }
             }
-            .fullScreenCover(isPresented: $navigateToStoreDetail) {
-                if let store = selectedStore {
-//                    StoreDetailView(store: store)
-                }
-            }
-            .fullScreenCover(isPresented: $navigateToHome) {
-                if let store = selectedStore {
+            .fullScreenCover(item: $navigationDestination) { destination in
+                switch destination {
+                case .detail(let store):
+                    StoreDetailView(store: store)
+                case .home:
                     HomeView()
                 }
             }
-            .fullScreenCover(isPresented: $showStoryViewer) {
-                InstagramStoryViewer(
-                    stories: $storyData,
-                    currentStoryIndex: $currentStoryIndex,
-                    isPresented: $showStoryViewer
+            .sheet(item: $selectedStore, onDismiss: {
+                // Navegación segura una vez que el sheet se ha cerrado completamente
+                if let destination = pendingDestination {
+                    // Un pequeño delay técnico asegura que el ciclo de renderizado esté listo
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                         navigationDestination = destination
+                         pendingDestination = nil
+                    }
+                }
+            }) { store in
+                StoreOptionsModal(
+                    store: store,
+                    onViewProfile: {
+                        pendingDestination = .detail(store.toStore())
+                        selectedStore = nil // Esto cierra el sheet e invoca onDismiss
+                    },
+                    onViewProducts: {
+                        pendingDestination = .home
+                        selectedStore = nil // Esto cierra el sheet e invoca onDismiss
+                    }
                 )
+                .presentationDetents([.height(520)])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(28)
+                .interactiveDismissDisabled(false)
             }
-            .onAppear {
-                // Inicializar historias mock
-                initializeMockStories()
-            }
-        }
-    }
-
-    // MARK: - Initialize Mock Stories
-    private func initializeMockStories() {
-        storyData = mockStores.map { storeWithCoords in
-            let store = storeWithCoords.toStore()
-
-            // Crear múltiples items de historia por tienda (2-3 historias)
-            let storyItems: [StoryItem] = [
-                StoryItem(
-                    mediaUrl: storeWithCoords.bannerUrl,
-                    mediaType: .image,
-                    duration: 5.0,
-                    timestamp: Date().addingTimeInterval(-3600)
-                ),
-                StoryItem(
-                    mediaUrl: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1080&h=1920&fit=crop",
-                    mediaType: .image,
-                    duration: 5.0,
-                    timestamp: Date().addingTimeInterval(-1800)
-                ),
-                StoryItem(
-                    mediaUrl: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=1080&h=1920&fit=crop",
-                    mediaType: .image,
-                    duration: 5.0,
-                    timestamp: Date().addingTimeInterval(-900)
-                )
-            ]
-
-            return StoryData(
-                id: store.id,
-                store: store,
-                items: storyItems
-            )
         }
     }
 
@@ -328,12 +250,7 @@ struct ShopTabLandingView: View {
             }
         }
 
-        // Mostrar modal después de la animación
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                showStoreOptionsModal = true
-            }
-        }
+        // El sheet se abre automáticamente cuando selectedStore tiene valor
     }
 
     private var searchToolbar: some View {
@@ -560,120 +477,232 @@ struct StoreWithCoordinates: Identifiable {
     }
 }
 
-// MARK: - StoreOptionsModal
+// MARK: - StoreOptionsModal (Native iOS Sheet Style)
 private struct StoreOptionsModal: View {
     let store: StoreWithCoordinates
     let onViewProfile: () -> Void
     let onViewProducts: () -> Void
-    let onDismiss: () -> Void
-
+    var onDismiss: (() -> Void)? = nil
+    
+    @State private var isAnimated = false
+    
     var body: some View {
         VStack(spacing: 0) {
-            Spacer()
-
-            VStack(spacing: 20) {
-                // Indicador de arrastre
-                Capsule()
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(width: 40, height: 4)
-                    .padding(.top, 12)
-
-                // Información de la tienda
-                HStack(spacing: 12) {
-                    AsyncImage(url: URL(string: store.logoUrl)) { phase in
+            // MARK: - Header con imagen del negocio
+            ZStack(alignment: .bottom) {
+                // Banner con gradiente elegante
+                GeometryReader { geometry in
+                    AsyncImage(url: URL(string: store.bannerUrl)) { phase in
                         switch phase {
                         case .success(let image):
                             image
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
+                                .frame(width: geometry.size.width, height: 180)
+                                .clipped()
                         case .empty, .failure:
-                            Color.gray.opacity(0.3)
+                            LinearGradient(
+                                colors: [
+                                    Color.llegoPrimary.opacity(0.8),
+                                    Color.llegoAccent.opacity(0.6)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         @unknown default:
                             Color.gray.opacity(0.3)
                         }
                     }
-                    .frame(width: 60, height: 60)
-                    .clipShape(Circle())
                     .overlay(
-                        Circle()
-                            .stroke(Color.llegoSecondary.opacity(0.3), lineWidth: 2)
+                        LinearGradient(
+                            colors: [
+                                Color.clear,
+                                Color(.systemBackground).opacity(0.3),
+                                Color(.systemBackground)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
                     )
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(store.name)
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(.llegoPrimary)
-
-                        if let address = store.address {
-                            Text(address)
-                                .font(.system(size: 13))
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
-                        }
-
-                        if let rating = store.rating {
-                            HStack(spacing: 4) {
-                                Image(systemName: "star.fill")
-                                    .font(.system(size: 11))
-                                    .foregroundColor(.orange)
-                                Text(String(format: "%.1f", rating))
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(.primary)
-                            }
-                        }
-                    }
-
-                    Spacer()
                 }
-                .padding(.horizontal, 20)
-
-                // Botones de acción
-                VStack(spacing: 12) {
-                    Button(action: onViewProfile) {
-                        HStack {
-                            Image(systemName: "storefront.fill")
-                                .font(.system(size: 16, weight: .semibold))
-                            Text("Ver Perfil de Tienda")
-                                .font(.system(size: 16, weight: .semibold))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                        .background(Color.llegoPrimary)
-                        .foregroundColor(.white)
-                        .cornerRadius(14)
-                    }
-
-                    Button(action: onViewProducts) {
-                        HStack {
-                            Image(systemName: "cart.fill")
-                                .font(.system(size: 16, weight: .semibold))
-                            Text("Ver Productos")
-                                .font(.system(size: 16, weight: .semibold))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                        .background(Color.llegoAccent)
-                        .foregroundColor(.llegoPrimary)
-                        .cornerRadius(14)
-                    }
-
-                    Button(action: onDismiss) {
-                        Text("Cancelar")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 44)
+                .frame(height: 180)
+                
+                // Logo flotante
+                AsyncImage(url: URL(string: store.logoUrl)) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    case .empty, .failure:
+                        Image(systemName: "storefront.fill")
+                            .font(.system(size: 32, weight: .medium))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background(Color.llegoPrimary)
+                    @unknown default:
+                        Color.gray.opacity(0.3)
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 32)
+                .frame(width: 88, height: 88)
+                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(Color(.systemBackground), lineWidth: 4)
+                )
+                .shadow(color: Color.black.opacity(0.15), radius: 12, x: 0, y: 6)
+                .offset(y: 44)
+                .scaleEffect(isAnimated ? 1.0 : 0.8)
+                .opacity(isAnimated ? 1 : 0)
             }
-            .background(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(Color(.systemBackground))
-                    .shadow(color: Color.black.opacity(0.15), radius: 20, x: 0, y: -5)
-            )
+            
+            Spacer().frame(height: 56)
+            
+            // MARK: - Información del negocio
+            VStack(spacing: 8) {
+                Text(store.name)
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.center)
+                
+                if let address = store.address {
+                    HStack(spacing: 6) {
+                        Image(systemName: "location.fill")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                        Text(address)
+                            .font(.system(size: 15, weight: .regular))
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .padding(.horizontal, 24)
+            .opacity(isAnimated ? 1 : 0)
+            .offset(y: isAnimated ? 0 : 10)
+            
+            Spacer().frame(height: 20)
+            
+            // MARK: - Pills de información
+            HStack(spacing: 16) {
+                // Rating
+                if let rating = store.rating {
+                    InfoPill(
+                        icon: "star.fill",
+                        iconColor: .orange,
+                        value: String(format: "%.1f", rating),
+                        label: "Rating"
+                    )
+                }
+                
+                // Tiempo de entrega
+                InfoPill(
+                    icon: "clock.fill",
+                    iconColor: .llegoAccent,
+                    value: "\(store.etaMinutes)",
+                    label: "min"
+                )
+                
+                // Estado
+                InfoPill(
+                    icon: "checkmark.circle.fill",
+                    iconColor: .green,
+                    value: "Abierto",
+                    label: "Ahora"
+                )
+            }
+            .padding(.horizontal, 24)
+            .opacity(isAnimated ? 1 : 0)
+            .offset(y: isAnimated ? 0 : 15)
+            
+            Spacer().frame(height: 28)
+            
+            // MARK: - Botones de acción estilo Apple
+            VStack(spacing: 12) {
+                // Botón primario - Ver productos
+                Button(action: onViewProducts) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "bag.fill")
+                            .font(.system(size: 18, weight: .semibold))
+                        Text("Ver Productos")
+                            .font(.system(size: 17, weight: .semibold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+                    .background(
+                        LinearGradient(
+                            colors: [Color.llegoPrimary, Color.llegoPrimary.opacity(0.9)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .foregroundColor(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .shadow(color: Color.llegoPrimary.opacity(0.3), radius: 8, x: 0, y: 4)
+                }
+                .buttonStyle(ScaleButtonStyle())
+                
+                // Botón secundario - Ver perfil
+                Button(action: onViewProfile) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "storefront")
+                            .font(.system(size: 18, weight: .semibold))
+                        Text("Ver Perfil de Tienda")
+                            .font(.system(size: 17, weight: .semibold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 54)
+                    .background(
+                        Color(.secondarySystemBackground)
+                    )
+                    .foregroundColor(.primary)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .buttonStyle(ScaleButtonStyle())
+            }
+            .padding(.horizontal, 20)
+            .opacity(isAnimated ? 1 : 0)
+            .offset(y: isAnimated ? 0 : 20)
+            
+            Spacer().frame(height: 16)
         }
+        .background(Color(.systemBackground))
+        .ignoresSafeArea(.container, edges: .bottom)
+        .onAppear {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.1)) {
+                isAnimated = true
+            }
+        }
+    }
+}
+
+// MARK: - Info Pill Component
+private struct InfoPill: View {
+    let icon: String
+    let iconColor: Color
+    let value: String
+    let label: String
+    
+    var body: some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(iconColor)
+                Text(value)
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary)
+            }
+            
+            Text(label)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color(.tertiarySystemBackground))
+        )
     }
 }
 
