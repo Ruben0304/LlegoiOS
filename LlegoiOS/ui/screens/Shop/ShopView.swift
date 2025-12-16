@@ -95,7 +95,7 @@ struct ShopView: View {
                     }) {
                         Image(systemName: "arrow.up.arrow.down")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.llegoPrimary)
+//                            .foregroundColor(.llegoPrimary)
                             .frame(width: 30, height: 30)
                     }
                 }
@@ -189,52 +189,27 @@ struct ShopView: View {
 
     // MARK: - Empty State
     private var emptyState: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 20) {
             Spacer()
 
-            // Icono ilustrativo
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color.llegoPrimary.opacity(0.1),
-                                Color.llegoAccent.opacity(0.15)
-                            ]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 180, height: 180)
+            // Icono minimalista
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 48, weight: .regular))
+                .foregroundColor(.black)
+                .padding(.bottom, 8)
 
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 70, weight: .light))
-                    .foregroundStyle(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color.llegoPrimary.opacity(0.7),
-                                Color.llegoAccent.opacity(0.8)
-                            ]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+            VStack(spacing: 8) {
+                Text("No encontramos productos")
+                    .font(.system(size: 22, weight: .semibold, design: .rounded))
+                    .foregroundColor(.primary)
+
+                Text(emptyStateMessage)
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundColor(.secondary.opacity(0.8))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+                    .lineSpacing(2)
             }
-            .padding(.bottom, 8)
-
-            // Título
-            Text("No encontramos productos")
-                .font(.system(size: 24, weight: .bold))
-                .foregroundColor(.llegoPrimary)
-                .multilineTextAlignment(.center)
-
-            // Descripción
-            Text(emptyStateMessage)
-                .font(.system(size: 16, weight: .regular))
-                .foregroundColor(.gray)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-                .lineSpacing(4)
 
             // Botón de acción
             if viewModel.hasActiveFilters || !viewModel.searchQuery.isEmpty {
@@ -246,27 +221,16 @@ struct ShopView: View {
                 }) {
                     HStack(spacing: 8) {
                         Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 14, weight: .semibold))
                         Text("Limpiar filtros")
                             .font(.system(size: 16, weight: .semibold))
                     }
-                    .foregroundColor(.white)
+                    .foregroundColor(.llegoPrimary)
                     .frame(height: 50)
                     .frame(maxWidth: 220)
-                    .background(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color.llegoPrimary,
-                                Color.llegoPrimary.opacity(0.85)
-                            ]),
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .cornerRadius(25)
-                    .shadow(color: Color.llegoPrimary.opacity(0.3), radius: 12, x: 0, y: 6)
                 }
-                .padding(.top, 8)
+                .buttonStyle(.glass)
+                .padding(.top, 12)
             }
 
             Spacer()

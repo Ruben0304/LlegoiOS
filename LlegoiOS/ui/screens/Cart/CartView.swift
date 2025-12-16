@@ -49,14 +49,7 @@ struct CartView: View {
     private let paymentRepository = PaymentRepository()
 
     let paymentMethods: [PaymentMethod] = [
-        PaymentMethod(
-            id: "invoice_international",
-            name: "ENviar factura a persona en el extranjero",
-            description: "Enviar link de pago",
-            imageType: .systemIcon("link.circle.fill"),
-            color: Color(red: 0.2, green: 0.5, blue: 0.9),
-            currency: "USD"
-        ),
+        
         PaymentMethod(
             id: "cash_cup",
             name: "Efectivo",
@@ -80,6 +73,14 @@ struct CartView: View {
             imageType: .systemIcon("building.columns"),
             color: Color.llegoSecondary,
             currency: "CUP"
+        ),
+        PaymentMethod(
+            id: "invoice_international",
+            name: "Enviar factura a persona en el extranjero",
+            description: "Enviar link de pago",
+            imageType: .systemIcon("link.circle.fill"),
+            color: Color(red: 0.2, green: 0.5, blue: 0.9),
+            currency: "USD"
         ),
         PaymentMethod(
             id: "credit_card",
@@ -380,17 +381,22 @@ struct CartView: View {
                         Color.black.opacity(0.4)
                             .ignoresSafeArea()
 
-                        VStack(spacing: 20) {
+                        VStack(spacing: 16) {
                             LottieView(name: "loading")
                                 .frame(width: 150, height: 150)
+                            ProgressView()
+                                .progressViewStyle(.circular)
+                                .tint(.llegoPrimary)
                             Text("Preparando pago...")
                                 .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.white)
+                                .foregroundColor(.primary)
+                                .padding(.top, 4)
                         }
-                        .padding(40)
+                        .padding(32)
                         .background(
                             RoundedRectangle(cornerRadius: 20)
-                                .fill(Color.llegoBackground)
+                                .fill(Color.white)
+                                .shadow(color: Color.black.opacity(0.12), radius: 14, x: 0, y: 8)
                         )
                     }
                 }
@@ -823,46 +829,23 @@ struct CartView: View {
     
 
     private var emptyCartView: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 20) {
             Spacer()
 
-            // Icono grande con gradiente
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color.llegoPrimary.opacity(0.1),
-                                Color.llegoAccent.opacity(0.15)
-                            ]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 140, height: 140)
+            // Icono minimalista
+            Image(systemName: "cart")
+                .font(.system(size: 48, weight: .regular))
+                .foregroundColor(.black)
+                .padding(.bottom, 8)
 
-                Image(systemName: "cart")
-                    .font(.system(size: 60, weight: .light))
-                    .foregroundStyle(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color.llegoPrimary.opacity(0.7),
-                                Color.llegoAccent.opacity(0.8)
-                            ]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-            }
-
-            VStack(spacing: 12) {
+            VStack(spacing: 8) {
                 Text("Tu carrito está vacío")
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .font(.system(size: 22, weight: .semibold, design: .rounded))
                     .foregroundColor(.primary)
 
                 Text("Agrega productos para comenzar tu pedido")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundColor(.secondary.opacity(0.8))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
             }
@@ -870,29 +853,23 @@ struct CartView: View {
             Button(action: {
                dismiss()
             }) {
-                HStack(spacing: 12) {
+                HStack(spacing: 8) {
                     Image(systemName: "arrow.left")
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(size: 14, weight: .semibold))
 
                     Text("Explorar Productos")
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
                 }
-                .foregroundColor(.white)
-                .frame(width: 250, height: 56)
-                .background(
-                    LinearGradient(
-                        gradient: Gradient(colors: [Color.llegoAccent, Color.llegoPrimary]),
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .cornerRadius(28)
-                .shadow(color: Color.llegoPrimary.opacity(0.3), radius: 12, x: 0, y: 6)
+                .foregroundColor(.llegoPrimary)
+                .frame(height: 50)
+                .frame(maxWidth: 240)
             }
-            .padding(.top, 16)
+            .buttonStyle(.glass)
+            .padding(.top, 12)
 
             Spacer()
         }
+        .frame(maxWidth: .infinity)
     }
 
     private var priceBreakdown: some View {
@@ -1007,57 +984,13 @@ struct PaymentMethodPickerView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                // Fondo moderno
-                WelcomeGradientBackground()
+                Color(UIColor.systemGroupedBackground)
                     .ignoresSafeArea()
 
                 ScrollView {
                     VStack(spacing: 16) {
-                        // Header minimalista
-                        VStack(spacing: 8) {
-                            Image(systemName: "creditcard.circle.fill")
-                                .font(.system(size: 50, weight: .medium))
-                                .foregroundStyle(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            Color.llegoAccent,
-                                            Color.llegoPrimary
-                                        ]),
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    )
-                                )
-
-                            Text("Selecciona tu método de pago")
-                                .font(.system(size: 20, weight: .bold, design: .rounded))
-                                .foregroundColor(.primary)
-
-                            Text("Elige cómo quieres pagar tu pedido")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.top, 20)
-                        .padding(.bottom, 10)
-
-                        // Lista de métodos de pago
-                        LazyVStack(spacing: 12) {
-                            ForEach(paymentMethods, id: \.id) { method in
-                                PaymentMethodRow(
-                                    method: method,
-                                    isSelected: selectedMethod?.id == method.id
-                                ) {
-                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                        selectedMethod = method
-                                    }
-                                    // Cerrar después de seleccionar
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                        dismiss()
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 40)
+//                        header
+                        paymentList
                     }
                 }
             }
@@ -1072,6 +1005,50 @@ struct PaymentMethodPickerView: View {
             }
         }
     }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Métodos de pago")
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundColor(.primary)
+
+            Text("Elige la opción que prefieras. Mostramos sólo la información esencial para que la decisión sea rápida.")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 16)
+    }
+
+    private var paymentList: some View {
+        LazyVStack(spacing: 12) {
+            ForEach(enumeratedPaymentMethods, id: \.element.id) { pair in
+                let index = pair.offset
+                let method = pair.element
+                PaymentMethodRow(
+                    method: method,
+                    isSelected: selectedMethod?.id == method.id,
+                    onTap: {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                            selectedMethod = method
+                        }
+                        // Cerrar después de seleccionar
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            dismiss()
+                        }
+                    },
+                    animationDelay: Double(index) * 0.05
+                )
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 40)
+    }
+
+    private var enumeratedPaymentMethods: [(offset: Int, element: PaymentMethod)] {
+        Array(paymentMethods.enumerated())
+    }
 }
 
 // MARK: - Payment Method Row
@@ -1079,97 +1056,120 @@ struct PaymentMethodRow: View {
     let method: PaymentMethod
     let isSelected: Bool
     let onTap: () -> Void
+    let animationDelay: Double
+
+    @State private var didAppear = false
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 14) {
-                // Icono del método
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(method.color.opacity(0.12))
-                        .frame(width: 50, height: 50)
-
-                    switch method.imageType {
-                    case .systemIcon(let iconName):
-                        Image(systemName: iconName)
-                            .font(.system(size: 22, weight: .semibold))
-                            .foregroundColor(method.color)
-                    case .assetImage(let imageName):
-                        Image(imageName)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 28, height: 28)
-                    }
-                }
-
-                // Información del método
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(method.name)
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundColor(.primary)
-
-                    Text(method.description)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.secondary)
-
-                    // Moneda
-                    HStack(spacing: 4) {
-                        Image(systemName: "banknote")
-                            .font(.system(size: 10, weight: .medium))
-                        Text(method.currency)
-                            .font(.system(size: 11, weight: .bold))
-                    }
-                    .foregroundColor(method.color)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(method.color.opacity(0.10))
-                    .cornerRadius(6)
-                }
-
-                Spacer()
-
-                // Indicador de selección
-                ZStack {
-                    Circle()
-                        .stroke(isSelected ? method.color : Color.secondary.opacity(0.2), lineWidth: 2)
-                        .frame(width: 24, height: 24)
-
-                    if isSelected {
-                        Circle()
-                            .fill(method.color)
-                            .frame(width: 14, height: 14)
-                            .overlay(
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 9, weight: .bold))
-                                    .foregroundColor(.white)
-                            )
-                            .scaleEffect(isSelected ? 1.0 : 0.0)
-                            .animation(.spring(response: 0.4, dampingFraction: 0.6), value: isSelected)
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 16)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(.regularMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(
-                                isSelected ? method.color.opacity(0.4) : Color.clear,
-                                lineWidth: 1.5
-                            )
-                    )
-                    .shadow(
-                        color: Color.black.opacity(0.04),
-                        radius: 8,
-                        x: 0, y: 2
-                    )
-            )
-            .scaleEffect(isSelected ? 1.01 : 1.0)
-            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isSelected)
+            rowContent
         }
         .buttonStyle(PlainButtonStyle())
+        .opacity(didAppear ? 1 : 0)
+        .offset(y: didAppear ? 0 : 12)
+        .scaleEffect(didAppear ? 1 : 0.98)
+        .onAppear {
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.9).delay(animationDelay)) {
+                didAppear = true
+            }
+        }
+    }
+
+    private var iconView: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.primary.opacity(0.05))
+                .frame(width: 54, height: 54)
+
+            switch method.imageType {
+            case .systemIcon(let iconName):
+                Image(systemName: iconName)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .opacity(0.8)
+            case .assetImage(let imageName):
+                Image(imageName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 30, height: 30)
+            }
+        }
+    }
+
+    private var badgeView: some View {
+        Group {
+            if isSelected {
+                Capsule()
+                    .fill(Color.llegoPrimary.opacity(0.12))
+                    .frame(height: 22)
+                    .overlay(
+                        HStack(spacing: 6) {
+                            Image(systemName: "checkmark.seal.fill")
+                                .font(.system(size: 11, weight: .bold))
+                            Text("Seleccionado")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                        .foregroundColor(Color.llegoPrimary)
+                        .padding(.horizontal, 8)
+                    )
+            }
+        }
+    }
+
+    private var currencyChip: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "banknote")
+                .font(.system(size: 11, weight: .medium))
+            Text(method.currency)
+                .font(.system(size: 12, weight: .semibold))
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.primary.opacity(0.04))
+        .cornerRadius(10)
+        .foregroundColor(.primary.opacity(0.7))
+    }
+
+    private var infoView: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Text(method.name)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundColor(.primary)
+                badgeView
+            }
+
+            Text(method.description)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.secondary)
+                .lineLimit(2)
+
+            currencyChip
+        }
+    }
+
+    private var rowContent: some View {
+        HStack(spacing: 14) {
+            iconView
+            infoView
+            Spacer()
+            Image(systemName: "chevron.forward")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.secondary)
+                .opacity(0.6)
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .shadow(color: Color.black.opacity(0.04), radius: 12, x: 0, y: 6)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(isSelected ? Color.llegoPrimary : Color.primary.opacity(0.06), lineWidth: isSelected ? 1.6 : 1)
+        )
+        .scaleEffect(isSelected ? 1.01 : 1.0)
+        .contentShape(Rectangle())
     }
 }
 
