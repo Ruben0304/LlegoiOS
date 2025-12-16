@@ -38,8 +38,8 @@ struct WelcomeView: View {
             fileName: "restaurant.usdz",
             description: "Comida y Bebidas",
             icon: "fork.knife",
-            cameraPosition: SCNVector3(x: 0, y: 1.5, z: 3.2), // Elevar cámara
-            cameraEulerAngles: SCNVector3(x: -.pi / 6, y: 0, z: 0) // Ángulo intermedio: ~30 grados desde arriba
+            cameraPosition: SCNVector3(x: 0, y: 4.0, z: 0), // Cámara más arriba, vista cenital
+            cameraEulerAngles: SCNVector3(x: -Float.pi / 2, y: 0, z: 0) // Vista casi completamente desde arriba
             
         ),
         CategoryModel3D(

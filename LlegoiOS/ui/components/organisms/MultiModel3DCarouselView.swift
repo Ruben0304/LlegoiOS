@@ -7,6 +7,9 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
     let currentIndex: Int
     var allowsCameraControl: Bool = false
     var isAnimated: Bool = true
+    private let modelSpacing: Float = 6.0
+    private let defaultCameraPosition = SCNVector3(x: 0, y: 1.2, z: 3.5)
+    private let defaultCameraEulerAngles = SCNVector3(x: -Float.pi / 8, y: 0, z: 0)
 
     func makeUIView(context: Context) -> SCNView {
         let sceneView = SCNView()
@@ -30,9 +33,9 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
         cameraNode.camera?.zNear = 0.1
         cameraNode.camera?.zFar = 100
 
-        // Posición inicial de la cámara (más cerca para modelos más grandes)
-        cameraNode.position = SCNVector3(x: 0, y: 1.2, z: 3.5)
-        cameraNode.eulerAngles = SCNVector3(x: -.pi / 8, y: 0, z: 0)
+        // Posición inicial de la cámara (se personaliza según modelo)
+        cameraNode.position = cameraPosition(for: currentIndex)
+        cameraNode.eulerAngles = cameraEulerAngles(for: currentIndex)
 
         scene.rootNode.addChildNode(cameraNode)
         context.coordinator.cameraNode = cameraNode
@@ -43,8 +46,6 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
         sceneView.addGestureRecognizer(panGesture)
 
         // Cargar y posicionar todos los modelos horizontalmente
-        let modelSpacing: Float = 6.0 // Separación entre modelos
-
         for (index, model) in models.enumerated() {
             if let modelURL = Bundle.main.url(forResource: model.fileName.replacingOccurrences(of: ".usdz", with: ""), withExtension: "usdz") {
                 if let modelScene = try? SCNScene(url: modelURL, options: nil) {
@@ -104,15 +105,13 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
 
         context.coordinator.currentIndex = currentIndex
 
-        let modelSpacing: Float = 6.0
-        let targetX = Float(currentIndex) * modelSpacing
-
         // Animación suave de la cámara
         SCNTransaction.begin()
         SCNTransaction.animationDuration = 0.6
         SCNTransaction.animationTimingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
 
-        cameraNode.position = SCNVector3(x: targetX, y: 1.2, z: 3.5)
+        cameraNode.position = cameraPosition(for: currentIndex)
+        cameraNode.eulerAngles = cameraEulerAngles(for: currentIndex)
 
         SCNTransaction.commit()
         disableZoomGestures(on: uiView)
@@ -145,6 +144,19 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
             // Reiniciar la traducción para usar deltas pequeños
             gesture.setTranslation(.zero, in: view)
         }
+    }
+
+    private func cameraPosition(for index: Int) -> SCNVector3 {
+        let base = models[index].cameraPosition ?? defaultCameraPosition
+        return SCNVector3(
+            x: Float(index) * modelSpacing + base.x,
+            y: base.y,
+            z: base.z
+        )
+    }
+
+    private func cameraEulerAngles(for index: Int) -> SCNVector3 {
+        models[index].cameraEulerAngles ?? defaultCameraEulerAngles
     }
 
     private func disableZoomGestures(on sceneView: SCNView) {
