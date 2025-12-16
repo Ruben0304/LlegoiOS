@@ -1,5 +1,6 @@
 import SwiftUI
 import SceneKit
+import UIKit
 
 struct MultiModel3DCarouselView: UIViewRepresentable {
     let models: [CategoryModel3D]
@@ -15,6 +16,9 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
         sceneView.antialiasingMode = .multisampling4X
         sceneView.clipsToBounds = false
         sceneView.layer.masksToBounds = false
+        context.coordinator.currentIndex = currentIndex
+        context.coordinator.modelNodes.removeAll()
+        disableZoomGestures(on: sceneView)
 
         // Create scene
         let scene = SCNScene()
@@ -32,6 +36,11 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
 
         scene.rootNode.addChildNode(cameraNode)
         context.coordinator.cameraNode = cameraNode
+
+        // Gestos para rotar únicamente el modelo actual (sin zoom)
+        let panGesture = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handlePan(_:)))
+        panGesture.maximumNumberOfTouches = 1
+        sceneView.addGestureRecognizer(panGesture)
 
         // Cargar y posicionar todos los modelos horizontalmente
         let modelSpacing: Float = 6.0 // Separación entre modelos
@@ -69,6 +78,7 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
 
                     // Añadir nombre para identificarlo
                     modelNode.name = "model_\(index)"
+                    context.coordinator.modelNodes[index] = modelNode
 
                     // Animación de rotación suave
                     if isAnimated {
@@ -92,6 +102,8 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
         // Animar la cámara a la posición del modelo actual
         guard let cameraNode = context.coordinator.cameraNode else { return }
 
+        context.coordinator.currentIndex = currentIndex
+
         let modelSpacing: Float = 6.0
         let targetX = Float(currentIndex) * modelSpacing
 
@@ -103,13 +115,43 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
         cameraNode.position = SCNVector3(x: targetX, y: 1.2, z: 3.5)
 
         SCNTransaction.commit()
+        disableZoomGestures(on: uiView)
     }
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
     }
 
-    class Coordinator {
+    class Coordinator: NSObject {
         var cameraNode: SCNNode?
+        var modelNodes: [Int: SCNNode] = [:]
+        var currentIndex: Int = 0
+
+        @objc func handlePan(_ gesture: UIPanGestureRecognizer) {
+            guard let view = gesture.view as? SCNView else { return }
+            guard let modelNode = modelNodes[currentIndex] else { return }
+
+            let translation = gesture.translation(in: view)
+            let rotationY = Float(translation.x) * 0.005
+            let rotationX = Float(translation.y) * 0.005
+
+            modelNode.eulerAngles.y -= rotationY
+
+            // Limitar la inclinación en X para evitar volteos extremos
+            let proposedX = modelNode.eulerAngles.x - rotationX
+            let clampedX = min(max(proposedX, -Float.pi / 4), Float.pi / 4)
+            modelNode.eulerAngles.x = clampedX
+
+            // Reiniciar la traducción para usar deltas pequeños
+            gesture.setTranslation(.zero, in: view)
+        }
+    }
+
+    private func disableZoomGestures(on sceneView: SCNView) {
+        sceneView.gestureRecognizers?.forEach { gesture in
+            if gesture is UIPinchGestureRecognizer {
+                gesture.isEnabled = false
+            }
+        }
     }
 }
