@@ -59,7 +59,7 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
                         z: maxBounds.z - minBounds.z
                     )
                     let maxDimension = max(size.x, max(size.y, size.z))
-                    let scale = 2.2 / maxDimension  // Aumentado de 1.8 a 2.2
+                    let scale = 2.5 / maxDimension  // Un poco más grande para todos los modelos
                     modelNode.scale = SCNVector3(x: scale, y: scale, z: scale)
 
                     // Centrar el modelo verticalmente
