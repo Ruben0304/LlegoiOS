@@ -79,9 +79,13 @@ class ConversationalSearchViewModel: ObservableObject {
     }
     
     func sendWelcomeMessage(mode: SearchMode) {
-        let welcomeText = mode == .quick ?
-            "Hola! Dime qué producto buscas y te ayudo a encontrarlo 😊" :
-            "Modo manual activado. Busca productos escribiendo aquí abajo."
+        let welcomeText: String
+        switch mode {
+        case .search:
+            welcomeText = "Hola! Dime qué producto buscas y te ayudo a encontrarlo 😊"
+        case .purchase:
+            welcomeText = "Modo compra activado. Dime qué quieres comprar y te ayudo con el pedido."
+        }
         
         let welcomeMessage = ConversationalChatMessage(
             text: welcomeText,

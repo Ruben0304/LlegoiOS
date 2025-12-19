@@ -9,9 +9,18 @@
 import SwiftUI
 import Combine
 
-enum SearchMode {
-    case quick
-    case manual
+enum SearchMode: CaseIterable {
+    case search
+    case purchase
+
+    var title: String {
+        switch self {
+        case .search:
+            return "Busqueda"
+        case .purchase:
+            return "Compra"
+        }
+    }
 }
 
 struct ConversationalSearchView: View {
@@ -19,7 +28,7 @@ struct ConversationalSearchView: View {
     @StateObject private var viewModel = ConversationalSearchViewModel()
 
     // Search mode
-    @State private var searchMode: SearchMode = .quick
+    @State private var searchMode: SearchMode = .search
 
     // Message input
     @State private var messageText: String = ""
@@ -84,33 +93,48 @@ struct ConversationalSearchView: View {
         .toolbar {
             // Back button con animación de gradiente al regresar
             ToolbarItem(placement: .navigationBarLeading) {
+                BackButton( action: {
+                    dismiss()// Acción para el botón plus (adjuntar archivos, etc.)
+                })
+            }
+
+            ToolbarItem(placement: .navigationBarTrailing) {
                 Button(action: {
-                    // Primero animar el gradiente de vuelta
-                    withAnimation(.easeInOut(duration: 0.4)) {
-                        isGradientExpanded = false
-                    }
-                    // Luego dismiss con un pequeño delay
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                        dismiss()
-                    }
+                    // Acción para el botón plus (adjuntar archivos, etc.)
                 }) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.primary)
+                    HStack(spacing: 6) {
+                        Image(systemName: "play.circle")
+                        Text("Tutorial")
+                    }
                 }
             }
 
-            // Mode selector - estilo simple como WelcomeView
+            ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
+            // Mode selector - menu nativo
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        searchMode = searchMode == .quick ? .manual : .quick
+                Menu {
+                    Picker("Modo", selection: $searchMode) {
+                        ForEach(SearchMode.allCases, id: \.self) { mode in
+                            if mode == .purchase {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "star.fill")
+                                        .foregroundColor(.yellow)
+                                    Text(mode.title)
+                                }
+                                .tag(mode)
+                            } else {
+                                Text(mode.title).tag(mode)
+                            }
+                        }
                     }
-                }) {
-                    Text(searchMode == .quick ? "Rápido" : "Manual")
-                        .font(.system(size: 15, weight: .medium))
+                } label: {
+                  
+                        Text(searchMode.title)
+                    
+                    .font(.system(size: 15, weight: .medium))
                 }
             }
+            
 
             // Botón plus en el toolbar inferior
             ToolbarItem(placement: .bottomBar) {
