@@ -78,8 +78,8 @@ struct ConversationalSearchView: View {
                 }
             }
         }
-        .navigationTitle("Llegó IA")
-        .navigationBarTitleDisplayMode(.inline)
+//        .navigationTitle("Llegó IA")
+//        .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar {
             // Back button con animación de gradiente al regresar

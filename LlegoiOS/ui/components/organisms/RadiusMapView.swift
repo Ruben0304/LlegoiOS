@@ -21,9 +21,9 @@ struct RadiusMapView: View {
         ZStack {
             // Mapa interactivo
             Map(coordinateRegion: $region, interactionModes: [.pan, .zoom])
-                .cornerRadius(16)
+                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
                         .stroke(Color.llegoPrimary.opacity(0.2), lineWidth: 1)
                 )
 
@@ -108,7 +108,7 @@ struct RadiusMapView: View {
             }
             .padding(12)
         }
-        .frame(height: 280)
+        .frame(minHeight: 300)
         .onAppear {
             pulseAnimation = true
         }

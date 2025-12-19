@@ -73,7 +73,6 @@ struct ShopView: View {
             .sheet(isPresented: $showFiltersSheet) {
                 FiltersSheet(
                     maxDistance: $viewModel.maxDistance,
-                    selectedCategory: $viewModel.selectedCategory,
                     onApply: {
                         showFiltersSheet = false
                         viewModel.applyFilters()
@@ -103,11 +102,11 @@ struct ShopView: View {
                         showFiltersSheet = true
                     }) {
                         HStack(spacing: 6) {
-                            Image(systemName: "slider.horizontal.3")
+                            Image(systemName: "location.circle")
                                 .font(.system(size: 14, weight: .semibold))
-                            Text("Filtros")
+                            Text("Distancia")
                                 .font(.system(size: 14, weight: .semibold))
-                            if viewModel.hasActiveFilters {
+                            if viewModel.maxDistance < 50 {
                                 Circle()
                                     .fill(Color.llegoPrimary)
                                     .frame(width: 6, height: 6)
@@ -128,7 +127,7 @@ struct ShopView: View {
                     .badge(favoritesManager.favoriteItemCount)
                 }
             }
-            .navigationTitle("Tienda")
+            .navigationTitle("15.40$")
             .navigationBarTitleDisplayMode(.inline)
             .searchable(
                 text: $viewModel.searchQuery,
@@ -439,29 +438,16 @@ private struct CategoryChip: View {
     }
 }
 
-// MARK: - Filters Sheet (Advanced Filters)
+// MARK: - Distance Sheet
 private struct FiltersSheet: View {
     @Binding var maxDistance: Double
-    @Binding var selectedCategory: String?
     let onApply: () -> Void
     @State private var tempDistance: Double
-    @State private var tempCategory: String?
 
-    let categories = [
-        "Italiana",
-        "Platos Fuertes",
-        "Vegetariana",
-        "Batidos y Cócteles",
-        "Bebidas Enlatadas",
-        "Botellas"
-    ]
-
-    init(maxDistance: Binding<Double>, selectedCategory: Binding<String?>, onApply: @escaping () -> Void) {
+    init(maxDistance: Binding<Double>, onApply: @escaping () -> Void) {
         self._maxDistance = maxDistance
-        self._selectedCategory = selectedCategory
         self.onApply = onApply
         self._tempDistance = State(initialValue: maxDistance.wrappedValue)
-        self._tempCategory = State(initialValue: selectedCategory.wrappedValue)
     }
 
     var body: some View {
@@ -469,62 +455,58 @@ private struct FiltersSheet: View {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
-                        // Distancia
-                        VStack(alignment: .leading, spacing: 16) {
-                            HStack {
-                                Text("Radio de búsqueda")
-                                    .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(.onSurfaceColor)
-                                Spacer()
-                                Text(tempDistance < 50 ? "\(Int(tempDistance)) km" : "Sin límite")
-                                    .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(.llegoPrimary)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(
-                                        Capsule()
-                                            .fill(Color.llegoAccent.opacity(0.15))
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Distancia de búsqueda")
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundColor(.onSurfaceColor)
+
+                            Text("Ajusta el rango para ver opciones cerca de ti.")
+                                .font(.system(size: 14, weight: .regular))
+                                .foregroundColor(.secondary)
+                        }
+
+                        VStack(spacing: 18) {
+                            ZStack(alignment: .topLeading) {
+                                RadiusMapView(radiusKm: $tempDistance)
+                                    .frame(height: 320)
+                                    .overlay(
+                                        LinearGradient(
+                                            colors: [
+                                                Color.black.opacity(0.15),
+                                                Color.clear,
+                                                Color.black.opacity(0.2)
+                                            ],
+                                            startPoint: .top,
+                                            endPoint: .bottom
+                                        )
                                     )
-                            }
+                                    .mask(
+                                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                            .stroke(Color.white.opacity(0.35), lineWidth: 1)
+                                    )
 
-                            // Mapa interactivo con radio
-                            RadiusMapView(radiusKm: $tempDistance)
-
-                            // Cuadrito informativo
-                            HStack(spacing: 10) {
-                                Image(systemName: "info.circle.fill")
-                                    .font(.system(size: 18))
-                                    .foregroundColor(.llegoAccent)
-
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Ahorra en envíos")
-                                        .font(.system(size: 13, weight: .semibold))
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(tempDistance < 50 ? "\(Int(tempDistance)) km" : "Sin límite")
+                                        .font(.system(size: 20, weight: .bold, design: .rounded))
                                         .foregroundColor(.llegoPrimary)
-
-                                    Text("Mientras más cerca busques, menores serán los costos de entrega")
-                                        .font(.system(size: 11, weight: .regular))
-                                        .foregroundColor(.gray)
-                                        .lineLimit(2)
-                                        .fixedSize(horizontal: false, vertical: true)
+                                    Text("Radio actual")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.secondary)
                                 }
-
-                                Spacer()
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 8)
+                                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .padding(12)
                             }
-                            .padding(12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(Color.llegoAccent.opacity(0.08))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color.llegoAccent.opacity(0.2), lineWidth: 1)
-                            )
+                            .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 8)
 
-                            // Slider estilizado
-                            VStack(spacing: 12) {
+                            VStack(spacing: 14) {
                                 HStack(spacing: 12) {
                                     Image(systemName: "minus.circle.fill")
-                                        .font(.system(size: 24))
+                                        .font(.system(size: 18))
                                         .foregroundColor(tempDistance > 1 ? .llegoPrimary : .gray.opacity(0.3))
                                         .onTapGesture {
                                             if tempDistance > 1 {
@@ -547,7 +529,7 @@ private struct FiltersSheet: View {
                                         )
 
                                     Image(systemName: "plus.circle.fill")
-                                        .font(.system(size: 24))
+                                        .font(.system(size: 18))
                                         .foregroundColor(tempDistance < 50 ? .llegoPrimary : .gray.opacity(0.3))
                                         .onTapGesture {
                                             if tempDistance < 50 {
@@ -558,132 +540,93 @@ private struct FiltersSheet: View {
                                         }
                                 }
 
-                                // Presets de distancia
+                                HStack {
+                                    Text("1 km")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.gray)
+                                    Spacer()
+                                    Text("50+ km")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(.gray)
+                                }
+
                                 HStack(spacing: 8) {
-                                    ForEach([5, 10, 20, 50], id: \.self) { preset in
-                                        Button(action: {
-                                            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                                                tempDistance = Double(preset)
-                                            }
-                                        }) {
-                                            Text(preset == 50 ? "Sin límite" : "\(preset) km")
-                                                .font(.system(size: 12, weight: .semibold))
-                                                .foregroundColor(
-                                                    Int(tempDistance) == preset ? .white : .llegoPrimary
-                                                )
-                                                .padding(.horizontal, 12)
-                                                .padding(.vertical, 6)
-                                                .background(
-                                                    Capsule()
-                                                        .fill(
-                                                            Int(tempDistance) == preset
-                                                                ? Color.llegoPrimary
-                                                                : Color.llegoAccent.opacity(0.15)
-                                                        )
-                                                )
-                                        }
-                                    }
+                                    presetButton(title: "3 km") { tempDistance = 3 }
+                                    presetButton(title: "5 km") { tempDistance = 5 }
+                                    presetButton(title: "10 km") { tempDistance = 10 }
+                                    presetButton(title: "Sin límite") { tempDistance = 50 }
                                 }
                             }
+                            .padding(16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                    .fill(Color.white)
+                                    .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
+                            )
                         }
-                        .padding(16)
-                        .background(.white)
-                        .cornerRadius(16)
-                        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
 
-                        // Categorías
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Categoría")
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundColor(.onSurfaceColor)
+                        HStack(spacing: 10) {
+                            Image(systemName: "info.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(.llegoAccent)
 
-                            VStack(spacing: 8) {
-                                // Opción "Todas"
-                                FilterOptionRow(
-                                    title: "Todas las categorías",
-                                    isSelected: tempCategory == nil,
-                                    onTap: {
-                                        tempCategory = nil
-                                    }
-                                )
-
-                                ForEach(categories, id: \.self) { category in
-                                    FilterOptionRow(
-                                        title: category,
-                                        isSelected: tempCategory == category,
-                                        onTap: {
-                                            tempCategory = category
-                                        }
-                                    )
-                                }
-                            }
+                            Text("Mientras más cerca busques, menores serán los costos de entrega.")
+                                .font(.system(size: 13, weight: .regular))
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
-                        .padding(16)
-                        .background(.white)
-                        .cornerRadius(12)
+                        .padding(14)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(Color.llegoAccent.opacity(0.08))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(Color.llegoAccent.opacity(0.18), lineWidth: 1)
+                        )
                     }
-                    .padding(16)
+                    .padding(20)
                 }
 
-
-                    HStack(spacing: 12) {
-                        Button(action: {
-                            tempDistance = 50
-                            tempCategory = nil
-                        }) {
-                            Text("Limpiar")
-                                .font(.system(size: 16, weight: .semibold))
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 35)
-                        }
-                        .buttonStyle(.glass)
-
-                        Button(action: {
-                            maxDistance = tempDistance
-                            selectedCategory = tempCategory
-                            onApply()
-                        }) {
-                            Text("Aplicar Filtros")
-                                .font(.system(size: 16, weight: .bold))
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 35)
-                        }
-                        .buttonStyle(.glassProminent)
-                        .tint(.llegoPrimary)
+                HStack(spacing: 12) {
+                    Button(action: {
+                        tempDistance = 50
+                    }) {
+                        Text("Restablecer")
+                            .font(.system(size: 16, weight: .semibold))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 44)
                     }
-                    .padding(16)
-                
+                    .buttonStyle(.glass)
+
+                    Button(action: {
+                        maxDistance = tempDistance
+                        onApply()
+                    }) {
+                        Text("Aplicar distancia")
+                            .font(.system(size: 16, weight: .bold))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 44)
+                    }
+                    .buttonStyle(.glassProminent)
+                    .tint(.llegoPrimary)
+                }
+                .padding(16)
             }
-//            .background(Color.llegoBackground)
-//            .navigationTitle("Filtros")
-//            .navigationBarTitleDisplayMode(.inline)
         }
     }
-}
 
-// MARK: - Filter Option Row
-private struct FilterOptionRow: View {
-    let title: String
-    let isSelected: Bool
-    let onTap: () -> Void
-
-    var body: some View {
-        Button(action: onTap) {
-            HStack {
-                Text(title)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.onSurfaceColor)
-                Spacer()
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 22))
-                        .foregroundColor(.llegoPrimary)
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 14)
-            .background(isSelected ? Color.llegoPrimary.opacity(0.08) : Color.clear)
-            .cornerRadius(8)
+    private func presetButton(title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.llegoPrimary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule()
+                        .fill(Color.llegoPrimary.opacity(0.12))
+                )
         }
         .buttonStyle(.plain)
     }
