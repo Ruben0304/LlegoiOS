@@ -2,9 +2,10 @@ import SwiftUI
 
 struct ShopView: View {
     @StateObject private var viewModel = ShopViewModel()
+    @StateObject private var favoritesManager = FavoritesManager.shared
     @State private var productCounts: [String: Int] = [:]
     @State private var showFiltersSheet = false
-    @State private var showSortOptions = false
+    @State private var showFavoritesSheet = false
     @State private var animationDelay: Double = 0
     @State private var selectedProduct: Product? = nil
 
@@ -58,7 +59,7 @@ struct ShopView: View {
                 } else if case .error(let message) = viewModel.state {
                     errorState(message: message)
                 } else if viewModel.filteredProducts.isEmpty {
-                    emptyState
+                    emptyStateScroll
                 } else {
                     productsGrid
                 }
@@ -81,16 +82,20 @@ struct ShopView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
             }
-            .sheet(isPresented: $showSortOptions) {
-                SortOptionsSheet(
-                    sortOption: $viewModel.sortOption,
-                    onApply: {
-                        showSortOptions = false
-                        viewModel.applySort()
+            .sheet(isPresented: $showFavoritesSheet) {
+                if #available(iOS 16.0, *) {
+                    NavigationView {
+                        FavoritesView()
                     }
-                )
-                .presentationDetents([.height(240)])
-                .presentationDragIndicator(.visible)
+                    .navigationViewStyle(StackNavigationViewStyle())
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+                } else {
+                    NavigationView {
+                        FavoritesView()
+                    }
+                    .navigationViewStyle(StackNavigationViewStyle())
+                }
             }
             .toolbar{
                 ToolbarItem{
@@ -113,13 +118,14 @@ struct ShopView: View {
                 ToolbarSpacer(.fixed)
                 ToolbarItem{
                     Button(action: {
-                        showSortOptions = true
+                        showFavoritesSheet = true
                     }) {
-                        Image(systemName: "arrow.up.arrow.down")
+                        Image(systemName: "heart")
                             .font(.system(size: 16, weight: .semibold))
 //                            .foregroundColor(.llegoPrimary)
                             .frame(width: 30, height: 30)
                     }
+                    .badge(favoritesManager.favoriteItemCount)
                 }
             }
             .navigationTitle("Tienda")
@@ -136,7 +142,7 @@ struct ShopView: View {
     // MARK: - Results Counter
     
 
-     private var productsGrid: some View {
+    private var productsGrid: some View {
         ScrollView {
             categoryScroll
             LazyVGrid(
@@ -209,6 +215,14 @@ struct ShopView: View {
         }
     }
 
+    private var emptyStateScroll: some View {
+        ScrollView {
+            categoryScroll
+            emptyState
+                .padding(.top, 12)
+        }
+    }
+
     private var categoryScroll: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 13) {
@@ -222,6 +236,7 @@ struct ShopView: View {
                         isSelected: isSelected,
                         isFeatured: category.isFeatured,
                         onTap: {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             if category.isAll || viewModel.selectedCategory == category.title {
                                 viewModel.selectedCategory = nil
                             } else {
@@ -349,18 +364,25 @@ private struct CategoryChip: View {
     var body: some View {
         let accentColor = Color.llegoPrimary
         let foregroundColor: Color = isSelected ? accentColor : .onSurfaceColor
+        let deepGold = Color(red: 0.48, green: 0.36, blue: 0.12)
+        let premiumStroke = LinearGradient(
+            colors: [Color.llegoSecondary.opacity(0.9), deepGold],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
         Button(action: onTap) {
             HStack(spacing: 8) {
-                Image(systemName: icon)
+                Image(systemName: isSelected ? "checkmark" : icon)
                     .fontWeight(.semibold)
                     .font(.system(size: 14))
+                    .foregroundColor(foregroundColor)
                 Text(title)
                     .fontWeight(.semibold)
                     .font(.system(size: 14))
+                    .foregroundColor(foregroundColor)
             }
             .padding(.horizontal, 3)
             .padding(.vertical, 2)
-            .foregroundColor(foregroundColor)
 //            .padding(.horizontal, 14)
 //            .padding(.vertical, 9)
             
@@ -384,19 +406,24 @@ private struct CategoryChip: View {
                     .fill(
                         AngularGradient(
                             gradient: Gradient(colors: [
-                                Color(red: 0.06, green: 0.18, blue: 0.20),
-                                Color(red: 0.24, green: 0.17, blue: 0.05),
-                                Color(red: 0.18, green: 0.10, blue: 0.06),
-                                Color(red: 0.05, green: 0.22, blue: 0.16),
-                                Color(red: 0.09, green: 0.32, blue: 0.25),
-                                Color(red: 0.06, green: 0.18, blue: 0.20)
+                                Color.llegoPrimary,
+                                Color.llegoTertiary,
+                                Color.llegoButton,
+                                deepGold,
+                                Color.llegoPrimary
                             ]),
                             center: .center,
                             angle: gradientAngle
                         )
                     )
-                    .overlay(Capsule().fill(Color.black.opacity(0.2)))
+                    .overlay(Capsule().fill(Color.black.opacity(0.28)))
                     .animation(.linear(duration: 8).repeatForever(autoreverses: false), value: gradientAngle)
+            }
+        }
+        .overlay {
+            if isSelected {
+                Capsule()
+                    .stroke(premiumStroke, lineWidth: 1.2)
             }
         }
         .onAppear {
@@ -659,66 +686,6 @@ private struct FilterOptionRow: View {
             .cornerRadius(8)
         }
         .buttonStyle(.plain)
-    }
-}
-
-// MARK: - Sort Options Sheet
-private struct SortOptionsSheet: View {
-    @Binding var sortOption: SortOption
-    let onApply: () -> Void
-
-    var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text("Ordenar por")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.onSurfaceColor)
-                Spacer()
-            }
-            .padding(20)
-
-            Divider()
-
-            // Opciones
-            VStack(spacing: 0) {
-                ForEach(SortOption.allCases, id: \.self) { option in
-                    Button(action: {
-                        sortOption = option
-                        onApply()
-                    }) {
-                        HStack(spacing: 12) {
-                            Image(systemName: option.icon)
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundColor(sortOption == option ? .llegoPrimary : .gray)
-                                .frame(width: 24)
-
-                            Text(option.displayName)
-                                .font(.system(size: 16, weight: sortOption == option ? .semibold : .regular))
-                                .foregroundColor(sortOption == option ? .llegoPrimary : .onSurfaceColor)
-
-                            Spacer()
-
-                            if sortOption == option {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(.llegoPrimary)
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 16)
-                        .background(sortOption == option ? Color.llegoPrimary.opacity(0.06) : Color.clear)
-                    }
-                    .buttonStyle(.plain)
-
-                    if option != SortOption.allCases.last {
-                        Divider()
-                            .padding(.leading, 56)
-                    }
-                }
-            }
-        }
-        
     }
 }
 

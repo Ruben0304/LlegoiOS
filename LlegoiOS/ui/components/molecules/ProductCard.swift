@@ -19,7 +19,8 @@ struct ProductCard: View {
     var onAddToCartAnimation: ((String, CGPoint) -> Void)? = nil
     var onProductTap: (() -> Void)? = nil
 
-    @State private var isFavorite: Bool = false
+    @ObservedObject private var favoritesManager = FavoritesManager.shared
+    @State private var favoritePulse = false
     
     private static let titleUIFont = UIFont.systemFont(ofSize: 17, weight: .semibold)
     private static let titleReservedHeight: CGFloat = ceil(titleUIFont.lineHeight * 2)
@@ -100,22 +101,31 @@ struct ProductCard: View {
     }
 
     private var favoriteButton: some View {
-        Button {
-            isFavorite.toggle()
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        let isFavorite = favoritesManager.isFavorite(productId: product.id)
+
+        return Button {
+            favoritesManager.toggleFavorite(productId: product.id)
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.55)) {
+                favoritePulse = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                favoritePulse = false
+            }
         } label: {
             Image(systemName: isFavorite ? "heart.fill" : "heart")
-                .font(.system(size: 14, weight: .bold))
+                .font(.system(size: 16, weight: .bold))
                 .foregroundColor(isFavorite ? Color.red : Color.gray)
-                .frame(width: 28, height: 28)
+                .frame(width: 36, height: 36)
                 .background(
                     Circle()
                         .fill(Color.white)
                         .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
                 )
         }
+        .scaleEffect(favoritePulse ? 1.15 : 1.0)
         .buttonStyle(.plain)
-        .padding(10)
+        .padding(8)
     }
 }
 
