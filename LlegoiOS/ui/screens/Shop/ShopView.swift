@@ -176,13 +176,12 @@ struct ShopView: View {
                                     }
                                 }
                             }
+                        },
+                        onProductTap: {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            selectedProduct = product
                         }
                     )
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        selectedProduct = product
-                    }
                     .opacity(animationDelay > Double(index) * 0.1 ? 1 : 0)
                     .scaleEffect(animationDelay > Double(index) * 0.1 ? 1 : 0.95)
                     .offset(y: animationDelay > Double(index) * 0.1 ? 0 : 10)
@@ -345,18 +344,23 @@ private struct CategoryChip: View {
     let isFeatured: Bool
     let onTap: () -> Void
 
+    @State private var gradientAngle: Angle = .degrees(0)
+
     var body: some View {
-        let accentColor = isFeatured ? Color.orange : Color.llegoPrimary
+        let accentColor = Color.llegoPrimary
+        let foregroundColor: Color = isSelected ? accentColor : .onSurfaceColor
         Button(action: onTap) {
             HStack(spacing: 8) {
                 Image(systemName: icon)
                     .fontWeight(.semibold)
+                    .font(.system(size: 14))
                 Text(title)
                     .fontWeight(.semibold)
+                    .font(.system(size: 14))
             }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 4)
-            .foregroundColor(isSelected ? accentColor : .onSurfaceColor)
+            .padding(.horizontal, 3)
+            .padding(.vertical, 2)
+            .foregroundColor(foregroundColor)
 //            .padding(.horizontal, 14)
 //            .padding(.vertical, 9)
             
@@ -374,6 +378,32 @@ private struct CategoryChip: View {
         .clipShape(Capsule())
         .compositingGroup()
         .tint(.white)
+        .background {
+            if isFeatured {
+                Capsule()
+                    .fill(
+                        AngularGradient(
+                            gradient: Gradient(colors: [
+                                Color(red: 0.06, green: 0.18, blue: 0.20),
+                                Color(red: 0.24, green: 0.17, blue: 0.05),
+                                Color(red: 0.18, green: 0.10, blue: 0.06),
+                                Color(red: 0.05, green: 0.22, blue: 0.16),
+                                Color(red: 0.09, green: 0.32, blue: 0.25),
+                                Color(red: 0.06, green: 0.18, blue: 0.20)
+                            ]),
+                            center: .center,
+                            angle: gradientAngle
+                        )
+                    )
+                    .overlay(Capsule().fill(Color.black.opacity(0.2)))
+                    .animation(.linear(duration: 8).repeatForever(autoreverses: false), value: gradientAngle)
+            }
+        }
+        .onAppear {
+            if isFeatured {
+                gradientAngle = .degrees(360)
+            }
+        }
 //        .background(
 //            Capsule()
 //               

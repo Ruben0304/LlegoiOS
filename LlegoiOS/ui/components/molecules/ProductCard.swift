@@ -25,78 +25,78 @@ struct ProductCard: View {
     private static let titleReservedHeight: CGFloat = ceil(titleUIFont.lineHeight * 2)
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            imageSection
+        ZStack(alignment: .topTrailing) {
+            Button(action: {
+                onProductTap?()
+            }) {
+                VStack(alignment: .leading, spacing: 12) {
+                    imageSection
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(product.name)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(.primary)
-                    .lineLimit(2)
-                    .truncationMode(.tail)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .frame(height: Self.titleReservedHeight, alignment: .topLeading)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(product.name)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(.primary)
+                            .lineLimit(2)
+                            .truncationMode(.tail)
+                            .multilineTextAlignment(.leading)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .frame(height: Self.titleReservedHeight, alignment: .topLeading)
 
-                Text(product.weight)
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary)
+                        Text(product.weight)
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                    }
+
+                    HStack {
+                        Text(product.shop)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.secondary)
+
+                        Spacer()
+
+                        Text(product.price)
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.primary)
+                    }
+                }
+                .padding(16)
             }
+            .buttonStyle(.glassProminent)
+            .buttonBorderShape(.roundedRectangle(radius: 26))
+            .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+            .compositingGroup()
+            .tint(.white)
 
-            HStack {
-                Text(product.shop)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.secondary)
-
-                Spacer()
-
-                Text(product.price)
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(.primary)
-            }
+            favoriteButton
+                .padding(.top, 16)
+                .padding(.trailing, 16)
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(Color.white)
-                .shadow(
-                    color: Color.black.opacity(0.08),
-                    radius: 12, x: 0, y: 6
-                )
-        )
-        .contentShape(Rectangle())
-        .modifier(OptionalTapModifier(onTap: onProductTap))
     }
 
     private var imageSection: some View {
-        ZStack(alignment: .topTrailing) {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color(red: 245/255, green: 247/255, blue: 250/255))
-                .overlay(
-                    CachedAsyncImage(
-                        url: URL(string: product.imageUrl),
+        RoundedRectangle(cornerRadius: 20, style: .continuous)
+            .fill(Color.clear)
+            .overlay(
+                CachedAsyncImage(
+                    url: URL(string: product.imageUrl),
                         content: { image in
                             image
                                 .resizable()
-                                .scaledToFill()
+                                .scaledToFit()
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .clipped()
                         },
-                        placeholder: {
-                            ZStack {
-                                Color(red: 240/255, green: 242/255, blue: 246/255)
-                                ProgressView()
-                                    .tint(.llegoPrimary)
-                            }
+                    placeholder: {
+                        ZStack {
+                            Color(red: 240/255, green: 242/255, blue: 246/255)
+                            ProgressView()
+                                .tint(.llegoPrimary)
                         }
-                    )
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-
-            favoriteButton
-        }
-        .frame(height: 150)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .frame(height: 150)
     }
 
     private var favoriteButton: some View {
