@@ -15,6 +15,28 @@ struct ShopView: View {
         self.initialCategory = category
     }
 
+    private struct ShopCategory: Identifiable {
+        let title: String
+        let icon: String
+        let isFeatured: Bool
+        let isAll: Bool
+
+        var id: String { title }
+    }
+
+    private let shopCategories: [ShopCategory] = [
+        ShopCategory(title: "Todos", icon: "square.grid.2x2", isFeatured: false, isAll: true),
+        ShopCategory(title: "Platos del día", icon: "sparkles", isFeatured: true, isAll: false),
+        ShopCategory(title: "Desayuno", icon: "sunrise.fill", isFeatured: false, isAll: false),
+        ShopCategory(title: "Entrantes", icon: "leaf.fill", isFeatured: false, isAll: false),
+        ShopCategory(title: "Platos principales", icon: "fork.knife", isFeatured: false, isAll: false),
+        ShopCategory(title: "Postres", icon: "birthday.cake.fill", isFeatured: false, isAll: false),
+        ShopCategory(title: "Italiano", icon: "fork.knife.circle.fill", isFeatured: false, isAll: false),
+        ShopCategory(title: "Cócteles", icon: "wineglass.fill", isFeatured: false, isAll: false),
+        ShopCategory(title: "Bebidas frías", icon: "snowflake", isFeatured: false, isAll: false),
+        ShopCategory(title: "Bebidas calientes", icon: "thermometer.sun.fill", isFeatured: false, isAll: false)
+    ]
+
     private var totalCartItems: Int {
         productCounts.values.reduce(0, +)
     }
@@ -116,6 +138,7 @@ struct ShopView: View {
 
      private var productsGrid: some View {
         ScrollView {
+            categoryScroll
             LazyVGrid(
                 columns: [
                     GridItem(.flexible(), spacing: 16),
@@ -185,6 +208,35 @@ struct ShopView: View {
         .fullScreenCover(item: $selectedProduct) { product in
             ProductShowcaseView(product: product)
         }
+    }
+
+    private var categoryScroll: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 13) {
+                ForEach(shopCategories) { category in
+                    let isSelected = category.isAll
+                        ? viewModel.selectedCategory == nil
+                        : viewModel.selectedCategory == category.title
+                    CategoryChip(
+                        title: category.title,
+                        icon: category.icon,
+                        isSelected: isSelected,
+                        isFeatured: category.isFeatured,
+                        onTap: {
+                            if category.isAll || viewModel.selectedCategory == category.title {
+                                viewModel.selectedCategory = nil
+                            } else {
+                                viewModel.selectedCategory = category.title
+                            }
+                            viewModel.applyFilters()
+                        }
+                    )
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 6)
+        }
+        .padding(.top, 6)
     }
 
     // MARK: - Empty State
@@ -288,26 +340,45 @@ struct ShopView: View {
 // MARK: - Category Chip Component
 private struct CategoryChip: View {
     let title: String
+    let icon: String
     let isSelected: Bool
+    let isFeatured: Bool
     let onTap: () -> Void
 
     var body: some View {
+        let accentColor = isFeatured ? Color.orange : Color.llegoPrimary
         Button(action: onTap) {
-            Text(title)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(isSelected ? .white : .llegoPrimary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(
-                    Capsule()
-                        .fill(isSelected ? Color.llegoPrimary : Color.clear)
-                )
-                .overlay(
-                    Capsule()
-                        .stroke(Color.llegoPrimary, lineWidth: isSelected ? 0 : 1.5)
-                )
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .fontWeight(.semibold)
+                Text(title)
+                    .fontWeight(.semibold)
+            }
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .foregroundColor(isSelected ? accentColor : .onSurfaceColor)
+//            .padding(.horizontal, 14)
+//            .padding(.vertical, 9)
+            
+//            .overlay(
+//                Capsule()
+//                    .stroke(
+//                        isSelected ? accentColor : Color.black.opacity(0.08),
+//                        lineWidth: isSelected ? 1.5 : 1
+//                    )
+//            )
+//            .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 3)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.glassProminent)
+        .buttonBorderShape(.capsule)
+        .clipShape(Capsule())
+        .compositingGroup()
+        .tint(.white)
+//        .background(
+//            Capsule()
+//               
+//        )
+        
     }
 }
 

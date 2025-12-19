@@ -4,5 +4,16 @@
 <dict>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Usamos Face ID para confirmar tus pagos de forma segura.</string>
+	<key>GIDClientID</key>
+	<string>309268628843-vafbp3o66ul2ea1g2bo6h9bpraqk5sj0.apps.googleusercontent.com</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.309268628843-vafbp3o66ul2ea1g2bo6h9bpraqk5sj0</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

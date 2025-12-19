@@ -23,6 +23,7 @@ struct WelcomeView: View {
     @State private var navigateToIntroVideo: Bool = false
     @State private var navigateToLogin: Bool = false
     @State private var navigateToCart: Bool = false
+    @State private var cartSheetDetent: PresentationDetent = .medium
 
     // Carousel state
     @State private var currentIndex: Int = 0
@@ -189,8 +190,25 @@ struct WelcomeView: View {
             .navigationDestination(isPresented: $navigateToLogin) {
                 LoginView(viewModel: ProfileViewModel())
             }
-            .fullScreenCover(isPresented: $navigateToCart) {
-                CartView()
+            .sheet(isPresented: $navigateToCart) {
+                let shouldBeLarge = cartManager.cartItemCount > 1
+
+                if #available(iOS 16.0, *) {
+                    NavigationView {
+                        CartView()
+                    }
+                    .navigationViewStyle(StackNavigationViewStyle())
+                    .presentationDetents(shouldBeLarge ? [.large] : [.medium], selection: $cartSheetDetent)
+                    .presentationDragIndicator(.visible)
+                    .task(id: shouldBeLarge) {
+                        cartSheetDetent = shouldBeLarge ? .large : .medium
+                    }
+                } else {
+                    NavigationView {
+                        CartView()
+                    }
+                    .navigationViewStyle(StackNavigationViewStyle())
+                }
             }
             .toolbar {
                 // Cart button con badge

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 
 struct Product: Identifiable, Hashable {
@@ -19,6 +20,9 @@ struct ProductCard: View {
     var onProductTap: (() -> Void)? = nil
 
     @State private var isFavorite: Bool = false
+    
+    private static let titleUIFont = UIFont.systemFont(ofSize: 17, weight: .semibold)
+    private static let titleReservedHeight: CGFloat = ceil(titleUIFont.lineHeight * 2)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -29,6 +33,10 @@ struct ProductCard: View {
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.primary)
                     .lineLimit(2)
+                    .truncationMode(.tail)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(height: Self.titleReservedHeight, alignment: .topLeading)
 
                 Text(product.weight)
                     .font(.system(size: 13))

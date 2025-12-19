@@ -1,5 +1,19 @@
 {
   "schemaNamespace": "LlegoAPI",
+  "schemaDownloadConfiguration": {
+    "downloadMethod": {
+      "introspection": {
+        "endpointURL": "https://llegobackend-production.up.railway.app/graphql",
+        "httpMethod": {
+          "POST": {}
+        },
+        "outputFormat": "SDL",
+        "includeDeprecatedInputValues": true
+      }
+    },
+    "downloadTimeout": 60,
+    "outputPath": "schema.graphqls"
+  },
   "input": {
     "operationSearchPaths": [
       "**/*.graphql"

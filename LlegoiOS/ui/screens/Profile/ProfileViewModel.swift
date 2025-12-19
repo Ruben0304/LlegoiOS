@@ -121,7 +121,7 @@ class ProfileViewModel: ObservableObject {
         }
     }
 
-    /// Login con Apple (por implementar con backend)
+    /// Login con Apple
     func signInWithApple(result: Result<ASAuthorization, Error>) async {
         state = .loading
         errorMessage = nil
@@ -130,11 +130,39 @@ class ProfileViewModel: ObservableObject {
             switch result {
             case .success(let authorization):
                 if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential {
-                    // TODO: Implementar login con Apple en el backend
-                    // Por ahora, mostrar mensaje
-                    errorMessage = "Login con Apple estará disponible próximamente"
+                    guard let tokenData = appleIDCredential.identityToken,
+                          let identityToken = String(data: tokenData, encoding: .utf8) else {
+                        errorMessage = "No se pudo obtener el token de Apple"
+                        state = .unauthenticated
+                        print("⚠️ Apple Sign In: identityToken nil o inválido")
+                        return
+                    }
+
+                    let authorizationCode = appleIDCredential.authorizationCode.flatMap { String(data: $0, encoding: .utf8) }
+                    let nonce: String?
+                    if let state = appleIDCredential.state, !state.isEmpty {
+                        nonce = state
+                    } else {
+                        nonce = nil
+                    }
+
+                    print("🍎 Recibido AppleIDCredential. email: \(appleIDCredential.email ?? "no proporcionado"), tieneAuthCode: \(authorizationCode != nil)")
+
+                    let session = try await repository.loginWithApple(
+                        identityToken: identityToken,
+                        authorizationCode: authorizationCode,
+                        nonce: nonce
+                    )
+
+                    authManager.saveSession(session)
+                    currentUser = session.user
+                    state = .authenticated
+
+                    print("✅ Apple Sign In exitoso: \(session.user.email)")
+                } else {
+                    errorMessage = "Credencial de Apple inválida"
                     state = .unauthenticated
-                    print("⚠️ Apple Sign In no implementado en backend aún")
+                    print("⚠️ Apple Sign In: credencial no es ASAuthorizationAppleIDCredential")
                 }
 
             case .failure(let error):
@@ -145,6 +173,38 @@ class ProfileViewModel: ObservableObject {
             errorMessage = "Error al iniciar sesión con Apple: \(error.localizedDescription)"
             state = .unauthenticated
             print("❌ Error en Apple Sign In: \(error)")
+        }
+    }
+
+    /// Login con Google
+    func signInWithGoogle(idToken: String, authorizationCode: String?, email: String?) async {
+        state = .loading
+        errorMessage = nil
+
+        guard !idToken.isEmpty else {
+            errorMessage = "No se pudo obtener el token de Google"
+            state = .unauthenticated
+            print("⚠️ Google Sign In: idToken vacío")
+            return
+        }
+
+        do {
+            print("🔍 Iniciando login con Google. email: \(email ?? "desconocido") authCode: \(authorizationCode != nil)")
+            let session = try await repository.loginWithGoogle(
+                idToken: idToken,
+                authorizationCode: authorizationCode,
+                nonce: nil
+            )
+
+            authManager.saveSession(session)
+            currentUser = session.user
+            state = .authenticated
+
+            print("✅ Google Sign In exitoso: \(session.user.email)")
+        } catch {
+            errorMessage = "Error al iniciar sesión con Google: \(error.localizedDescription)"
+            state = .unauthenticated
+            print("❌ Error en Google Sign In: \(error)")
         }
     }
 

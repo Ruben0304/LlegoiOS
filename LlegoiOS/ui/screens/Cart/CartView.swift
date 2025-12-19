@@ -111,9 +111,7 @@ struct CartView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .top) {
-                // Background moderno consistente con WelcomeView, ShopView, ConversationalSearchView
-                WelcomeGradientBackground()
-                    .ignoresSafeArea()
+//                Color.white.ignoresSafeArea()
 
                 if case .loading = viewModel.state {
                     VStack(spacing: 20) {
@@ -188,89 +186,86 @@ struct CartView: View {
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
-                        .padding(.bottom, 120)
+                        .padding(.bottom, 110)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     .safeAreaInset(edge: .bottom) {
-                        VStack(spacing: 0) {
-                            // Línea divisoria sutil
-                            Divider()
-                                .background(Color.gray.opacity(0.2))
-                            
-                            VStack(spacing: 12) {
-                                // Seguridad badge
-                                HStack(spacing: 6) {
-                                    Image(systemName: "lock.shield.fill")
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundColor(.llegoAccent)
-                                    
-                                    Text("Pago seguro y protegido")
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundColor(.secondary.opacity(0.8))
-                                }
-                                .padding(.top, 8)
-                                
-                                // Botones de acción
-                                HStack(spacing: 10) {
-                                    Button(action: {
-                                        showPaymentMethodPicker = true
-                                    }) {
-                                        HStack(spacing: 6) {
-                                            if let method = selectedPaymentMethod {
-                                                switch method.imageType {
-                                                case .systemIcon(let iconName):
-                                                    Image(systemName: iconName)
-                                                        .font(.system(size: 14, weight: .semibold))
-                                                case .assetImage(let imageName):
-                                                    Image(imageName)
-                                                        .resizable()
-                                                        .scaledToFit()
-                                                        .frame(width: 20, height: 20)
-                                                }
-                                                
-                                                VStack(alignment: .leading, spacing: 1) {
-                                                    Text("Pagar con")
-                                                        .font(.system(size: 11, weight: .medium))
-                                                    Text(method.name)
-                                                        .font(.system(size: 13, weight: .bold))
-                                                }
-                                            } else {
-                                                Image(systemName: "creditcard")
-                                                    .font(.system(size: 14, weight: .semibold))
-                                                Text("Método")
+                        VStack(spacing: 10) {
+//                            HStack(spacing: 6) {
+//                                Image(systemName: "lock.shield.fill")
+//                                    .font(.system(size: 11, weight: .medium))
+//                                    .foregroundColor(.llegoAccent)
+//
+//                                Text("Pago seguro y protegido")
+//                                    .font(.system(size: 11, weight: .medium))
+//                                    .foregroundColor(.secondary.opacity(0.8))
+//                            }
+
+                            HStack(spacing: 10) {
+                                Button(action: {
+                                    showPaymentMethodPicker = true
+                                }) {
+                                    HStack(spacing: 6) {
+                                        if let method = selectedPaymentMethod {
+                                            switch method.imageType {
+                                            case .systemIcon(let iconName):
+                                                Image(systemName: iconName)
                                                     .font(.system(size: 13, weight: .semibold))
+                                            case .assetImage(let imageName):
+                                                Image(imageName)
+                                                    .resizable()
+                                                    .scaledToFit()
+                                                    .frame(width: 18, height: 18)
                                             }
-                                        }
-                                        .frame(maxWidth: .infinity)
-                                        .frame(height: 48)
-                                    }
-                                    .buttonStyle(.glass)
-                                    
-                                    Button(action: {
-                                        processPayment()
-                                    }) {
-                                        HStack(spacing: 6) {
-                                            if selectedPaymentMethod?.id == "invoice_international" {
-                                                Text("Enviar factura")
-                                                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                                            } else {
-                                                Text("Pagar")
-                                                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                                                Text(viewModel.formattedTotal)
-                                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+
+                                            VStack(alignment: .leading, spacing: 1) {
+                                                Text("Pagar con")
+                                                    .font(.system(size: 12, weight: .medium))
+                                                Text(method.name)
+                                                    .font(.system(size: 13, weight: .bold))
                                             }
+                                        } else {
+                                            Image(systemName: "creditcard")
+                                                .font(.system(size: 15, weight: .semibold))
+                                            Text("Método")
+                                                .font(.system(size: 14, weight: .semibold))
                                         }
-                                        .frame(maxWidth: .infinity)
-                                        .frame(height: 48)
                                     }
-                                    .buttonStyle(.glassProminent)
-                                    .tint(.llegoPrimary)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 44)
                                 }
+                                .buttonStyle(.glassProminent)
+                                .tint(.black)
+
+                                Button(action: {
+                                    processPayment()
+                                }) {
+                                    HStack(spacing: 6) {
+                                        if selectedPaymentMethod?.id == "invoice_international" {
+                                            Text("Enviar factura")
+                                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                        } else {
+                                            Text("Pagar")
+                                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                                            Text(viewModel.formattedTotal)
+                                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 44)
+                                }
+                                .buttonStyle(.glassProminent)
+                                .tint(.llegoPrimary)
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 16)
-                            .background(.ultraThinMaterial)
                         }
+                        .padding(12)
+//                        .background(
+//                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+//                                .fill(Color.white)
+//                                .shadow(color: Color.black.opacity(0.08), radius: 14, x: 0, y: 8)
+//                        )
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 12)
                     }
 
                     NavigationLink(
@@ -287,7 +282,7 @@ struct CartView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    BackButton(action: {
+                    CloseButton(action: {
                         dismiss()
                     })
                 }
@@ -330,6 +325,7 @@ struct CartView: View {
                     }
                 }
             }
+//            .modifier(NavigationBarWhiteBackground())
             .sheet(isPresented: $showPaymentMethodPicker) {
                 PaymentMethodPickerView(
                     paymentMethods: paymentMethods,
@@ -829,51 +825,72 @@ struct CartView: View {
     
 
     private var emptyCartView: some View {
-        VStack(spacing: 20) {
-            Spacer()
+        VStack(spacing: 0) {
+            Spacer(minLength: 24)
 
-            // Icono minimalista
-            Image(systemName: "cart")
-                .font(.system(size: 48, weight: .regular))
-                .foregroundColor(.black)
-                .padding(.bottom, 8)
+            VStack(spacing: 18) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.llegoAccent.opacity(0.22),
+                                    Color.llegoPrimary.opacity(0.12)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 92, height: 92)
 
-            VStack(spacing: 8) {
-                Text("Tu carrito está vacío")
-                    .font(.system(size: 22, weight: .semibold, design: .rounded))
-                    .foregroundColor(.primary)
-
-                Text("Agrega productos para comenzar tu pedido")
-                    .font(.system(size: 15, weight: .regular))
-                    .foregroundColor(.secondary.opacity(0.8))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
-            }
-
-            Button(action: {
-               dismiss()
-            }) {
-                HStack(spacing: 8) {
-                    Image(systemName: "arrow.left")
-                        .font(.system(size: 14, weight: .semibold))
-
-                    Text("Explorar Productos")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    Image(systemName: "cart")
+                        .font(.system(size: 34, weight: .semibold))
+                        .foregroundColor(.llegoPrimary)
                 }
-                .foregroundColor(.llegoPrimary)
-                .frame(height: 50)
-                .frame(maxWidth: 240)
-            }
-            .buttonStyle(.glass)
-            .padding(.top, 12)
 
-            Spacer()
+                VStack(spacing: 8) {
+                    Text("Tu carrito está vacío")
+                        .font(.system(size: 22, weight: .semibold, design: .rounded))
+                        .foregroundColor(.primary)
+
+                    Text("Agrega productos para comenzar tu pedido")
+                        .font(.system(size: 15, weight: .regular))
+                        .foregroundColor(.secondary.opacity(0.85))
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.horizontal, 18)
+
+                Button(action: { dismiss() }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "storefront")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("Explorar tiendas")
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 12)
+                    .background(Color.llegoAccent)
+                    .cornerRadius(14)
+                    .shadow(color: Color.black.opacity(0.10), radius: 10, x: 0, y: 6)
+                }
+            }
+            .padding(.vertical, 22)
+            .frame(maxWidth: 520)
+            .background(
+                RoundedRectangle(cornerRadius: 22)
+                    .fill(Color.white.opacity(0.92))
+                    .shadow(color: Color.black.opacity(0.06), radius: 18, x: 0, y: 10)
+            )
+            .padding(.horizontal, 20)
+
+            Spacer(minLength: 140)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var priceBreakdown: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 12) {
             // Subtotal
             HStack {
                 Text("Subtotal")
@@ -886,89 +903,40 @@ struct CartView: View {
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
                     .foregroundColor(.primary)
             }
+            .padding(12)
+            .background(Color.white)
+            .cornerRadius(16)
+            .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
 
-            // Envío
-            HStack {
-                HStack(spacing: 6) {
-                    Image(systemName: "truck.box.fill")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.llegoAccent)
+            // Envío (el total ya se muestra en el botón de pagar)
+            HStack(spacing: 12) {
+                Image(systemName: "truck.box.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.llegoAccent)
+                    .frame(width: 32, height: 32)
+                    .background(Circle().fill(Color.llegoAccent.opacity(0.12)))
 
+                VStack(alignment: .leading, spacing: 3) {
                     Text("Envío")
-                        .font(.system(size: 15, weight: .medium))
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(.primary)
+
+                    Text("Entrega")
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.secondary)
                 }
 
                 Spacer()
 
                 Text(viewModel.formattedDeliveryFee)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
             }
-
-            shippingTipCard
-
-            Divider()
-                .background(Color.gray.opacity(0.2))
-                .padding(.vertical, 4)
-
-            // Total
-            HStack {
-                Text("Total")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
-
-                Spacer()
-
-                Text(viewModel.formattedTotal)
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundColor(.llegoPrimary)
-            }
+            .padding(12)
+            .background(Color.white)
+            .cornerRadius(16)
+            .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
         }
-        .padding(20)
-        .background(Color.white)
-        .cornerRadius(18)
-        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
-    }
-
-    private var tipAttributedString: AttributedString {
-        var base = AttributedString("Recomendamos elegir productos de un mismo vendedor para hacer más barato el envío o ")
-        base.font = .system(size: 13, weight: .medium)
-        base.foregroundColor = .gray
-
-        var action = AttributedString("suscribirse")
-        action.font = .system(size: 13, weight: .semibold)
-        action.foregroundColor = .llegoAccent
-        action.underlineStyle = .single
-
-        return base + action
-    }
-
-    private var shippingTipCard: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "lightbulb.fill")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.llegoAccent)
-                .frame(width: 24, height: 24)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Tip")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundColor(.secondary)
-                    .textCase(.uppercase)
-
-                Button(action: {
-                    navigateToPlans = true
-                }) {
-                    Text(tipAttributedString)
-                        .multilineTextAlignment(.leading)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(12)
-        .background(Color.white)
-        .cornerRadius(12)
     }
 
    

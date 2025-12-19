@@ -34,7 +34,17 @@ class ConversationalSearchRepository {
                     return
                 }
                 
-                let output = data.aiChat.output
+                guard let aiChat = data.aiChat else {
+                    print("⚠️ [REPOSITORY] aiChat es nil en la respuesta")
+                    completion(.failure(NSError(
+                        domain: "GraphQL",
+                        code: -3,
+                        userInfo: [NSLocalizedDescriptionKey: "Respuesta vacía de AI"]
+                    )))
+                    return
+                }
+
+                let output = aiChat.output
 
                 // LOGS DE DEBUG
                 print("📥 [REPOSITORY] Response Type: \(output.type)")

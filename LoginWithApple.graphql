@@ -1,0 +1,14 @@
+mutation LoginWithApple($input: AppleLoginInput!) {
+  loginWithApple(input: $input) {
+    accessToken
+    tokenType
+    user {
+      id
+      name
+      email
+      phone
+      role
+      createdAt
+    }
+  }
+}

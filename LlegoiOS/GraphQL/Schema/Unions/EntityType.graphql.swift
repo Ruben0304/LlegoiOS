@@ -4,8 +4,8 @@
 import ApolloAPI
 
 public extension LlegoAPI.Unions {
-  static let Entity = Union(
-    name: "Entity",
+  static let EntityType = Union(
+    name: "EntityType",
     possibleTypes: [
       LlegoAPI.Objects.ProductType.self,
       LlegoAPI.Objects.BranchType.self,

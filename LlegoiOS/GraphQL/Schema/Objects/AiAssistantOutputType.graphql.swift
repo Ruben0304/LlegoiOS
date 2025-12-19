@@ -4,8 +4,8 @@
 import ApolloAPI
 
 public extension LlegoAPI.Objects {
-  static let PaymentType = ApolloAPI.Object(
-    typename: "PaymentType",
+  static let AiAssistantOutputType = ApolloAPI.Object(
+    typename: "AiAssistantOutputType",
     implementedInterfaces: [],
     keyFields: nil
   )

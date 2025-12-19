@@ -34,7 +34,7 @@ public extension LlegoAPI {
 
       @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.Query }
       @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
-        .field("aiChat", AiChat.self, arguments: ["input": [
+        .field("aiChat", AiChat?.self, arguments: ["input": [
           "message": .variable("message"),
           "sessionId": .variable("sessionId")
         ]]),
@@ -43,17 +43,17 @@ public extension LlegoAPI {
         AIChatQuery.Data.self
       ] }
 
-      /// Chat con IA
-      public var aiChat: AiChat { __data["aiChat"] }
+      /// Send a message to the AI assistant and get a response
+      public var aiChat: AiChat? { __data["aiChat"] }
 
       /// AiChat
       ///
-      /// Parent Type: `AIChatResponse`
+      /// Parent Type: `AiAssistantResponseType`
       public struct AiChat: LlegoAPI.SelectionSet {
         @_spi(Unsafe) public let __data: DataDict
         @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
 
-        @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.AIChatResponse }
+        @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.AiAssistantResponseType }
         @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
           .field("__typename", String.self),
           .field("output", Output.self),
@@ -62,16 +62,17 @@ public extension LlegoAPI {
           AIChatQuery.Data.AiChat.self
         ] }
 
+        /// Response output from AI assistant
         public var output: Output { __data["output"] }
 
         /// AiChat.Output
         ///
-        /// Parent Type: `AIChatOutput`
+        /// Parent Type: `AiAssistantOutputType`
         public struct Output: LlegoAPI.SelectionSet {
           @_spi(Unsafe) public let __data: DataDict
           @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
 
-          @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.AIChatOutput }
+          @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.AiAssistantOutputType }
           @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
             .field("__typename", String.self),
             .field("type", String.self),
@@ -83,19 +84,23 @@ public extension LlegoAPI {
             AIChatQuery.Data.AiChat.Output.self
           ] }
 
+          /// Type of response (e.g., 'payment_method', 'products', 'branches')
           public var type: String { __data["type"] }
+          /// AI-generated response text
           public var aItext: String { __data["AItext"] }
+          /// List of relevant IDs (for debugging)
           public var ids: [String] { __data["ids"] }
+          /// List of resolved entities (products, branches, or payment methods)
           public var entities: [Entity]? { __data["entities"] }
 
           /// AiChat.Output.Entity
           ///
-          /// Parent Type: `Entity`
+          /// Parent Type: `EntityType`
           public struct Entity: LlegoAPI.SelectionSet {
             @_spi(Unsafe) public let __data: DataDict
             @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
 
-            @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Unions.Entity }
+            @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Unions.EntityType }
             @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
               .field("__typename", String.self),
               .inlineFragment(AsPaymentMethodType.self),
@@ -129,8 +134,11 @@ public extension LlegoAPI {
                 AIChatQuery.Data.AiChat.Output.Entity.AsPaymentMethodType.self
               ] }
 
+              /// Payment method ID
               public var id: String { __data["id"] }
+              /// Currency (e.g., CUP, USD)
               public var currency: String { __data["currency"] }
+              /// Payment method (e.g., tarjeta, efectivo, transferencia)
               public var method: String { __data["method"] }
             }
 

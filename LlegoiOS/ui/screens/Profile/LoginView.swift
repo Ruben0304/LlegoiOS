@@ -246,12 +246,8 @@ struct LoginView: View {
                     SignInWithAppleButton(.continue) { request in
                          request.requestedScopes = [.fullName, .email]
                     } onCompletion: { result in
-                        switch result {
-                        case .success(let authResults):
-                            print("Apple Login Successful: \(authResults)")
-                            // viewModel.handleAppleLogin(authResults)
-                        case .failure(let error):
-                             print("Apple Login Failed: \(error.localizedDescription)")
+                        Task {
+                            await viewModel.signInWithApple(result: result)
                         }
                     }
                     .signInWithAppleButtonStyle(.black)
@@ -388,17 +384,43 @@ struct LoginView: View {
             return
         }
 
+        // Configurar Google Sign-In
+        GIDSignIn.sharedInstance.configuration = GIDConfiguration(
+            clientID: "309268628843-vafbp3o66ul2ea1g2bo6h9bpraqk5sj0.apps.googleusercontent.com"
+        )
+
         GIDSignIn.sharedInstance.signIn(
             withPresenting: rootViewController) { signInResult, error in
             guard let result = signInResult else {
                 if let error = error {
                      print("Google Sign In Error: \(error.localizedDescription)")
+                     Task { @MainActor in
+                         viewModel.errorMessage = "Error al iniciar sesión con Google: \(error.localizedDescription)"
+                         viewModel.state = .unauthenticated
+                     }
                 }
                 return
             }
-            // If sign in succeeded, display the app's main content View.
-            print("Google Login Successful: \(result.user.profile?.email ?? "No Email")")
-            // viewModel.handleGoogleLogin(result)
+            guard let idToken = result.user.idToken?.tokenString else {
+                print("Google Sign In Error: idToken vacío")
+                Task { @MainActor in
+                    viewModel.errorMessage = "No se pudo obtener el token de Google"
+                    viewModel.state = .unauthenticated
+                }
+                return
+            }
+
+            let authorizationCode = result.serverAuthCode
+            let email = result.user.profile?.email
+
+            print("Google Login Successful: \(email ?? "No Email")")
+            Task { @MainActor in
+                await viewModel.signInWithGoogle(
+                    idToken: idToken,
+                    authorizationCode: authorizationCode,
+                    email: email
+                )
+            }
         }
     }
 

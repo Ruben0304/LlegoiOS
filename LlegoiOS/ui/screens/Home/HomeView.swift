@@ -6,6 +6,7 @@ struct HomeView: View {
     @ObservedObject private var cartManager = CartManager.shared
     @State private var productCounts: [String: Int] = [:]
     @State private var navigateToCart = false
+    @State private var cartSheetDetent: PresentationDetent = .medium
     @State private var navigateToWallet = false
     @State private var selectedProduct: Product? = nil
     @State private var navigateToProfile = false
@@ -262,11 +263,25 @@ struct HomeView: View {
                 }
             }
         }
-        .fullScreenCover(isPresented: $navigateToCart) {
-            NavigationView {
-                CartView()
+        .sheet(isPresented: $navigateToCart) {
+            let shouldBeLarge = cartManager.cartItemCount > 1
+
+            if #available(iOS 16.0, *) {
+                NavigationView {
+                    CartView()
+                }
+                .navigationViewStyle(StackNavigationViewStyle())
+                .presentationDetents(shouldBeLarge ? [.large] : [.medium], selection: $cartSheetDetent)
+                .presentationDragIndicator(.visible)
+                .task(id: shouldBeLarge) {
+                    cartSheetDetent = shouldBeLarge ? .large : .medium
+                }
+            } else {
+                NavigationView {
+                    CartView()
+                }
+                .navigationViewStyle(StackNavigationViewStyle())
             }
-            .navigationViewStyle(StackNavigationViewStyle())
         }
         .fullScreenCover(isPresented: $navigateToWallet) {
             NavigationView {

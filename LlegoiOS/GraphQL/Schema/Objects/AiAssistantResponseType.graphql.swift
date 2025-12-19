@@ -4,8 +4,8 @@
 import ApolloAPI
 
 public extension LlegoAPI.Objects {
-  static let AIChatResponse = ApolloAPI.Object(
-    typename: "AIChatResponse",
+  static let AiAssistantResponseType = ApolloAPI.Object(
+    typename: "AiAssistantResponseType",
     implementedInterfaces: [],
     keyFields: nil
   )

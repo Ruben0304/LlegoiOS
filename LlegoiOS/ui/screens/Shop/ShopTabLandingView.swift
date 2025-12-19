@@ -18,7 +18,7 @@ struct ShopTabLandingView: View {
     @State private var searchDebounceTask: Task<Void, Never>? = nil
 
     // Modo de visualización
-    @State private var viewMode: ShopViewMode = .list
+    @State private var viewMode: ShopViewMode = .map
 
     // Resultados filtrados de búsqueda (solo vendedores)
     @State private var filteredSearchStores: [StoreWithCoordinates] = []
