@@ -209,14 +209,7 @@ struct WelcomeView: View {
                                             .padding(.trailing, 4) // Un tin de padding derecho extra
                                         }
                                         // Animación de entrada de arriba a abajo, uno a uno
-                                        .transition(
-                                            .asymmetric(
-                                                insertion: .offset(y: -15).combined(with: .opacity),
-                                                removal: .offset(y: 10).combined(with: .opacity)
-                                            )
-                                        )
-                                        // Delay progresivo basado en el índice para efecto cascada
-                                        .animation(.spring(response: 0.5, dampingFraction: 0.7).delay(Double(index) * 0.08), value: currentIndex)
+
                                     }
                                 }
                             }
@@ -372,6 +365,18 @@ struct WelcomeView: View {
                 }
             }
             .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    HStack(spacing: 4) {
+                        Text("Llegó")
+                           
+                        Image("corona")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 24)
+                    }.padding(.horizontal,10)
+                        .padding(.vertical,4)
+                }
+                ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
                 // Cart button con badge
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
