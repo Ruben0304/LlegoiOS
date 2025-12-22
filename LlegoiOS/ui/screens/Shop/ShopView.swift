@@ -8,6 +8,7 @@ struct ShopView: View {
     @State private var showFavoritesSheet = false
     @State private var animationDelay: Double = 0
     @State private var selectedProduct: Product? = nil
+    @FocusState private var isSearchFocused: Bool
 
     // Parámetros opcionales para filtrado inicial
     let initialCategory: String?
@@ -134,6 +135,7 @@ struct ShopView: View {
                 placement: .toolbar,
                 prompt: "Buscar productos..."
             )
+            .searchFocused($isSearchFocused)
         }
     }
 
@@ -143,7 +145,13 @@ struct ShopView: View {
 
     private var productsGrid: some View {
         ScrollView {
-            categoryScroll
+            if isSearchFocused {
+                categoryScroll
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .top).combined(with: .opacity),
+                        removal: .move(edge: .top).combined(with: .opacity)
+                    ))
+            }
             LazyVGrid(
                 columns: [
                     GridItem(.flexible(), spacing: 16),
@@ -200,6 +208,7 @@ struct ShopView: View {
             .padding(.horizontal, 20)
             .padding(.top, 8)
         }
+        .animation(.easeInOut(duration: 0.3), value: isSearchFocused)
         .onAppear {
             animationDelay = Double(viewModel.filteredProducts.count) * 0.1 + 0.1
         }
@@ -216,10 +225,17 @@ struct ShopView: View {
 
     private var emptyStateScroll: some View {
         ScrollView {
-            categoryScroll
+            if isSearchFocused {
+                categoryScroll
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .top).combined(with: .opacity),
+                        removal: .move(edge: .top).combined(with: .opacity)
+                    ))
+            }
             emptyState
                 .padding(.top, 12)
         }
+        .animation(.easeInOut(duration: 0.3), value: isSearchFocused)
     }
 
     private var categoryScroll: some View {

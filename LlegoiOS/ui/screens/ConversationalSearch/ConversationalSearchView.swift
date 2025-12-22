@@ -26,6 +26,10 @@ enum SearchMode: CaseIterable {
 struct ConversationalSearchView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = ConversationalSearchViewModel()
+    @ObservedObject private var gradientManager = GradientStateManager.shared
+
+    // Índice de categoría desde WelcomeView para mantener el mismo fondo
+    let categoryIndex: Int
 
     // Search mode
     @State private var searchMode: SearchMode = .search
@@ -35,15 +39,15 @@ struct ConversationalSearchView: View {
     @State private var messageText: String = ""
     @FocusState private var isMessageFocused: Bool
 
-    // Gradient animation state
-    @State private var isGradientExpanded: Bool = false
-
     var body: some View {
         ZStack {
-            // Background estilo WelcomeView con animación de expansión
-            WelcomeGradientBackground(isExpanded: isGradientExpanded)
+            // Background exactamente igual que WelcomeView
+            WelcomeGradientBackground()
                 .ignoresSafeArea()
-                .animation(.easeInOut(duration: 0.6), value: isGradientExpanded)
+            
+            // Overlay para oscurecer el fondo
+            Color.black.opacity(0.5)
+                .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 // Messages ScrollView
@@ -147,35 +151,30 @@ struct ConversationalSearchView: View {
             }
             
 
-            // Botón plus en el toolbar inferior
-            ToolbarItem(placement: .bottomBar) {
-                Button(action: {
-                    // Acción para el botón plus (adjuntar archivos, etc.)
-                }) {
-                    Image(systemName: "plus")
-                        .foregroundColor(.llegoPrimary)
-                        .fontWeight(.semibold)
-                }
-            }
-
-            ToolbarSpacer(.fixed, placement: .bottomBar)
-
             // Input en el toolbar inferior
             ToolbarItem(placement: .bottomBar) {
                 messageInputToolbar
             }
-        }
-        .onAppear {
-            // Esperar a que termine la animación de presentación antes de expandir el gradiente
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                withAnimation(.easeInOut(duration: 0.6)) {
-                    isGradientExpanded = true
+            
+            ToolbarSpacer(.fixed, placement: .bottomBar)
+            
+            // Botón de enviar en el toolbar inferior (siempre visible)
+            ToolbarItem(placement: .bottomBar) {
+                Button(action: handleSendAction) {
+                    Image(systemName: "arrow.up.circle")
+                        .foregroundColor(.llegoPrimary)
+                        .font(.system(size: 28))
+                        .fontWeight(.semibold)
                 }
             }
-
+        }
+        .onAppear {
+            // Establecer el índice de categoría para mantener el mismo fondo de WelcomeView
+            gradientManager.setCategoryIndex(categoryIndex)
+            
             // Mensaje inicial del asistente
             if $viewModel.messages.isEmpty {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                     withAnimation {
                         viewModel.sendWelcomeMessage(mode: searchMode)
                     }
@@ -184,38 +183,31 @@ struct ConversationalSearchView: View {
         }
     }
 
-    // MARK: - Message Input Toolbar (estilo ShopTabLandingView)
+    // MARK: - Message Input Toolbar
     private var messageInputToolbar: some View {
-        HStack(spacing: 8) {
-            TextField("Mensaje", text: $messageText)
-                .autocorrectionDisabled()
-                .focused($isMessageFocused)
-                .submitLabel(.send)
-                .onSubmit {
-                    if !messageText.isEmpty {
-                        sendMessage()
-                    }
-                }
-
-            if !messageText.isEmpty {
-//                Button(action: {
-//                    messageText = ""
-//                }) {
-//                    Image(systemName: "xmark.circle.fill")
-//                        .foregroundColor(.gray)
-//                        .font(.system(size: 14))
-//                }
-
-                Button(action: sendMessage) {
-                    Image(systemName: "arrow.up.circle.fill")
-//                        .font(.system(size: 20))
-                        .foregroundColor(.llegoPrimary)
-                        .fontWeight(.semibold)
-                }
+        TextField("Mensaje", text: $messageText)
+            .autocorrectionDisabled()
+            .focused($isMessageFocused)
+            .submitLabel(.send)
+            .onSubmit {
+                handleSendAction()
             }
+            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity)
+    }
+    
+    // MARK: - Send Action Handler
+    private func handleSendAction() {
+        if messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            // Mostrar feedback de error
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.error)
+            
+            // TODO: Mostrar alerta o toast con mensaje "Escribe un mensaje"
+            print("⚠️ Error: Escribe un mensaje")
+        } else {
+            sendMessage()
         }
-        .padding(.horizontal, 12)
-        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Actions
@@ -616,35 +608,63 @@ struct MessageBubble: View {
 
     var body: some View {
         VStack(alignment: message.isFromUser ? .trailing : .leading, spacing: 8) {
-            // Texto del mensaje
-            HStack {
-                if message.isFromUser {
-                    Spacer()
+            // Mensaje con avatar
+            HStack(alignment: .bottom, spacing: 8) {
+                // Avatar del sistema (a la izquierda)
+                if !message.isFromUser {
+                    Image("icon")
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 32, height: 32)
+                        .clipShape(Circle())
+                        .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
                 }
+                
+                // Burbuja de texto
+                HStack {
+                    if message.isFromUser {
+                        Spacer()
+                    }
 
-                Text(message.text)
-                    .font(.system(size: 16))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background {
-                        if message.isFromUser {
-                            // Burbuja del usuario con color sólido sobre blur
-                            RoundedRectangle(cornerRadius: 18)
-                                .fill(Color.llegoPrimary.opacity(0.9))
-                                .background(
-                                    RoundedRectangle(cornerRadius: 18)
-                                        .fill(.ultraThinMaterial)
-                                )
-                        } else {
-                            // Burbuja del asistente con backdrop blur
+                    Text(message.text)
+                        .font(.system(size: 16))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background {
+                            // Burbuja con backdrop blur para todos (usuario y sistema)
                             RoundedRectangle(cornerRadius: 18)
                                 .fill(.regularMaterial)
                         }
-                    }
-                    .foregroundColor(message.isFromUser ? .white : .primary)
+                        .foregroundColor(.primary)
 
-                if !message.isFromUser {
-                    Spacer()
+                    if !message.isFromUser {
+                        Spacer()
+                    }
+                }
+                
+                // Avatar del usuario (a la derecha)
+                if message.isFromUser {
+                    AsyncImage(url: URL(string: "https://i.pravatar.cc/150?img=12")) { phase in
+                        switch phase {
+                        case .empty:
+                            Circle()
+                                .fill(Color.gray.opacity(0.3))
+                                .frame(width: 32, height: 32)
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 32, height: 32)
+                                .clipShape(Circle())
+                                .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
+                        case .failure:
+                            Circle()
+                                .fill(Color.gray.opacity(0.3))
+                                .frame(width: 32, height: 32)
+                        @unknown default:
+                            EmptyView()
+                        }
+                    }
                 }
             }
             
@@ -718,27 +738,39 @@ struct TypingIndicator: View {
     @State private var animationPhase: Int = 0
 
     var body: some View {
-        HStack(spacing: 4) {
-            ForEach(0..<3) { index in
-                Circle()
-                    .fill(Color.secondary.opacity(0.5))
-                    .frame(width: 8, height: 8)
-                    .scaleEffect(animationPhase == index ? 1.2 : 1.0)
-                    .animation(
-                        .easeInOut(duration: 0.6)
-                        .repeatForever(autoreverses: true)
-                        .delay(Double(index) * 0.2),
-                        value: animationPhase
-                    )
+        HStack(alignment: .bottom, spacing: 8) {
+            // Avatar del sistema
+            Image("icon")
+                .resizable()
+                .scaledToFill()
+                .frame(width: 32, height: 32)
+                .clipShape(Circle())
+                .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
+            
+            // Indicador de escritura
+            HStack(spacing: 4) {
+                ForEach(0..<3) { index in
+                    Circle()
+                        .fill(Color.secondary.opacity(0.5))
+                        .frame(width: 8, height: 8)
+                        .scaleEffect(animationPhase == index ? 1.2 : 1.0)
+                        .animation(
+                            .easeInOut(duration: 0.6)
+                            .repeatForever(autoreverses: true)
+                            .delay(Double(index) * 0.2),
+                            value: animationPhase
+                        )
+                }
             }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(.regularMaterial)
+            )
+            
+            Spacer()
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 18)
-                .fill(Color(uiColor: .secondarySystemBackground))
-        )
-        .frame(maxWidth: .infinity, alignment: .leading)
         .onAppear {
             animationPhase = 1
         }
@@ -748,6 +780,6 @@ struct TypingIndicator: View {
 // MARK: - Preview
 #Preview("Conversational Search") {
     NavigationStack {
-        ConversationalSearchView()
+        ConversationalSearchView(categoryIndex: 0)
     }
 }

@@ -23,14 +23,77 @@ struct WelcomeView: View {
     @State private var navigateToIntroVideo: Bool = false
     @State private var navigateToLogin: Bool = false
     @State private var navigateToCart: Bool = false
+    @State private var navigateToConversationalSearch: Bool = false
     @State private var cartSheetDetent: PresentationDetent = .medium
 
     // Carousel state
     @State private var currentIndex: Int = 0
     @State private var scaleEffect: CGFloat = 1.0
 
+    // Long press states
+    @State private var isPressing: Bool = false
+    @State private var pressProgress: CGFloat = 0.0
+    @State private var pressLocation: CGPoint = .zero
+    @State private var timer: Timer?
+
     // User data (placeholder)
     let balance: String = "3.99$"
+    
+    // Color de glow dinámico basado en la categoría
+    var glowColorForCategory: Color {
+        switch currentIndex {
+        case 0: // Restaurantes - Rojo-naranja
+            return Color(red: 0.9, green: 0.3, blue: 0.2)
+        case 1: // Ropa - Verde
+            return Color(red: 0.2, green: 0.7, blue: 0.5)
+        case 2: // Mercado - Azul
+            return Color(red: 0.2, green: 0.5, blue: 0.8)
+        case 3: // Agro - Amarillo
+            return Color(red: 0.9, green: 0.8, blue: 0.3)
+        default:
+            return Color(red: 0.9, green: 0.3, blue: 0.2)
+        }
+    }
+    
+    // Características dinámicas según la categoría (Subcategorías Principales - Ampliadas)
+    var categoryFeatures: [Feature] {
+        switch currentIndex {
+        case 0: // Restaurantes
+            return [
+                Feature(icon: "fork.knife", title: "Gourmet", subtitle: "Alta cocina"),
+                Feature(icon: "flame.fill", title: "Fast Food", subtitle: "Hamburguesas"),
+                Feature(icon: "fish.fill", title: "Sushi & Mar", subtitle: "Fresco del día"),
+                Feature(icon: "birthday.cake.fill", title: "Postres", subtitle: "Dulces momentos"),
+                Feature(icon: "wineglass.fill", title: "Bebidas", subtitle: "Coctelería")
+            ]
+        case 1: // Ropa
+            return [
+                Feature(icon: "figure.stand", title: "Hombre", subtitle: "Estilo urbano"),
+                Feature(icon: "figure.stand.dress", title: "Mujer", subtitle: "Tendencias"),
+                Feature(icon: "figure.child", title: "Niños", subtitle: "Comodidad total"),
+                Feature(icon: "figure.run", title: "Deportivo", subtitle: "Alto rendimiento"),
+                Feature(icon: "bag.fill", title: "Accesorios", subtitle: "Complementos")
+            ]
+        case 2: // Mercado
+            return [
+                Feature(icon: "carrot.fill", title: "Frescos", subtitle: "Frutas y verduras"),
+                Feature(icon: "cart.fill", title: "Despensa", subtitle: "Básicos del hogar"),
+                Feature(icon: "drop.fill", title: "Bebidas", subtitle: "Jugos y refrescos"),
+                Feature(icon: "house.fill", title: "Hogar", subtitle: "Limpieza y más"),
+                Feature(icon: "heart.fill", title: "Cuidado", subtitle: "Personal")
+            ]
+        case 3: // Agro
+            return [
+                Feature(icon: "leaf.fill", title: "Vegetales", subtitle: "Directo del campo"),
+                Feature(icon: "pawprint.fill", title: "Mascotas", subtitle: "Alimento natural"),
+                Feature(icon: "ant.fill", title: "Jardín", subtitle: "Semillas y tierra"),
+                Feature(icon: "apple.logo", title: "Frutas", subtitle: "Estacionales"),
+                Feature(icon: "hammer.fill", title: "Herramientas", subtitle: "Trabajo")
+            ]
+        default:
+            return []
+        }
+    }
     
     // Models data - Orden: Restaurantes, Tienda de Ropa, Agro, Mercadito
     let models: [CategoryModel3D] = [
@@ -73,119 +136,215 @@ struct WelcomeView: View {
                     .ignoresSafeArea()
                     .animation(.easeInOut(duration: 0.8), value: gradientManager.currentCategoryIndex)
                 
-                VStack(alignment: .center, spacing: 0) {
-                    // Carrusel 3D con cámara móvil
+                ZStack(alignment: .topLeading) {
+                    // Modelo 3D - optimizado
                     MultiModel3DCarouselView(
                         models: models,
                         currentIndex: currentIndex,
                         allowsCameraControl: false,
                         isAnimated: true
                     )
-                    .frame(height: 400)
-                    .scaleEffect(scaleEffect)
-                    .offset(y: carouselAppeared ? carouselFloat : 50)
+                    .frame(width: 460, height: 600)
+                    .scaleEffect(scaleEffect * 1.05)
+                    .offset(
+                        x: -145 + (carouselAppeared ? carouselFloat / 2 : -30), // Más cortado
+                        y: carouselAppeared ? -50 + carouselFloat : -20
+                    )
                     .opacity(carouselAppeared ? 1 : 0)
-                    .padding(.horizontal, 24)
-                    .padding(.top, 24)
+                    .shadow(color: .black.opacity(0.3), radius: 30, x: 10, y: 10)
+                    // Efecto glow sutil basado en la categoría
+                    .shadow(color: glowColorForCategory.opacity(0.4), radius: 50, x: 0, y: 0)
+                    .shadow(color: glowColorForCategory.opacity(0.2), radius: 80, x: 0, y: 0)
+                    .allowsHitTesting(false)
 
-                    // Selector simple con flechas (estilo original)
-                    HStack(spacing: 12) {
-                        // Flecha izquierda
-                        if #available(iOS 26.0, *) {
-                            // iOS 26+: Sin fondo ni opacidad
-                            Button(action: previousModel) {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 24, weight: .bold))
-                                    .foregroundColor(.black)
-                                    .frame(width: 44, height: 44)
-                            }
-                            .glassEffect(.regular.interactive(), in: .circle)
-                            .disabled(currentIndex == 0)
-                        } else {
-                            // iOS anterior: Con fondo y opacidad
-                            Button(action: previousModel) {
-                                Image(systemName: "chevron.left")
-                                    .font(.system(size: 24, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .frame(width: 44, height: 44)
-                                    .background(
-                                        Circle()
-                                            .fill(Color.white.opacity(0.15))
-                                    )
-                            }
-                            .opacity(currentIndex > 0 ? 1 : 0.3)
-                            .disabled(currentIndex == 0)
-                        }
-
-                        // Nombre de la categoría con subtítulo
-                        VStack(spacing: 4) {
-                            Text(models[currentIndex].name)
-                                .font(.system(size: 26, weight: .bold, design: .rounded))
-                                .foregroundColor(.white)
-                                .multilineTextAlignment(.center)
-                                .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+                    // Contenido principal - layout vertical
+                    VStack(alignment: .center, spacing: 0) {
+                        Spacer()
+                            .frame(height: 60)
+                        
+                        // Título pequeño a la derecha arriba + Info minimalista
+                        HStack(spacing: 0) {
+                            Spacer() // Spacer flexible para empujar todo a la derecha
                             
-                            Text(models[currentIndex].description)
-                                .font(.system(size: 14, weight: .regular, design: .rounded))
-                                .foregroundColor(.white.opacity(0.7))
-                                .multilineTextAlignment(.center)
-                                .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)
+                            VStack(alignment: .trailing, spacing: 16) {
+                                // Título pequeño de la categoría - arriba a la derecha
+                                VStack(alignment: .center, spacing: 2) {
+                                    Text(models[currentIndex].name)
+                                        .font(.system(size: 24, weight: .black, design: .rounded))
+                                        .foregroundStyle(
+                                            LinearGradient(
+                                                colors: [.white, .white.opacity(0.9)],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                        .shadow(color: .black.opacity(0.3), radius: 6, x: 0, y: 3)
+                                    
+                                    Text(models[currentIndex].description)
+                                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                                        .foregroundColor(.white.opacity(0.7))
+                                        .shadow(color: .black.opacity(0.2), radius: 3, x: 0, y: 1)
+                                }
+                                
+                                // Características minimalistas (Categorías Principales)
+                                VStack(alignment: .leading, spacing: 18) {
+                                    ForEach(Array(categoryFeatures.enumerated()), id: \.offset) { index, feature in
+                                        HStack(spacing: 12) {
+                                            Image(systemName: feature.icon)
+                                                .font(.system(size: 14, weight: .semibold))
+                                                .foregroundColor(.white.opacity(0.9))
+                                                .frame(width: 20, height: 20)
+                                            
+                                            VStack(alignment: .leading, spacing: 0) {
+                                                Text(feature.title)
+                                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                                    .foregroundColor(.white)
+                                                
+                                                Text(feature.subtitle)
+                                                    .font(.system(size: 9, weight: .regular, design: .rounded))
+                                                    .foregroundColor(.white.opacity(0.6))
+                                            }
+                                            .padding(.trailing, 4) // Un tin de padding derecho extra
+                                        }
+                                        // Animación de entrada de arriba a abajo, uno a uno
+                                        .transition(
+                                            .asymmetric(
+                                                insertion: .offset(y: -15).combined(with: .opacity),
+                                                removal: .offset(y: 10).combined(with: .opacity)
+                                            )
+                                        )
+                                        // Delay progresivo basado en el índice para efecto cascada
+                                        .animation(.spring(response: 0.5, dampingFraction: 0.7).delay(Double(index) * 0.08), value: currentIndex)
+                                    }
+                                }
+                            }
+                            .padding(.trailing, 32) // Aumentado un poco el padding general derecho
+                            .padding(.top, 20) // Un poco de espacio arriba
                         }
-                        .frame(width: 180)
+                        
+                        // Espaciador para empujar el contenido hacia arriba
+                        Spacer()
+                            .frame(height: 200) // Espacio reducido para subir las flechas
+                        
+                        // Selector de categorías - justo debajo del modelo 3D
+                        HStack(spacing: 10) {
+                            // Flecha izquierda
+                            if #available(iOS 26.0, *) {
+                                Button(action: previousModel) {
+                                    Image(systemName: "chevron.left")
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(.black)
+                                        .frame(width: 40, height: 40)
+                                }
+                                .glassEffect(.regular.interactive(), in: .circle)
+                                .disabled(currentIndex == 0)
+                            } else {
+                                Button(action: previousModel) {
+                                    Image(systemName: "chevron.left")
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .frame(width: 40, height: 40)
+                                        .background(
+                                            Circle()
+                                                .fill(Color.white.opacity(0.2))
+                                                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                                        )
+                                }
+                                .opacity(currentIndex > 0 ? 1 : 0.3)
+                                .disabled(currentIndex == 0)
+                            }
+                            
+                            // Indicadores de página (puntos)
+                            HStack(spacing: 8) {
+                                ForEach(0..<models.count, id: \.self) { index in
+                                    Circle()
+                                        .fill(index == currentIndex ? Color.white : Color.white.opacity(0.3))
+                                        .frame(width: index == currentIndex ? 10 : 8, height: index == currentIndex ? 10 : 8)
+                                        .scaleEffect(index == currentIndex ? 1.0 : 0.8)
+                                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: currentIndex)
+                                }
+                            }
+                            .padding(.horizontal, 8)
 
-                        // Flecha derecha
-                        if #available(iOS 26.0, *) {
-                            // iOS 26+: Sin fondo ni opacidad
-                            Button(action: nextModel) {
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 24, weight: .bold))
-                                    .foregroundColor(.black)
-                                    .frame(width: 44, height: 44)
+                            // Flecha derecha
+                            if #available(iOS 26.0, *) {
+                                Button(action: nextModel) {
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(.black)
+                                        .frame(width: 40, height: 40)
+                                }
+                                .glassEffect(.regular.interactive(), in: .circle)
+                                .disabled(currentIndex == models.count - 1)
+                            } else {
+                                Button(action: nextModel) {
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .frame(width: 40, height: 40)
+                                        .background(
+                                            Circle()
+                                                .fill(Color.white.opacity(0.2))
+                                                .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                                        )
+                                }
+                                .opacity(currentIndex < models.count - 1 ? 1 : 0.3)
+                                .disabled(currentIndex == models.count - 1)
                             }
-                            .glassEffect(.regular.interactive(), in: .circle)
-                            .disabled(currentIndex == models.count - 1)
-                        } else {
-                            // iOS anterior: Con fondo y opacidad
-                            Button(action: nextModel) {
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 24, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .frame(width: 44, height: 44)
-                                    .background(
-                                        Circle()
-                                            .fill(Color.white.opacity(0.15))
-                                    )
-                            }
-                            .opacity(currentIndex < models.count - 1 ? 1 : 0.3)
-                            .disabled(currentIndex == models.count - 1)
                         }
+                        .padding(.top, 20) // Espacio entre el modelo y las flechas
+                        
+                        Spacer()
+                        
+                        // Texto "Manten presionado..."
+                        Text("Manten presionado para encontrar lo que buscas...")
+                            .font(.system(size: 20, weight: .light, design: .rounded))
+                            .foregroundColor(Color(red: 0.32, green: 0.35, blue: 0.4))
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.horizontal, 32)
+                            .padding(.bottom, 30)
+                            .opacity(isPressing ? 0 : 1) // Ocultar texto al presionar
+                            .animation(.easeOut(duration: 0.2), value: isPressing)
                     }
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, 12)
-
-                    Spacer()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     
-                    // Texto "Presiona para encontrar lo que buscas..." pegado abajo
-                    Text("Presiona para encontrar lo que buscas...")
-                        .font(.system(size: 24, weight: .light, design: .rounded))
-                        .foregroundColor(Color(red: 0.32, green: 0.35, blue: 0.4))
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.horizontal, 32)
-                        .padding(.bottom, 40)
+                    // Spiral Animation Overlay - Posicionada donde se toca
+                    if isPressing {
+                        SpiralAnimationView(progress: pressProgress)
+                            .position(pressLocation) // Colocar exactamente donde se presiona
+                            .transition(.opacity)
+                            .zIndex(100)
+                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .padding(.top, 0)
 
-                // Ripple overlay
-                RippleOverlay(ripplePoints: $ripplePoints)
+                // Ripple overlay (mantenido por si acaso)
+                // RippleOverlay(ripplePoints: $ripplePoints) 
             }
             .contentShape(Rectangle())
-            .onTapGesture(coordinateSpace: .local) { location in
-                handleTap(at: location)
-            }
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        if !isPressing {
+                            isPressing = true
+                            pressLocation = value.location
+                            startPressAnimation()
+                        }
+                    }
+                    .onEnded { _ in
+                        isPressing = false
+                        cancelPressAnimation()
+                    }
+            )
             .fullScreenCover(isPresented: $navigateToIntroVideo) {
                 OrderFlowCoordinatorView()
+            }
+            .fullScreenCover(isPresented: $navigateToConversationalSearch) {
+                NavigationStack {
+                    ConversationalSearchView(categoryIndex: currentIndex)
+                }
             }
             .navigationDestination(isPresented: $navigateToLogin) {
                 LoginView(viewModel: ProfileViewModel())
@@ -361,25 +520,148 @@ struct WelcomeView: View {
         case left, right
     }
 
-    // MARK: - Tap Handler with Haptics
-    private func handleTap(at location: CGPoint) {
-        // Generar feedback háptico elegante
-        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
-        impactFeedback.impactOccurred()
-
-        // Añadir ripple en el punto de toque
-        let newRipple = RipplePoint(location: location)
-        ripplePoints.append(newRipple)
-
-        // Limitar a máximo 5 ripples activos
-        if ripplePoints.count > 5 {
-            ripplePoints.removeFirst()
+    // MARK: - Long Press Logic
+    private func startPressAnimation() {
+        pressProgress = 0
+        let generator = UIImpactFeedbackGenerator(style: .soft)
+        generator.prepare()
+        
+        // Timer para animar el progreso y haptics
+        timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [self] _ in
+            if pressProgress >= 1.0 {
+                completePressAction()
+                return
+            }
+            pressProgress += 0.05 / 1.5 // Basado en minimumDuration 1.5s
+            
+            // Haptic progresivo
+            if Int(pressProgress * 100) % 10 == 0 {
+                generator.impactOccurred(intensity: pressProgress)
+            }
         }
-
-        // Navegar después del delay para ver el ripple
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            navigateToIntroVideo = true
+    }
+    
+    private func cancelPressAnimation() {
+        timer?.invalidate()
+        timer = nil
+        pressProgress = 0
+    }
+    
+    private func completePressAction() {
+        timer?.invalidate()
+        timer = nil
+        pressProgress = 1.0 // Asegurar final
+        
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.success)
+        
+        // Navegar a ConversationalSearchView
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            navigateToConversationalSearch = true
+            // Resetear estado después de navegar
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                isPressing = false
+                pressProgress = 0
+            }
         }
+    }
+}
+
+// MARK: - Gradient Press Animation View
+struct SpiralAnimationView: View {
+    let progress: CGFloat
+    
+    var body: some View {
+        ZStack {
+            // Capa externa - Wave radial suave
+            Circle()
+                .fill(
+                    RadialGradient(
+                        gradient: Gradient(colors: [
+                            Color.white.opacity(0.0),
+                            Color.white.opacity(0.15 * progress),
+                            Color.white.opacity(0.0)
+                        ]),
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: 200 * progress
+                    )
+                )
+                .frame(width: 400 * progress, height: 400 * progress)
+                .blur(radius: 15)
+                .opacity(progress)
+            
+            // Capa intermedia - Gradiente principal
+            Circle()
+                .fill(
+                    RadialGradient(
+                        gradient: Gradient(colors: [
+                            Color.white.opacity(0.6 * progress),
+                            Color.white.opacity(0.4 * progress),
+                            Color.white.opacity(0.2 * progress),
+                            Color.white.opacity(0.0)
+                        ]),
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: 120 * progress
+                    )
+                )
+                .frame(width: 240 * progress, height: 240 * progress)
+                .blur(radius: 8)
+            
+            // Capa interna - Centro brillante
+            Circle()
+                .fill(
+                    RadialGradient(
+                        gradient: Gradient(colors: [
+                            Color.white.opacity(0.9 * progress),
+                            Color.white.opacity(0.6 * progress),
+                            Color.white.opacity(0.2 * progress),
+                            Color.white.opacity(0.0)
+                        ]),
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: 60 * progress
+                    )
+                )
+                .frame(width: 120 * progress, height: 120 * progress)
+                .blur(radius: 4)
+            
+            // Centro core - Punto focal
+            Circle()
+                .fill(
+                    RadialGradient(
+                        gradient: Gradient(colors: [
+                            Color.white.opacity(1.0 * progress),
+                            Color.white.opacity(0.7 * progress),
+                            Color.white.opacity(0.0)
+                        ]),
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: 30 * progress
+                    )
+                )
+                .frame(width: 60 * progress, height: 60 * progress)
+            
+            // Anillo de borde sutil para definición
+            Circle()
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.5 * progress),
+                            Color.white.opacity(0.2 * progress)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 2
+                )
+                .frame(width: 100 * progress, height: 100 * progress)
+                .blur(radius: 1)
+        }
+        .scaleEffect(0.5 + 0.5 * progress) // Crece suavemente desde 50% a 100%
+        .opacity(min(1.0, progress * 1.2)) // Fade in rápido
+        .animation(.easeOut(duration: 0.3), value: progress)
     }
 }
 
@@ -466,6 +748,14 @@ struct WelcomeGradientBackground: View {
             )
         }
     }
+}
+
+// MARK: - Feature Model
+struct Feature: Identifiable {
+    let id = UUID()
+    let icon: String
+    let title: String
+    let subtitle: String
 }
 
 #Preview {

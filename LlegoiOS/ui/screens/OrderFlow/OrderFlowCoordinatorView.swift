@@ -12,7 +12,7 @@ struct OrderFlowCoordinatorView: View {
 
     var body: some View {
         NavigationStack {
-            ConversationalSearchView()
+            ConversationalSearchView(categoryIndex: 0)
                 .navigationBarBackButtonHidden(true)
         }
     }
