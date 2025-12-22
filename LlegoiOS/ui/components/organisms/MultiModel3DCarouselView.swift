@@ -7,7 +7,6 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
     let currentIndex: Int
     var allowsCameraControl: Bool = false
     var isAnimated: Bool = true
-    private let modelSpacing: Float = 6.0
     private let defaultCameraPosition = SCNVector3(x: 0, y: 1.2, z: 3.5)
     private let defaultCameraEulerAngles = SCNVector3(x: -Float.pi / 8, y: 0, z: 0)
 
@@ -26,14 +25,14 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
         // Create scene
         let scene = SCNScene()
 
-        // Configure camera
+        // Configure camera - Posición fija para todos los modelos
         let cameraNode = SCNNode()
         cameraNode.camera = SCNCamera()
         cameraNode.camera?.fieldOfView = 55
         cameraNode.camera?.zNear = 0.1
         cameraNode.camera?.zFar = 100
 
-        // Posición inicial de la cámara (se personaliza según modelo)
+        // Posición de cámara fija (no se mueve entre modelos)
         cameraNode.position = cameraPosition(for: currentIndex)
         cameraNode.eulerAngles = cameraEulerAngles(for: currentIndex)
 
@@ -45,13 +44,13 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
         panGesture.maximumNumberOfTouches = 1
         sceneView.addGestureRecognizer(panGesture)
 
-        // Cargar y posicionar todos los modelos horizontalmente
+        // Cargar y posicionar todos los modelos EN EL MISMO LUGAR
         for (index, model) in models.enumerated() {
             if let modelURL = Bundle.main.url(forResource: model.fileName.replacingOccurrences(of: ".usdz", with: ""), withExtension: "usdz") {
                 if let modelScene = try? SCNScene(url: modelURL, options: nil) {
                     let modelNode = modelScene.rootNode.clone()
 
-                    // Center and scale the model (más grande)
+                    // Center and scale the model
                     let (minBounds, maxBounds) = modelNode.boundingBox
                     let size = SCNVector3(
                         x: maxBounds.x - minBounds.x,
@@ -59,23 +58,25 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
                         z: maxBounds.z - minBounds.z
                     )
                     let maxDimension = max(size.x, max(size.y, size.z))
-                    let scale = 2.5 / maxDimension  // Un poco más grande para todos los modelos
+                    let scale = 2.5 / maxDimension
                     modelNode.scale = SCNVector3(x: scale, y: scale, z: scale)
 
-                    // Centrar el modelo verticalmente
+                    // Centrar el modelo
                     let center = SCNVector3(
                         x: (minBounds.x + maxBounds.x) / 2,
                         y: (minBounds.y + maxBounds.y) / 2,
                         z: (minBounds.z + maxBounds.z) / 2
                     )
 
-                    // Posicionar el modelo horizontalmente
-                    let xPosition = Float(index) * modelSpacing
+                    // TODOS los modelos en la MISMA posición (x=0)
                     modelNode.position = SCNVector3(
-                        x: xPosition - center.x * scale,
+                        x: -center.x * scale,
                         y: -center.y * scale,
                         z: -center.z * scale
                     )
+
+                    // Configurar opacidad inicial: visible sólo si es el modelo actual
+                    modelNode.opacity = (index == currentIndex) ? 1.0 : 0.0
 
                     // Añadir nombre para identificarlo
                     modelNode.name = "model_\(index)"
@@ -100,20 +101,77 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: SCNView, context: Context) {
-        // Animar la cámara a la posición del modelo actual
         guard let cameraNode = context.coordinator.cameraNode else { return }
-
+        
+        let previousIndex = context.coordinator.currentIndex
         context.coordinator.currentIndex = currentIndex
 
-        // Animación suave de la cámara
-        SCNTransaction.begin()
-        SCNTransaction.animationDuration = 0.6
-        SCNTransaction.animationTimingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-
-        cameraNode.position = cameraPosition(for: currentIndex)
-        cameraNode.eulerAngles = cameraEulerAngles(for: currentIndex)
-
-        SCNTransaction.commit()
+        // Si el índice cambió, animar slide de los modelos
+        if previousIndex != currentIndex {
+            // Slide out del modelo anterior hacia la izquierda
+            if let previousNode = context.coordinator.modelNodes[previousIndex] {
+                let currentPosition = previousNode.position
+                
+                SCNTransaction.begin()
+                SCNTransaction.animationDuration = 0.7
+                SCNTransaction.animationTimingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                
+                // Mover hacia la izquierda y desvanecer
+                previousNode.position = SCNVector3(
+                    x: currentPosition.x - 3.0,
+                    y: currentPosition.y,
+                    z: currentPosition.z
+                )
+                previousNode.opacity = 0.0
+                
+                SCNTransaction.commit()
+            }
+            
+            // Slide in del modelo actual desde la izquierda hacia la derecha
+            if let currentNode = context.coordinator.modelNodes[currentIndex] {
+                // Obtener la posición final (centro)
+                let (minBounds, maxBounds) = currentNode.boundingBox
+                let scale = currentNode.scale.x
+                let center = SCNVector3(
+                    x: (minBounds.x + maxBounds.x) / 2,
+                    y: (minBounds.y + maxBounds.y) / 2,
+                    z: (minBounds.z + maxBounds.z) / 2
+                )
+                
+                let finalPosition = SCNVector3(
+                    x: -center.x * scale,
+                    y: -center.y * scale,
+                    z: -center.z * scale
+                )
+                
+                // Posicionar inicialmente a la IZQUIERDA (mismo lado) y transparente
+                currentNode.position = SCNVector3(
+                    x: finalPosition.x - 3.0,  // Cambio: ahora viene desde la izquierda
+                    y: finalPosition.y,
+                    z: finalPosition.z
+                )
+                currentNode.opacity = 0.0
+                
+                // Animar entrada desde la izquierda hacia la derecha
+                SCNTransaction.begin()
+                SCNTransaction.animationDuration = 0.7
+                SCNTransaction.animationTimingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                
+                currentNode.position = finalPosition
+                currentNode.opacity = 1.0
+                
+                SCNTransaction.commit()
+            }
+            
+            // Actualizar ángulos de cámara según el modelo
+            SCNTransaction.begin()
+            SCNTransaction.animationDuration = 0.7
+            SCNTransaction.animationTimingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            cameraNode.position = cameraPosition(for: currentIndex)
+            cameraNode.eulerAngles = cameraEulerAngles(for: currentIndex)
+            SCNTransaction.commit()
+        }
+        
         disableZoomGestures(on: uiView)
     }
 
@@ -149,7 +207,7 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
     private func cameraPosition(for index: Int) -> SCNVector3 {
         let base = models[index].cameraPosition ?? defaultCameraPosition
         return SCNVector3(
-            x: Float(index) * modelSpacing + base.x,
+            x: base.x,
             y: base.y,
             z: base.z
         )
