@@ -110,7 +110,8 @@ struct WelcomeView: View {
             name: "Ropa",
             fileName: "ropa.usdz",
             description: "Moda y Accesorios",
-            icon: "tshirt.fill"
+            icon: "tshirt.fill",
+            customScale: 0.8
         ),
         CategoryModel3D(
             name: "Mercado",
@@ -124,7 +125,8 @@ struct WelcomeView: View {
             description: "Frutas y Vegetales Frescos",
             icon: "cart.fill",
             cameraPosition: SCNVector3(x: 0, y: 1.5, z: 3.2), // Elevar cámara
-            cameraEulerAngles: SCNVector3(x: -.pi / 6, y: 0, z: 0) // Ángulo intermedio: ~30 grados desde arriba
+            cameraEulerAngles: SCNVector3(x: -.pi / 6, y: 0, z: 0), // Ángulo intermedio: ~30 grados desde arriba
+            customScale: 0.8
         )
     ]
 
@@ -155,7 +157,7 @@ struct WelcomeView: View {
                     // Efecto glow sutil basado en la categoría
                     .shadow(color: glowColorForCategory.opacity(0.4), radius: 50, x: 0, y: 0)
                     .shadow(color: glowColorForCategory.opacity(0.2), radius: 80, x: 0, y: 0)
-                    .allowsHitTesting(false)
+                    // .allowsHitTesting(false) eliminada para permitir rotación manual
 
                     // Contenido principal - layout vertical
                     VStack(alignment: .center, spacing: 0) {

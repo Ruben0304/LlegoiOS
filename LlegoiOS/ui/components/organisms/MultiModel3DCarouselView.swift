@@ -58,8 +58,12 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
                         z: maxBounds.z - minBounds.z
                     )
                     let maxDimension = max(size.x, max(size.y, size.z))
-                    let scale = 2.5 / maxDimension
-                    modelNode.scale = SCNVector3(x: scale, y: scale, z: scale)
+                    
+                    // Usar escala personalizada si existe, sino usar el cálculo automático
+                    let baseScale: Float = 2.5 / maxDimension
+                    let finalScale = baseScale * (model.customScale ?? 1.0)
+                    
+                    modelNode.scale = SCNVector3(x: finalScale, y: finalScale, z: finalScale)
 
                     // Centrar el modelo
                     let center = SCNVector3(
@@ -70,9 +74,9 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
 
                     // TODOS los modelos en la MISMA posición (x=0)
                     modelNode.position = SCNVector3(
-                        x: -center.x * scale,
-                        y: -center.y * scale,
-                        z: -center.z * scale
+                        x: -center.x * finalScale,
+                        y: -center.y * finalScale,
+                        z: -center.z * finalScale
                     )
 
                     // Configurar opacidad inicial: visible sólo si es el modelo actual
