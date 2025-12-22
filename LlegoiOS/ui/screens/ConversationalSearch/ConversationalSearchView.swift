@@ -29,6 +29,7 @@ struct ConversationalSearchView: View {
 
     // Search mode
     @State private var searchMode: SearchMode = .search
+    @State private var showLlegoPlus: Bool = false
 
     // Message input
     @State private var messageText: String = ""
@@ -86,6 +87,11 @@ struct ConversationalSearchView: View {
                     }
                 }
             }
+
+            NavigationLink(destination: LlegoPlusBenefitsView(), isActive: $showLlegoPlus) {
+                EmptyView()
+            }
+            .hidden()
         }
 //        .navigationTitle("Llegó IA")
 //        .navigationBarTitleDisplayMode(.inline)
@@ -113,25 +119,30 @@ struct ConversationalSearchView: View {
             // Mode selector - menu nativo
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
-                    Picker("Modo", selection: $searchMode) {
-                        ForEach(SearchMode.allCases, id: \.self) { mode in
-                            if mode == .purchase {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "star.fill")
-                                        .foregroundColor(.yellow)
-                                    Text(mode.title)
-                                }
-                                .tag(mode)
-                            } else {
-                                Text(mode.title).tag(mode)
+                    Button(action: {
+                        searchMode = .search
+                    }) {
+                        HStack(spacing: 8) {
+                            if searchMode == .search {
+                                Image(systemName: "checkmark")
                             }
+                            Text(SearchMode.search.title)
+                        }
+                    }
+
+                    Button(action: {
+                        searchMode = .purchase
+                        showLlegoPlus = true
+                    }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "star.fill")
+                                .foregroundColor(.yellow)
+                            Text(SearchMode.purchase.title)
                         }
                     }
                 } label: {
-                  
-                        Text(searchMode.title)
-                    
-                    .font(.system(size: 15, weight: .medium))
+                    Text(searchMode.title)
+                        .font(.system(size: 15, weight: .medium))
                 }
             }
             
@@ -217,6 +228,385 @@ struct ConversationalSearchView: View {
         // Enviar al ViewModel
         viewModel.sendMessage(textToSend)
     }
+}
+import SwiftUI
+
+struct LlegoPlusBenefitsView: View {
+    @State private var revealBenefits = false
+    @State private var ctaPulse = false
+
+    private let comparisonRows: [LlegoPlusComparisonRow] = [
+        LlegoPlusComparisonRow(
+            title: "IA para recomendar",
+            freeValue: "Básica",
+            plusValue: "Avanzada"
+        ),
+        LlegoPlusComparisonRow(
+            title: "Modo compra con IA",
+            freeValue: "Limitado",
+            plusValue: "Completo"
+        ),
+        LlegoPlusComparisonRow(
+            title: "Mensajería",
+            freeValue: "Tarifa estándar",
+            plusValue: "Gratis en rango local + rebaja"
+        ),
+        LlegoPlusComparisonRow(
+            title: "Cashback en compras",
+            freeValue: "No",
+            plusValue: "Sí"
+        )
+    ]
+
+    private let benefits: [LlegoPlusBenefit] = [
+        LlegoPlusBenefit(
+            systemImage: "sparkles",
+            title: "IA más inteligente",
+            description: "Resultados precisos y recomendaciones personalizadas."
+        ),
+        LlegoPlusBenefit(
+            systemImage: "cart.fill",
+            title: "Compra asistida por IA",
+            description: "Cierra pedidos en menos pasos y con menos fricción."
+        ),
+        LlegoPlusBenefit(
+            systemImage: "paperplane.fill",
+            title: "Mensajería con ahorro",
+            description: "Gratis en rango local y rebaja en el resto."
+        ),
+        LlegoPlusBenefit(
+            systemImage: "dollarsign.circle.fill",
+            title: "Cashback en cada compra",
+            description: "Acumula saldo y úsalo en tus próximos pedidos."
+        )
+    ]
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.white.ignoresSafeArea()
+
+                backgroundHighlights
+
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 24) {
+                        headerSection
+                            .opacity(revealBenefits ? 1 : 0)
+                            .offset(y: revealBenefits ? 0 : 14)
+                            .animation(.easeOut(duration: 0.45), value: revealBenefits)
+
+                        pricingSection
+                            .opacity(revealBenefits ? 1 : 0)
+                            .offset(y: revealBenefits ? 0 : 18)
+                            .animation(.easeOut(duration: 0.5).delay(0.05), value: revealBenefits)
+
+                        comparisonCard
+                            .opacity(revealBenefits ? 1 : 0)
+                            .offset(y: revealBenefits ? 0 : 20)
+                            .animation(.easeOut(duration: 0.5).delay(0.1), value: revealBenefits)
+
+                        benefitsCard
+                            .opacity(revealBenefits ? 1 : 0)
+                            .offset(y: revealBenefits ? 0 : 20)
+                            .animation(.easeOut(duration: 0.5).delay(0.15), value: revealBenefits)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 16)
+                    .padding(.bottom, 32)
+                }
+            }
+            .navigationBarBackButtonHidden(true)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    BackButton()
+                }
+            }
+            .onAppear {
+                revealBenefits = true
+                withAnimation(
+                    Animation.easeInOut(duration: 1.8)
+                        .repeatForever(autoreverses: true)
+                ) {
+                    ctaPulse = true
+                }
+            }
+        }
+    }
+
+    private var backgroundHighlights: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color.llegoPrimary.opacity(0.08),
+                            Color.llegoPrimary.opacity(0.02)
+                        ]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 260, height: 260)
+                .offset(x: -140, y: -180)
+                .opacity(0.25)
+
+            RoundedRectangle(cornerRadius: 80)
+                .fill(
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color.llegoPrimary.opacity(0.06),
+                            Color.llegoPrimary.opacity(0.02)
+                        ]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 240, height: 160)
+                .rotationEffect(.degrees(18))
+                .offset(x: 150, y: -120)
+        }
+        .allowsHitTesting(false)
+    }
+
+    private var headerSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 12) {
+                Image("icon")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 54, height: 54)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.white)
+                            .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 6)
+                    )
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("LLEGÓ+")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundColor(.llegoPrimary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill(Color.llegoPrimary.opacity(0.08))
+                        )
+
+                    Text("Obtener Llegó+")
+                        .font(.system(size: 30, weight: .black, design: .rounded))
+                        .foregroundColor(.llegoPrimary)
+                }
+            }
+
+            Text("Compra más rápido, ahorra en mensajería y recibe cashback en cada pedido.")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.onBackgroundColor.opacity(0.72))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var pricingSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("USD 10")
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .foregroundColor(.llegoPrimary)
+
+                Text("/ mes")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.onBackgroundColor.opacity(0.6))
+            }
+
+            Text("El plan se paga solo con el ahorro en mensajería y cashback.")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(.onBackgroundColor.opacity(0.7))
+
+            Button(action: {}) {
+                HStack(spacing: 10) {
+                    Text("Activar Llegó+")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("USD 10/mes")
+                        .font(.system(size: 14, weight: .medium))
+                        .opacity(0.9)
+                }
+                .foregroundColor(.white)
+                .padding(.vertical, 14)
+                .frame(maxWidth: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.llegoPrimary)
+                        .shadow(
+                            color: Color.llegoPrimary.opacity(ctaPulse ? 0.28 : 0.18),
+                            radius: ctaPulse ? 18 : 10,
+                            x: 0,
+                            y: 8
+                        )
+                )
+            }
+
+            Text("Cancela cuando quieras • Sin compromisos")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.onBackgroundColor.opacity(0.6))
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(Color.white)
+                .shadow(color: Color.black.opacity(0.05), radius: 14, x: 0, y: 8)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 22)
+                .stroke(Color.black.opacity(0.04), lineWidth: 1)
+        )
+    }
+
+    private var comparisonCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Comparación rápida")
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundColor(.onBackgroundColor)
+
+            HStack {
+                Text("Beneficio")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.onBackgroundColor.opacity(0.55))
+                Spacer()
+                Text("Gratis")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.onBackgroundColor.opacity(0.55))
+                Spacer()
+                Text("Llegó+")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.llegoPrimary)
+            }
+
+            VStack(spacing: 14) {
+                ForEach(comparisonRows) { row in
+                    LlegoPlusComparisonRowView(row: row)
+                    if row.id != comparisonRows.last?.id {
+                        Divider()
+                    }
+                }
+            }
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(Color.white)
+                .shadow(color: Color.black.opacity(0.05), radius: 14, x: 0, y: 8)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 22)
+                .stroke(Color.black.opacity(0.04), lineWidth: 1)
+        )
+    }
+
+    private var benefitsCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Beneficios incluidos")
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundColor(.onBackgroundColor)
+
+            VStack(spacing: 14) {
+                ForEach(Array(benefits.enumerated()), id: \.element.id) { index, benefit in
+                    LlegoPlusBenefitRow(benefit: benefit)
+                        .opacity(revealBenefits ? 1 : 0)
+                        .offset(y: revealBenefits ? 0 : 8)
+                        .animation(
+                            .easeOut(duration: 0.35).delay(0.05 * Double(index)),
+                            value: revealBenefits
+                        )
+
+                    if benefit.id != benefits.last?.id {
+                        Divider()
+                    }
+                }
+            }
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 22)
+                .fill(Color.white)
+                .shadow(color: Color.black.opacity(0.05), radius: 14, x: 0, y: 8)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 22)
+                .stroke(Color.black.opacity(0.04), lineWidth: 1)
+        )
+    }
+}
+
+struct LlegoPlusBenefit: Identifiable {
+    let id = UUID()
+    let systemImage: String
+    let title: String
+    let description: String
+}
+
+struct LlegoPlusBenefitRow: View {
+    let benefit: LlegoPlusBenefit
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(Color.llegoPrimary.opacity(0.12))
+                    .frame(width: 34, height: 34)
+
+                Image(systemName: benefit.systemImage)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.llegoPrimary)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(benefit.title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.onBackgroundColor)
+
+                Text(benefit.description)
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundColor(.onBackgroundColor.opacity(0.7))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
+struct LlegoPlusComparisonRow: Identifiable {
+    let id = UUID()
+    let title: String
+    let freeValue: String
+    let plusValue: String
+}
+
+struct LlegoPlusComparisonRowView: View {
+    let row: LlegoPlusComparisonRow
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text(row.title)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.onBackgroundColor)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text(row.freeValue)
+                .font(.system(size: 13, weight: .regular))
+                .foregroundColor(.onBackgroundColor.opacity(0.65))
+                .frame(width: 90, alignment: .leading)
+
+            Text(row.plusValue)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.llegoPrimary)
+                .frame(width: 120, alignment: .leading)
+        }
+    }
+}
+
+
+
+// Preview
+#Preview {
+    LlegoPlusBenefitsView()
 }
 
 // MARK: - Supporting Components
