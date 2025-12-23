@@ -241,4 +241,50 @@ class ProfileRepository {
             }
         }
     }
+
+    // MARK: - Usuario Actual (Me)
+    func fetchCurrentUser(jwt: String) async throws -> User {
+        return try await withCheckedThrowingContinuation { continuation in
+            let query = LlegoAPI.MeQuery(jwt: jwt)
+            apolloClient.fetch(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
+                switch result {
+                case .success(let graphQLResult):
+                    if let errors = graphQLResult.errors {
+                        print("❌ GraphQL Errors (me):")
+                        errors.forEach { print("  - \($0.localizedDescription)") }
+                        continuation.resume(throwing: NSError(
+                            domain: "GraphQL",
+                            code: -1,
+                            userInfo: [NSLocalizedDescriptionKey: errors.first?.localizedDescription ?? "Error desconocido"]
+                        ))
+                        return
+                    }
+
+                    guard let data = graphQLResult.data?.me else {
+                        print("⚠️ Me devolvió nil (posible token inválido)")
+                        continuation.resume(throwing: NSError(
+                            domain: "GraphQL",
+                            code: -2,
+                            userInfo: [NSLocalizedDescriptionKey: "Token inválido o usuario no encontrado"]
+                        ))
+                        return
+                    }
+
+                    let user = User(
+                        id: data.id,
+                        email: data.email,
+                        fullName: data.name,
+                        phone: data.phone,
+                        role: data.role,
+                        appleUserId: data.providerUserId
+                    )
+                    continuation.resume(returning: user)
+
+                case .failure(let error):
+                    print("❌ Error en me: \(error.localizedDescription)")
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
 }

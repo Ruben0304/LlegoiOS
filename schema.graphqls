@@ -1,110 +1,60 @@
-"""
-A directive used by the Apollo iOS client to annotate operations or fragments that should be used exclusively for generating local cache mutations instead of as standard operations.
-"""
-directive @apollo_client_ios_localCacheMutation on QUERY | MUTATION | SUBSCRIPTION | FRAGMENT_DEFINITION
-
-"""
-A directive used by the Apollo iOS code generation engine to generate custom import statements in operation or fragment definition files. An import statement to import a module with the name provided in the `module` argument will be added to the generated definition file.
-"""
-directive @import(
-  """The name of the module to import."""
-  module: String!
-) repeatable on QUERY | MUTATION | SUBSCRIPTION | FRAGMENT_DEFINITION
-
-"""Attach extra information to a given type."""
-directive @typePolicy(
-  """
-  A selection set containing fields used to compute the cache key of an object. Referenced fields must have non-nullable scalar types. Order is important.
-  """
-  keyFields: String!
-) on OBJECT | INTERFACE
-
-"""
-A directive used by Apollo iOS to map query input data to cache keys of objects.
-"""
-directive @fieldPolicy(
-  """The field you are setting the @fieldPolicy for."""
-  forField: String!
-
-  """Set of fields used to compute the cache key."""
-  keyArgs: String!
-) repeatable on OBJECT | INTERFACE
-
-"""
-Directs the executor to defer this fragment when the `if` argument is true or undefined.
-"""
-directive @defer(
-  """Deferred when true or undefined."""
-  if: Boolean
-
-  """Unique name"""
-  label: String
-) on FRAGMENT_SPREAD | INLINE_FRAGMENT
-
-type Query {
-  """Lista de usuarios"""
-  users: [UserType!]!
-
-  """Obtener usuario por ID"""
-  user(id: String!): UserType
-
-  """Buscar usuarios"""
-  searchUsers(query: String!): [UserType!]!
-
-  """Lista de negocios"""
-  businesses(ownerId: String = null): [BusinessType!]!
-
-  """Obtener negocio por ID"""
-  business(id: String!): BusinessType
-
-  """Buscar negocios"""
-  searchBusinesses(query: String!): [BusinessType!]!
-
-  """Lista de sucursales"""
-  branches(businessId: String = null): [BranchType!]!
-
-  """Obtener sucursal por ID"""
-  branch(id: String!): BranchType
-
-  """Buscar sucursales"""
-  searchBranches(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true): [BranchType!]!
-
-  """Lista de productos"""
-  products(ids: [String!] = null, branchId: String = null, categoryId: String = null, availableOnly: Boolean! = false): [ProductType!]!
-
-  """Obtener producto por ID"""
-  product(id: String!): ProductType
-
-  """Buscar productos"""
-  searchProducts(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true): [ProductType!]!
-
-  """Lista de categorías con subcategorías"""
-  categories: [CategoryType!]!
-
-  """Obtener categoría por ID"""
-  category(id: String!): CategoryType
-
-  """Send a message to the AI assistant and get a response"""
-  aiChat(input: AiAssistantChatInput!): AiAssistantResponseType
-
-  """Saludo de ejemplo"""
-  hello: String!
-
-  """Saluda por nombre"""
-  greet(name: String! = "mundo"): String!
+schema {
+  query: Query
+  mutation: Mutation
 }
-
+"Date with time (isoformat)"
+scalar DateTime
+"The `JSON` scalar type represents JSON values as specified by [ECMA-404](https://ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf)."
+scalar JSON
+type Query {
+  "Lista de usuarios"
+  users(jwt: String = null): [UserType!]!
+  "Obtener usuario por ID"
+  user(id: String!, jwt: String = null): UserType
+  "Buscar usuarios"
+  searchUsers(query: String!, jwt: String = null): [UserType!]!
+  "Usuario actual desde JWT"
+  me(jwt: String!): UserType
+  "Lista de negocios"
+  businesses(ownerId: String = null, jwt: String = null): [BusinessType!]!
+  "Obtener negocio por ID"
+  business(id: String!, jwt: String = null): BusinessType
+  "Buscar negocios"
+  searchBusinesses(query: String!, jwt: String = null): [BusinessType!]!
+  "Lista de sucursales"
+  branches(businessId: String = null, jwt: String = null): [BranchType!]!
+  "Obtener sucursal por ID"
+  branch(id: String!, jwt: String = null): BranchType
+  "Buscar sucursales"
+  searchBranches(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true, jwt: String = null): [BranchType!]!
+  "Lista de productos"
+  products(ids: [String!] = null, branchId: String = null, categoryId: String = null, availableOnly: Boolean! = false, jwt: String = null): [ProductType!]!
+  "Obtener producto por ID"
+  product(id: String!, jwt: String = null): ProductType
+  "Buscar productos"
+  searchProducts(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true, jwt: String = null): [ProductType!]!
+  "Lista de categorías con subcategorías"
+  categories(jwt: String = null): [CategoryType!]!
+  "Obtener categoría por ID"
+  category(id: String!, jwt: String = null): CategoryType
+  "Send a message to the AI assistant and get a response"
+  aiChat(input: AiAssistantChatInput!, jwt: String = null): AiAssistantResponseType
+  "Saludo de ejemplo"
+  hello(jwt: String = null): String!
+  "Saluda por nombre"
+  greet(name: String! = "mundo", jwt: String = null): String!
+}
 type UserType {
   id: String!
   name: String!
   email: String!
+  phone: String
   role: String!
   createdAt: DateTime!
+  authProvider: String!
+  providerUserId: String
+  applePrivateEmail: String
 }
-
-"""Date with time (isoformat)"""
-scalar DateTime
-
 type BusinessType {
   id: String!
   name: String!
@@ -113,7 +63,6 @@ type BusinessType {
   globalRating: Float!
   createdAt: DateTime!
 }
-
 type BranchType {
   id: String!
   businessId: String!
@@ -126,17 +75,10 @@ type BranchType {
   status: String!
   createdAt: DateTime!
 }
-
 type CoordinatesType {
   type: String!
   coordinates: [Float!]!
 }
-
-"""
-The `JSON` scalar type represents JSON values as specified by [ECMA-404](https://ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf).
-"""
-scalar JSON
-
 type ProductType {
   id: String!
   branchId: String!
@@ -150,7 +92,6 @@ type ProductType {
   categoryId: String
   createdAt: DateTime!
 }
-
 type CategoryType {
   id: String!
   name: String!
@@ -158,72 +99,47 @@ type CategoryType {
   subcategories: [SubcategoryType!]!
   createdAt: DateTime!
 }
-
 type SubcategoryType {
   name: String!
   imageUrl: String!
 }
-
 type AiAssistantResponseType {
-  """Response output from AI assistant"""
+  "Response output from AI assistant"
   output: AiAssistantOutputType!
 }
-
 type AiAssistantOutputType {
-  """Type of response (e.g., 'payment_method', 'products', 'branches')"""
+  "Type of response (e.g., 'payment_method', 'products', 'branches')"
   type: String!
-
-  """AI-generated response text"""
+  "AI-generated response text"
   AItext: String!
-
-  """List of relevant IDs (for debugging)"""
+  "List of relevant IDs (for debugging)"
   ids: [String!]!
-
-  """List of resolved entities (products, branches, or payment methods)"""
+  "List of resolved entities (products, branches, or payment methods)"
   entities: [EntityType!]
 }
-
-union EntityType = ProductType | BranchType | PaymentMethodType
-
 type PaymentMethodType {
-  """Payment method ID"""
+  "Payment method ID"
   id: String!
-
-  """Currency (e.g., CUP, USD)"""
+  "Currency (e.g., CUP, USD)"
   currency: String!
-
-  """Payment method (e.g., tarjeta, efectivo, transferencia)"""
+  "Payment method (e.g., tarjeta, efectivo, transferencia)"
   method: String!
 }
-
-input AiAssistantChatInput {
-  """The user message/query to send"""
-  message: String!
-
-  """Session ID for conversation context"""
-  sessionId: String!
-}
-
 type Mutation {
-  """Register a new user"""
-  register(input: RegisterInput!): AuthResponse!
-
-  """Login with email and password"""
-  login(input: LoginInput!): AuthResponse!
-
-  """Login with Google"""
-  loginWithGoogle(input: SocialLoginInput!): AuthResponse!
-
-  """Login with Apple"""
-  loginWithApple(input: AppleLoginInput!): AuthResponse!
+  "Register a new user"
+  register(input: RegisterInput!, jwt: String = null): AuthResponse!
+  "Login with email and password"
+  login(input: LoginInput!, jwt: String = null): AuthResponse!
+  "Login with Google"
+  loginWithGoogle(input: SocialLoginInput!, jwt: String = null): AuthResponse!
+  "Login with Apple"
+  loginWithApple(input: AppleLoginInput!, jwt: String = null): AuthResponse!
 }
-
 type AuthResponse {
   accessToken: String!
   tokenType: String!
   user: UserData!
 }
-
 type UserData {
   id: String!
   name: String!
@@ -232,7 +148,13 @@ type UserData {
   role: String!
   createdAt: String!
 }
-
+union EntityType = ProductType | BranchType | PaymentMethodType
+input AiAssistantChatInput {
+  "The user message/query to send"
+  message: String!
+  "Session ID for conversation context"
+  sessionId: String!
+}
 input RegisterInput {
   name: String!
   email: String!
@@ -240,20 +162,25 @@ input RegisterInput {
   phone: String = null
   role: String = "customer"
 }
-
 input LoginInput {
   email: String!
   password: String!
 }
-
 input SocialLoginInput {
   idToken: String!
   authorizationCode: String = null
   nonce: String = null
 }
-
 input AppleLoginInput {
   identityToken: String!
   authorizationCode: String = null
   nonce: String = null
 }
+"Exposes a URL that specifies the behavior of this scalar."
+directive @specifiedBy(
+    "The URL that specifies the behavior of this scalar."
+    url: String!
+  ) on SCALAR
+"Indicates an Input Object is a OneOf Input Object."
+directive @oneOf on INPUT_OBJECT
+

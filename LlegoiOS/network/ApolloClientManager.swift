@@ -2,13 +2,27 @@ import Foundation
 import Apollo
 import ApolloSQLite
 
+
 final class ApolloClientManager: @unchecked Sendable {
     nonisolated(unsafe) static let shared = ApolloClientManager()
 
     private(set) lazy var apollo: ApolloClient = {
+        return ApolloClient(networkTransport: networkTransport, store: store)
+    }()
+
+    private lazy var store: ApolloStore = {
+        ApolloStore(cache: cache)
+    }()
+
+    private lazy var networkTransport: NetworkTransport = {
         let url = URL(string: "https://llegobackend-production.up.railway.app/graphql")!
-        let store = ApolloStore(cache: cache)
-        return ApolloClient(url: url)
+        let interceptorProvider = LlegoInterceptorProvider()
+        return RequestChainNetworkTransport(
+            urlSession: URLSession.shared,
+            interceptorProvider: interceptorProvider,
+            store: store,
+            endpointURL: url
+        )
     }()
 
     private lazy var cache: SQLiteNormalizedCache = {

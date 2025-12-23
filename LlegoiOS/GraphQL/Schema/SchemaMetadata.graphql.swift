@@ -39,6 +39,7 @@ public extension LlegoAPI {
       case "ProductType": return LlegoAPI.Objects.ProductType
       case "Query": return LlegoAPI.Objects.Query
       case "UserData": return LlegoAPI.Objects.UserData
+      case "UserType": return LlegoAPI.Objects.UserType
       default: return nil
       }
     }

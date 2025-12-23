@@ -8,6 +8,8 @@ struct WelcomeView: View {
 
     // Cart manager
     @StateObject private var cartManager = CartManager.shared
+    @ObservedObject private var authManager = AuthManager.shared
+    private let profileRepository = ProfileRepository()
 
     // Animation states
     @State private var carouselAppeared = false
@@ -27,6 +29,7 @@ struct WelcomeView: View {
     @State private var navigateToConversationalSearch: Bool = false
     @State private var navigateToPlansAndPricing: Bool = false
     @State private var cartSheetDetent: PresentationDetent = .medium
+    @State private var isCheckingAccount: Bool = false
 
     // Carousel state
     @State private var currentIndex: Int = 0
@@ -419,7 +422,42 @@ struct WelcomeView: View {
             ToolbarSpacer(.fixed,placement: .navigationBarTrailing)
             ToolbarItem(placement: .navigationBarTrailing) {
                 // Avatar
-                Button(action: { navigateToLogin = true }) {
+                Button(action: {
+                    let impact = UIImpactFeedbackGenerator(style: .light)
+                    impact.impactOccurred()
+                    guard !isCheckingAccount else { return }
+                    guard let token = authManager.getAccessToken() else {
+                        authManager.signOut()
+                        navigateToLogin = true
+                        return
+                    }
+
+                    isCheckingAccount = true
+                    Task {
+                        do {
+                            let user = try await profileRepository.fetchCurrentUser(jwt: token)
+                            await MainActor.run {
+                                authManager.applyCurrentUser(user)
+                                isCheckingAccount = false
+                                navigateToProfile = true
+                            }
+                        } catch {
+                            await MainActor.run {
+                                isCheckingAccount = false
+                                if shouldInvalidateSession(for: error) {
+                                    authManager.signOut()
+                                    navigateToLogin = true
+                                    return
+                                }
+                                if authManager.currentUser != nil {
+                                    navigateToProfile = true
+                                } else {
+                                    navigateToLogin = true
+                                }
+                            }
+                        }
+                    }
+                }) {
                     Image(systemName: "person.fill")
                         .resizable()
                         .scaledToFit()
@@ -577,6 +615,14 @@ struct WelcomeView: View {
         timer?.invalidate()
         timer = nil
         pressProgress = 0
+    }
+
+    private func shouldInvalidateSession(for error: Error) -> Bool {
+        let message = (error as NSError).localizedDescription.lowercased()
+        return message.contains("token")
+            || message.contains("jwt")
+            || message.contains("unauthorized")
+            || message.contains("no autorizado")
     }
     
     private func completePressAction() {
