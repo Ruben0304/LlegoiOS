@@ -7,7 +7,6 @@ struct ShopView: View {
     @State private var showFiltersSheet = false
     @State private var showFavoritesSheet = false
     @State private var animationDelay: Double = 0
-    @State private var selectedProduct: Product? = nil
     @FocusState private var isSearchFocused: Bool
 
     // Parámetros opcionales para filtrado inicial
@@ -161,38 +160,48 @@ struct ShopView: View {
                 spacing: 20
             ) {
                 ForEach(Array(viewModel.filteredProducts.enumerated()), id: \.element.id) { index, product in
-                    ProductCard(
-                        product: product,
-                        count: Binding(
-                            get: { productCounts[product.id] ?? 0 },
-                            set: { newValue in
-                                if newValue > 0 {
-                                    productCounts[product.id] = newValue
-                                } else {
-                                    productCounts.removeValue(forKey: product.id)
-                                }
-                            }
-                        ),
-                        onIncrement: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                productCounts[product.id] = (productCounts[product.id] ?? 0) + 1
-                            }
-                        },
-                        onDecrement: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                let currentCount = productCounts[product.id] ?? 0
-                                if currentCount > 0 {
-                                    if currentCount == 1 {
-                                        productCounts.removeValue(forKey: product.id)
+                    NavigationLink(
+                        destination: ProductShowcaseView(product: product)
+                    ) {
+                        ProductCard(
+                            product: product,
+                            count: Binding(
+                                get: { productCounts[product.id] ?? 0 },
+                                set: { newValue in
+                                    if newValue > 0 {
+                                        productCounts[product.id] = newValue
                                     } else {
-                                        productCounts[product.id] = currentCount - 1
+                                        productCounts.removeValue(forKey: product.id)
                                     }
                                 }
-                            }
-                        },
-                        onProductTap: {
+                            ),
+                            onIncrement: {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    productCounts[product.id] = (productCounts[product.id] ?? 0) + 1
+                                }
+                            },
+                            onDecrement: {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    let currentCount = productCounts[product.id] ?? 0
+                                    if currentCount > 0 {
+                                        if currentCount == 1 {
+                                            productCounts.removeValue(forKey: product.id)
+                                        } else {
+                                            productCounts[product.id] = currentCount - 1
+                                        }
+                                    }
+                                }
+                            },
+                            onProductTap: nil
+                        )
+                    }
+                    .buttonStyle(.glassProminent)
+                    .buttonBorderShape(.roundedRectangle(radius: 26))
+                    .tint(.white)
+                    .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+                    .simultaneousGesture(
+                        TapGesture().onEnded {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            selectedProduct = product
                         }
                     )
                     .opacity(animationDelay > Double(index) * 0.1 ? 1 : 0)
@@ -217,9 +226,6 @@ struct ShopView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                 animationDelay = Double(viewModel.filteredProducts.count) * 0.1 + 0.1
             }
-        }
-        .fullScreenCover(item: $selectedProduct) { product in
-            ProductShowcaseView(product: product)
         }
     }
 

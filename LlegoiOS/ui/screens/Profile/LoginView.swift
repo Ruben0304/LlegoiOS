@@ -6,6 +6,7 @@ import GoogleSignInSwift
 struct LoginView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: ProfileViewModel
+    var onAuthenticated: (() -> Void)?
 
     @State private var selectedTab: AuthTab
     @State private var rememberMe = false
@@ -23,8 +24,9 @@ struct LoginView: View {
 
     private let primaryAccent = Color(red: 0.41, green: 0.62, blue: 0.52)
 
-    init(viewModel: ProfileViewModel, startWithRegister: Bool = false) {
+    init(viewModel: ProfileViewModel, startWithRegister: Bool = false, onAuthenticated: (() -> Void)? = nil) {
         self.viewModel = viewModel
+        self.onAuthenticated = onAuthenticated
         _selectedTab = State(initialValue: startWithRegister ? .register : .login)
     }
 
@@ -139,6 +141,11 @@ struct LoginView: View {
             focusedRegisterField = nil
             showLoginPassword = false
             showRegisterPassword = false
+        }
+        .onChange(of: viewModel.state) { newState in
+            if case .authenticated = newState {
+                onAuthenticated?()
+            }
         }
     }
 

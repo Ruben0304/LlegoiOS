@@ -36,6 +36,7 @@ class AuthManager: ObservableObject {
     @Published var isAuthenticated: Bool = false
 
     private let sessionKey = "llego_auth_session"
+    private let tokenKey = "llego_auth_token"
 
     private init() {
         loadSession()
@@ -49,6 +50,7 @@ class AuthManager: ObservableObject {
             let encoder = JSONEncoder()
             let data = try encoder.encode(session)
             UserDefaults.standard.set(data, forKey: sessionKey)
+            UserDefaults.standard.set(session.accessToken, forKey: tokenKey)
 
             currentUser = session.user
             accessToken = session.accessToken
@@ -66,6 +68,7 @@ class AuthManager: ObservableObject {
         accessToken = nil
         isAuthenticated = false
         UserDefaults.standard.removeObject(forKey: sessionKey)
+        UserDefaults.standard.removeObject(forKey: tokenKey)
         print("✅ Sesión cerrada exitosamente")
     }
 
@@ -94,6 +97,7 @@ class AuthManager: ObservableObject {
         } catch {
             print("❌ Error cargando sesión: \(error.localizedDescription)")
             UserDefaults.standard.removeObject(forKey: sessionKey)
+            UserDefaults.standard.removeObject(forKey: tokenKey)
         }
     }
 }

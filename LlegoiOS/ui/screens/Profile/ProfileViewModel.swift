@@ -3,7 +3,7 @@ import SwiftUI
 import AuthenticationServices
 import Combine
 
-enum ProfileViewState {
+enum ProfileViewState: Equatable {
     case idle
     case loading
     case authenticated

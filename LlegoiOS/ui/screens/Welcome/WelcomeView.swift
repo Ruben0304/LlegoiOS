@@ -22,8 +22,10 @@ struct WelcomeView: View {
     @State private var ripplePoints: [RipplePoint] = []
     @State private var navigateToIntroVideo: Bool = false
     @State private var navigateToLogin: Bool = false
+    @State private var navigateToProfile: Bool = false
     @State private var navigateToCart: Bool = false
     @State private var navigateToConversationalSearch: Bool = false
+    @State private var navigateToPlansAndPricing: Bool = false
     @State private var cartSheetDetent: PresentationDetent = .medium
 
     // Carousel state
@@ -149,7 +151,7 @@ struct WelcomeView: View {
                     .frame(width: 460, height: 600)
                     .scaleEffect(scaleEffect * 1.05)
                     .offset(
-                        x: -145 + (carouselAppeared ? carouselFloat / 2 : -30), // Más cortado
+                        x: -153 + (carouselAppeared ? carouselFloat / 2 : -30), // Más cortado
                         y: carouselAppeared ? -50 + carouselFloat : -20
                     )
                     .opacity(carouselAppeared ? 1 : 0)
@@ -213,7 +215,7 @@ struct WelcomeView: View {
                                     }
                                 }
                             }
-                            .padding(.trailing, 32) // Aumentado un poco el padding general derecho
+                            .padding(.trailing, 48) // Un poco más de separación con el borde derecho
                             .padding(.top, 20) // Un poco de espacio arriba
                         }
                         
@@ -287,18 +289,22 @@ struct WelcomeView: View {
                                 .disabled(currentIndex == models.count - 1)
                             }
                         }
-                        .padding(.top, 20) // Espacio entre el modelo y las flechas
+                        .padding(.top, -6) // Espacio entre el modelo y las flechas
+                        .padding(.bottom, 28) // Más separación con el texto inferior
+                        .zIndex(200) // Asegura que las flechas estén sobre el modelo 3D
                         
                         Spacer()
                         
                         // Texto "Manten presionado..."
-                        Text("Manten presionado para encontrar lo que buscas...")
+                        Text("Manten presionado\npara encontrar lo que buscas...")
                             .font(.system(size: 20, weight: .light, design: .rounded))
                             .foregroundColor(Color(red: 0.32, green: 0.35, blue: 0.4))
                             .multilineTextAlignment(.center)
                             .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.horizontal, 32)
-                            .padding(.bottom, 30)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.horizontal, 40)
+                            .padding(.bottom, 44)
                             .opacity(isPressing ? 0 : 1) // Ocultar texto al presionar
                             .animation(.easeOut(duration: 0.2), value: isPressing)
                     }
@@ -342,7 +348,18 @@ struct WelcomeView: View {
                 }
             }
             .navigationDestination(isPresented: $navigateToLogin) {
-                LoginView(viewModel: ProfileViewModel())
+                LoginView(viewModel: ProfileViewModel()) {
+                    navigateToLogin = false
+                    DispatchQueue.main.async {
+                        navigateToProfile = true
+                    }
+                }
+            }
+            .navigationDestination(isPresented: $navigateToProfile) {
+                ProfileView()
+            }
+            .navigationDestination(isPresented: $navigateToPlansAndPricing) {
+                PlansAndPricingView()
             }
             .sheet(isPresented: $navigateToCart) {
                 let shouldBeLarge = cartManager.cartItemCount > 1
@@ -366,15 +383,23 @@ struct WelcomeView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 4) {
-                        Text("Llegó")
-                           
-                        Image("corona")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(height: 24)
-                    }.padding(.horizontal,10)
+                    Button(action: {
+                        let impact = UIImpactFeedbackGenerator(style: .light)
+                        impact.impactOccurred()
+                        navigateToPlansAndPricing = true
+                    }) {
+                        HStack(spacing: 4) {
+                            Text("Llegó")
+                               
+                            Image("corona")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(height: 24)
+                        }
+                        .padding(.horizontal,10)
                         .padding(.vertical,4)
+                    }
+                    .buttonStyle(.plain)
                 }
                 ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
                 // Cart button con badge

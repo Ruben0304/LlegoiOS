@@ -27,51 +27,66 @@ struct ProductCard: View {
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
+            cardContainer
+
+            favoriteButton
+                .padding(.top, 16)
+                .padding(.trailing, 16)
+        }
+    }
+
+    @ViewBuilder
+    private var cardContainer: some View {
+        if let onProductTap {
             Button(action: {
-                onProductTap?()
+                onProductTap()
             }) {
-                VStack(alignment: .leading, spacing: 12) {
-                    imageSection
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(product.name)
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.primary)
-                            .lineLimit(2)
-                            .truncationMode(.tail)
-                            .multilineTextAlignment(.leading)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .frame(height: Self.titleReservedHeight, alignment: .topLeading)
-
-                        Text(product.weight)
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-                    }
-
-                    HStack {
-                        Text(product.shop)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.secondary)
-
-                        Spacer()
-
-                        Text(product.price)
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(.primary)
-                    }
-                }
-                .padding(16)
+                cardContent
             }
             .buttonStyle(.glassProminent)
             .buttonBorderShape(.roundedRectangle(radius: 26))
             .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
             .compositingGroup()
             .tint(.white)
-
-            favoriteButton
-                .padding(.top, 16)
-                .padding(.trailing, 16)
+        } else {
+            // Let an outer container (e.g. NavigationLink) handle the tap.
+            cardContent
+                .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         }
+    }
+
+    private var cardContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            imageSection
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(product.name)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+                    .truncationMode(.tail)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(height: Self.titleReservedHeight, alignment: .topLeading)
+
+                Text(product.weight)
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
+            }
+
+            HStack {
+                Text(product.shop)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.secondary)
+
+                Spacer()
+
+                Text(product.price)
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(.primary)
+            }
+        }
+        .padding(16)
     }
 
     private var imageSection: some View {

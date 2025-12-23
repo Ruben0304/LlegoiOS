@@ -8,16 +8,12 @@ struct ProductShowcaseView: View {
 
     @State private var heroAppeared = false
     @State private var contentAppeared = false
-    @State private var showFloatingBar = true
-
     @State private var quantity: Int = 1
     @State private var selectedStyle = "Clásico"
     @State private var selectedDelivery = "Express 25-35m"
     @State private var similarCounts: [String: Int] = [:]
     
     // Animation states
-    @State private var isBottomLoading = false
-    @State private var showBottomSuccess = false
     @State private var showGeneralToast = false
 
     private let styleOptions = ["Clásico", "Ligero", "Extra queso"]
@@ -58,81 +54,70 @@ struct ProductShowcaseView: View {
     ]
 
     var body: some View {
-        NavigationStack {
-            ZStack(alignment: .bottom) {
-                Color.llegoBackground.ignoresSafeArea()
+        ZStack(alignment: .bottom) {
+            Color.llegoBackground.ignoresSafeArea()
 
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 18) {
-                        heroSection
-                            .padding(.horizontal, 20)
-                            .padding(.top, 12)
-                            .opacity(heroAppeared ? 1 : 0)
-                            .offset(y: heroAppeared ? 0 : 20)
-
-                        VStack(spacing: 16) {
-                            infoSection
-                            optionsSection
-                            similarProductsSection
-                        }
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 18) {
+                    heroSection
                         .padding(.horizontal, 20)
-                        .opacity(contentAppeared ? 1 : 0)
-                        .offset(y: contentAppeared ? 0 : 14)
+                        .padding(.top, 12)
+                        .opacity(heroAppeared ? 1 : 0)
+                        .offset(y: heroAppeared ? 0 : 20)
+
+                    VStack(spacing: 16) {
+                        infoSection
+                        optionsSection
+                        similarProductsSection
                     }
-                    .padding(.bottom, 140)
+                    .padding(.horizontal, 20)
+                    .opacity(contentAppeared ? 1 : 0)
+                    .offset(y: contentAppeared ? 0 : 14)
                 }
-
-                bottomBar
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 12)
+                .padding(.bottom, 140)
             }
-            .overlay(alignment: .top) {
-                if showGeneralToast {
-                    HStack(spacing: 12) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.title3)
-                            .foregroundColor(.green)
-                        Text("Producto agregado")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(.primary)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(.thinMaterial)
-                    .clipShape(Capsule())
-                    .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
-                    .padding(.top, 60)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    .zIndex(100)
-                }
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    BackButton(action: dismiss.callAsFunction)
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                   
-                    
 
-                        Button(action: triggerStandardAdd) {
-                            Image(systemName: "cart.badge.plus")
-                                .font(.system(size: 18, weight: .semibold))
-                        }
-                  
-                }
-
-                ToolbarItem(placement: .navigationBarTrailing) {
-                   
-                        Button(action: shareProduct) {
-                            Image(systemName: "square.and.arrow.up")
-                        }
-
-                      
-                }
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .onAppear(perform: startEntranceAnimations)
         }
+        .overlay(alignment: .top) {
+            if showGeneralToast {
+                HStack(spacing: 12) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.title3)
+                        .foregroundColor(.green)
+                    Text("Producto agregado")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.primary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(.thinMaterial)
+                .clipShape(Capsule())
+                .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
+                .padding(.top, 60)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .zIndex(100)
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                BackButton(action: dismiss.callAsFunction)
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: triggerStandardAdd) {
+                    Image(systemName: "cart.badge.plus")
+                        .font(.system(size: 18, weight: .semibold))
+                }
+            }
+
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: shareProduct) {
+                    Image(systemName: "square.and.arrow.up")
+                }
+            }
+        }
+        .navigationBarBackButtonHidden(true)
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear(perform: startEntranceAnimations)
     }
 
     // MARK: - Sections
@@ -322,43 +307,6 @@ struct ProductShowcaseView: View {
         }
     }
 
-    private var bottomBar: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(product.shop)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.secondary)
-                Text(product.name)
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
-            }
-
-            Spacer()
-
-            Button(action: triggerBottomButtonAdd) {
-                HStack(spacing: 8) {
-                    if isBottomLoading {
-                        ProgressView()
-                            .tint(.white)
-                    } else if showBottomSuccess {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 16, weight: .bold))
-                    } else {
-                        Text(product.price)
-                            .fontWeight(.semibold)
-                    }
-                }
-            }
-            .buttonStyle(.glassProminent)
-            .tint(.llegoPrimary)
-        }
-        .padding(16)
-//        .background(.ultraThinMaterial)
-//        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .glassEffect(.regular,in: .rect(cornerRadius: 22))
-//        .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: -2)
-    }
-
     private var quantitySelector: some View {
         HStack(spacing: 12) {
             Button(action: decrementQuantity) {
@@ -529,29 +477,6 @@ struct ProductShowcaseView: View {
         }
     }
 
-    private func triggerBottomButtonAdd() {
-        let generator = UIImpactFeedbackGenerator(style: .medium)
-        generator.prepare()
-        generator.impactOccurred()
-        
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-            isBottomLoading = true
-        }
-        
-        performAdd {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                isBottomLoading = false
-                showBottomSuccess = true
-            }
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                withAnimation {
-                    showBottomSuccess = false
-                }
-            }
-        }
-    }
-    
     private func triggerStandardAdd() {
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.prepare()
