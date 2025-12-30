@@ -38,12 +38,12 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		870E85352EC8DFAE0099A0C9 /* cridit_card.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = cridit_card.usdz; sourceTree = "<group>"; };
-		870E853E2EC8FC4E0099A0C9 /* mercadito.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = mercadito.usdz; sourceTree = "<group>"; };
-		870E86912EC9393C0099A0C9 /* restaurant.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = restaurant.usdz; sourceTree = "<group>"; };
+		870E85352EC8DFAE0099A0C9 /* cridit_card.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = LlegoiOS/resources/3dModels/cridit_card.usdz; sourceTree = "<group>"; };
+		870E853E2EC8FC4E0099A0C9 /* mercadito.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = LlegoiOS/resources/3dModels/mercadito.usdz; sourceTree = "<group>"; };
+		870E86912EC9393C0099A0C9 /* restaurant.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = LlegoiOS/resources/3dModels/restaurant.usdz; sourceTree = "<group>"; };
 		87B147A52E9346C400A515EF /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
-		87E725F82EC681FD00E583D9 /* ropa.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = ropa.usdz; sourceTree = "<group>"; };
-		87E725F92EC681FD00E583D9 /* agro.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = agro.usdz; sourceTree = "<group>"; };
+		87E725F82EC681FD00E583D9 /* ropa.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = LlegoiOS/resources/3dModels/ropa.usdz; sourceTree = "<group>"; };
+		87E725F92EC681FD00E583D9 /* agro.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = LlegoiOS/resources/3dModels/agro.usdz; sourceTree = "<group>"; };
 		87F968CD2E8F622A00EC1A7C /* LlegoiOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LlegoiOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
