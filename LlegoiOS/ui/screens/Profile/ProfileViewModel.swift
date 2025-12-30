@@ -16,6 +16,7 @@ class ProfileViewModel: ObservableObject {
     @Published var state: ProfileViewState = .idle
     @Published var currentUser: User?
     @Published var errorMessage: String?
+    @Published var isRefreshingProfile: Bool = false
 
     // Login form state
     @Published var email: String = ""
@@ -40,6 +41,7 @@ class ProfileViewModel: ObservableObject {
     func checkAuthenticationStatus() {
         if authManager.isAuthenticated, let user = authManager.currentUser {
             currentUser = user
+            updateCachedUserInfo(user)
             state = .authenticated
         } else {
             state = .unauthenticated
@@ -66,6 +68,7 @@ class ProfileViewModel: ObservableObject {
             // Actualizar estado
             currentUser = session.user
             state = .authenticated
+            updateCachedUserInfo(session.user)
 
             // Limpiar campos
             email = ""
@@ -105,6 +108,7 @@ class ProfileViewModel: ObservableObject {
             // Actualizar estado
             currentUser = session.user
             state = .authenticated
+            updateCachedUserInfo(session.user)
 
             // Limpiar campos
             registerName = ""
@@ -157,6 +161,7 @@ class ProfileViewModel: ObservableObject {
                     authManager.saveSession(session)
                     currentUser = session.user
                     state = .authenticated
+                    updateCachedUserInfo(session.user)
 
                     print("✅ Apple Sign In exitoso: \(session.user.email)")
                 } else {
@@ -199,6 +204,7 @@ class ProfileViewModel: ObservableObject {
             authManager.saveSession(session)
             currentUser = session.user
             state = .authenticated
+            updateCachedUserInfo(session.user)
 
             print("✅ Google Sign In exitoso: \(session.user.email)")
         } catch {
@@ -213,7 +219,36 @@ class ProfileViewModel: ObservableObject {
         authManager.signOut()
         currentUser = nil
         state = .unauthenticated
+        ProfileLocalCache.clear()
         print("✅ Sesión cerrada")
+    }
+
+    func refreshProfile() async {
+        guard !isRefreshingProfile else { return }
+        guard let token = authManager.getAccessToken() else {
+            state = .unauthenticated
+            return
+        }
+
+        isRefreshingProfile = true
+        defer { isRefreshingProfile = false }
+
+        do {
+            let user = try await repository.fetchCurrentUser(jwt: token)
+            authManager.applyCurrentUser(user)
+            currentUser = user
+            updateCachedUserInfo(user)
+            state = .authenticated
+        } catch {
+            if shouldInvalidateSession(for: error) {
+                authManager.signOut()
+                currentUser = nil
+                state = .unauthenticated
+                ProfileLocalCache.clear()
+                return
+            }
+            state = .authenticated
+        }
     }
 
     // MARK: - Validation
@@ -224,5 +259,20 @@ class ProfileViewModel: ObservableObject {
 
     var isRegisterButtonEnabled: Bool {
         !registerName.isEmpty && !registerEmail.isEmpty && !registerPassword.isEmpty
+    }
+
+    private func updateCachedUserInfo(_ user: User) {
+        ProfileLocalCache.update { snapshot in
+            snapshot.fullName = user.fullName
+            snapshot.email = user.email
+        }
+    }
+
+    private func shouldInvalidateSession(for error: Error) -> Bool {
+        let message = (error as NSError).localizedDescription.lowercased()
+        return message.contains("token")
+            || message.contains("jwt")
+            || message.contains("unauthorized")
+            || message.contains("no autorizado")
     }
 }

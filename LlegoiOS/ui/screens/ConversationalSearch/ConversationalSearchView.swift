@@ -45,9 +45,6 @@ struct ConversationalSearchView: View {
             WelcomeGradientBackground()
                 .ignoresSafeArea()
             
-            // Overlay para oscurecer el fondo
-            Color.black.opacity(0.5)
-                .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 // Messages ScrollView
@@ -161,10 +158,14 @@ struct ConversationalSearchView: View {
             // Botón de enviar en el toolbar inferior (siempre visible)
             ToolbarItem(placement: .bottomBar) {
                 Button(action: handleSendAction) {
-                    Image(systemName: "arrow.up.circle")
-                        .foregroundColor(.llegoPrimary)
-                        .font(.system(size: 28))
-                        .fontWeight(.semibold)
+                    Image(systemName: "paperplane.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(10)
+                        .background(
+                            Circle()
+                                .fill(Color.llegoPrimary)
+                        )
                 }
             }
         }

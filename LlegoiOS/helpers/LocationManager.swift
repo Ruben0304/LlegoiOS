@@ -76,4 +76,11 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         self.location = coordinate
         reverseGeocode(coordinate: coordinate)
     }
+
+    func applyCachedLocation(coordinate: CLLocationCoordinate2D, address: String?) {
+        self.location = coordinate
+        if let address = address, !address.isEmpty {
+            self.address = address
+        }
+    }
 }

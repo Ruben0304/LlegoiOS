@@ -15,6 +15,14 @@ struct ProfileView: View {
     @State private var showingLocationPicker = false
     @State private var showingEditName = false
     @State private var showingPaymentMethods = false
+    @State private var showingWallet = false
+    @State private var navigateToPlansAndPricing = false
+    @State private var cachedProfile: ProfileLocalCache.Snapshot? = ProfileLocalCache.load()
+    @State private var didTriggerRefresh = false
+    private let defaultCustomerLevel: CustomerLevel = .gold
+    private let defaultCurrentPoints: Int = 847
+    private let defaultNextLevelPoints: Int = 1000
+    private let walletBalance: String = "$120.50"
 
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 23.1136, longitude: -82.3666),
@@ -43,9 +51,16 @@ struct ProfileView: View {
         }
         .onAppear {
             viewModel.checkAuthenticationStatus()
+            loadCachedProfile()
             locationManager.requestPermission()
             if let location = locationManager.location {
                 region.center = location
+            }
+            if !didTriggerRefresh {
+                didTriggerRefresh = true
+                Task {
+                    await viewModel.refreshProfile()
+                }
             }
         }
         .onChange(of: locationManager.location) { newLocation in
@@ -53,13 +68,95 @@ struct ProfileView: View {
                 withAnimation {
                     region.center = location
                 }
+                if viewModel.currentUser != nil {
+                    ProfileLocalCache.update { snapshot in
+                        snapshot.latitude = location.latitude
+                        snapshot.longitude = location.longitude
+                    }
+                    cachedProfile = ProfileLocalCache.load()
+                }
+            }
+        }
+        .onChange(of: locationManager.address) { newAddress in
+            if viewModel.currentUser != nil {
+                ProfileLocalCache.update { snapshot in
+                    snapshot.address = newAddress
+                }
+                cachedProfile = ProfileLocalCache.load()
             }
         }
     }
 
+    private var customerLevelProgress: Double {
+        let points = effectiveCurrentPoints
+        let maxPoints = effectiveNextLevelPoints
+        guard maxPoints > 0 else { return 0 }
+        return min(max(Double(points) / Double(maxPoints), 0), 1)
+    }
+
+    private var nextCustomerLevel: CustomerLevel? {
+        CustomerLevel(rawValue: effectiveCustomerLevel.rawValue + 1)
+    }
+
+    private var pointsToNextLevel: Int {
+        max(effectiveNextLevelPoints - effectiveCurrentPoints, 0)
+    }
+
+    private var effectiveCustomerLevel: CustomerLevel {
+        if let raw = cachedProfile?.customerLevelRaw, let level = CustomerLevel(rawValue: raw) {
+            return level
+        }
+        return defaultCustomerLevel
+    }
+
+    private var effectiveCurrentPoints: Int {
+        cachedProfile?.currentPoints ?? defaultCurrentPoints
+    }
+
+    private var effectiveNextLevelPoints: Int {
+        cachedProfile?.nextLevelPoints ?? defaultNextLevelPoints
+    }
+
+    private func loadCachedProfile() {
+        let cached = ProfileLocalCache.load()
+        cachedProfile = cached
+
+        if let cached = cached,
+           let latitude = cached.latitude,
+           let longitude = cached.longitude {
+            let coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+            locationManager.applyCachedLocation(coordinate: coordinate, address: cached.address)
+            region.center = coordinate
+        } else if let address = cached?.address, !address.isEmpty {
+            locationManager.address = address
+        }
+
+        guard viewModel.currentUser != nil else { return }
+
+        ProfileLocalCache.update { snapshot in
+            if snapshot.customerLevelRaw == nil {
+                snapshot.customerLevelRaw = defaultCustomerLevel.rawValue
+            }
+            if snapshot.currentPoints == nil {
+                snapshot.currentPoints = defaultCurrentPoints
+            }
+            if snapshot.nextLevelPoints == nil {
+                snapshot.nextLevelPoints = defaultNextLevelPoints
+            }
+            if snapshot.fullName == nil {
+                snapshot.fullName = viewModel.currentUser?.fullName
+            }
+            if snapshot.email == nil {
+                snapshot.email = viewModel.currentUser?.email
+            }
+        }
+
+        cachedProfile = ProfileLocalCache.load()
+    }
+
     // MARK: - Authenticated Profile View
     private var authenticatedProfileView: some View {
-        NavigationView {
+        NavigationStack{
             ZStack {
                 Color.llegoBackground.ignoresSafeArea()
 
@@ -69,23 +166,27 @@ struct ProfileView: View {
                         futuristicProfileHeader
 
                         VStack(spacing: 24) {
+                            if viewModel.isRefreshingProfile {
+                                profileLoadingIndicator
+                            }
+
                             // Información de ubicación compacta
                             compactLocationSection
 
-                            // Nivel del cliente con progreso
                             customerLevelSection
 
-                            // Vista previa de pedidos recientes
-                            recentOrdersSection
+                            if !viewModel.isRefreshingProfile {
+                                walletQuickAccessSection
 
-                            // Método de pago preferido
-                            preferredPaymentMethodSection
+                                // Vista previa de pedidos recientes
+                                recentOrdersSection
 
-                            // Notificaciones
-                            notificationsSection
+                                // Notificaciones
+                                notificationsSection
 
-                            // Botón de cerrar sesión
-                            signOutButton
+                                // Botón de cerrar sesión
+                                signOutButton
+                            }
 
                             Spacer(minLength: 60)
                         }
@@ -95,8 +196,7 @@ struct ProfileView: View {
                 }
                 .ignoresSafeArea(edges: .top)
             }
-            .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
+
             .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -104,7 +204,27 @@ struct ProfileView: View {
                         dismiss()
                     })
                 }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    customerLevelToolbarItem
+                }
+                ToolbarSpacer(.fixed,placement:.navigationBarTrailing)
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        navigateToPlansAndPricing = true
+                    }) {
+                        Image(systemName: "crown.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.llegoSecondary)
+                    }
+                    .accessibilityLabel("Planes y precios")
+                }
             }
+            .navigationDestination(isPresented: $navigateToPlansAndPricing) {
+                PlansAndPricingView()
+            }
+        }
+        .fullScreenCover(isPresented: $showingWallet) {
+            WalletView()
         }
         .sheet(isPresented: $showingLocationPicker) {
             LocationPickerView(locationManager: locationManager)
@@ -134,6 +254,18 @@ struct ProfileView: View {
                     .foregroundColor(.gray)
             }
         }
+    }
+
+    private var profileLoadingIndicator: some View {
+        HStack(spacing: 12) {
+            ProgressView()
+                .tint(.llegoPrimary)
+
+            Text("Cargando datos del perfil...")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.gray)
+        }
+        .padding(.vertical, 8)
     }
 
     // MARK: - Error View
@@ -172,21 +304,24 @@ struct ProfileView: View {
             viewModel.signOut()
         }) {
             HStack(spacing: 14) {
-                Image(systemName: "arrow.right.square.fill")
-                    .font(.system(size: 20, weight: .semibold))
+                Image(systemName: "arrow.right.square")
+                    .font(.system(size: 18, weight: .medium))
                     .foregroundColor(.red)
 
                 Text("Cerrar sesión")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.red)
 
                 Spacer()
             }
-            .padding(18)
+            .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 16)
                     .fill(Color.white)
-                    .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.red.opacity(0.25), lineWidth: 1)
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -197,7 +332,7 @@ struct ProfileView: View {
         ZStack(alignment: .bottom) {
             // Mapa como portada de fondo
             Map(coordinateRegion: .constant(region), interactionModes: [])
-                .frame(height: 340)
+                .frame(height: 380)
                 .opacity(0.6) // Opacidad base del mapa
                 .overlay(
                     // Gradient overlay para efecto de desvanecimiento progresivo
@@ -303,7 +438,7 @@ struct ProfileView: View {
 
                 // Información del usuario
                 VStack(spacing: 8) {
-                    Text(viewModel.currentUser?.fullName ?? "Usuario")
+                    Text(viewModel.currentUser?.fullName ?? cachedProfile?.fullName ?? "Usuario")
                         .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundColor(.llegoPrimary)
                         .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
@@ -313,7 +448,7 @@ struct ProfileView: View {
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.llegoAccent)
 
-                        Text(viewModel.currentUser?.email ?? "")
+                        Text(viewModel.currentUser?.email ?? cachedProfile?.email ?? "")
                             .font(.system(size: 15, weight: .medium))
                             .foregroundColor(.gray)
                     }
@@ -327,77 +462,86 @@ struct ProfileView: View {
                 }
                 .padding(.bottom, 30)
             }
+            .offset(y: 12)
         }
     }
 
     // MARK: - Compact Location Section
     private var compactLocationSection: some View {
-        VStack(spacing: 14) {
-            HStack {
-                Image(systemName: "mappin.circle.fill")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.llegoPrimary)
+        Button(action: {
+            showingLocationPicker = true
+        }) {
+            HStack(spacing: 12) {
+                Image(systemName: "location.circle")
+                    .font(.system(size: 22, weight: .regular))
+                    .foregroundColor(.gray)
 
-                Text("Ubicación de entrega")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundColor(.llegoPrimary)
-
-                Spacer()
-            }
-
-            VStack(spacing: 14) {
-                HStack(spacing: 12) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.llegoAccent.opacity(0.15))
-                            .frame(width: 48, height: 48)
-
-                        Image(systemName: "location.fill")
-                            .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(.llegoAccent)
-                    }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Ubicación de entrega")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.llegoPrimary)
 
                     Text(locationManager.address)
-                        .font(.system(size: 15, weight: .semibold, design: .rounded))
-                        .foregroundColor(.llegoPrimary)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.gray)
                         .lineLimit(2)
-                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                Button(action: {
-                    showingLocationPicker = true
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "map")
-                            .font(.system(size: 16, weight: .semibold))
+                Spacer()
 
-                        Text("Cambiar ubicación")
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
-                    }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color.llegoPrimary,
-                                Color.llegoPrimary.opacity(0.85)
-                            ]),
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .cornerRadius(26)
-                    .shadow(color: Color.llegoPrimary.opacity(0.3), radius: 12, x: 0, y: 6)
-                }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.gray.opacity(0.6))
             }
-            .padding(18)
+            .padding(16)
             .background(
-                RoundedRectangle(cornerRadius: 20)
+                RoundedRectangle(cornerRadius: 16)
                     .fill(Color.white)
-                    .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 4)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
             )
         }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    private var walletQuickAccessSection: some View {
+        Button(action: {
+            showingWallet = true
+        }) {
+            HStack(spacing: 12) {
+                Image(systemName: "creditcard")
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundColor(.gray)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Wallet")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.llegoPrimary)
+
+                    Text("Saldo disponible")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.gray)
+                }
+
+                Spacer()
+
+                Text(walletBalance)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.llegoPrimary)
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.white)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 
     // MARK: - Customer Level Section
@@ -438,11 +582,11 @@ struct ProfileView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Cliente Oro")
+                        Text("Cliente \(effectiveCustomerLevel.name)")
                             .font(.system(size: 20, weight: .bold, design: .rounded))
                             .foregroundColor(.llegoPrimary)
 
-                        Text("847 puntos de 1,000")
+                        Text("\(effectiveCurrentPoints) puntos de \(effectiveNextLevelPoints)")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.gray)
                     }
@@ -451,11 +595,11 @@ struct ProfileView: View {
 
                     // Indicador de siguiente nivel
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text("153")
+                        Text("\(pointsToNextLevel)")
                             .font(.system(size: 16, weight: .bold))
                             .foregroundColor(.llegoAccent)
 
-                        Text("para Platino")
+                        Text(nextCustomerLevel.map { "para \($0.name)" } ?? "Nivel máximo")
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(.gray)
                     }
@@ -463,7 +607,7 @@ struct ProfileView: View {
 
                 // Barra de progreso nativa de iOS
                 VStack(spacing: 8) {
-                    ProgressView(value: 0.847)
+                    ProgressView(value: customerLevelProgress)
                         .tint(
                             LinearGradient(
                                 gradient: Gradient(colors: [
@@ -502,37 +646,129 @@ struct ProfileView: View {
         }
     }
 
+    private var customerLevelToolbarItem: some View {
+        let level = effectiveCustomerLevel
+        let contentWidth: CGFloat = 128
+        let checkpointLevels: [CustomerLevel] = [.bronze, .silver, .gold, .platinum]
+
+        return NavigationLink(destination: CustomerLevelBenefitsView()) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    Text(level.name)
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundColor(.black)
+
+                    Spacer(minLength: 6)
+
+                    Text("\(effectiveCurrentPoints) pts")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundColor(.black)
+                }
+                .frame(maxWidth: .infinity)
+
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.black.opacity(0.08))
+
+                    Capsule()
+                        .fill(level.color)
+                        .frame(width: contentWidth * CGFloat(customerLevelProgress))
+
+                    HStack(spacing: 0) {
+                        ForEach(checkpointLevels.indices, id: \.self) { index in
+                            let checkpoint = checkpointLevels[index]
+ 
+                            Circle()
+                                .fill(checkpoint.rawValue <= level.rawValue ? checkpoint.color : Color.black.opacity(0.25))
+                                .frame(width: 4, height: 4)
+
+                            if index != checkpointLevels.count - 1 {
+                                Spacer()
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 2)
+                }
+                .frame(width: contentWidth, height: 6)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+        }
+        .tint(level.color)
+        .buttonStyle(.glassProminent)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Nivel \(level.name)")
+        .accessibilityValue("\(effectiveCurrentPoints) de \(effectiveNextLevelPoints) puntos")
+    }
+
     // MARK: - Recent Orders Preview Section
     private var recentOrdersSection: some View {
-        VStack(spacing: 14) {
-            HStack {
-                Image(systemName: "clock.arrow.circlepath")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.llegoAccent)
+        let orders = sampleRecentOrders
 
-                Text("Pedidos Recientes")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
+        return VStack(spacing: 12) {
+            HStack {
+                Text("Pedidos recientes")
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.llegoPrimary)
 
                 Spacer()
 
                 NavigationLink(destination: OrderHistoryView()) {
-                    HStack(spacing: 4) {
-                        Text("Ver todos")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.llegoAccent)
-
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.llegoAccent)
-                    }
+                    Text("Ver todos")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.gray)
                 }
             }
 
-            VStack(spacing: 10) {
-                ForEach(sampleRecentOrders) { order in
-                    RecentOrderCard(order: order)
+            VStack(spacing: 0) {
+                ForEach(Array(orders.enumerated()), id: \.element.id) { index, order in
+                    NavigationLink(destination: OrderDetailView(status: order.detailStatus)) {
+                        minimalOrderRow(order, isLast: index == orders.count - 1)
+                    }
+                    .buttonStyle(.plain)
                 }
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.white)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
+            )
+        }
+    }
+
+    private func minimalOrderRow(_ order: RecentOrder, isLast: Bool) -> some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(order.storeName)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.llegoPrimary)
+
+                    Text(order.date)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.gray)
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(order.total)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.llegoPrimary)
+
+                    Text(order.status.text)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(order.status.color)
+                }
+            }
+            .padding(16)
+
+            if !isLast {
+                Divider()
+                    .padding(.leading, 16)
             }
         }
     }
@@ -627,14 +863,41 @@ struct ProfileView: View {
 
     // MARK: - Notifications Section
     private var notificationsSection: some View {
-        SimpleInfoCard(
-            icon: "bell.fill",
-            title: "Notificaciones",
-            subtitle: "Configurar preferencias",
-            color: .llegoAccent
-        ) {
+        Button(action: {
             // Acción para notificaciones
+        }) {
+            HStack(spacing: 12) {
+                Image(systemName: "bell")
+                    .font(.system(size: 18, weight: .regular))
+                    .foregroundColor(.gray)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Notificaciones")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.llegoPrimary)
+
+                    Text("Personaliza tus avisos")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.gray)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.gray.opacity(0.6))
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.white)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
+            )
         }
+        .buttonStyle(PlainButtonStyle())
     }
 
 }
@@ -813,34 +1076,43 @@ struct RecentOrder: Identifiable {
     let date: String
     let total: String
     let status: OrderStatus
+    let detailStatus: OrderDetailStatus
     let itemCount: Int
 
     enum OrderStatus {
-        case delivered
-        case inProgress
+        case pendingAcceptance
+        case modifiedByStore
         case cancelled
+        case inProgress
+        case accepted
 
         var text: String {
             switch self {
-            case .delivered: return "Entregado"
-            case .inProgress: return "En camino"
+            case .pendingAcceptance: return "Pendiente"
+            case .modifiedByStore: return "Modificado"
             case .cancelled: return "Cancelado"
+            case .inProgress: return "En progreso"
+            case .accepted: return "Aceptado"
             }
         }
 
         var color: Color {
             switch self {
-            case .delivered: return .llegoAccent
-            case .inProgress: return .llegoSecondary
+            case .pendingAcceptance: return .orange
+            case .modifiedByStore: return .blue
             case .cancelled: return .red
+            case .inProgress: return .llegoPrimary
+            case .accepted: return .green
             }
         }
 
         var icon: String {
             switch self {
-            case .delivered: return "checkmark.circle.fill"
-            case .inProgress: return "shippingbox.fill"
+            case .pendingAcceptance: return "clock.fill"
+            case .modifiedByStore: return "square.and.pencil"
             case .cancelled: return "xmark.circle.fill"
+            case .inProgress: return "shippingbox.fill"
+            case .accepted: return "checkmark.circle.fill"
             }
         }
     }
@@ -1082,27 +1354,48 @@ struct OrderHistoryView: View {
 private let sampleRecentOrders = [
     RecentOrder(
         id: "1",
-        storeName: "Supermercado Plaza",
-        date: "Hace 2 días",
-        total: "$45.50",
-        status: .delivered,
-        itemCount: 12
+        storeName: "Cafe Habana",
+        date: "Hace 12 min",
+        total: "$12.50",
+        status: .pendingAcceptance,
+        detailStatus: .pendingAcceptance,
+        itemCount: 3
     ),
     RecentOrder(
         id: "2",
-        storeName: "Farmacia Central",
-        date: "Hace 5 días",
-        total: "$28.30",
-        status: .delivered,
-        itemCount: 5
+        storeName: "Pizzeria Roma",
+        date: "Ayer",
+        total: "$22.80",
+        status: .inProgress,
+        detailStatus: .inProgress,
+        itemCount: 2
     ),
     RecentOrder(
         id: "3",
-        storeName: "Panadería La Estrella",
-        date: "Hace 1 semana",
-        total: "$15.80",
-        status: .delivered,
-        itemCount: 8
+        storeName: "Sushi House",
+        date: "23 May",
+        total: "$18.20",
+        status: .cancelled,
+        detailStatus: .cancelled,
+        itemCount: 4
+    ),
+    RecentOrder(
+        id: "4",
+        storeName: "La Central",
+        date: "22 May",
+        total: "$9.40",
+        status: .modifiedByStore,
+        detailStatus: .modifiedByStore,
+        itemCount: 1
+    ),
+    RecentOrder(
+        id: "5",
+        storeName: "Bistro 21",
+        date: "21 May",
+        total: "$16.10",
+        status: .accepted,
+        detailStatus: .accepted,
+        itemCount: 2
     )
 ]
 

@@ -1,6 +1,7 @@
 import SwiftUI
 import UIKit
 import SceneKit
+import AVFoundation
 
 struct WelcomeView: View {
     // Global gradient state manager
@@ -9,7 +10,6 @@ struct WelcomeView: View {
     // Cart manager
     @StateObject private var cartManager = CartManager.shared
     @ObservedObject private var authManager = AuthManager.shared
-    private let profileRepository = ProfileRepository()
 
     // Animation states
     @State private var carouselAppeared = false
@@ -27,6 +27,7 @@ struct WelcomeView: View {
     @State private var navigateToProfile: Bool = false
     @State private var navigateToCart: Bool = false
     @State private var navigateToConversationalSearch: Bool = false
+    @State private var showingWallet: Bool = false
     @State private var navigateToPlansAndPricing: Bool = false
     @State private var cartSheetDetent: PresentationDetent = .medium
     @State private var isCheckingAccount: Bool = false
@@ -40,6 +41,8 @@ struct WelcomeView: View {
     @State private var pressProgress: CGFloat = 0.0
     @State private var pressLocation: CGPoint = .zero
     @State private var timer: Timer?
+    @State private var pressAudioPlayer: AVAudioPlayer?
+    @State private var pressSoundStopTimer: Timer?
 
     // User data (placeholder)
     let balance: String = "3.99$"
@@ -350,6 +353,9 @@ struct WelcomeView: View {
                     ConversationalSearchView(categoryIndex: currentIndex)
                 }
             }
+            .fullScreenCover(isPresented: $showingWallet) {
+                WalletView()
+            }
             .navigationDestination(isPresented: $navigateToLogin) {
                 LoginView(viewModel: ProfileViewModel()) {
                     navigateToLogin = false
@@ -387,22 +393,14 @@ struct WelcomeView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        let impact = UIImpactFeedbackGenerator(style: .light)
-                        impact.impactOccurred()
-                        navigateToPlansAndPricing = true
+                        showingWallet = true
                     }) {
-                        HStack(spacing: 4) {
-                            Text("Llegó")
-                               
-                            Image("corona")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(height: 24)
-                        }
-                        .padding(.horizontal,10)
-                        .padding(.vertical,4)
+                        Image(systemName: "creditcard")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.llegoPrimary)
                     }
-                    .buttonStyle(.plain)
+                    .accessibilityLabel("Wallet")
+                   
                 }
                 ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
                 // Cart button con badge
@@ -426,36 +424,16 @@ struct WelcomeView: View {
                     let impact = UIImpactFeedbackGenerator(style: .light)
                     impact.impactOccurred()
                     guard !isCheckingAccount else { return }
-                    guard let token = authManager.getAccessToken() else {
+                    guard authManager.getAccessToken() != nil else {
                         authManager.signOut()
                         navigateToLogin = true
                         return
                     }
 
                     isCheckingAccount = true
-                    Task {
-                        do {
-                            let user = try await profileRepository.fetchCurrentUser(jwt: token)
-                            await MainActor.run {
-                                authManager.applyCurrentUser(user)
-                                isCheckingAccount = false
-                                navigateToProfile = true
-                            }
-                        } catch {
-                            await MainActor.run {
-                                isCheckingAccount = false
-                                if shouldInvalidateSession(for: error) {
-                                    authManager.signOut()
-                                    navigateToLogin = true
-                                    return
-                                }
-                                if authManager.currentUser != nil {
-                                    navigateToProfile = true
-                                } else {
-                                    navigateToLogin = true
-                                }
-                            }
-                        }
+                    navigateToProfile = true
+                    DispatchQueue.main.async {
+                        isCheckingAccount = false
                     }
                 }) {
                     Image(systemName: "person.fill")
@@ -496,6 +474,11 @@ struct WelcomeView: View {
             .onAppear {
                 startEntranceAnimations()
                 startFloatingAnimations()
+                preparePressSound()
+            }
+            .onDisappear {
+                pressSoundStopTimer?.invalidate()
+                pressSoundStopTimer = nil
             }
         }
     }
@@ -595,6 +578,7 @@ struct WelcomeView: View {
         pressProgress = 0
         let generator = UIImpactFeedbackGenerator(style: .soft)
         generator.prepare()
+        playPressSound()
         
         // Timer para animar el progreso y haptics
         timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [self] _ in
@@ -602,7 +586,7 @@ struct WelcomeView: View {
                 completePressAction()
                 return
             }
-            pressProgress += 0.05 / 1.5 // Basado en minimumDuration 1.5s
+            pressProgress += 0.05 / 0.8 // Duración total ~0.8s
             
             // Haptic progresivo
             if Int(pressProgress * 100) % 10 == 0 {
@@ -615,31 +599,57 @@ struct WelcomeView: View {
         timer?.invalidate()
         timer = nil
         pressProgress = 0
+        pressSoundStopTimer?.invalidate()
+        pressSoundStopTimer = nil
+        pressAudioPlayer?.stop()
+        pressAudioPlayer?.currentTime = 0
     }
 
-    private func shouldInvalidateSession(for error: Error) -> Bool {
-        let message = (error as NSError).localizedDescription.lowercased()
-        return message.contains("token")
-            || message.contains("jwt")
-            || message.contains("unauthorized")
-            || message.contains("no autorizado")
-    }
-    
     private func completePressAction() {
         timer?.invalidate()
         timer = nil
         pressProgress = 1.0 // Asegurar final
-        
+
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
         
         // Navegar a ConversationalSearchView
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        DispatchQueue.main.async {
             navigateToConversationalSearch = true
             // Resetear estado después de navegar
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 isPressing = false
                 pressProgress = 0
+            }
+        }
+    }
+
+    private func preparePressSound() {
+        guard let url = Bundle.main.url(forResource: "sonido", withExtension: "caf") else { return }
+        do {
+            let player = try AVAudioPlayer(contentsOf: url)
+            player.volume = 0.2
+            player.prepareToPlay()
+            pressAudioPlayer = player
+        } catch {
+            pressAudioPlayer = nil
+        }
+    }
+
+    private func playPressSound() {
+        if pressAudioPlayer == nil {
+            preparePressSound()
+        }
+        guard let player = pressAudioPlayer else { return }
+        player.currentTime = 0
+        player.play()
+
+        pressSoundStopTimer?.invalidate()
+        let remaining = max(0, player.duration - 2.0)
+        if remaining > 0 {
+            pressSoundStopTimer = Timer.scheduledTimer(withTimeInterval: remaining, repeats: false) { _ in
+                player.stop()
+                player.currentTime = 0
             }
         }
     }
