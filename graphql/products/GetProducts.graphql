@@ -1,5 +1,5 @@
-query GetProducts {
-  products {
+query GetProducts($branchId: String, $categoryId: String, $availableOnly: Boolean) {
+  products(branchId: $branchId, categoryId: $categoryId, availableOnly: $availableOnly) {
     id
     branchId
     name
@@ -8,7 +8,9 @@ query GetProducts {
     price
     currency
     image
+    imageUrl
     availability
+    categoryId
     createdAt
   }
 }

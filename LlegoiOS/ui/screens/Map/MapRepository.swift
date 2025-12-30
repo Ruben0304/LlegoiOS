@@ -6,7 +6,7 @@ class MapRepository {
 
     // Fetch all branches from GraphQL
     func fetchBranches(completion: @escaping @Sendable (Result<[MapBranchGraphQL], Error>) -> Void) {
-        apolloClient.fetch(query: LlegoAPI.GetBranchesQuery(), cachePolicy: .returnCacheDataAndFetch) { result in
+        apolloClient.fetch(query: LlegoAPI.GetBranchesQuery(businessId: .none), cachePolicy: .returnCacheDataAndFetch) { result in
             switch result {
             case .success(let graphQLResult):
                 if let errors = graphQLResult.errors {
@@ -30,7 +30,7 @@ class MapRepository {
                         id: branch.id,
                         businessId: branch.businessId,
                         name: branch.name,
-                        address: branch.address,
+                        address: branch.address ?? "",
                         coordinates: MapCoordinatesGraphQL(
                             type: branch.coordinates.type,
                             coordinates: branch.coordinates.coordinates

@@ -186,7 +186,7 @@ public extension LlegoAPI {
               @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
                 .field("id", String.self),
                 .field("name", String.self),
-                .field("address", String.self),
+                .field("address", String?.self),
                 .field("phone", String.self),
                 .field("status", String.self),
                 .field("coordinates", Coordinates.self),
@@ -198,7 +198,7 @@ public extension LlegoAPI {
 
               public var id: String { __data["id"] }
               public var name: String { __data["name"] }
-              public var address: String { __data["address"] }
+              public var address: String? { __data["address"] }
               public var phone: String { __data["phone"] }
               public var status: String { __data["status"] }
               public var coordinates: Coordinates { __data["coordinates"] }

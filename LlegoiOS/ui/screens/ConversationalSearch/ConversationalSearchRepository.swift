@@ -77,7 +77,7 @@ class ConversationalSearchRepository {
                             branchEntities.append(AIChatBranchEntity(
                                 id: branch.id,
                                 name: branch.name,
-                                address: branch.address,
+                                address: branch.address ?? "",
                                 phone: branch.phone,
                                 status: branch.status,
                                 coordinates: AIChatCoordinates(

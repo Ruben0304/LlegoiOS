@@ -82,7 +82,7 @@ public extension LlegoAPI {
           .field("id", String.self),
           .field("businessId", String.self),
           .field("name", String.self),
-          .field("address", String.self),
+          .field("address", String?.self),
           .field("coordinates", Coordinates.self),
           .field("phone", String.self),
           .field("status", String.self),
@@ -95,7 +95,7 @@ public extension LlegoAPI {
         public var id: String { __data["id"] }
         public var businessId: String { __data["businessId"] }
         public var name: String { __data["name"] }
-        public var address: String { __data["address"] }
+        public var address: String? { __data["address"] }
         public var coordinates: Coordinates { __data["coordinates"] }
         public var phone: String { __data["phone"] }
         public var status: String { __data["status"] }

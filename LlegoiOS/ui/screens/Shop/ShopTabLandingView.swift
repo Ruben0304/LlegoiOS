@@ -8,6 +8,7 @@ enum ShopViewMode {
 }
 
 struct ShopTabLandingView: View {
+    @StateObject private var viewModel = ShopTabLandingViewModel()
     @State private var searchText = ""
     @FocusState private var isSearchFocused: Bool
     @State private var isSearchExpanded = false
@@ -43,13 +44,21 @@ struct ShopTabLandingView: View {
                     .ignoresSafeArea()
 
                 // Contenido según el modo de visualización
-                if viewMode == .list {
+                if viewModel.isLoading {
+                    VStack(spacing: 20) {
+                        LottieView(name: "loading")
+                            .frame(width: 150, height: 150)
+                        Text("Cargando tiendas...")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.gray)
+                    }
+                } else if viewMode == .list {
                     // MODO LISTADO: Lista de tiendas
                     ScrollView {
                         VStack(spacing: 0) {
                             // Listado de tiendas
                             VStack(spacing: 12) {
-                                ForEach(mockStores, id: \.id) { store in
+                                ForEach(viewModel.stores, id: \.id) { store in
                                     Button(action: {
                                         selectedStore = store
                                     }) {
@@ -67,7 +76,7 @@ struct ShopTabLandingView: View {
                     // MODO MAPA: Solo mapa a pantalla completa
                     FullScreenMapView(
                         mapRegion: $mapRegion,
-                        mockStores: mockStores,
+                        stores: viewModel.stores,
                         onStoreSelected: { store in
                             selectedStore = store
                         }
@@ -195,6 +204,9 @@ struct ShopTabLandingView: View {
                 .presentationCornerRadius(28)
                 .interactiveDismissDisabled(false)
             }
+            .onAppear {
+                viewModel.loadStores()
+            }
         }
     }
 
@@ -209,14 +221,9 @@ struct ShopTabLandingView: View {
         isSearchLoading = true
         showSearchResults = false
 
-        // Simular búsqueda de 1 segundo
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            // Buscar vendedores (máximo 3)
-            filteredSearchStores = mockStores.filter { store in
-                store.name.localizedCaseInsensitiveContains(searchText) ||
-                (store.address?.localizedCaseInsensitiveContains(searchText) ?? false)
-            }.prefix(3).map { $0 }
-
+        // Buscar usando el ViewModel
+        viewModel.searchStores(query: searchText) { results in
+            filteredSearchStores = results
             isSearchLoading = false
             showSearchResults = true
 
@@ -398,59 +405,6 @@ struct ShopTabLandingView: View {
         }
     }
 
-    // MARK: - Mock Data
-    private let mockStores = [
-        StoreWithCoordinates(
-            id: "1",
-            name: "FreshMart Premium",
-            etaMinutes: 25,
-            logoUrl: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&h=200&fit=crop&crop=center",
-            bannerUrl: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&h=200&fit=crop&crop=center",
-            address: "Calle 23 #456, Vedado",
-            rating: 4.8,
-            coordinate: CLLocationCoordinate2D(latitude: 23.1355, longitude: -82.3600)
-        ),
-        StoreWithCoordinates(
-            id: "2",
-            name: "EcoFruit Orgánico",
-            etaMinutes: 30,
-            logoUrl: "https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=200&h=200&fit=crop&crop=center",
-            bannerUrl: "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=500&h=200&fit=crop&crop=center",
-            address: "Av. 5ta #789, Miramar",
-            rating: 4.6,
-            coordinate: CLLocationCoordinate2D(latitude: 23.1338, longitude: -82.3575)
-        ),
-        StoreWithCoordinates(
-            id: "3",
-            name: "TropicalFresh Market",
-            etaMinutes: 20,
-            logoUrl: "https://images.unsplash.com/photo-1534723328310-e82dad3ee43f?w=200&h=200&fit=crop&crop=center",
-            bannerUrl: "https://images.unsplash.com/photo-1506617420156-8e4536971650?w=500&h=200&fit=crop&crop=center",
-            address: "Calle 10 #234, Plaza",
-            rating: 4.9,
-            coordinate: CLLocationCoordinate2D(latitude: 23.1348, longitude: -82.3595)
-        ),
-        StoreWithCoordinates(
-            id: "4",
-            name: "La Bodeguita del Sabor",
-            etaMinutes: 15,
-            logoUrl: "https://images.unsplash.com/photo-1528698827591-e19ccd7bc23d?w=200&h=200&fit=crop&crop=center",
-            bannerUrl: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=500&h=200&fit=crop&crop=center",
-            address: "Calle L #567, Vedado",
-            rating: 4.7,
-            coordinate: CLLocationCoordinate2D(latitude: 23.1340, longitude: -82.3610)
-        ),
-        StoreWithCoordinates(
-            id: "5",
-            name: "SuperMercado El Rápido",
-            etaMinutes: 18,
-            logoUrl: "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=200&h=200&fit=crop&crop=center",
-            bannerUrl: "https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=500&h=200&fit=crop&crop=center",
-            address: "Av. 31 #890, Nuevo Vedado",
-            rating: 4.5,
-            coordinate: CLLocationCoordinate2D(latitude: 23.1352, longitude: -82.3580)
-        )
-    ]
 }
 
 // MARK: - StoreWithCoordinates
@@ -1086,13 +1040,13 @@ private struct StoreListCard: View {
 // MARK: - Full Screen Map View
 private struct FullScreenMapView: View {
     @Binding var mapRegion: MKCoordinateRegion
-    let mockStores: [StoreWithCoordinates]
+    let stores: [StoreWithCoordinates]
     let onStoreSelected: (StoreWithCoordinates) -> Void
 
     var body: some View {
         Map(
             coordinateRegion: $mapRegion,
-            annotationItems: mockStores
+            annotationItems: stores
         ) { store in
             MapAnnotation(coordinate: store.coordinate) {
                 Button(action: {

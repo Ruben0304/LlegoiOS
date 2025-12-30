@@ -86,7 +86,7 @@ class ShopViewModel: ObservableObject {
                                 price: productGraphQL.price,
                                 currency: productGraphQL.currency
                             ),
-                            imageUrl: productGraphQL.image
+                            imageUrl: productGraphQL.imageUrl
                         )
                     }
 

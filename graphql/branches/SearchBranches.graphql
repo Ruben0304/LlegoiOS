@@ -1,5 +1,5 @@
-query SearchBranches($query: String!) {
-  searchBranches(query: $query) {
+query SearchBranches($query: String!, $limit: Int, $useVectorSearch: Boolean) {
+  searchBranches(query: $query, limit: $limit, useVectorSearch: $useVectorSearch) {
     id
     businessId
     name
@@ -9,7 +9,11 @@ query SearchBranches($query: String!) {
       coordinates
     }
     phone
+    schedule
     status
+    avatarUrl
+    coverUrl
+    deliveryRadius
     createdAt
   }
 }

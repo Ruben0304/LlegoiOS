@@ -9,10 +9,28 @@ public extension LlegoAPI {
     public static let operationName: String = "GetProducts"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetProducts { products { __typename id branchId name description weight price currency image availability createdAt } }"#
+        #"query GetProducts($branchId: String, $categoryId: String, $availableOnly: Boolean) { products( branchId: $branchId categoryId: $categoryId availableOnly: $availableOnly ) { __typename id branchId name description weight price currency image imageUrl availability categoryId createdAt } }"#
       ))
 
-    public init() {}
+    public var branchId: GraphQLNullable<String>
+    public var categoryId: GraphQLNullable<String>
+    public var availableOnly: GraphQLNullable<Bool>
+
+    public init(
+      branchId: GraphQLNullable<String>,
+      categoryId: GraphQLNullable<String>,
+      availableOnly: GraphQLNullable<Bool>
+    ) {
+      self.branchId = branchId
+      self.categoryId = categoryId
+      self.availableOnly = availableOnly
+    }
+
+    @_spi(Unsafe) public var __variables: Variables? { [
+      "branchId": branchId,
+      "categoryId": categoryId,
+      "availableOnly": availableOnly
+    ] }
 
     public struct Data: LlegoAPI.SelectionSet {
       @_spi(Unsafe) public let __data: DataDict
@@ -20,7 +38,11 @@ public extension LlegoAPI {
 
       @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.Query }
       @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
-        .field("products", [Product].self),
+        .field("products", [Product].self, arguments: [
+          "branchId": .variable("branchId"),
+          "categoryId": .variable("categoryId"),
+          "availableOnly": .variable("availableOnly")
+        ]),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
         GetProductsQuery.Data.self
@@ -47,7 +69,9 @@ public extension LlegoAPI {
           .field("price", Double.self),
           .field("currency", String.self),
           .field("image", String.self),
+          .field("imageUrl", String.self),
           .field("availability", Bool.self),
+          .field("categoryId", String?.self),
           .field("createdAt", LlegoAPI.DateTime.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
@@ -62,7 +86,10 @@ public extension LlegoAPI {
         public var price: Double { __data["price"] }
         public var currency: String { __data["currency"] }
         public var image: String { __data["image"] }
+        /// Presigned URL for the product image
+        public var imageUrl: String { __data["imageUrl"] }
         public var availability: Bool { __data["availability"] }
+        public var categoryId: String? { __data["categoryId"] }
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
       }
     }

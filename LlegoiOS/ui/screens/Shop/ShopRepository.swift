@@ -6,7 +6,12 @@ class ShopRepository {
 
     // Fetch all products from GraphQL
     func fetchProducts(completion: @escaping @Sendable (Result<[ShopProductGraphQL], Error>) -> Void) {
-        apolloClient.fetch(query: LlegoAPI.GetProductsQuery(), cachePolicy: .returnCacheDataAndFetch) { result in
+        let query = LlegoAPI.GetProductsQuery(
+            branchId: .none,
+            categoryId: .none,
+            availableOnly: .none
+        )
+        apolloClient.fetch(query: query, cachePolicy: .returnCacheDataAndFetch) { result in
             switch result {
             case .success(let graphQLResult):
                 if let errors = graphQLResult.errors {
@@ -35,7 +40,9 @@ class ShopRepository {
                         price: product.price,
                         currency: product.currency,
                         image: product.image,
+                        imageUrl: product.imageUrl,
                         availability: product.availability,
+                        categoryId: product.categoryId,
                         createdAt: product.createdAt
                     )
                 }
@@ -63,6 +70,8 @@ struct ShopProductGraphQL: Identifiable, Sendable {
     let price: Double
     let currency: String
     let image: String
+    let imageUrl: String
     let availability: Bool
+    let categoryId: String?
     let createdAt: String
 }

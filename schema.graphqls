@@ -50,10 +50,15 @@ type UserType {
   email: String!
   phone: String
   role: String!
+  avatar: String
+  businessIds: [String!]!
+  branchIds: [String!]!
   createdAt: DateTime!
   authProvider: String!
   providerUserId: String
   applePrivateEmail: String
+  "URL firmada del avatar del usuario"
+  avatarUrl: String
 }
 type BusinessType {
   id: String!
@@ -61,19 +66,37 @@ type BusinessType {
   type: String!
   ownerId: String!
   globalRating: Float!
+  avatar: String
+  coverImage: String
+  description: String
+  socialMedia: JSON
+  tags: [String!]!
+  isActive: Boolean!
   createdAt: DateTime!
+  "Presigned URL for the business avatar"
+  avatarUrl: String
+  "Presigned URL for the business cover image"
+  coverUrl: String
 }
 type BranchType {
   id: String!
   businessId: String!
   name: String!
-  address: String!
+  address: String
   coordinates: CoordinatesType!
   phone: String!
   schedule: JSON!
   managerIds: [String!]!
   status: String!
+  avatar: String
+  coverImage: String
+  deliveryRadius: Float
+  facilities: [String!]!
   createdAt: DateTime!
+  "Presigned URL for the branch avatar"
+  avatarUrl: String
+  "Presigned URL for the branch cover image"
+  coverUrl: String
 }
 type CoordinatesType {
   type: String!
@@ -91,6 +114,8 @@ type ProductType {
   availability: Boolean!
   categoryId: String
   createdAt: DateTime!
+  "Presigned URL for the product image"
+  imageUrl: String!
 }
 type CategoryType {
   id: String!
@@ -134,6 +159,28 @@ type Mutation {
   loginWithGoogle(input: SocialLoginInput!, jwt: String = null): AuthResponse!
   "Login with Apple"
   loginWithApple(input: AppleLoginInput!, jwt: String = null): AuthResponse!
+  "Actualizar perfil de usuario"
+  updateUser(input: UpdateUserInput!, jwt: String = null): UserType!
+  "Agregar sucursal a usuario"
+  addBranchToUser(input: AddBranchToUserInput!, jwt: String = null): UserType!
+  "Remover sucursal de usuario"
+  removeBranchFromUser(branchId: String!, jwt: String = null): UserType!
+  "Eliminar cuenta de usuario"
+  deleteUser(jwt: String = null): Boolean!
+  "Registrar un nuevo negocio con al menos una sucursal"
+  registerBusiness(businessInput: CreateBusinessInput!, branchesInput: [RegisterBranchInput!]!, jwt: String = null): BusinessType!
+  "Actualizar un negocio"
+  updateBusiness(businessId: String!, input: UpdateBusinessInput!, jwt: String = null): BusinessType!
+  "Crear una nueva sucursal"
+  createBranch(input: CreateBranchInput!, jwt: String = null): BranchType!
+  "Actualizar una sucursal"
+  updateBranch(branchId: String!, input: UpdateBranchInput!, jwt: String = null): BranchType!
+  "Crear un nuevo producto"
+  createProduct(input: CreateProductInput!, jwt: String = null): ProductType!
+  "Actualizar un producto"
+  updateProduct(productId: String!, input: UpdateProductInput!, jwt: String = null): ProductType!
+  "Eliminar un producto"
+  deleteProduct(productId: String!, jwt: String = null): Boolean!
 }
 type AuthResponse {
   accessToken: String!
@@ -175,6 +222,95 @@ input AppleLoginInput {
   identityToken: String!
   authorizationCode: String = null
   nonce: String = null
+}
+input UpdateUserInput {
+  name: String = null
+  phone: String = null
+  avatar: String = null
+}
+input AddBranchToUserInput {
+  branchId: String!
+}
+input CreateBusinessInput {
+  name: String!
+  type: String!
+  avatar: String = null
+  coverImage: String = null
+  description: String = null
+  socialMedia: JSON = null
+  tags: [String!] = null
+}
+input RegisterBranchInput {
+  name: String!
+  coordinates: CoordinatesInput!
+  phone: String!
+  schedule: JSON!
+  address: String = null
+  managerIds: [String!] = null
+  avatar: String = null
+  coverImage: String = null
+  deliveryRadius: Float = null
+  facilities: [String!] = null
+}
+input CoordinatesInput {
+  lat: Float!
+  lng: Float!
+}
+input UpdateBusinessInput {
+  name: String = null
+  type: String = null
+  description: String = null
+  socialMedia: JSON = null
+  tags: [String!] = null
+  isActive: Boolean = null
+  avatar: String = null
+  coverImage: String = null
+}
+input CreateBranchInput {
+  businessId: String!
+  name: String!
+  coordinates: CoordinatesInput!
+  phone: String!
+  schedule: JSON!
+  address: String = null
+  managerIds: [String!] = null
+  avatar: String = null
+  coverImage: String = null
+  deliveryRadius: Float = null
+  facilities: [String!] = null
+}
+input UpdateBranchInput {
+  name: String = null
+  address: String = null
+  phone: String = null
+  schedule: JSON = null
+  status: String = null
+  deliveryRadius: Float = null
+  facilities: [String!] = null
+  managerIds: [String!] = null
+  avatar: String = null
+  coverImage: String = null
+}
+input CreateProductInput {
+  name: String!
+  description: String!
+  price: Float!
+  image: String!
+  branchId: String = null
+  businessId: String = null
+  currency: String! = "USD"
+  weight: String = null
+  categoryId: String = null
+}
+input UpdateProductInput {
+  name: String = null
+  description: String = null
+  price: Float = null
+  currency: String = null
+  weight: String = null
+  availability: Boolean = null
+  categoryId: String = null
+  image: String = null
 }
 "Exposes a URL that specifies the behavior of this scalar."
 directive @specifiedBy(

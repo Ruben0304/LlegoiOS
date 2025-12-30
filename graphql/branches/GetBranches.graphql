@@ -1,5 +1,5 @@
-query GetBranches {
-  branches {
+query GetBranches($businessId: String) {
+  branches(businessId: $businessId) {
     id
     businessId
     name
@@ -9,7 +9,15 @@ query GetBranches {
       coordinates
     }
     phone
+    schedule
+    managerIds
     status
+    avatar
+    coverImage
+    avatarUrl
+    coverUrl
+    deliveryRadius
+    facilities
     createdAt
   }
 }

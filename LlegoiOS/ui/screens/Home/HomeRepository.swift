@@ -95,15 +95,61 @@ struct BranchGraphQL: Identifiable, Sendable {
     let id: String
     let businessId: String
     let name: String
-    let address: String
+    let address: String?
     let coordinates: CoordinatesGraphQL
     let phone: String
+    let schedule: [String: String]?
     let status: String
+    let avatarUrl: String?
+    let coverUrl: String?
+    let deliveryRadius: Double?
+    let facilities: [String]?
     let createdAt: String
+
+    // Constructor con valores por defecto para compatibilidad con HomeData
+    init(
+        id: String,
+        businessId: String,
+        name: String,
+        address: String? = nil,
+        coordinates: CoordinatesGraphQL,
+        phone: String,
+        schedule: [String: String]? = nil,
+        status: String,
+        avatarUrl: String? = nil,
+        coverUrl: String? = nil,
+        deliveryRadius: Double? = nil,
+        facilities: [String]? = nil,
+        createdAt: String
+    ) {
+        self.id = id
+        self.businessId = businessId
+        self.name = name
+        self.address = address
+        self.coordinates = coordinates
+        self.phone = phone
+        self.schedule = schedule
+        self.status = status
+        self.avatarUrl = avatarUrl
+        self.coverUrl = coverUrl
+        self.deliveryRadius = deliveryRadius
+        self.facilities = facilities
+        self.createdAt = createdAt
+    }
 }
 
 // Model for coordinates
 struct CoordinatesGraphQL: Sendable {
     let type: String
     let coordinates: [Double]
+
+    var latitude: Double {
+        // GeoJSON format: [lng, lat]
+        coordinates.count > 1 ? coordinates[1] : 0.0
+    }
+
+    var longitude: Double {
+        // GeoJSON format: [lng, lat]
+        coordinates.count > 0 ? coordinates[0] : 0.0
+    }
 }

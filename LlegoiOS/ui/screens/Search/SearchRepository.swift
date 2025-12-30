@@ -58,7 +58,11 @@ class SearchRepository {
     // Search branches (stores) by query
     func searchBranches(query: String, completion: @escaping @Sendable (Result<[SearchBranchGraphQL], Error>) -> Void) {
         apolloClient.fetch(
-            query: LlegoAPI.SearchBranchesQuery(query: query),
+            query: LlegoAPI.SearchBranchesQuery(
+                query: query,
+                limit: .none,
+                useVectorSearch: .none
+            ),
             cachePolicy: .returnCacheDataAndFetch
         ) { result in
             switch result {
@@ -86,7 +90,7 @@ class SearchRepository {
                         id: branch.id,
                         businessId: branch.businessId,
                         name: branch.name,
-                        address: branch.address,
+                        address: branch.address ?? "",
                         coordinates: CoordinatesGraphQL(
                             type: branch.coordinates.type,
                             coordinates: branch.coordinates.coordinates

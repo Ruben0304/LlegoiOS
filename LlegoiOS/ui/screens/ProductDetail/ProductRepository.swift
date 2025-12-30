@@ -6,7 +6,11 @@ class ProductRepository {
 
     // Fetch all products from GraphQL
     func fetchProducts(completion: @escaping @Sendable (Result<[ProductGraphQL], Error>) -> Void) {
-        apolloClient.fetch(query: LlegoAPI.GetProductsQuery(), cachePolicy: .returnCacheDataAndFetch) { result in
+        apolloClient.fetch(query: LlegoAPI.GetProductsQuery(
+            branchId: .none,
+            categoryId: .none,
+            availableOnly: .none
+        ), cachePolicy: .returnCacheDataAndFetch) { result in
             switch result {
             case .success(let graphQLResult):
                 if let errors = graphQLResult.errors {

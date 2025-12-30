@@ -7,9 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		870E85362EC8DFAF0099A0C9 /* cridit_card.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 870E85352EC8DFAE0099A0C9 /* cridit_card.usdz */; };
-		870E853F2EC8FC4F0099A0C9 /* mercadito.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 870E853E2EC8FC4E0099A0C9 /* mercadito.usdz */; };
-		870E86922EC9393C0099A0C9 /* restaurant.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 870E86912EC9393C0099A0C9 /* restaurant.usdz */; };
+		870E85362EC8DFAF0099A0C9 /* LlegoiOS/resources/3dModels/cridit_card.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 870E85352EC8DFAE0099A0C9 /* LlegoiOS/resources/3dModels/cridit_card.usdz */; };
+		870E853F2EC8FC4F0099A0C9 /* LlegoiOS/resources/3dModels/mercadito.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 870E853E2EC8FC4E0099A0C9 /* LlegoiOS/resources/3dModels/mercadito.usdz */; };
+		870E86922EC9393C0099A0C9 /* LlegoiOS/resources/3dModels/restaurant.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 870E86912EC9393C0099A0C9 /* LlegoiOS/resources/3dModels/restaurant.usdz */; };
 		87348EA92EE9E4C20055BC0C /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 87348EA82EE9E4C20055BC0C /* GoogleSignIn */; };
 		87348EAB2EE9E4C20055BC0C /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 87348EAA2EE9E4C20055BC0C /* GoogleSignInSwift */; };
 		879D684B2EB004D60045F86E /* Stripe in Frameworks */ = {isa = PBXBuildFile; productRef = 879D684A2EB004D60045F86E /* Stripe */; };
@@ -20,8 +20,8 @@
 		87CB529B2E90242F00618C59 /* ApolloSQLite in Frameworks */ = {isa = PBXBuildFile; productRef = 87CB529A2E90242F00618C59 /* ApolloSQLite */; };
 		87CB529D2E90242F00618C59 /* ApolloWebSocket in Frameworks */ = {isa = PBXBuildFile; productRef = 87CB529C2E90242F00618C59 /* ApolloWebSocket */; };
 		87D766B02E91C0B5003D2461 /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = 87D766AF2E91C0B5003D2461 /* Lottie */; };
-		87E725FB2EC681FD00E583D9 /* ropa.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 87E725F82EC681FD00E583D9 /* ropa.usdz */; };
-		87E725FC2EC681FD00E583D9 /* agro.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 87E725F92EC681FD00E583D9 /* agro.usdz */; };
+		87E725FB2EC681FD00E583D9 /* LlegoiOS/resources/3dModels/ropa.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 87E725F82EC681FD00E583D9 /* LlegoiOS/resources/3dModels/ropa.usdz */; };
+		87E725FC2EC681FD00E583D9 /* LlegoiOS/resources/3dModels/agro.usdz in Resources */ = {isa = PBXBuildFile; fileRef = 87E725F92EC681FD00E583D9 /* LlegoiOS/resources/3dModels/agro.usdz */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -38,12 +38,12 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		870E85352EC8DFAE0099A0C9 /* cridit_card.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = LlegoiOS/resources/3dModels/cridit_card.usdz; sourceTree = "<group>"; };
-		870E853E2EC8FC4E0099A0C9 /* mercadito.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = LlegoiOS/resources/3dModels/mercadito.usdz; sourceTree = "<group>"; };
-		870E86912EC9393C0099A0C9 /* restaurant.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = LlegoiOS/resources/3dModels/restaurant.usdz; sourceTree = "<group>"; };
+		870E85352EC8DFAE0099A0C9 /* LlegoiOS/resources/3dModels/cridit_card.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = LlegoiOS/resources/3dModels/cridit_card.usdz; sourceTree = "<group>"; };
+		870E853E2EC8FC4E0099A0C9 /* LlegoiOS/resources/3dModels/mercadito.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = LlegoiOS/resources/3dModels/mercadito.usdz; sourceTree = "<group>"; };
+		870E86912EC9393C0099A0C9 /* LlegoiOS/resources/3dModels/restaurant.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = LlegoiOS/resources/3dModels/restaurant.usdz; sourceTree = "<group>"; };
 		87B147A52E9346C400A515EF /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
-		87E725F82EC681FD00E583D9 /* ropa.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = LlegoiOS/resources/3dModels/ropa.usdz; sourceTree = "<group>"; };
-		87E725F92EC681FD00E583D9 /* agro.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = LlegoiOS/resources/3dModels/agro.usdz; sourceTree = "<group>"; };
+		87E725F82EC681FD00E583D9 /* LlegoiOS/resources/3dModels/ropa.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = LlegoiOS/resources/3dModels/ropa.usdz; sourceTree = "<group>"; };
+		87E725F92EC681FD00E583D9 /* LlegoiOS/resources/3dModels/agro.usdz */ = {isa = PBXFileReference; lastKnownFileType = file; path = LlegoiOS/resources/3dModels/agro.usdz; sourceTree = "<group>"; };
 		87F968CD2E8F622A00EC1A7C /* LlegoiOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LlegoiOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -108,11 +108,11 @@
 				87F968CE2E8F622A00EC1A7C /* Products */,
 				095875A3AD4E80E59A68CD27 /* Pods */,
 				87B147A52E9346C400A515EF /* AppIcon.icon */,
-				87E725F82EC681FD00E583D9 /* ropa.usdz */,
-				87E725F92EC681FD00E583D9 /* agro.usdz */,
-				870E85352EC8DFAE0099A0C9 /* cridit_card.usdz */,
-				870E853E2EC8FC4E0099A0C9 /* mercadito.usdz */,
-				870E86912EC9393C0099A0C9 /* restaurant.usdz */,
+				87E725F82EC681FD00E583D9 /* LlegoiOS/resources/3dModels/ropa.usdz */,
+				87E725F92EC681FD00E583D9 /* LlegoiOS/resources/3dModels/agro.usdz */,
+				870E85352EC8DFAE0099A0C9 /* LlegoiOS/resources/3dModels/cridit_card.usdz */,
+				870E853E2EC8FC4E0099A0C9 /* LlegoiOS/resources/3dModels/mercadito.usdz */,
+				870E86912EC9393C0099A0C9 /* LlegoiOS/resources/3dModels/restaurant.usdz */,
 			);
 			sourceTree = "<group>";
 		};
@@ -204,12 +204,12 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				870E85362EC8DFAF0099A0C9 /* cridit_card.usdz in Resources */,
-				870E86922EC9393C0099A0C9 /* restaurant.usdz in Resources */,
+				870E85362EC8DFAF0099A0C9 /* LlegoiOS/resources/3dModels/cridit_card.usdz in Resources */,
+				870E86922EC9393C0099A0C9 /* LlegoiOS/resources/3dModels/restaurant.usdz in Resources */,
 				87B147A62E9346C400A515EF /* AppIcon.icon in Resources */,
-				87E725FB2EC681FD00E583D9 /* ropa.usdz in Resources */,
-				87E725FC2EC681FD00E583D9 /* agro.usdz in Resources */,
-				870E853F2EC8FC4F0099A0C9 /* mercadito.usdz in Resources */,
+				87E725FB2EC681FD00E583D9 /* LlegoiOS/resources/3dModels/ropa.usdz in Resources */,
+				87E725FC2EC681FD00E583D9 /* LlegoiOS/resources/3dModels/agro.usdz in Resources */,
+				870E853F2EC8FC4F0099A0C9 /* LlegoiOS/resources/3dModels/mercadito.usdz in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
