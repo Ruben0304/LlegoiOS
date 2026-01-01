@@ -11,9 +11,9 @@ struct StoreDetailView: View {
     @State private var region: MKCoordinateRegion
     @State private var showShareSheet = false
 
-    // Default images
-    private let defaultLogoUrl = "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&h=200&fit=crop&crop=center"
-    private let defaultBannerUrl = "https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&h=200&fit=crop&crop=center"
+    // Default images - Empty strings to trigger AsyncImage failure -> shows generic assets
+    private let defaultLogoUrl = ""
+    private let defaultBannerUrl = ""
 
     // Helper functions
     private func calculateETA(deliveryRadius: Double?) -> Int {
@@ -36,24 +36,27 @@ struct StoreDetailView: View {
         return "\(symbol)\(String(format: "%.2f", price))"
     }
 
-    // Computed property to get current store (from initial or from viewModel)
+    // Computed property to get current store (prefer viewModel data when available)
     private var store: Store? {
+        // Prioritize fresh data from ViewModel if available
+        if let detail = viewModel.branchDetail {
+            return Store(
+                id: detail.id,
+                name: detail.name,
+                etaMinutes: viewModel.calculateETA(deliveryRadius: detail.deliveryRadius),
+                logoUrl: viewModel.getLogoUrl(),
+                bannerUrl: viewModel.getBannerUrl(),
+                address: detail.address,
+                rating: nil
+            )
+        }
+
+        // Fallback to initial store while loading
         if let initial = initialStore {
             return initial
         }
 
-        guard let detail = viewModel.branchDetail else { return nil }
-
-        // Convert BranchDetailGraphQL to Store
-        return Store(
-            id: detail.id,
-            name: detail.name,
-            etaMinutes: viewModel.calculateETA(deliveryRadius: detail.deliveryRadius),
-            logoUrl: viewModel.getLogoUrl(),
-            bannerUrl: viewModel.getBannerUrl(),
-            address: detail.address,
-            rating: nil
-        )
+        return nil
     }
 
     // Initializer that accepts full Store (existing code compatibility)
@@ -128,15 +131,11 @@ struct StoreDetailView: View {
                                 AsyncImage(url: URL(string: store.bannerUrl)) { phase in
                                     switch phase {
                                     case .empty:
-                                        Rectangle()
-                                            .fill(
-                                                LinearGradient(
-                                                    colors: [Color.gray.opacity(0.2), Color.gray.opacity(0.4)],
-                                                    startPoint: .topLeading,
-                                                    endPoint: .bottomTrailing
-                                                )
-                                            )
-                                            .overlay(ProgressView())
+                                        Image("generic_cover")
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(width: geometry.size.width, height: 280)
+                                            .clipped()
                                     case .success(let image):
                                         image
                                             .resizable()
@@ -144,16 +143,17 @@ struct StoreDetailView: View {
                                             .frame(width: geometry.size.width, height: 280)
                                             .clipped()
                                     case .failure:
-                                        Rectangle()
-                                            .fill(
-                                                LinearGradient(
-                                                    colors: [Color.gray.opacity(0.2), Color.gray.opacity(0.4)],
-                                                    startPoint: .topLeading,
-                                                    endPoint: .bottomTrailing
-                                                )
-                                            )
+                                        Image("generic_cover")
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(width: geometry.size.width, height: 280)
+                                            .clipped()
                                     @unknown default:
-                                        EmptyView()
+                                        Image("generic_cover")
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(width: geometry.size.width, height: 280)
+                                            .clipped()
                                     }
                                 }
                                 .frame(width: geometry.size.width, height: 280)
@@ -171,15 +171,16 @@ struct StoreDetailView: View {
                                     AsyncImage(url: URL(string: store.logoUrl)) { phase in
                                         switch phase {
                                         case .empty:
-                                            Circle()
-                                                .fill(Color.white)
+                                            Image("generic_logo")
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
                                                 .frame(width: 110, height: 110)
-                                                .overlay(ProgressView())
+                                                .clipShape(Circle())
                                                 .overlay(
                                                     Circle()
                                                         .stroke(Color.white, lineWidth: 5)
                                                 )
-                                                .shadow(color: Color.black.opacity(0.25), radius: 15, x: 0, y: 5)
+                                                .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
                                         case .success(let image):
                                             image
                                                 .resizable()
@@ -190,18 +191,29 @@ struct StoreDetailView: View {
                                                     Circle()
                                                         .stroke(Color.white, lineWidth: 5)
                                                 )
-                                                .shadow(color: Color.black.opacity(0.25), radius: 15, x: 0, y: 5)
+                                                .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
                                         case .failure:
-                                            Circle()
-                                                .fill(Color.gray.opacity(0.3))
+                                            Image("generic_logo")
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
                                                 .frame(width: 110, height: 110)
+                                                .clipShape(Circle())
                                                 .overlay(
                                                     Circle()
                                                         .stroke(Color.white, lineWidth: 5)
                                                 )
-                                                .shadow(color: Color.black.opacity(0.25), radius: 15, x: 0, y: 5)
+                                                .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
                                         @unknown default:
-                                            EmptyView()
+                                            Image("generic_logo")
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(width: 110, height: 110)
+                                                .clipShape(Circle())
+                                                .overlay(
+                                                    Circle()
+                                                        .stroke(Color.white, lineWidth: 5)
+                                                )
+                                                .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
                                         }
                                     }
                                     
@@ -212,11 +224,11 @@ struct StoreDetailView: View {
                             }
                             .frame(width: geometry.size.width)
                             .padding(.bottom, 20)
-                            
-                            // Add space to show full profile logo
+
+                            // Add space to show full profile logo + shadow
                             Spacer()
-                                .frame(height: 55)
-                            
+                                .frame(height: 65) // Space for logo (55) + reduced shadow (10)
+
                             // Main Content
                             VStack(spacing: 0) {
                                 // Store Info Section

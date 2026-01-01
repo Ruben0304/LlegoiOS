@@ -454,16 +454,17 @@ private struct StoreOptionsModal: View {
                                 .frame(width: geometry.size.width, height: 180)
                                 .clipped()
                         case .empty, .failure:
-                            LinearGradient(
-                                colors: [
-                                    Color.llegoPrimary.opacity(0.8),
-                                    Color.llegoAccent.opacity(0.6)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
+                            Image("generic_cover")
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: geometry.size.width, height: 180)
+                                .clipped()
                         @unknown default:
-                            Color.gray.opacity(0.3)
+                            Image("generic_cover")
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: geometry.size.width, height: 180)
+                                .clipped()
                         }
                     }
                     .overlay(
@@ -488,13 +489,13 @@ private struct StoreOptionsModal: View {
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                     case .empty, .failure:
-                        Image(systemName: "storefront.fill")
-                            .font(.system(size: 32, weight: .medium))
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .background(Color.llegoPrimary)
+                        Image("generic_logo")
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
                     @unknown default:
-                        Color.gray.opacity(0.3)
+                        Image("generic_logo")
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
                     }
                 }
                 .frame(width: 88, height: 88)
@@ -1043,14 +1044,13 @@ private struct StoreListCard: View {
                     .resizable()
                     .aspectRatio(contentMode: .fill)
             case .empty, .failure:
-                ZStack {
-                    Color.llegoPrimary.opacity(0.08)
-                    Image(systemName: "storefront.fill")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.llegoPrimary.opacity(0.5))
-                }
+                Image("generic_logo")
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
             @unknown default:
-                Color.gray.opacity(0.2)
+                Image("generic_logo")
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
             }
         }
         .frame(width: 48, height: 48)
@@ -1110,11 +1110,17 @@ private struct FullScreenMapView: View {
                                         .frame(width: 42, height: 42)
                                         .clipShape(Circle())
                                 case .empty, .failure:
-                                    Image(systemName: "storefront.fill")
-                                        .font(.system(size: 20, weight: .semibold))
-                                        .foregroundColor(.white)
+                                    Image("generic_logo")
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(width: 42, height: 42)
+                                        .clipShape(Circle())
                                 @unknown default:
-                                    EmptyView()
+                                    Image("generic_logo")
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(width: 42, height: 42)
+                                        .clipShape(Circle())
                                 }
                             }
                         }

@@ -103,10 +103,10 @@ class ShopTabLandingViewModel: ObservableObject {
     }
 
     private var defaultLogoUrl: String {
-        "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&h=200&fit=crop&crop=center"
+        "" // Empty string to trigger AsyncImage failure -> shows generic_logo asset
     }
 
     private var defaultBannerUrl: String {
-        "https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&h=200&fit=crop&crop=center"
+        "" // Empty string to trigger AsyncImage failure -> shows generic_cover asset
     }
 }

@@ -49,9 +49,9 @@ class StoreDetailViewModel: ObservableObject {
     // MARK: - Dependencies
     private let repository = StoreDetailRepository()
 
-    // Default images
-    private let defaultLogoUrl = "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&h=200&fit=crop&crop=center"
-    private let defaultBannerUrl = "https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&h=200&fit=crop&crop=center"
+    // Default images - Empty strings to trigger AsyncImage failure -> shows generic assets
+    private let defaultLogoUrl = ""
+    private let defaultBannerUrl = ""
 
     // MARK: - Public Methods
     func loadBranchDetail(id: String) {
