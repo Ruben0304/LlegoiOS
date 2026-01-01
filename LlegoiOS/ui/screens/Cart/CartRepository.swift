@@ -1,6 +1,7 @@
 import Foundation
 import Apollo
 import UIKit
+import Combine
 
 @MainActor
 class CartRepository {
@@ -61,7 +62,8 @@ class CartRepository {
                         currency: product.currency,
                         image: product.image,
                         availability: product.availability,
-                        quantity: localItem.quantity
+                        quantity: localItem.quantity,
+                        businessName: product.business?.name ?? "Tienda"
                     )
                 }
 
@@ -254,6 +256,7 @@ struct CartProductGraphQL: Identifiable, Sendable {
     let image: String
     let availability: Bool
     let quantity: Int // Cantidad del carrito (desde local storage)
+    let businessName: String
 }
 
 /// Resultado de validación de pago

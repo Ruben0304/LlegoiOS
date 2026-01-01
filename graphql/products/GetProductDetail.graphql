@@ -1,5 +1,5 @@
-query GetCartProducts($ids: [String!]!) {
-  products(ids: $ids) {
+query GetProductDetail($id: String!) {
+  product(id: $id) {
     id
     branchId
     name
@@ -7,8 +7,9 @@ query GetCartProducts($ids: [String!]!) {
     weight
     price
     currency
-    image
+    imageUrl
     availability
+    categoryId
     createdAt
     business {
       id

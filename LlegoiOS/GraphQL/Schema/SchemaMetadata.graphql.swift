@@ -33,6 +33,7 @@ public extension LlegoAPI {
       case "AiAssistantResponseType": return LlegoAPI.Objects.AiAssistantResponseType
       case "AuthResponse": return LlegoAPI.Objects.AuthResponse
       case "BranchType": return LlegoAPI.Objects.BranchType
+      case "BusinessType": return LlegoAPI.Objects.BusinessType
       case "CoordinatesType": return LlegoAPI.Objects.CoordinatesType
       case "Mutation": return LlegoAPI.Objects.Mutation
       case "PaymentMethodType": return LlegoAPI.Objects.PaymentMethodType

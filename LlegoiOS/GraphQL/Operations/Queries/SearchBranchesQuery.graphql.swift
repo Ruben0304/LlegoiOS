@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "SearchBranches"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query SearchBranches($query: String!, $limit: Int, $useVectorSearch: Boolean) { searchBranches(query: $query, limit: $limit, useVectorSearch: $useVectorSearch) { __typename id businessId name address coordinates { __typename type coordinates } phone schedule status avatarUrl coverUrl deliveryRadius createdAt } }"#
+        #"query SearchBranches($query: String!, $limit: Int, $useVectorSearch: Boolean) { searchBranches(query: $query, limit: $limit, useVectorSearch: $useVectorSearch) { __typename id businessId name address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius createdAt } }"#
       ))
 
     public var query: String
@@ -67,7 +67,6 @@ public extension LlegoAPI {
           .field("address", String?.self),
           .field("coordinates", Coordinates.self),
           .field("phone", String.self),
-          .field("schedule", LlegoAPI.JSON.self),
           .field("status", String.self),
           .field("avatarUrl", String?.self),
           .field("coverUrl", String?.self),
@@ -84,7 +83,6 @@ public extension LlegoAPI {
         public var address: String? { __data["address"] }
         public var coordinates: Coordinates { __data["coordinates"] }
         public var phone: String { __data["phone"] }
-        public var schedule: LlegoAPI.JSON { __data["schedule"] }
         public var status: String { __data["status"] }
         /// Presigned URL for the branch avatar
         public var avatarUrl: String? { __data["avatarUrl"] }

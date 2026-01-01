@@ -49,6 +49,9 @@ class ShopViewModel: ObservableObject {
     // Ordenación
     @Published var sortOption: SortOption = .proximity
 
+    // Branch filter
+    var branchId: String? = nil
+
     private let repository = ShopRepository()
 
     // Categorías rápidas para chips horizontales
@@ -69,7 +72,7 @@ class ShopViewModel: ObservableObject {
         isLoading = true
         state = .loading
 
-        repository.fetchProducts { [weak self] result in
+        repository.fetchProducts(branchId: branchId) { [weak self] result in
             guard let self = self else { return }
 
             Task { @MainActor in
@@ -80,8 +83,8 @@ class ShopViewModel: ObservableObject {
                         Product(
                             id: productGraphQL.id,
                             name: productGraphQL.name,
-                            shop: "Tienda", // TODO: Get actual shop name from branch
-                            weight: productGraphQL.weight,
+                            shop: productGraphQL.businessName,
+                            weight: "0",
                             price: self.formatPrice(
                                 price: productGraphQL.price,
                                 currency: productGraphQL.currency
@@ -93,6 +96,8 @@ class ShopViewModel: ObservableObject {
                     self.applyFiltersAndSort()
                     self.isLoading = false
                     self.state = .success
+
+                    print("✅ Loaded \(self.products.count) products" + (self.branchId != nil ? " for branch \(self.branchId!)" : ""))
 
                 case .failure(let error):
                     self.isLoading = false

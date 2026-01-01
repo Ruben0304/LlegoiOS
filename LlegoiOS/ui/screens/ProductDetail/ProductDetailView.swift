@@ -55,12 +55,47 @@ struct SimilarProductCard: View {
 }
 
 struct ProductDetailView: View {
-    let product: Product
+    // Support both: passing full Product OR just productId
+    let initialProduct: Product?
+    let productId: String
+
+    @StateObject private var viewModel = ProductDetailViewModel()
     @Environment(\.dismiss) private var dismiss
     @State private var selectedVariant = "Queso extra"
     @State private var selectedStoreId: String? = nil
     @State private var selectedStoreForNav: Store? = nil
     @State private var cartItemCount = 3
+
+    // Computed property to get current product (from initial or from viewModel)
+    private var product: Product? {
+        if let initial = initialProduct {
+            return initial
+        }
+
+        guard let detail = viewModel.productDetail else { return nil }
+
+        // Convert ProductDetailGraphQL to Product
+        return Product(
+            id: detail.id,
+            name: detail.name,
+            shop: "Store",
+            weight: detail.weight,
+            price: viewModel.formatPrice(price: detail.price, currency: detail.currency),
+            imageUrl: detail.imageUrl
+        )
+    }
+
+    // Initializer that accepts full Product (existing code compatibility)
+    init(product: Product) {
+        self.initialProduct = product
+        self.productId = product.id
+    }
+
+    // New initializer that accepts only ID (will load details)
+    init(productId: String) {
+        self.initialProduct = nil
+        self.productId = productId
+    }
 
     private let variants = [
         "Queso extra",
@@ -94,8 +129,46 @@ struct ProductDetailView: View {
                 curveInclinationAbsolute: 50,
                 invertCurve: true
             ) {
-                ScrollView {
-                    VStack(spacing: 0) {
+                // LOADING STATE - Indicador nativo
+                if initialProduct == nil && viewModel.isLoading {
+                    VStack(spacing: 20) {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                            .tint(.llegoPrimary)
+
+                        Text("Cargando detalles...")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(.gray)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+
+                // ERROR STATE
+                else if let errorMessage = viewModel.errorMessage {
+                    VStack(spacing: 16) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 50))
+                            .foregroundColor(.red)
+
+                        Text(errorMessage)
+                            .font(.system(size: 16))
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding()
+
+                        Button("Reintentar") {
+                            viewModel.loadProductDetail(id: productId)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.llegoPrimary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+
+                // SUCCESS STATE - Show product details
+                else if let product = product {
+                    ScrollView {
+                        VStack(spacing: 0) {
                             // Product Image
                             AsyncImage(url: URL(string: product.imageUrl)) { phase in
                                 switch phase {
@@ -336,11 +409,11 @@ struct ProductDetailView: View {
                                 EmptyView()
                             }
                             .hidden()
-                    }.padding(.top,-45)
-                }
-                .padding(.top, 60)
-                .zIndex(100)
-
+                        }.padding(.top,-45)
+                    }
+                    .padding(.top, 60)
+                    .zIndex(100)
+                } // End of else if let product
             }.zIndex(200)
         }
         .navigationBarTitleDisplayMode(.inline)
@@ -353,7 +426,7 @@ struct ProductDetailView: View {
             }
 
             ToolbarItem(placement: .principal) {
-                Text(product.name)
+                Text(product?.name ?? "Producto")
                     .font(.system(size: 24, weight: .semibold))
                     .foregroundColor(.white)
             }
@@ -364,10 +437,16 @@ struct ProductDetailView: View {
                         print("Cart tapped")
                     }) {
                         Image(systemName: "cart")
-                           
+
                     }.badge(cartItemCount)
-                    
+
                 }
+            }
+        }
+        .onAppear {
+            // Load product details if only ID was provided
+            if initialProduct == nil {
+                viewModel.loadProductDetail(id: productId)
             }
         }
     }

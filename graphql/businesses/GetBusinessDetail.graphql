@@ -1,0 +1,9 @@
+query GetBusinessDetail($id: String!) {
+  business(id: $id) {
+    id
+    name
+    socialMedia
+    avatarUrl
+    coverUrl
+  }
+}

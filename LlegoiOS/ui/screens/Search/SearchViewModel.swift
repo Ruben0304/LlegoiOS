@@ -88,7 +88,7 @@ class SearchViewModel: ObservableObject {
                             Product(
                                 id: productGraphQL.id, // Use real GraphQL ID
                                 name: productGraphQL.name,
-                                shop: "Store", // Will be updated when we link products to branches
+                                shop: productGraphQL.businessName,
                                 weight: productGraphQL.weight,
                                 price: self.formatPrice(price: productGraphQL.price, currency: productGraphQL.currency),
                                 imageUrl: productGraphQL.image

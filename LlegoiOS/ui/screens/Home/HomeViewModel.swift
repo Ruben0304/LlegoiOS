@@ -51,10 +51,10 @@ class HomeViewModel: ObservableObject {
                         Product(
                             id: productGraphQL.id, // Use real GraphQL ID
                             name: productGraphQL.name,
-                            shop: "Store", // Will be updated when we link products to branches
-                            weight: productGraphQL.weight,
+                            shop: productGraphQL.businessName,
+                            weight: "", // Weight not loaded in list view for performance
                             price: self.formatPrice(price: productGraphQL.price, currency: productGraphQL.currency),
-                            imageUrl: productGraphQL.image
+                            imageUrl: productGraphQL.imageUrl
                         )
                     }
 
@@ -63,9 +63,9 @@ class HomeViewModel: ObservableObject {
                         Store(
                             id: branchGraphQL.id,
                             name: branchGraphQL.name,
-                            etaMinutes: self.calculateETA(coordinates: branchGraphQL.coordinates),
-                            logoUrl: self.defaultLogoUrl,
-                            bannerUrl: self.defaultBannerUrl,
+                            etaMinutes: self.calculateETA(deliveryRadius: branchGraphQL.deliveryRadius),
+                            logoUrl: branchGraphQL.avatarUrl ?? self.defaultLogoUrl,
+                            bannerUrl: branchGraphQL.coverUrl ?? self.defaultBannerUrl,
                             address: branchGraphQL.address,
                             rating: nil // Backend doesn't provide rating yet
                         )
@@ -104,10 +104,10 @@ class HomeViewModel: ObservableObject {
         return String(format: "\(symbol)%.2f", price)
     }
 
-    private func calculateETA(coordinates: CoordinatesGraphQL) -> Int {
-        // TODO: Implement proper ETA calculation based on user's location
-        // For now, return a random value between 15 and 45 minutes
-        return Int.random(in: 15...45)
+    private func calculateETA(deliveryRadius: Double?) -> Int {
+        // Estimación simple: 5 minutos por km + 10 minutos base
+        guard let radius = deliveryRadius else { return 20 }
+        return Int(radius * 5 + 10)
     }
 
     private func loadTutorials() {

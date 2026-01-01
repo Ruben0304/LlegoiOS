@@ -116,6 +116,10 @@ type ProductType {
   createdAt: DateTime!
   "Presigned URL for the product image"
   imageUrl: String!
+  "Branch associated with this product"
+  branch: BranchType
+  "Business associated with this product (through branch)"
+  business: BusinessType
 }
 type CategoryType {
   id: String!

@@ -5,20 +5,20 @@
 @_spi(Execution) @_spi(Unsafe) import ApolloAPI
 
 public extension LlegoAPI {
-  struct SearchProductsQuery: GraphQLQuery {
-    public static let operationName: String = "SearchProducts"
+  struct GetProductDetailQuery: GraphQLQuery {
+    public static let operationName: String = "GetProductDetail"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query SearchProducts($query: String!) { searchProducts(query: $query) { __typename id branchId name description weight price currency imageUrl availability createdAt business { __typename id name } } }"#
+        #"query GetProductDetail($id: String!) { product(id: $id) { __typename id branchId name description weight price currency imageUrl availability categoryId createdAt business { __typename id name } } }"#
       ))
 
-    public var query: String
+    public var id: String
 
-    public init(query: String) {
-      self.query = query
+    public init(id: String) {
+      self.id = id
     }
 
-    @_spi(Unsafe) public var __variables: Variables? { ["query": query] }
+    @_spi(Unsafe) public var __variables: Variables? { ["id": id] }
 
     public struct Data: LlegoAPI.SelectionSet {
       @_spi(Unsafe) public let __data: DataDict
@@ -26,19 +26,19 @@ public extension LlegoAPI {
 
       @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.Query }
       @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
-        .field("searchProducts", [SearchProduct].self, arguments: ["query": .variable("query")]),
+        .field("product", Product?.self, arguments: ["id": .variable("id")]),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
-        SearchProductsQuery.Data.self
+        GetProductDetailQuery.Data.self
       ] }
 
-      /// Buscar productos
-      public var searchProducts: [SearchProduct] { __data["searchProducts"] }
+      /// Obtener producto por ID
+      public var product: Product? { __data["product"] }
 
-      /// SearchProduct
+      /// Product
       ///
       /// Parent Type: `ProductType`
-      public struct SearchProduct: LlegoAPI.SelectionSet {
+      public struct Product: LlegoAPI.SelectionSet {
         @_spi(Unsafe) public let __data: DataDict
         @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
 
@@ -54,11 +54,12 @@ public extension LlegoAPI {
           .field("currency", String.self),
           .field("imageUrl", String.self),
           .field("availability", Bool.self),
+          .field("categoryId", String?.self),
           .field("createdAt", LlegoAPI.DateTime.self),
           .field("business", Business?.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
-          SearchProductsQuery.Data.SearchProduct.self
+          GetProductDetailQuery.Data.Product.self
         ] }
 
         public var id: String { __data["id"] }
@@ -71,11 +72,12 @@ public extension LlegoAPI {
         /// Presigned URL for the product image
         public var imageUrl: String { __data["imageUrl"] }
         public var availability: Bool { __data["availability"] }
+        public var categoryId: String? { __data["categoryId"] }
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
         /// Business associated with this product (through branch)
         public var business: Business? { __data["business"] }
 
-        /// SearchProduct.Business
+        /// Product.Business
         ///
         /// Parent Type: `BusinessType`
         public struct Business: LlegoAPI.SelectionSet {
@@ -89,7 +91,7 @@ public extension LlegoAPI {
             .field("name", String.self),
           ] }
           @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
-            SearchProductsQuery.Data.SearchProduct.Business.self
+            GetProductDetailQuery.Data.Product.Business.self
           ] }
 
           public var id: String { __data["id"] }

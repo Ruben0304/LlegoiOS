@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetHomeData"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetHomeData { products { __typename id branchId name description weight price currency image availability createdAt } branches { __typename id businessId name address coordinates { __typename type coordinates } phone status createdAt } }"#
+        #"query GetHomeData { products { __typename id branchId name price currency imageUrl availability createdAt business { __typename id name } } branches { __typename id businessId name address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius createdAt } }"#
       ))
 
     public init() {}
@@ -45,13 +45,12 @@ public extension LlegoAPI {
           .field("id", String.self),
           .field("branchId", String.self),
           .field("name", String.self),
-          .field("description", String.self),
-          .field("weight", String.self),
           .field("price", Double.self),
           .field("currency", String.self),
-          .field("image", String.self),
+          .field("imageUrl", String.self),
           .field("availability", Bool.self),
           .field("createdAt", LlegoAPI.DateTime.self),
+          .field("business", Business?.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
           GetHomeDataQuery.Data.Product.self
@@ -60,13 +59,35 @@ public extension LlegoAPI {
         public var id: String { __data["id"] }
         public var branchId: String { __data["branchId"] }
         public var name: String { __data["name"] }
-        public var description: String { __data["description"] }
-        public var weight: String { __data["weight"] }
         public var price: Double { __data["price"] }
         public var currency: String { __data["currency"] }
-        public var image: String { __data["image"] }
+        /// Presigned URL for the product image
+        public var imageUrl: String { __data["imageUrl"] }
         public var availability: Bool { __data["availability"] }
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
+        /// Business associated with this product (through branch)
+        public var business: Business? { __data["business"] }
+
+        /// Product.Business
+        ///
+        /// Parent Type: `BusinessType`
+        public struct Business: LlegoAPI.SelectionSet {
+          @_spi(Unsafe) public let __data: DataDict
+          @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+          @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.BusinessType }
+          @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+            .field("__typename", String.self),
+            .field("id", String.self),
+            .field("name", String.self),
+          ] }
+          @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+            GetHomeDataQuery.Data.Product.Business.self
+          ] }
+
+          public var id: String { __data["id"] }
+          public var name: String { __data["name"] }
+        }
       }
 
       /// Branch
@@ -86,6 +107,9 @@ public extension LlegoAPI {
           .field("coordinates", Coordinates.self),
           .field("phone", String.self),
           .field("status", String.self),
+          .field("avatarUrl", String?.self),
+          .field("coverUrl", String?.self),
+          .field("deliveryRadius", Double?.self),
           .field("createdAt", LlegoAPI.DateTime.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
@@ -99,6 +123,11 @@ public extension LlegoAPI {
         public var coordinates: Coordinates { __data["coordinates"] }
         public var phone: String { __data["phone"] }
         public var status: String { __data["status"] }
+        /// Presigned URL for the branch avatar
+        public var avatarUrl: String? { __data["avatarUrl"] }
+        /// Presigned URL for the branch cover image
+        public var coverUrl: String? { __data["coverUrl"] }
+        public var deliveryRadius: Double? { __data["deliveryRadius"] }
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
 
         /// Branch.Coordinates

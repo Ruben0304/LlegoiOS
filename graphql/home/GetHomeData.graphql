@@ -3,13 +3,15 @@ query GetHomeData {
     id
     branchId
     name
-    description
-    weight
     price
     currency
-    image
+    imageUrl
     availability
     createdAt
+    business {
+      id
+      name
+    }
   }
   branches {
     id
@@ -22,6 +24,9 @@ query GetHomeData {
     }
     phone
     status
+    avatarUrl
+    coverUrl
+    deliveryRadius
     createdAt
   }
 }

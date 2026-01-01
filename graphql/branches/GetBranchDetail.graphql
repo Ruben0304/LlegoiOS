@@ -1,5 +1,5 @@
-query GetBranches($businessId: String) {
-  branches(businessId: $businessId) {
+query GetBranchDetail($id: String!) {
+  branch(id: $id) {
     id
     businessId
     name
@@ -13,6 +13,7 @@ query GetBranches($businessId: String) {
     avatarUrl
     coverUrl
     deliveryRadius
+    facilities
     createdAt
   }
 }

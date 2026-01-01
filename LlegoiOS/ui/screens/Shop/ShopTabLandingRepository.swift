@@ -38,12 +38,11 @@ class ShopTabLandingRepository {
                             coordinates: branch.coordinates.coordinates
                         ),
                         phone: branch.phone,
-                        schedule: branch.schedule as? [String: String],
                         status: branch.status,
                         avatarUrl: branch.avatarUrl,
                         coverUrl: branch.coverUrl,
                         deliveryRadius: branch.deliveryRadius,
-                        facilities: branch.facilities,
+                        facilities: nil,
                         createdAt: branch.createdAt
                     )
                 }
@@ -96,7 +95,6 @@ class ShopTabLandingRepository {
                             coordinates: branch.coordinates.coordinates
                         ),
                         phone: branch.phone,
-                        schedule: branch.schedule as? [String: String],
                         status: branch.status,
                         avatarUrl: branch.avatarUrl,
                         coverUrl: branch.coverUrl,

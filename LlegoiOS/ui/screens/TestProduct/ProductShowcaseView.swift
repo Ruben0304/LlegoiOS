@@ -1,9 +1,10 @@
 import SwiftUI
 
 struct ProductShowcaseView: View {
-    let product: Product
+    let productId: String
 
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var viewModel = ProductDetailViewModel()
     @StateObject private var cartManager = CartManager.shared
 
     @State private var heroAppeared = false
@@ -12,9 +13,23 @@ struct ProductShowcaseView: View {
     @State private var selectedStyle = "Clásico"
     @State private var selectedDelivery = "Express 25-35m"
     @State private var similarCounts: [String: Int] = [:]
-    
+
     // Animation states
     @State private var showGeneralToast = false
+
+    // Computed property to get current product from ViewModel
+    private var product: Product? {
+        guard let detail = viewModel.productDetail else { return nil }
+
+        return Product(
+            id: detail.id,
+            name: detail.name,
+            shop: detail.businessName,
+            weight: detail.weight,
+            price: viewModel.formatPrice(price: detail.price, currency: detail.currency),
+            imageUrl: detail.imageUrl
+        )
+    }
 
     private let styleOptions = ["Clásico", "Ligero", "Extra queso"]
     private let deliveryOptions = ["Express 25-35m", "Programar hoy", "Recoger en tienda"]
@@ -57,24 +72,38 @@ struct ProductShowcaseView: View {
         ZStack(alignment: .bottom) {
             Color.llegoBackground.ignoresSafeArea()
 
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 18) {
-                    heroSection
-                        .padding(.horizontal, 20)
-                        .padding(.top, 12)
-                        .opacity(heroAppeared ? 1 : 0)
-                        .offset(y: heroAppeared ? 0 : 20)
+            // LOADING STATE
+            if viewModel.isLoading {
+                loadingView
+                    .transition(.opacity)
+            }
+            // ERROR STATE
+            else if let errorMessage = viewModel.errorMessage {
+                errorView(message: errorMessage)
+                    .transition(.opacity)
+            }
+            // SUCCESS STATE
+            else if let product = product {
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 18) {
+                        heroSection(product: product)
+                            .padding(.horizontal, 20)
+                            .padding(.top, 12)
+                            .opacity(heroAppeared ? 1 : 0)
+                            .offset(y: heroAppeared ? 0 : 20)
 
-                    VStack(spacing: 16) {
-                        infoSection
-                        optionsSection
-                        similarProductsSection
+                        VStack(spacing: 16) {
+                            infoSection(product: product)
+                            optionsSection
+                            similarProductsSection
+                        }
+                        .padding(.horizontal, 20)
+                        .opacity(contentAppeared ? 1 : 0)
+                        .offset(y: contentAppeared ? 0 : 14)
                     }
-                    .padding(.horizontal, 20)
-                    .opacity(contentAppeared ? 1 : 0)
-                    .offset(y: contentAppeared ? 0 : 14)
+                    .padding(.bottom, 140)
                 }
-                .padding(.bottom, 140)
+                .transition(.opacity)
             }
 
         }
@@ -117,12 +146,71 @@ struct ProductShowcaseView: View {
         }
         .navigationBarBackButtonHidden(true)
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear(perform: startEntranceAnimations)
+        .onAppear {
+            viewModel.loadProductDetail(id: productId)
+        }
+        .onChange(of: viewModel.productDetail) { detail in
+            if detail != nil {
+                startEntranceAnimations()
+            }
+        }
+    }
+
+    // MARK: - Loading View
+
+    private var loadingView: some View {
+        VStack(spacing: 20) {
+            ProgressView()
+                .scaleEffect(1.5)
+                .tint(.llegoPrimary)
+
+            Text("Cargando producto...")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.gray)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Error View
+
+    private func errorView(message: String) -> some View {
+        VStack(spacing: 20) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 60))
+                .foregroundColor(.orange)
+
+            Text("Error")
+                .font(.system(size: 22, weight: .bold))
+                .foregroundColor(.primary)
+
+            Text(message)
+                .font(.system(size: 16))
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+
+            Button(action: {
+                viewModel.loadProductDetail(id: productId)
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("Reintentar")
+                        .font(.system(size: 17, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 32)
+                .padding(.vertical, 14)
+                .background(Color.llegoPrimary)
+                .cornerRadius(12)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Sections
 
-    private var heroSection: some View {
+    private func heroSection(product: Product) -> some View {
         let isPNG = {
             if let ext = URL(string: product.imageUrl)?.pathExtension.lowercased(), ext == "png" {
                 return true
@@ -180,7 +268,7 @@ struct ProductShowcaseView: View {
         .frame(height: 320)
     }
 
-    private var infoSection: some View {
+    private func infoSection(product: Product) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 Text(product.name)
@@ -331,6 +419,8 @@ struct ProductShowcaseView: View {
     // MARK: - Helpers
 
     private var totalPriceText: String {
+        guard let product = product else { return "$0.00" }
+
         let cleaned = product.price
             .replacingOccurrences(of: "[^0-9.,]", with: "", options: .regularExpression)
             .replacingOccurrences(of: ",", with: ".")
@@ -498,7 +588,7 @@ struct ProductShowcaseView: View {
     private func performAdd(completion: @escaping () -> Void) {
         // Simulate network/processing delay if needed, or just immediate
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            cartManager.addToCart(productId: product.id, quantity: quantity)
+            cartManager.addToCart(productId: productId, quantity: quantity)
             completion()
         }
     }
@@ -521,14 +611,7 @@ private func startEntranceAnimations() {
 
 
 #Preview {
-    ProductShowcaseView(
-        product: Product(
-            id: "1",
-            name: "Pizza Margherita",
-            shop: "TropicalFresh Market",
-            weight: "800g",
-            price: "$14.50",
-            imageUrl: "https://images.unsplash.com/photo-1548365328-95f0cbb89ffd?w=1200"
-        )
-    )
+    NavigationStack {
+        ProductShowcaseView(productId: "6777f74afe6bab27db6c4aa0")
+    }
 }

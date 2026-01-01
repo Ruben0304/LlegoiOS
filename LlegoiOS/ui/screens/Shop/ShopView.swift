@@ -8,12 +8,17 @@ struct ShopView: View {
     @State private var showFavoritesSheet = false
     @State private var animationDelay: Double = 0
     @FocusState private var isSearchFocused: Bool
+    @State private var isSearchPresented: Bool = false
 
     // Parámetros opcionales para filtrado inicial
     let initialCategory: String?
+    let initialBranchId: String?
+    let branchName: String?
 
-    init(category: String? = nil) {
+    init(category: String? = nil, branchId: String? = nil, branchName: String? = nil) {
         self.initialCategory = category
+        self.initialBranchId = branchId
+        self.branchName = branchName
     }
 
     private struct ShopCategory: Identifiable {
@@ -68,6 +73,9 @@ struct ShopView: View {
                 if let category = initialCategory {
                     viewModel.selectedCategory = category
                 }
+                if let branchId = initialBranchId {
+                    viewModel.branchId = branchId
+                }
                 viewModel.loadProducts()
             }
             .sheet(isPresented: $showFiltersSheet) {
@@ -96,45 +104,60 @@ struct ShopView: View {
                     .navigationViewStyle(StackNavigationViewStyle())
                 }
             }
+            .navigationTitle(branchName ?? "15.40$")
+            .navigationBarTitleDisplayMode(.inline)
+            .searchable(
+                text: $viewModel.searchQuery,
+                isPresented: $isSearchPresented,
+                placement: initialBranchId != nil ? .navigationBarDrawer(displayMode: .always) : .toolbar,
+                prompt: "Buscar productos..."
+            )
+            .searchFocused($isSearchFocused)
             .toolbar{
-                ToolbarItem{
-                    Button(action: {
-                        showFiltersSheet = true
-                    }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "location.circle")
-                                .font(.system(size: 14, weight: .semibold))
-                            Text("Distancia")
-                                .font(.system(size: 14, weight: .semibold))
-                            if viewModel.maxDistance < 50 {
-                                Circle()
-                                    .fill(Color.llegoPrimary)
-                                    .frame(width: 6, height: 6)
+                // Show different toolbar items based on context
+                if initialBranchId == nil {
+                    // Default view: show distance filter
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(action: {
+                            showFiltersSheet = true
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "location.circle")
+                                    .font(.system(size: 14, weight: .semibold))
+                               
+                                if viewModel.maxDistance < 50 {
+                                    Circle()
+                                        .fill(Color.llegoPrimary)
+                                        .frame(width: 6, height: 6)
+                                }
                             }
                         }
                     }
+                } else {
+                    // Branch-specific view: show cart button
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(action: {
+                            showFavoritesSheet = true
+                        }) {
+                            Image(systemName: "cart")
+                                .font(.system(size: 16, weight: .semibold))
+                                .frame(width: 30, height: 30)
+                        }
+                        .badge(favoritesManager.favoriteItemCount)
+                    }
                 }
-                ToolbarSpacer(.fixed)
-                ToolbarItem{
+
+                ToolbarItem(placement: .topBarTrailing) {
                     Button(action: {
                         showFavoritesSheet = true
                     }) {
                         Image(systemName: "heart")
                             .font(.system(size: 16, weight: .semibold))
-//                            .foregroundColor(.llegoPrimary)
                             .frame(width: 30, height: 30)
                     }
                     .badge(favoritesManager.favoriteItemCount)
                 }
             }
-            .navigationTitle("15.40$")
-            .navigationBarTitleDisplayMode(.inline)
-            .searchable(
-                text: $viewModel.searchQuery,
-                placement: .toolbar,
-                prompt: "Buscar productos..."
-            )
-            .searchFocused($isSearchFocused)
         }
     }
 
@@ -161,7 +184,7 @@ struct ShopView: View {
             ) {
                 ForEach(Array(viewModel.filteredProducts.enumerated()), id: \.element.id) { index, product in
                     NavigationLink(
-                        destination: ProductShowcaseView(product: product)
+                        destination: ProductShowcaseView(productId: product.id)
                     ) {
                         ProductCard(
                             product: product,

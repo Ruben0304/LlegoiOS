@@ -5,9 +5,9 @@ class ShopRepository {
     private let apolloClient = ApolloClientManager.shared.apollo
 
     // Fetch all products from GraphQL
-    func fetchProducts(completion: @escaping @Sendable (Result<[ShopProductGraphQL], Error>) -> Void) {
+    func fetchProducts(branchId: String? = nil, completion: @escaping @Sendable (Result<[ShopProductGraphQL], Error>) -> Void) {
         let query = LlegoAPI.GetProductsQuery(
-            branchId: .none,
+            branchId: branchId.map { .some($0) } ?? .none,
             categoryId: .none,
             availableOnly: .none
         )
@@ -29,21 +29,18 @@ class ShopRepository {
                     return
                 }
 
-                // Map GraphQL products to our model
+                // Map GraphQL products to our model (list view - optimized)
                 let mappedProducts = data.products.map { product in
                     ShopProductGraphQL(
                         id: product.id,
                         branchId: product.branchId,
                         name: product.name,
-                        description: product.description,
-                        weight: product.weight,
                         price: product.price,
                         currency: product.currency,
-                        image: product.image,
                         imageUrl: product.imageUrl,
                         availability: product.availability,
-                        categoryId: product.categoryId,
-                        createdAt: product.createdAt
+                        createdAt: product.createdAt,
+                        businessName: product.business?.name ?? "Tienda"
                     )
                 }
 
@@ -60,18 +57,15 @@ class ShopRepository {
 
 // MARK: - Models
 
-// Model to represent GraphQL Product for Shop
+// Model to represent GraphQL Product for Shop list view (optimized)
 struct ShopProductGraphQL: Identifiable, Sendable {
     let id: String
     let branchId: String
     let name: String
-    let description: String
-    let weight: String
     let price: Double
     let currency: String
-    let image: String
     let imageUrl: String
     let availability: Bool
-    let categoryId: String?
     let createdAt: String
+    let businessName: String
 }

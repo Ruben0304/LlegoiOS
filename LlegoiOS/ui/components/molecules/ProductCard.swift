@@ -69,22 +69,15 @@ struct ProductCard: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .frame(height: Self.titleReservedHeight, alignment: .topLeading)
 
-                Text(product.weight)
+                Text(product.shop)
                     .font(.system(size: 13))
                     .foregroundColor(.secondary)
             }
 
-            HStack {
-                Text(product.shop)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.secondary)
-
-                Spacer()
-
-                Text(product.price)
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(.primary)
-            }
+            Text(product.price)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(.primary)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(16)
     }

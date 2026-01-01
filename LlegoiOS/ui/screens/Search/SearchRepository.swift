@@ -39,9 +39,10 @@ class SearchRepository {
                         weight: product.weight,
                         price: product.price,
                         currency: product.currency,
-                        image: product.image,
+                        image: product.imageUrl,
                         availability: product.availability,
-                        createdAt: product.createdAt
+                        createdAt: product.createdAt,
+                        businessName: product.business?.name ?? "Tienda"
                     )
                 }
 
@@ -126,6 +127,7 @@ struct SearchProductGraphQL: Identifiable, Sendable {
     let image: String
     let availability: Bool
     let createdAt: String
+    let businessName: String
 }
 
 // Model to represent GraphQL Branch (Store) for Search

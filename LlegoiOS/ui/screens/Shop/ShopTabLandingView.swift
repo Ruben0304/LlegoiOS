@@ -46,7 +46,7 @@ struct ShopTabLandingView: View {
                 // Contenido según el modo de visualización
                 if viewModel.isLoading {
                     VStack(spacing: 20) {
-                        LottieView(name: "loading")
+                        LottieView(dotLottieName: "loader")
                             .frame(width: 150, height: 150)
                         Text("Cargando tiendas...")
                             .font(.system(size: 16, weight: .medium))
@@ -59,12 +59,9 @@ struct ShopTabLandingView: View {
                             // Listado de tiendas
                             VStack(spacing: 12) {
                                 ForEach(viewModel.stores, id: \.id) { store in
-                                    Button(action: {
+                                    StoreListCard(store: store, onTap: {
                                         selectedStore = store
-                                    }) {
-                                        StoreListCard(store: store)
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
+                                    })
                                 }
                             }
                             .padding(.horizontal, 16)
@@ -170,10 +167,12 @@ struct ShopTabLandingView: View {
                     filteredSearchStores = []
                 }
             }
-            .fullScreenCover(item: $navigationDestination) { destination in
+            .navigationDestination(item: $navigationDestination) { destination in
                 switch destination {
                 case .detail(let store):
                     StoreDetailView(store: store)
+                case .shop(let branchId, let branchName):
+                    ShopView(branchId: branchId, branchName: branchName)
                 case .home:
                     HomeView()
                 }
@@ -195,7 +194,7 @@ struct ShopTabLandingView: View {
                         selectedStore = nil // Esto cierra el sheet e invoca onDismiss
                     },
                     onViewProducts: {
-                        pendingDestination = .home
+                        pendingDestination = .shop(branchId: store.id, branchName: store.name)
                         selectedStore = nil // Esto cierra el sheet e invoca onDismiss
                     }
                 )
@@ -953,60 +952,69 @@ private struct ShopMapCenterIndicator: View {
     }
 }
 
-// MARK: - Store List Card
+// MARK: - Store List Card (Glass Effect)
 private struct StoreListCard: View {
     let store: StoreWithCoordinates
+    var onTap: (() -> Void)? = nil
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Logo de la tienda
-            AsyncImage(url: URL(string: store.logoUrl)) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                case .empty, .failure:
-                    Color.gray.opacity(0.3)
-                @unknown default:
-                    Color.gray.opacity(0.3)
-                }
+        if let onTap = onTap {
+            Button(action: onTap) {
+                cardContent
             }
-            .frame(width: 70, height: 70)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.llegoSecondary.opacity(0.3), lineWidth: 1.5)
-            )
+            .buttonStyle(.glassProminent)
+            .buttonBorderShape(.roundedRectangle(radius: 20))
+            .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .tint(.white)
+        } else {
+            cardContent
+                .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 20))
+        }
+    }
 
-            // Información de la tienda
-            VStack(alignment: .leading, spacing: 6) {
-                Text(store.name)
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundColor(.llegoPrimary)
-                    .lineLimit(1)
+    private var cardContent: some View {
+        HStack(alignment: .center, spacing: 12) {
+            // Logo compacto
+            logoSection
 
-                if let address = store.address {
-                    HStack(spacing: 4) {
-                        Image(systemName: "location.fill")
-                            .font(.system(size: 11))
-                            .foregroundColor(.gray)
+            // Contenido principal
+            VStack(alignment: .leading, spacing: 4) {
+                // Nombre y estado en línea
+                HStack(alignment: .center, spacing: 6) {
+                    Text(store.name)
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+
+                    statusIndicator
+
+                    Spacer(minLength: 4)
+
+                    // Flecha
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.secondary.opacity(0.4))
+                }
+
+                // Info compacta: dirección + rating + ETA
+                HStack(spacing: 8) {
+                    if let address = store.address {
                         Text(address)
-                            .font(.system(size: 13))
+                            .font(.system(size: 12, weight: .medium))
                             .foregroundColor(.secondary)
                             .lineLimit(1)
                     }
-                }
 
-                HStack(spacing: 12) {
+                    Spacer()
+
                     // Rating
                     if let rating = store.rating {
                         HStack(spacing: 3) {
                             Image(systemName: "star.fill")
-                                .font(.system(size: 11))
+                                .font(.system(size: 9))
                                 .foregroundColor(.orange)
                             Text(String(format: "%.1f", rating))
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
                                 .foregroundColor(.primary)
                         }
                     }
@@ -1014,26 +1022,60 @@ private struct StoreListCard: View {
                     // ETA
                     HStack(spacing: 3) {
                         Image(systemName: "clock.fill")
-                            .font(.system(size: 11))
+                            .font(.system(size: 9))
                             .foregroundColor(.llegoAccent)
                         Text("\(store.etaMinutes) min")
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
                             .foregroundColor(.primary)
                     }
                 }
             }
-
-            Spacer()
-
-            // Chevron
-            Image(systemName: "chevron.right")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.gray.opacity(0.5))
         }
-        .padding(12)
-        .background(Color.white)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+    }
+
+    private var logoSection: some View {
+        AsyncImage(url: URL(string: store.logoUrl)) { phase in
+            switch phase {
+            case .success(let image):
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            case .empty, .failure:
+                ZStack {
+                    Color.llegoPrimary.opacity(0.08)
+                    Image(systemName: "storefront.fill")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(.llegoPrimary.opacity(0.5))
+                }
+            @unknown default:
+                Color.gray.opacity(0.2)
+            }
+        }
+        .frame(width: 48, height: 48)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.5), lineWidth: 1)
+        )
+    }
+
+    private var statusIndicator: some View {
+        HStack(spacing: 3) {
+            Circle()
+                .fill(Color.green)
+                .frame(width: 5, height: 5)
+            Text("Abierto")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(.green)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(
+            Capsule()
+                .fill(Color.green.opacity(0.1))
+        )
     }
 }
 

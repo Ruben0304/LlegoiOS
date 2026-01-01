@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetCartProducts"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetCartProducts($ids: [String!]!) { products(ids: $ids) { __typename id branchId name description weight price currency image availability createdAt } }"#
+        #"query GetCartProducts($ids: [String!]!) { products(ids: $ids) { __typename id branchId name description weight price currency image availability createdAt business { __typename id name } } }"#
       ))
 
     public var ids: [String]
@@ -55,6 +55,7 @@ public extension LlegoAPI {
           .field("image", String.self),
           .field("availability", Bool.self),
           .field("createdAt", LlegoAPI.DateTime.self),
+          .field("business", Business?.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
           GetCartProductsQuery.Data.Product.self
@@ -70,6 +71,29 @@ public extension LlegoAPI {
         public var image: String { __data["image"] }
         public var availability: Bool { __data["availability"] }
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
+        /// Business associated with this product (through branch)
+        public var business: Business? { __data["business"] }
+
+        /// Product.Business
+        ///
+        /// Parent Type: `BusinessType`
+        public struct Business: LlegoAPI.SelectionSet {
+          @_spi(Unsafe) public let __data: DataDict
+          @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+          @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.BusinessType }
+          @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+            .field("__typename", String.self),
+            .field("id", String.self),
+            .field("name", String.self),
+          ] }
+          @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+            GetCartProductsQuery.Data.Product.Business.self
+          ] }
+
+          public var id: String { __data["id"] }
+          public var name: String { __data["name"] }
+        }
       }
     }
   }

@@ -30,13 +30,12 @@ class HomeRepository {
                         id: product.id,
                         branchId: product.branchId,
                         name: product.name,
-                        description: product.description,
-                        weight: product.weight,
                         price: product.price,
                         currency: product.currency,
-                        image: product.image,
+                        imageUrl: product.imageUrl,
                         availability: product.availability,
-                        createdAt: product.createdAt
+                        createdAt: product.createdAt,
+                        businessName: product.business?.name ?? "Tienda"
                     )
                 }
 
@@ -53,6 +52,10 @@ class HomeRepository {
                         ),
                         phone: branch.phone,
                         status: branch.status,
+                        avatarUrl: branch.avatarUrl,
+                        coverUrl: branch.coverUrl,
+                        deliveryRadius: branch.deliveryRadius,
+                        facilities: nil,
                         createdAt: branch.createdAt
                     )
                 }
@@ -81,13 +84,12 @@ struct HomeProductGraphQL: Identifiable, Sendable {
     let id: String
     let branchId: String
     let name: String
-    let description: String
-    let weight: String
     let price: Double
     let currency: String
-    let image: String
+    let imageUrl: String
     let availability: Bool
     let createdAt: String
+    let businessName: String
 }
 
 // Model to represent GraphQL Branch (Store)
@@ -98,7 +100,6 @@ struct BranchGraphQL: Identifiable, Sendable {
     let address: String?
     let coordinates: CoordinatesGraphQL
     let phone: String
-    let schedule: [String: String]?
     let status: String
     let avatarUrl: String?
     let coverUrl: String?
@@ -114,7 +115,6 @@ struct BranchGraphQL: Identifiable, Sendable {
         address: String? = nil,
         coordinates: CoordinatesGraphQL,
         phone: String,
-        schedule: [String: String]? = nil,
         status: String,
         avatarUrl: String? = nil,
         coverUrl: String? = nil,
@@ -128,7 +128,6 @@ struct BranchGraphQL: Identifiable, Sendable {
         self.address = address
         self.coordinates = coordinates
         self.phone = phone
-        self.schedule = schedule
         self.status = status
         self.avatarUrl = avatarUrl
         self.coverUrl = coverUrl

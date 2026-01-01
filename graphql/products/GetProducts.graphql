@@ -3,14 +3,14 @@ query GetProducts($branchId: String, $categoryId: String, $availableOnly: Boolea
     id
     branchId
     name
-    description
-    weight
     price
     currency
-    image
     imageUrl
     availability
-    categoryId
     createdAt
+    business {
+      id
+      name
+    }
   }
 }

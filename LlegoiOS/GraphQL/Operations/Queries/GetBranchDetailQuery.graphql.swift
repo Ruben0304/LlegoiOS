@@ -5,20 +5,20 @@
 @_spi(Execution) @_spi(Unsafe) import ApolloAPI
 
 public extension LlegoAPI {
-  struct GetBranchesQuery: GraphQLQuery {
-    public static let operationName: String = "GetBranches"
+  struct GetBranchDetailQuery: GraphQLQuery {
+    public static let operationName: String = "GetBranchDetail"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetBranches($businessId: String) { branches(businessId: $businessId) { __typename id businessId name address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius createdAt } }"#
+        #"query GetBranchDetail($id: String!) { branch(id: $id) { __typename id businessId name address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius facilities createdAt } }"#
       ))
 
-    public var businessId: GraphQLNullable<String>
+    public var id: String
 
-    public init(businessId: GraphQLNullable<String>) {
-      self.businessId = businessId
+    public init(id: String) {
+      self.id = id
     }
 
-    @_spi(Unsafe) public var __variables: Variables? { ["businessId": businessId] }
+    @_spi(Unsafe) public var __variables: Variables? { ["id": id] }
 
     public struct Data: LlegoAPI.SelectionSet {
       @_spi(Unsafe) public let __data: DataDict
@@ -26,14 +26,14 @@ public extension LlegoAPI {
 
       @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.Query }
       @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
-        .field("branches", [Branch].self, arguments: ["businessId": .variable("businessId")]),
+        .field("branch", Branch?.self, arguments: ["id": .variable("id")]),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
-        GetBranchesQuery.Data.self
+        GetBranchDetailQuery.Data.self
       ] }
 
-      /// Lista de sucursales
-      public var branches: [Branch] { __data["branches"] }
+      /// Obtener sucursal por ID
+      public var branch: Branch? { __data["branch"] }
 
       /// Branch
       ///
@@ -55,10 +55,11 @@ public extension LlegoAPI {
           .field("avatarUrl", String?.self),
           .field("coverUrl", String?.self),
           .field("deliveryRadius", Double?.self),
+          .field("facilities", [String].self),
           .field("createdAt", LlegoAPI.DateTime.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
-          GetBranchesQuery.Data.Branch.self
+          GetBranchDetailQuery.Data.Branch.self
         ] }
 
         public var id: String { __data["id"] }
@@ -73,6 +74,7 @@ public extension LlegoAPI {
         /// Presigned URL for the branch cover image
         public var coverUrl: String? { __data["coverUrl"] }
         public var deliveryRadius: Double? { __data["deliveryRadius"] }
+        public var facilities: [String] { __data["facilities"] }
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
 
         /// Branch.Coordinates
@@ -89,7 +91,7 @@ public extension LlegoAPI {
             .field("coordinates", [Double].self),
           ] }
           @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
-            GetBranchesQuery.Data.Branch.Coordinates.self
+            GetBranchDetailQuery.Data.Branch.Coordinates.self
           ] }
 
           public var type: String { __data["type"] }

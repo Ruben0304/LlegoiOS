@@ -5,7 +5,7 @@ class ProductRepository {
     private let apolloClient = ApolloClientManager.shared.apollo
 
     // Fetch all products from GraphQL
-    func fetchProducts(completion: @escaping @Sendable (Result<[ProductGraphQL], Error>) -> Void) {
+    func fetchProducts(completion: @escaping @Sendable (Result<[ProductListGraphQL], Error>) -> Void) {
         apolloClient.fetch(query: LlegoAPI.GetProductsQuery(
             branchId: .none,
             categoryId: .none,
@@ -28,17 +28,15 @@ class ProductRepository {
                     return
                 }
                 
-                // Map GraphQL products to our model
+                // Map GraphQL products to our model (list view - optimized)
                 let mappedProducts = products.map { product in
-                    ProductGraphQL(
+                    ProductListGraphQL(
                         id: product.id,
                         branchId: product.branchId,
                         name: product.name,
-                        description: product.description,
-                        weight: product.weight,
                         price: product.price,
                         currency: product.currency,
-                        image: product.image,
+                        imageUrl: product.imageUrl,
                         availability: product.availability,
                         createdAt: product.createdAt
                     )
@@ -55,16 +53,14 @@ class ProductRepository {
     }
 }
 
-// Model to represent GraphQL Product (different from UI Store model)
-struct ProductGraphQL: Identifiable, Sendable {
+// Model to represent GraphQL Product for list view (optimized)
+struct ProductListGraphQL: Identifiable, Sendable {
     let id: String
     let branchId: String
     let name: String
-    let description: String
-    let weight: String
     let price: Double
     let currency: String
-    let image: String
+    let imageUrl: String
     let availability: Bool
     let createdAt: String
 }

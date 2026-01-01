@@ -290,7 +290,9 @@ struct HomeView: View {
             .navigationViewStyle(StackNavigationViewStyle())
         }
         .fullScreenCover(item: $selectedProduct) { product in
-            ProductShowcaseView(product: product)
+            NavigationStack {
+                ProductShowcaseView(productId: product.id)
+            }
         }
         .fullScreenCover(isPresented: $navigateToProfile) {
             NavigationView {

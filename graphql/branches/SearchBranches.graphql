@@ -9,7 +9,6 @@ query SearchBranches($query: String!, $limit: Int, $useVectorSearch: Boolean) {
       coordinates
     }
     phone
-    schedule
     status
     avatarUrl
     coverUrl
