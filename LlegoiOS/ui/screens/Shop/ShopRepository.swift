@@ -68,4 +68,15 @@ struct ShopProductGraphQL: Identifiable, Sendable {
     let availability: Bool
     let createdAt: String
     let businessName: String
+
+    var formattedPrice: String {
+        let symbol: String
+        switch currency.uppercased() {
+        case "USD": symbol = ""
+        case "EUR": symbol = "€"
+        case "CUP": symbol = "₱"
+        default: symbol = currency
+        }
+        return String(format: "%.2f \(symbol == "" ? "US$" : symbol)", price)
+    }
 }

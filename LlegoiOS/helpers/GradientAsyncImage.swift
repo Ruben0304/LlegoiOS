@@ -278,7 +278,7 @@ extension ExtractedGradient {
     }
 
     /// Extract gradient asynchronously from asset
-    static func fromAsset(named name: String, completion: @escaping (ExtractedGradient) -> Void) {
+    static func fromAsset(named name: String, completion: @escaping @Sendable (ExtractedGradient) -> Void) {
         guard let image = UIImage(named: name) else {
             completion(.placeholder)
             return

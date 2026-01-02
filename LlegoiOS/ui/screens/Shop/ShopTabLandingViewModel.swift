@@ -14,7 +14,9 @@ enum ShopTabLandingViewState {
 class ShopTabLandingViewModel: ObservableObject {
     @Published var state: ShopTabLandingViewState = .idle
     @Published var stores: [StoreWithCoordinates] = []
+    @Published var storeProducts: [String: [ShopProductGraphQL]] = [:] // storeId -> products
     @Published var isLoading: Bool = false
+    @Published var isLoadingProducts: [String: Bool] = [:] // storeId -> isLoading
 
     private let repository = ShopTabLandingRepository()
 
@@ -51,12 +53,47 @@ class ShopTabLandingViewModel: ObservableObject {
                     self.isLoading = false
                     self.state = .success
 
+                    // Load products for each store
+                    for store in self.stores {
+                        self.loadProductsForStore(storeId: store.id)
+                    }
+
                 case .failure(let error):
                     self.isLoading = false
                     self.state = .error("No se pudieron cargar las tiendas: \(error.localizedDescription)")
                 }
             }
         }
+    }
+
+    // Load products for a specific store
+    func loadProductsForStore(storeId: String) {
+        isLoadingProducts[storeId] = true
+
+        repository.fetchBranchProducts(branchId: storeId, limit: 6) { [weak self] result in
+            guard let self = self else { return }
+
+            Task { @MainActor in
+                self.isLoadingProducts[storeId] = false
+
+                switch result {
+                case .success(let products):
+                    self.storeProducts[storeId] = products
+                case .failure:
+                    self.storeProducts[storeId] = []
+                }
+            }
+        }
+    }
+
+    // Get products for a store
+    func products(for storeId: String) -> [ShopProductGraphQL] {
+        return storeProducts[storeId] ?? []
+    }
+
+    // Check if products are loading for a store
+    func isLoadingProductsFor(storeId: String) -> Bool {
+        return isLoadingProducts[storeId] ?? false
     }
 
     // Search stores by query

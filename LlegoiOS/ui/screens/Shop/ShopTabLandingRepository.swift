@@ -57,6 +57,54 @@ class ShopTabLandingRepository {
         }
     }
 
+    // Fetch products for a specific branch
+    func fetchBranchProducts(branchId: String, limit: Int = 6, completion: @escaping @Sendable (Result<[ShopProductGraphQL], Error>) -> Void) {
+        apolloClient.fetch(
+            query: LlegoAPI.GetProductsQuery(
+                branchId: .some(branchId),
+                categoryId: .none,
+                availableOnly: .some(true)
+            ),
+            cachePolicy: .returnCacheDataAndFetch
+        ) { result in
+            switch result {
+            case .success(let graphQLResult):
+                if let errors = graphQLResult.errors {
+                    print("❌ GraphQL Errors (Branch Products):")
+                    errors.forEach { print("  - \($0.localizedDescription)") }
+                    completion(.failure(NSError(domain: "GraphQL", code: -1)))
+                    return
+                }
+
+                guard let products = graphQLResult.data?.products else {
+                    completion(.success([]))
+                    return
+                }
+
+                let mappedProducts = Array(products.prefix(limit)).map { product in
+                    ShopProductGraphQL(
+                        id: product.id,
+                        branchId: product.branchId,
+                        name: product.name,
+                        price: product.price,
+                        currency: product.currency,
+                        imageUrl: product.imageUrl,
+                        availability: product.availability,
+                        createdAt: product.createdAt,
+                        businessName: "" // Not available in this context
+                    )
+                }
+
+                print("✅ Fetched \(mappedProducts.count) products for branch \(branchId)")
+                completion(.success(mappedProducts))
+
+            case .failure(let error):
+                print("❌ Network Error (Branch Products): \(error.localizedDescription)")
+                completion(.failure(error))
+            }
+        }
+    }
+
     // Search branches by query
     func searchBranches(query: String, limit: Int = 10, useVectorSearch: Bool = true, completion: @escaping @Sendable (Result<[BranchGraphQL], Error>) -> Void) {
         let searchQuery = LlegoAPI.SearchBranchesQuery(
@@ -116,4 +164,5 @@ class ShopTabLandingRepository {
 }
 
 // MARK: - Models
-// BranchGraphQL and CoordinatesGraphQL are defined in HomeRepository.swift and shared across the app
+// BranchGraphQL and CoordinatesGraphQL are defined in HomeRepository.swift
+// ShopProductGraphQL is defined in ShopRepository.swift

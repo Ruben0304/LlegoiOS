@@ -40,8 +40,8 @@ struct ShopTabLandingView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                WelcomeGradientBackground()
-                    .ignoresSafeArea()
+                // WelcomeGradientBackground()
+                //     .ignoresSafeArea()
 
                 // Contenido según el modo de visualización
                 if viewModel.isLoading {
@@ -53,20 +53,30 @@ struct ShopTabLandingView: View {
                             .foregroundColor(.gray)
                     }
                 } else if viewMode == .list {
-                    // MODO LISTADO: Lista de tiendas
+                    // MODO LISTADO: Lista de tiendas con productos
                     ScrollView {
-                        VStack(spacing: 0) {
-                            // Listado de tiendas
-                            VStack(spacing: 12) {
-                                ForEach(viewModel.stores, id: \.id) { store in
-                                    StoreListCard(store: store, onTap: {
+                        VStack(spacing: 24) {
+                            ForEach(viewModel.stores, id: \.id) { store in
+                                StoreProductsCard(
+                                    store: store,
+                                    products: viewModel.products(for: store.id),
+                                    isLoadingProducts: viewModel.isLoadingProductsFor(storeId: store.id),
+                                    onStoreTap: {
                                         selectedStore = store
-                                    })
-                                }
+                                    },
+                                    onProductTap: { product in
+                                        // Navigate to product detail
+                                        navigationDestination = .shop(branchId: store.id, branchName: store.name)
+                                    },
+                                    onFavoriteTap: { product in
+                                        // Toggle favorite - handled by card's internal FavoritesManager
+                                        FavoritesManager.shared.toggleFavorite(productId: product.id)
+                                    }
+                                )
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.bottom, 24)
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 16)
                     }
                     .transition(.opacity.combined(with: .move(edge: .leading)))
                 } else {
