@@ -2,13 +2,13 @@
 // MARK: - Navigation Destination
 enum NavigationDestination: Identifiable, Hashable {
     case detail(Store)
-    case shop(branchId: String, branchName: String)
+    case shop(branchId: String, branchName: String, storeGradient: ExtractedGradient? = nil)
     case home
 
     var id: String {
         switch self {
         case .detail(let store): return "detail-\(store.id)"
-        case .shop(let branchId, _): return "shop-\(branchId)"
+        case .shop(let branchId, _, _): return "shop-\(branchId)"
         case .home: return "home"
         }
     }

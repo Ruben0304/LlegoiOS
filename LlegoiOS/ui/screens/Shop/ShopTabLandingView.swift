@@ -30,6 +30,9 @@ struct ShopTabLandingView: View {
     // Navegación
     @State private var navigationDestination: NavigationDestination? = nil
     @State private var pendingDestination: NavigationDestination? = nil
+    
+    // Gradientes de las tiendas
+    @State private var storeGradients: [String: ExtractedGradient] = [:]
 
     // Región del mapa compartida
     @State private var mapRegion = MKCoordinateRegion(
@@ -66,11 +69,19 @@ struct ShopTabLandingView: View {
                                     },
                                     onProductTap: { product in
                                         // Navigate to product detail
-                                        navigationDestination = .shop(branchId: store.id, branchName: store.name)
+                                        navigationDestination = .shop(
+                                            branchId: store.id, 
+                                            branchName: store.name,
+                                            storeGradient: storeGradients[store.id]
+                                        )
                                     },
                                     onFavoriteTap: { product in
                                         // Toggle favorite - handled by card's internal FavoritesManager
                                         FavoritesManager.shared.toggleFavorite(productId: product.id)
+                                    },
+                                    onGradientExtracted: { gradient in
+                                        // Store the extracted gradient
+                                        storeGradients[store.id] = gradient
                                     }
                                 )
                             }
@@ -181,8 +192,8 @@ struct ShopTabLandingView: View {
                 switch destination {
                 case .detail(let store):
                     StoreDetailView(store: store)
-                case .shop(let branchId, let branchName):
-                    ShopView(branchId: branchId, branchName: branchName)
+                case .shop(let branchId, let branchName, let storeGradient):
+                    ShopView(branchId: branchId, branchName: branchName, storeGradient: storeGradient)
                 case .home:
                     HomeView()
                 }
@@ -204,7 +215,11 @@ struct ShopTabLandingView: View {
                         selectedStore = nil // Esto cierra el sheet e invoca onDismiss
                     },
                     onViewProducts: {
-                        pendingDestination = .shop(branchId: store.id, branchName: store.name)
+                        pendingDestination = .shop(
+                            branchId: store.id, 
+                            branchName: store.name,
+                            storeGradient: storeGradients[store.id]
+                        )
                         selectedStore = nil // Esto cierra el sheet e invoca onDismiss
                     }
                 )

@@ -14,11 +14,13 @@ struct ShopView: View {
     let initialCategory: String?
     let initialBranchId: String?
     let branchName: String?
+    let storeGradient: ExtractedGradient?
 
-    init(category: String? = nil, branchId: String? = nil, branchName: String? = nil) {
+    init(category: String? = nil, branchId: String? = nil, branchName: String? = nil, storeGradient: ExtractedGradient? = nil) {
         self.initialCategory = category
         self.initialBranchId = branchId
         self.branchName = branchName
+        self.storeGradient = storeGradient
     }
 
     private struct ShopCategory: Identifiable {
@@ -50,8 +52,14 @@ struct ShopView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                WelcomeGradientBackground()
-                    .ignoresSafeArea()
+                // Use custom gradient if provided, otherwise use default
+                if let gradient = storeGradient {
+                    gradient.linearGradient
+                        .ignoresSafeArea()
+                } else {
+                    WelcomeGradientBackground()
+                        .ignoresSafeArea()
+                }
 
                 // Contador de resultados
                 if !viewModel.isLoading {
