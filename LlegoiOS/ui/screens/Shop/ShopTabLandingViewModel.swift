@@ -70,7 +70,7 @@ class ShopTabLandingViewModel: ObservableObject {
     func loadProductsForStore(storeId: String) {
         isLoadingProducts[storeId] = true
 
-        repository.fetchBranchProducts(branchId: storeId, limit: 6) { [weak self] result in
+        repository.fetchBranchProducts(branchId: storeId, limit: 2) { [weak self] result in
             guard let self = self else { return }
 
             Task { @MainActor in

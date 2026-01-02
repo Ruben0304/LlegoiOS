@@ -623,25 +623,24 @@ struct ProductFullCoverCard: View {
                 // White background for transparent images
                 Color.white
 
-                // Product Image - Full Cover
-                AsyncImage(url: URL(string: product.imageUrl)) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    case .empty:
+                // Product Image - Full Cover with Cache
+                CachedAsyncImage(url: URL(string: product.imageUrl)) { image in
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    ZStack {
+                        Color.gray.opacity(0.1)
                         ProgressView()
-                            .tint(.gray)
-                    case .failure:
-                        Image("generic_logo")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 40, height: 40)
-                            .opacity(0.4)
-                    @unknown default:
-                        Color.white
+                            .progressViewStyle(CircularProgressViewStyle(tint: .llegoPrimary))
+                            .scaleEffect(1.2)
                     }
+                } failure: {
+                    Image("generic_logo")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 40, height: 40)
+                        .opacity(0.4)
                 }
                 .frame(height: 140)
                 .clipped()

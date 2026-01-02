@@ -28,19 +28,23 @@ final class ImageCacheManager: @unchecked Sendable {
     }
 }
 
-// MARK: - Cached AsyncImage View
-struct CachedAsyncImage<Content: View, Placeholder: View>: View {
+// MARK: - Cached AsyncImage View with Loading and Failure States
+struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
     let url: URL?
     @ViewBuilder let content: (Image) -> Content
     @ViewBuilder let placeholder: () -> Placeholder
+    @ViewBuilder let failure: () -> Failure
 
     @State private var image: UIImage?
     @State private var isLoading = false
+    @State private var loadFailed = false
 
     var body: some View {
         Group {
             if let image = image {
                 content(Image(uiImage: image))
+            } else if loadFailed {
+                failure()
             } else {
                 placeholder()
                     .onAppear {
@@ -51,7 +55,10 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
     }
 
     private func loadImage() {
-        guard let url = url else { return }
+        guard let url = url else {
+            loadFailed = true
+            return
+        }
         let urlString = url.absoluteString
 
         // Check memory cache first
@@ -72,19 +79,32 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
                     // Cache the image
                     ImageCacheManager.shared.setImage(downloadedImage, for: urlString)
                     self.image = downloadedImage
+                } else {
+                    self.loadFailed = true
                 }
             }
         }.resume()
     }
 }
 
+// MARK: - Convenience initializer without failure view
+extension CachedAsyncImage where Failure == EmptyView {
+    init(url: URL?, @ViewBuilder content: @escaping (Image) -> Content, @ViewBuilder placeholder: @escaping () -> Placeholder) {
+        self.url = url
+        self.content = content
+        self.placeholder = placeholder
+        self.failure = { EmptyView() }
+    }
+}
+
 // MARK: - Convenience initializer to match AsyncImage API
-extension CachedAsyncImage where Content == Image, Placeholder == AnyView {
+extension CachedAsyncImage where Content == Image, Placeholder == AnyView, Failure == EmptyView {
     init(url: URL?, @ViewBuilder content: @escaping (Image) -> Image) {
         self.url = url
         self.content = content
         self.placeholder = {
             AnyView(ProgressView())
         }
+        self.failure = { EmptyView() }
     }
 }
