@@ -52,14 +52,8 @@ struct ShopView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // Use custom gradient if provided, otherwise use default
-                if let gradient = storeGradient {
-                    gradient.linearGradient
-                        .ignoresSafeArea()
-                } else {
-                    WelcomeGradientBackground()
-                        .ignoresSafeArea()
-                }
+                WelcomeGradientBackground(customGradient: storeGradient)
+                    .ignoresSafeArea()
 
                 // Contador de resultados
                 if !viewModel.isLoading {

@@ -31,8 +31,8 @@ struct ShopTabLandingView: View {
     @State private var navigationDestination: NavigationDestination? = nil
     @State private var pendingDestination: NavigationDestination? = nil
     
-    // Gradientes de las tiendas
-    @State private var storeGradients: [String: ExtractedGradient] = [:]
+    // Gradiente seleccionado temporalmente (para pasar al modal)
+    @State private var selectedStoreGradient: ExtractedGradient? = nil
 
     // Región del mapa compartida
     @State private var mapRegion = MKCoordinateRegion(
@@ -64,24 +64,21 @@ struct ShopTabLandingView: View {
                                     store: store,
                                     products: viewModel.products(for: store.id),
                                     isLoadingProducts: viewModel.isLoadingProductsFor(storeId: store.id),
-                                    onStoreTap: {
+                                    onStoreTap: { gradient in
                                         selectedStore = store
+                                        selectedStoreGradient = gradient
                                     },
-                                    onProductTap: { product in
+                                    onProductTap: { product, gradient in
                                         // Navigate to product detail
                                         navigationDestination = .shop(
                                             branchId: store.id, 
                                             branchName: store.name,
-                                            storeGradient: storeGradients[store.id]
+                                            storeGradient: gradient
                                         )
                                     },
                                     onFavoriteTap: { product in
                                         // Toggle favorite - handled by card's internal FavoritesManager
                                         FavoritesManager.shared.toggleFavorite(productId: product.id)
-                                    },
-                                    onGradientExtracted: { gradient in
-                                        // Store the extracted gradient
-                                        storeGradients[store.id] = gradient
                                     }
                                 )
                             }
@@ -218,7 +215,7 @@ struct ShopTabLandingView: View {
                         pendingDestination = .shop(
                             branchId: store.id, 
                             branchName: store.name,
-                            storeGradient: storeGradients[store.id]
+                            storeGradient: selectedStoreGradient
                         )
                         selectedStore = nil // Esto cierra el sheet e invoca onDismiss
                     }

@@ -759,9 +759,22 @@ struct WelcomeGradientBackground: View {
 
     // Control para expansión del degradado (usado en ConversationalSearchView)
     var isExpanded: Bool = false
+    
+    // Gradiente personalizado opcional (para tiendas específicas)
+    var customGradient: ExtractedGradient? = nil
 
     // Color palettes for each category
     private var colorPalette: (dark: Color, medium: Color, light: Color, veryLight: Color, overlay: Color) {
+        if let custom = customGradient {
+            return (
+                dark: custom.primaryColor,
+                medium: custom.secondaryColor,
+                light: custom.primaryColor.opacity(0.6),
+                veryLight: custom.secondaryColor.opacity(0.15),
+                overlay: custom.primaryColor
+            )
+        }
+    
         switch gradientManager.currentCategoryIndex {
         case 0: // Restaurantes - Rojo-naranja terracota comida
             return (

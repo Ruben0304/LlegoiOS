@@ -6,8 +6,8 @@ struct StoreProductsCard: View {
     let store: StoreWithCoordinates
     let products: [ShopProductGraphQL]
     let isLoadingProducts: Bool
-    let onStoreTap: () -> Void
-    let onProductTap: (ShopProductGraphQL) -> Void
+    let onStoreTap: (ExtractedGradient?) -> Void
+    let onProductTap: (ShopProductGraphQL, ExtractedGradient?) -> Void
     let onFavoriteTap: (ShopProductGraphQL) -> Void
     var onGradientExtracted: ((ExtractedGradient) -> Void)? = nil
 
@@ -114,8 +114,8 @@ private struct StoreProductsCardFront: View {
     let store: StoreWithCoordinates
     let products: [ShopProductGraphQL]
     let isLoadingProducts: Bool
-    let onStoreTap: () -> Void
-    let onProductTap: (ShopProductGraphQL) -> Void
+    let onStoreTap: (ExtractedGradient?) -> Void
+    let onProductTap: (ShopProductGraphQL, ExtractedGradient?) -> Void
     let onFavoriteTap: (ShopProductGraphQL) -> Void
     let onFlip: () -> Void
     var onGradientExtracted: ((ExtractedGradient) -> Void)? = nil
@@ -231,7 +231,7 @@ private struct StoreProductsCardFront: View {
                     ProductFullCoverCard(
                         product: product,
                         isFavorite: favoritesManager.isFavorite(productId: product.id),
-                        onTap: { onProductTap(product) },
+                        onTap: { onProductTap(product, storeGradient) },
                         onFavoriteTap: { onFavoriteTap(product) }
                     )
                 }
@@ -341,7 +341,7 @@ private struct StoreProductsCardFront: View {
             .glassEffect(.clear)
 
             // Options Button
-            Button(action: onStoreTap) {
+            Button(action: { onStoreTap(storeGradient) }) {
                 Image(systemName: "ellipsis")
                     .font(.system(size: 16, weight: .bold))
                     .frame(width: 36, height: 36)
