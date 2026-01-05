@@ -88,17 +88,26 @@ struct ProductCard: View {
             .overlay(
                 CachedAsyncImage(
                     url: URL(string: product.imageUrl),
-                        content: { image in
-                            image
-                                .resizable()
-                                .scaledToFit()
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        },
+                    cacheKey: "product_\(product.id)", // Cache key específica para productos
+                    content: { image in
+                        image
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    },
                     placeholder: {
                         ZStack {
                             Color(red: 240/255, green: 242/255, blue: 246/255)
                             ProgressView()
                                 .tint(.llegoPrimary)
+                        }
+                    },
+                    failure: {
+                        ZStack {
+                            Color(red: 240/255, green: 242/255, blue: 246/255)
+                            Image(systemName: "photo")
+                                .font(.system(size: 40))
+                                .foregroundColor(.gray.opacity(0.3))
                         }
                     }
                 )

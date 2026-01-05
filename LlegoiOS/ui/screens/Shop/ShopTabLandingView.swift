@@ -503,23 +503,28 @@ private struct StoreOptionsModal: View {
                 }
                 .frame(height: 180)
                 
-                // Logo flotante
-                AsyncImage(url: URL(string: store.logoUrl)) { phase in
-                    switch phase {
-                    case .success(let image):
+                // Logo flotante con cache
+                CachedAsyncImage(
+                    url: URL(string: store.logoUrl),
+                    cacheKey: "store_logo_modal_\(store.id)",
+                    content: { image in
                         image
                             .resizable()
                             .aspectRatio(contentMode: .fill)
-                    case .empty, .failure:
-                        Image("generic_logo")
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    @unknown default:
+                    },
+                    placeholder: {
+                        ZStack {
+                            Color.gray.opacity(0.2)
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .llegoPrimary))
+                        }
+                    },
+                    failure: {
                         Image("generic_logo")
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                     }
-                }
+                )
                 .frame(width: 88, height: 88)
                 .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                 .overlay(
@@ -1059,22 +1064,28 @@ private struct StoreListCard: View {
     }
 
     private var logoSection: some View {
-        AsyncImage(url: URL(string: store.logoUrl)) { phase in
-            switch phase {
-            case .success(let image):
+        CachedAsyncImage(
+            url: URL(string: store.logoUrl),
+            cacheKey: "store_logo_list_\(store.id)",
+            content: { image in
                 image
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-            case .empty, .failure:
-                Image("generic_logo")
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            @unknown default:
+            },
+            placeholder: {
+                ZStack {
+                    Color.gray.opacity(0.2)
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .gray))
+                        .scaleEffect(0.7)
+                }
+            },
+            failure: {
                 Image("generic_logo")
                     .resizable()
                     .aspectRatio(contentMode: .fill)
             }
-        }
+        )
         .frame(width: 48, height: 48)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
@@ -1123,28 +1134,34 @@ private struct FullScreenMapView: View {
                                 .fill(Color.llegoPrimary)
                                 .frame(width: 50, height: 50)
 
-                            AsyncImage(url: URL(string: store.logoUrl)) { phase in
-                                switch phase {
-                                case .success(let image):
+                            CachedAsyncImage(
+                                url: URL(string: store.logoUrl),
+                                cacheKey: "store_logo_map_\(store.id)",
+                                content: { image in
                                     image
                                         .resizable()
                                         .aspectRatio(contentMode: .fill)
                                         .frame(width: 42, height: 42)
                                         .clipShape(Circle())
-                                case .empty, .failure:
-                                    Image("generic_logo")
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                        .frame(width: 42, height: 42)
-                                        .clipShape(Circle())
-                                @unknown default:
+                                },
+                                placeholder: {
+                                    ZStack {
+                                        Color.gray.opacity(0.2)
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                            .scaleEffect(0.7)
+                                    }
+                                    .frame(width: 42, height: 42)
+                                    .clipShape(Circle())
+                                },
+                                failure: {
                                     Image("generic_logo")
                                         .resizable()
                                         .aspectRatio(contentMode: .fill)
                                         .frame(width: 42, height: 42)
                                         .clipShape(Circle())
                                 }
-                            }
+                            )
                         }
                         .shadow(color: Color.llegoPrimary.opacity(0.4), radius: 8, x: 0, y: 4)
 

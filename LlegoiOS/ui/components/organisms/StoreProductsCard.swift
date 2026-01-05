@@ -546,29 +546,35 @@ private struct StoreMapPin: View {
                         )
                         .frame(width: 50, height: 50)
 
-                    // Logo image
-                    AsyncImage(url: URL(string: store.logoUrl)) { phase in
-                        switch phase {
-                        case .success(let image):
+                    // Logo image with cache
+                    CachedAsyncImage(
+                        url: URL(string: store.logoUrl),
+                        cacheKey: "store_logo_pin_\(store.id)",
+                        content: { image in
                             image
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
                                 .frame(width: 42, height: 42)
                                 .clipShape(Circle())
-                        case .empty, .failure:
-                            Image("generic_logo")
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 42, height: 42)
-                                .clipShape(Circle())
-                        @unknown default:
+                        },
+                        placeholder: {
+                            ZStack {
+                                Color.gray.opacity(0.2)
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    .scaleEffect(0.8)
+                            }
+                            .frame(width: 42, height: 42)
+                            .clipShape(Circle())
+                        },
+                        failure: {
                             Image("generic_logo")
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
                                 .frame(width: 42, height: 42)
                                 .clipShape(Circle())
                         }
-                    }
+                    )
                 }
                 .shadow(color: Color.llegoPrimary.opacity(0.4), radius: 8, x: 0, y: 4)
             }
@@ -624,24 +630,30 @@ struct ProductFullCoverCard: View {
                 Color.white
 
                 // Product Image - Full Cover with Cache
-                CachedAsyncImage(url: URL(string: product.imageUrl)) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    ZStack {
-                        Color.gray.opacity(0.1)
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .llegoPrimary))
-                            .scaleEffect(1.2)
+                CachedAsyncImage(
+                    url: URL(string: product.imageUrl),
+                    cacheKey: "shop_product_\(product.id)", // Cache key específica para productos de tienda
+                    content: { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    },
+                    placeholder: {
+                        ZStack {
+                            Color.gray.opacity(0.1)
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .llegoPrimary))
+                                .scaleEffect(1.2)
+                        }
+                    },
+                    failure: {
+                        Image("generic_logo")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 40, height: 40)
+                            .opacity(0.4)
                     }
-                } failure: {
-                    Image("generic_logo")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 40, height: 40)
-                        .opacity(0.4)
-                }
+                )
                 .frame(height: 140)
                 .clipped()
 
