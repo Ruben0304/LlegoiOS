@@ -49,6 +49,17 @@ struct ShopView: View {
         productCounts.values.reduce(0, +)
     }
 
+    // MARK: - Refresh Function
+    private func refreshProducts() async {
+        await withCheckedContinuation { continuation in
+            viewModel.loadProducts(isRefreshing: true)
+            // Wait a bit to allow the animation to complete
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                continuation.resume()
+            }
+        }
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -243,6 +254,9 @@ struct ShopView: View {
             .padding(.top, 8)
         }
         .animation(.easeInOut(duration: 0.3), value: isSearchFocused)
+        .refreshable {
+            await refreshProducts()
+        }
         .onAppear {
             animationDelay = Double(viewModel.filteredProducts.count) * 0.1 + 0.1
         }
@@ -267,6 +281,9 @@ struct ShopView: View {
                 .padding(.top, 12)
         }
         .animation(.easeInOut(duration: 0.3), value: isSearchFocused)
+        .refreshable {
+            await refreshProducts()
+        }
     }
 
     private var categoryScroll: some View {

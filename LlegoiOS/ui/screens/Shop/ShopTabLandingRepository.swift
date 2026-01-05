@@ -8,7 +8,7 @@ class ShopTabLandingRepository {
     func fetchBranches(businessId: String? = nil, completion: @escaping @Sendable (Result<[BranchGraphQL], Error>) -> Void) {
         let query = LlegoAPI.GetBranchesQuery(businessId: businessId.map { .some($0) } ?? .none)
 
-        apolloClient.fetch(query: query, cachePolicy: .returnCacheDataAndFetch) { result in
+        apolloClient.fetch(query: query, cachePolicy: .returnCacheDataAndFetch) { [apolloClient = self.apolloClient] result in
             switch result {
             case .success(let graphQLResult):
                 if let errors = graphQLResult.errors {
@@ -52,21 +52,70 @@ class ShopTabLandingRepository {
 
             case .failure(let error):
                 print("❌ Network Error: \(error.localizedDescription)")
-                completion(.failure(error))
+
+                // Si es error de red (offline), intentar cargar SOLO desde caché
+                if let nsError = error as NSError?,
+                   nsError.domain == NSURLErrorDomain &&
+                   (nsError.code == NSURLErrorNotConnectedToInternet ||
+                    nsError.code == NSURLErrorTimedOut ||
+                    nsError.code == NSURLErrorCannotConnectToHost ||
+                    nsError.code == NSURLErrorNetworkConnectionLost) {
+
+                    print("🔄 Sin conexión - Intentando cargar branches desde caché...")
+
+                    // Intentar cargar SOLO desde caché (sin red)
+                    apolloClient.fetch(query: query, cachePolicy: .returnCacheDataDontFetch) { cacheResult in
+                        switch cacheResult {
+                        case .success(let graphQLResult):
+                            if let data = graphQLResult.data {
+                                let mappedBranches = data.branches.map { branch in
+                                    BranchGraphQL(
+                                        id: branch.id,
+                                        businessId: branch.businessId,
+                                        name: branch.name,
+                                        address: branch.address,
+                                        coordinates: CoordinatesGraphQL(
+                                            type: branch.coordinates.type,
+                                            coordinates: branch.coordinates.coordinates
+                                        ),
+                                        phone: branch.phone,
+                                        status: branch.status,
+                                        avatarUrl: branch.avatarUrl,
+                                        coverUrl: branch.coverUrl,
+                                        deliveryRadius: branch.deliveryRadius,
+                                        facilities: nil,
+                                        createdAt: branch.createdAt
+                                    )
+                                }
+
+                                print("✅ Cargados \(mappedBranches.count) branches desde caché (offline)")
+                                completion(.success(mappedBranches))
+                            } else {
+                                print("⚠️ No hay branches en caché")
+                                completion(.success([]))
+                            }
+                        case .failure:
+                            print("❌ No hay branches en caché")
+                            completion(.success([]))
+                        }
+                    }
+                } else {
+                    // Otros errores (no de red) -> fallar
+                    completion(.failure(error))
+                }
             }
         }
     }
 
     // Fetch products for a specific branch
     func fetchBranchProducts(branchId: String, limit: Int = 6, completion: @escaping @Sendable (Result<[ShopProductGraphQL], Error>) -> Void) {
-        apolloClient.fetch(
-            query: LlegoAPI.GetProductsQuery(
-                branchId: .some(branchId),
-                categoryId: .none,
-                availableOnly: .some(true)
-            ),
-            cachePolicy: .returnCacheDataAndFetch
-        ) { result in
+        let query = LlegoAPI.GetProductsQuery(
+            branchId: .some(branchId),
+            categoryId: .none,
+            availableOnly: .some(true)
+        )
+
+        apolloClient.fetch(query: query, cachePolicy: .returnCacheDataAndFetch) { [apolloClient = self.apolloClient] result in
             switch result {
             case .success(let graphQLResult):
                 if let errors = graphQLResult.errors {
@@ -100,7 +149,51 @@ class ShopTabLandingRepository {
 
             case .failure(let error):
                 print("❌ Network Error (Branch Products): \(error.localizedDescription)")
-                completion(.failure(error))
+
+                // Si es error de red (offline), intentar cargar SOLO desde caché
+                if let nsError = error as NSError?,
+                   nsError.domain == NSURLErrorDomain &&
+                   (nsError.code == NSURLErrorNotConnectedToInternet ||
+                    nsError.code == NSURLErrorTimedOut ||
+                    nsError.code == NSURLErrorCannotConnectToHost ||
+                    nsError.code == NSURLErrorNetworkConnectionLost) {
+
+                    print("🔄 Sin conexión - Intentando cargar productos de \(branchId) desde caché...")
+
+                    // Intentar cargar SOLO desde caché (sin red)
+                    apolloClient.fetch(query: query, cachePolicy: .returnCacheDataDontFetch) { cacheResult in
+                        switch cacheResult {
+                        case .success(let graphQLResult):
+                            if let products = graphQLResult.data?.products {
+                                let mappedProducts = Array(products.prefix(limit)).map { product in
+                                    ShopProductGraphQL(
+                                        id: product.id,
+                                        branchId: product.branchId,
+                                        name: product.name,
+                                        price: product.price,
+                                        currency: product.currency,
+                                        imageUrl: product.imageUrl,
+                                        availability: product.availability,
+                                        createdAt: product.createdAt,
+                                        businessName: "" // Not available in this context
+                                    )
+                                }
+
+                                print("✅ Cargados \(mappedProducts.count) productos de \(branchId) desde caché (offline)")
+                                completion(.success(mappedProducts))
+                            } else {
+                                print("⚠️ No hay productos de \(branchId) en caché")
+                                completion(.success([]))
+                            }
+                        case .failure:
+                            print("❌ No hay productos de \(branchId) en caché")
+                            completion(.success([]))
+                        }
+                    }
+                } else {
+                    // Otros errores (no de red) -> fallar
+                    completion(.failure(error))
+                }
             }
         }
     }

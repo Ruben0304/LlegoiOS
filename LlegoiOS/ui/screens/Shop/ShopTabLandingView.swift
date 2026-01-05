@@ -19,7 +19,7 @@ struct ShopTabLandingView: View {
     @State private var searchDebounceTask: Task<Void, Never>? = nil
 
     // Modo de visualización
-    @State private var viewMode: ShopViewMode = .map
+    @State private var viewMode: ShopViewMode = .list
 
     // Resultados filtrados de búsqueda (solo vendedores)
     @State private var filteredSearchStores: [StoreWithCoordinates] = []
@@ -40,6 +40,17 @@ struct ShopTabLandingView: View {
         span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
     )
 
+    // MARK: - Refresh Function
+    private func refreshStores() async {
+        await withCheckedContinuation { continuation in
+            viewModel.loadStores(isRefreshing: true)
+            // Wait a bit to allow the animation to complete
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                continuation.resume()
+            }
+        }
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -49,11 +60,12 @@ struct ShopTabLandingView: View {
                 // Contenido según el modo de visualización
                 if viewModel.isLoading {
                     VStack(spacing: 20) {
-                        LottieView(dotLottieName: "loader")
-                            .frame(width: 150, height: 150)
+                        ProgressView()
+                            .controlSize(.large)
+                            .tint(.llegoPrimary)
                         Text("Cargando tiendas...")
                             .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.gray)
+                            .foregroundColor(.secondary)
                     }
                 } else if viewMode == .list {
                     // MODO LISTADO: Lista de tiendas con productos
@@ -71,7 +83,7 @@ struct ShopTabLandingView: View {
                                     onProductTap: { product, gradient in
                                         // Navigate to product detail
                                         navigationDestination = .shop(
-                                            branchId: store.id, 
+                                            branchId: store.id,
                                             branchName: store.name,
                                             storeGradient: gradient
                                         )
@@ -85,6 +97,9 @@ struct ShopTabLandingView: View {
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 16)
+                    }
+                    .refreshable {
+                        await refreshStores()
                     }
                     .transition(.opacity.combined(with: .move(edge: .leading)))
                 } else {

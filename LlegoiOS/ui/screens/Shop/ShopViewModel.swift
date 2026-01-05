@@ -68,9 +68,12 @@ class ShopViewModel: ObservableObject {
         maxDistance < 50 || selectedCategory != nil || !searchQuery.isEmpty
     }
 
-    func loadProducts() {
-        isLoading = true
-        state = .loading
+    func loadProducts(isRefreshing: Bool = false) {
+        // Solo mostrar loading si NO es un refresh
+        if !isRefreshing {
+            isLoading = true
+            state = .loading
+        }
 
         repository.fetchProducts(branchId: branchId) { [weak self] result in
             guard let self = self else { return }
@@ -94,14 +97,32 @@ class ShopViewModel: ObservableObject {
                     }
 
                     self.applyFiltersAndSort()
+
+                    // Marcar como completado
                     self.isLoading = false
-                    self.state = .success
+                    if !isRefreshing {
+                        self.state = .success
+                    }
 
                     print("✅ Loaded \(self.products.count) products" + (self.branchId != nil ? " for branch \(self.branchId!)" : ""))
 
                 case .failure(let error):
                     self.isLoading = false
-                    self.state = .error("No se pudieron cargar los productos: \(error.localizedDescription)")
+
+                    // Mejorar mensaje de error para offline
+                    let nsError = error as NSError
+                    let isNetworkError = nsError.domain == NSURLErrorDomain &&
+                        (nsError.code == NSURLErrorNotConnectedToInternet ||
+                         nsError.code == NSURLErrorTimedOut ||
+                         nsError.code == NSURLErrorCannotConnectToHost ||
+                         nsError.code == NSURLErrorNetworkConnectionLost)
+
+                    let errorMessage = isNetworkError
+                        ? "No hay conexión a internet y no hay productos guardados en caché"
+                        : "Error al cargar productos: \(error.localizedDescription)"
+
+                    print("❌ ShopViewModel error: \(errorMessage)")
+                    self.state = .error(errorMessage)
                 }
             }
         }
