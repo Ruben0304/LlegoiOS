@@ -29,7 +29,6 @@ struct WelcomeView: View {
     @State private var navigateToConversationalSearch: Bool = false
     @State private var showingWallet: Bool = false
     @State private var navigateToPlansAndPricing: Bool = false
-    @State private var cartSheetDetent: PresentationDetent = .medium
     @State private var isCheckingAccount: Bool = false
 
     // Carousel state
@@ -352,18 +351,13 @@ struct WelcomeView: View {
                 PlansAndPricingView()
             }
             .sheet(isPresented: $navigateToCart) {
-                let shouldBeLarge = cartManager.cartItemCount > 1
-
                 if #available(iOS 16.0, *) {
                     NavigationView {
                         CartView()
                     }
                     .navigationViewStyle(StackNavigationViewStyle())
-                    .presentationDetents(shouldBeLarge ? [.large] : [.medium], selection: $cartSheetDetent)
+                    .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
-                    .task(id: shouldBeLarge) {
-                        cartSheetDetent = shouldBeLarge ? .large : .medium
-                    }
                 } else {
                     NavigationView {
                         CartView()
@@ -391,9 +385,7 @@ struct WelcomeView: View {
                         impact.impactOccurred()
                         navigateToCart = true
                     }) {
-                            Image(systemName: "cart")
-//                                .foregroundStyle(.secondary)
-                            
+                        Image(systemName: "cart")
                     }
                     .badge(cartManager.cartItemCount)
                 }

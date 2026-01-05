@@ -14,9 +14,14 @@ class CartViewModel: ObservableObject {
     @Published var state: CartViewState = .idle
     @Published var cartItems: [CartItem] = []
     @Published var errorMessage: String?
+    @Published var hasWatchedAds: Bool = false // Descuento por ver anuncios
 
     private let repository = CartRepository()
     private let cartManager = CartManager.shared
+
+    // MARK: - Service Fee Constants
+    private let standardServiceFeeRate: Double = 0.15 // 15%
+    private let discountedServiceFeeRate: Double = 0.10 // 10% con descuento
 
     // MARK: - Computed Properties
 
@@ -32,8 +37,28 @@ class CartViewModel: ObservableObject {
         cartItems.isEmpty ? 0.0 : 2.50
     }
 
+    /// Tasa de servicio actual (15% normal, 10% con descuento)
+    var currentServiceFeeRate: Double {
+        hasWatchedAds ? discountedServiceFeeRate : standardServiceFeeRate
+    }
+
+    /// Porcentaje de servicio formateado
+    var serviceFeePercentage: Int {
+        Int(currentServiceFeeRate * 100)
+    }
+
+    /// Cargo de servicio calculado sobre el subtotal
+    var serviceFee: Double {
+        subtotal * currentServiceFeeRate
+    }
+
+    /// Ahorro por ver anuncios
+    var adSavings: Double {
+        hasWatchedAds ? subtotal * (standardServiceFeeRate - discountedServiceFeeRate) : 0
+    }
+
     var total: Double {
-        subtotal + deliveryFee
+        subtotal + deliveryFee + serviceFee
     }
 
     var formattedSubtotal: String {
@@ -44,8 +69,41 @@ class CartViewModel: ObservableObject {
         formatPrice(deliveryFee)
     }
 
+    var formattedServiceFee: String {
+        formatPrice(serviceFee)
+    }
+
+    var formattedAdSavings: String {
+        formatPrice(adSavings)
+    }
+
     var formattedTotal: String {
         formatPrice(total)
+    }
+
+    /// Total si viera los anuncios (para mostrar incentivo)
+    var totalWithDiscount: Double {
+        subtotal + deliveryFee + (subtotal * discountedServiceFeeRate)
+    }
+
+    var formattedTotalWithDiscount: String {
+        formatPrice(totalWithDiscount)
+    }
+
+    /// Ahorro potencial si ve los anuncios
+    var potentialSavings: Double {
+        subtotal * (standardServiceFeeRate - discountedServiceFeeRate)
+    }
+
+    var formattedPotentialSavings: String {
+        formatPrice(potentialSavings)
+    }
+
+    /// Activar descuento por ver anuncios
+    func activateAdDiscount() {
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+            hasWatchedAds = true
+        }
     }
 
     // MARK: - Actions
