@@ -141,11 +141,7 @@ struct MainAppView: View {
 //                    }
                     .tabBarMinimizeBehavior(.onScrollDown)
                     .accentColor(Color.llegoPrimary)
-                    .fullScreenCover(isPresented: $showTrackingFullScreen) {
-                        if #available(iOS 26.0, *) {
-                            LiveOrderTrackingView()
-                        }
-                    }
+                  
 
                 // .toolbarBackground(.hidden, for: .tabBar)
                 // .background(.clear)

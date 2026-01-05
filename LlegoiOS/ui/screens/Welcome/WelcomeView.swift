@@ -50,14 +50,12 @@ struct WelcomeView: View {
     // Color de glow dinámico basado en la categoría
     var glowColorForCategory: Color {
         switch currentIndex {
-        case 0: // Restaurantes - Rojo-naranja
+        case 0: // Restaurantes - Rojo-naranja terracota
             return Color(red: 0.9, green: 0.3, blue: 0.2)
-        case 1: // Ropa - Verde
+        case 1: // Supermercado - Verde
             return Color(red: 0.2, green: 0.7, blue: 0.5)
-        case 2: // Mercado - Azul
-            return Color(red: 0.2, green: 0.5, blue: 0.8)
-        case 3: // Agro - Amarillo
-            return Color(red: 0.9, green: 0.8, blue: 0.3)
+        case 2: // Dulcería - Marrón-Dorado
+            return Color(red: 0.737, green: 0.514, blue: 0.345)
         default:
             return Color(red: 0.9, green: 0.3, blue: 0.2)
         }
@@ -74,15 +72,7 @@ struct WelcomeView: View {
                 Feature(icon: "birthday.cake.fill", title: "Postres", subtitle: "Dulces momentos"),
                 Feature(icon: "wineglass.fill", title: "Bebidas", subtitle: "Coctelería")
             ]
-        case 1: // Ropa
-            return [
-                Feature(icon: "figure.stand", title: "Hombre", subtitle: "Estilo urbano"),
-                Feature(icon: "figure.stand.dress", title: "Mujer", subtitle: "Tendencias"),
-                Feature(icon: "figure.child", title: "Niños", subtitle: "Comodidad total"),
-                Feature(icon: "figure.run", title: "Deportivo", subtitle: "Alto rendimiento"),
-                Feature(icon: "bag.fill", title: "Accesorios", subtitle: "Complementos")
-            ]
-        case 2: // Mercado
+        case 1: // Supermercado
             return [
                 Feature(icon: "carrot.fill", title: "Frescos", subtitle: "Frutas y verduras"),
                 Feature(icon: "cart.fill", title: "Despensa", subtitle: "Básicos del hogar"),
@@ -90,20 +80,20 @@ struct WelcomeView: View {
                 Feature(icon: "house.fill", title: "Hogar", subtitle: "Limpieza y más"),
                 Feature(icon: "heart.fill", title: "Cuidado", subtitle: "Personal")
             ]
-        case 3: // Agro
+        case 2: // Dulcería
             return [
-                Feature(icon: "leaf.fill", title: "Vegetales", subtitle: "Directo del campo"),
-                Feature(icon: "pawprint.fill", title: "Mascotas", subtitle: "Alimento natural"),
-                Feature(icon: "ant.fill", title: "Jardín", subtitle: "Semillas y tierra"),
-                Feature(icon: "apple.logo", title: "Frutas", subtitle: "Estacionales"),
-                Feature(icon: "hammer.fill", title: "Herramientas", subtitle: "Trabajo")
+                Feature(icon: "birthday.cake.fill", title: "Pasteles", subtitle: "Recién horneados"),
+                Feature(icon: "cup.and.saucer.fill", title: "Pan Dulce", subtitle: "Tradicional"),
+                Feature(icon: "gift.fill", title: "Chocolates", subtitle: "Premium"),
+                Feature(icon: "sparkles", title: "Galletas", subtitle: "Artesanales"),
+                Feature(icon: "star.fill", title: "Especiales", subtitle: "Del día")
             ]
         default:
             return []
         }
     }
     
-    // Models data - Orden: Restaurantes, Tienda de Ropa, Agro, Mercadito
+    // Models data - Orden: Restaurantes, Supermercado, Dulcería
     let models: [CategoryModel3D] = [
         CategoryModel3D(
             name: "Restaurantes",
@@ -115,25 +105,16 @@ struct WelcomeView: View {
             
         ),
         CategoryModel3D(
-            name: "Ropa",
-            fileName: "ropa.usdz",
-            description: "Moda y Accesorios",
-            icon: "tshirt.fill",
-            customScale: 0.8
-        ),
-        CategoryModel3D(
-            name: "Mercado",
+            name: "Tiendas",
             fileName: "mercadito.usdz",
-            description: "Productos Agrícolas",
-            icon: "leaf.fill"
+            description: "Productos del Hogar",
+            icon: "cart.fill"
         ),
         CategoryModel3D(
-            name: "Agro",
-            fileName: "agro.usdz",
-            description: "Frutas y Vegetales Frescos",
-            icon: "cart.fill",
-            cameraPosition: SCNVector3(x: 0, y: 1.5, z: 3.2), // Elevar cámara
-            cameraEulerAngles: SCNVector3(x: -.pi / 6, y: 0, z: 0), // Ángulo intermedio: ~30 grados desde arriba
+            name: "Dulcería",
+            fileName: "dulce.usdz",
+            description: "Pan y Repostería",
+            icon: "birthday.cake.fill",
             customScale: 0.8
         )
     ]
@@ -776,7 +757,7 @@ struct WelcomeGradientBackground: View {
         }
     
         switch gradientManager.currentCategoryIndex {
-        case 0: // Restaurantes - Rojo-naranja terracota comida
+        case 0: // Restaurantes - Rojo-naranja terracota (original)
             return (
                 dark: Color(red: 0.5, green: 0.15, blue: 0.1),
                 medium: Color(red: 0.7, green: 0.25, blue: 0.15),
@@ -784,7 +765,7 @@ struct WelcomeGradientBackground: View {
                 veryLight: Color(red: 0.95, green: 0.88, blue: 0.85),
                 overlay: Color(red: 0.45, green: 0.12, blue: 0.08)
             )
-        case 1: // Tienda de Ropa - Verde
+        case 1: // Supermercado - Verde (el que tenía ropa)
             return (
                 dark: Color(red: 0.05, green: 0.3, blue: 0.25),
                 medium: Color(red: 0.1, green: 0.45, blue: 0.38),
@@ -792,23 +773,15 @@ struct WelcomeGradientBackground: View {
                 veryLight: Color(red: 0.85, green: 0.92, blue: 0.88),
                 overlay: Color(red: 0.05, green: 0.25, blue: 0.2)
             )
-        case 2: // Mercado - Azul
+        case 2: // Dulcería - Marrón-Dorado-Beige (Juankys Pan Flores)
             return (
-                dark: Color(red: 0.05, green: 0.2, blue: 0.3),
-                medium: Color(red: 0.1, green: 0.35, blue: 0.45),
-                light: Color(red: 0.4, green: 0.55, blue: 0.65),
-                veryLight: Color(red: 0.85, green: 0.9, blue: 0.92),
-                overlay: Color(red: 0.05, green: 0.15, blue: 0.25)
+                dark: Color(red: 0.737, green: 0.514, blue: 0.345),      // Primary - Marrón dorado
+                medium: Color(red: 0.910, green: 0.796, blue: 0.702),    // Secondary - Beige claro cálido
+                light: Color(red: 0.85, green: 0.7, blue: 0.6),
+                veryLight: Color(red: 0.96, green: 0.92, blue: 0.88),
+                overlay: Color(red: 0.65, green: 0.45, blue: 0.3)
             )
-        case 3: // Agro - Amarillo
-            return (
-                dark: Color(red: 0.3, green: 0.25, blue: 0.05),
-                medium: Color(red: 0.45, green: 0.38, blue: 0.1),
-                light: Color(red: 0.65, green: 0.6, blue: 0.4),
-                veryLight: Color(red: 0.92, green: 0.9, blue: 0.85),
-                overlay: Color(red: 0.25, green: 0.2, blue: 0.05)
-            )
-        default: // Default to rojo-naranja terracota (restaurantes)
+        default: // Default to Rojo-naranja terracota (restaurantes)
             return (
                 dark: Color(red: 0.5, green: 0.15, blue: 0.1),
                 medium: Color(red: 0.7, green: 0.25, blue: 0.15),
