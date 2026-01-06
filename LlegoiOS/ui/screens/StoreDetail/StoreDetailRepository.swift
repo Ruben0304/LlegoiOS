@@ -157,7 +157,9 @@ class StoreDetailRepository {
             query: LlegoAPI.GetProductsQuery(
                 branchId: .some(branchId),
                 categoryId: .none,
-                availableOnly: .some(true)
+                availableOnly: .some(true),
+                radiusKm: .none,
+                jwt: .none
             ),
             cachePolicy: .returnCacheDataAndFetch
         ) { result in

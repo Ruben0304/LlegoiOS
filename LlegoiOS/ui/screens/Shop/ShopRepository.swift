@@ -1,15 +1,21 @@
 import Foundation
 import Apollo
+import Combine
 
 class ShopRepository {
     private let apolloClient = ApolloClientManager.shared.apollo
 
     // Fetch all products from GraphQL
-    func fetchProducts(branchId: String? = nil, completion: @escaping @Sendable (Result<[ShopProductGraphQL], Error>) -> Void) {
+    @MainActor func fetchProducts(branchId: String? = nil, radiusKm: Double? = nil, completion: @escaping @Sendable (Result<[ShopProductGraphQL], Error>) -> Void) {
+        // Obtener JWT si está disponible
+        let jwt = AuthManager.shared.getAccessToken()
+        
         let query = LlegoAPI.GetProductsQuery(
             branchId: branchId.map { .some($0) } ?? .none,
             categoryId: .none,
-            availableOnly: .none
+            availableOnly: .none,
+            radiusKm: radiusKm.map { .some($0) } ?? .none,
+            jwt: jwt.map { .some($0) } ?? .none
         )
         apolloClient.fetch(query: query, cachePolicy: .returnCacheDataAndFetch) { [apolloClient = self.apolloClient] result in
             switch result {
@@ -29,7 +35,6 @@ class ShopRepository {
                     return
                 }
 
-                // Map GraphQL products to our model (list view - optimized)
                 let mappedProducts = data.products.map { product in
                     ShopProductGraphQL(
                         id: product.id,
@@ -40,7 +45,8 @@ class ShopRepository {
                         imageUrl: product.imageUrl,
                         availability: product.availability,
                         createdAt: product.createdAt,
-                        businessName: product.business?.name ?? "Tienda"
+                        businessName: product.business?.name ?? "Tienda",
+                        distanceKm: product.distanceKm
                     )
                 }
 
@@ -75,7 +81,8 @@ class ShopRepository {
                                         imageUrl: product.imageUrl,
                                         availability: product.availability,
                                         createdAt: product.createdAt,
-                                        businessName: product.business?.name ?? "Tienda"
+                                        businessName: product.business?.name ?? "Tienda",
+                                        distanceKm: product.distanceKm
                                     )
                                 }
 
@@ -99,11 +106,16 @@ class ShopRepository {
     }
 
     // Search products with vector search (with automatic fallback to text search)
-    func searchProducts(query: String, branchId: String? = nil, limit: Int = 10, useVectorSearch: Bool = true, completion: @escaping @Sendable (Result<[ShopProductGraphQL], Error>) -> Void) {
+    @MainActor func searchProducts(query: String, branchId: String? = nil, limit: Int = 10, useVectorSearch: Bool = true, radiusKm: Double? = nil, completion: @escaping @Sendable (Result<[ShopProductGraphQL], Error>) -> Void) {
+        // Obtener JWT si está disponible
+        let jwt = AuthManager.shared.getAccessToken()
+        
         let searchQuery = LlegoAPI.SearchProductsQuery(
             query: query,
             limit: .some(Int32(limit)),
-            useVectorSearch: .some(useVectorSearch)
+            useVectorSearch: .some(useVectorSearch),
+            radiusKm: radiusKm.map { .some($0) } ?? .none,
+            jwt: jwt.map { .some($0) } ?? .none
         )
 
         apolloClient.fetch(query: searchQuery, cachePolicy: .fetchIgnoringCacheData) { [apolloClient = self.apolloClient] result in
@@ -121,7 +133,9 @@ class ShopRepository {
                         let textSearchQuery = LlegoAPI.SearchProductsQuery(
                             query: query,
                             limit: .some(Int32(limit)),
-                            useVectorSearch: .some(false)
+                            useVectorSearch: .some(false),
+                            radiusKm: radiusKm.map { .some($0) } ?? .none,
+                            jwt: jwt.map { .some($0) } ?? .none
                         )
 
                         apolloClient.fetch(query: textSearchQuery, cachePolicy: .fetchIgnoringCacheData) { fallbackResult in
@@ -151,7 +165,8 @@ class ShopRepository {
                                         imageUrl: product.imageUrl,
                                         availability: product.availability,
                                         createdAt: product.createdAt,
-                                        businessName: product.business?.name ?? "Tienda"
+                                        businessName: product.business?.name ?? "Tienda",
+                                        distanceKm: product.distanceKm
                                     )
                                 }
 
@@ -191,7 +206,8 @@ class ShopRepository {
                         imageUrl: product.imageUrl,
                         availability: product.availability,
                         createdAt: product.createdAt,
-                        businessName: product.business?.name ?? "Tienda"
+                        businessName: product.business?.name ?? "Tienda",
+                        distanceKm: product.distanceKm
                     )
                 }
 
@@ -224,6 +240,7 @@ struct ShopProductGraphQL: Identifiable, Sendable {
     let availability: Bool
     let createdAt: String
     let businessName: String
+    let distanceKm: Double?
 
     var formattedPrice: String {
         let symbol: String
@@ -234,5 +251,13 @@ struct ShopProductGraphQL: Identifiable, Sendable {
         default: symbol = currency
         }
         return String(format: "%.2f \(symbol == "" ? "US$" : symbol)", price)
+    }
+    
+    var formattedDistance: String? {
+        guard let distance = distanceKm else { return nil }
+        if distance < 1 {
+            return String(format: "%.0f m", distance * 1000)
+        }
+        return String(format: "%.1f km", distance)
     }
 }

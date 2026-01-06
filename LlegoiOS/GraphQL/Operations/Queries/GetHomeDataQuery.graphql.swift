@@ -27,19 +27,19 @@ public extension LlegoAPI {
         GetHomeDataQuery.Data.self
       ] }
 
-      /// Lista de productos
+      /// Lista de productos con scoring por cercanía
       public var products: [Product] { __data["products"] }
-      /// Lista de sucursales
+      /// Lista de sucursales con scoring por cercanía
       public var branches: [Branch] { __data["branches"] }
 
       /// Product
       ///
-      /// Parent Type: `ProductType`
+      /// Parent Type: `ScoredProductType`
       public struct Product: LlegoAPI.SelectionSet {
         @_spi(Unsafe) public let __data: DataDict
         @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
 
-        @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.ProductType }
+        @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.ScoredProductType }
         @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
           .field("__typename", String.self),
           .field("id", String.self),
@@ -92,12 +92,12 @@ public extension LlegoAPI {
 
       /// Branch
       ///
-      /// Parent Type: `BranchType`
+      /// Parent Type: `ScoredBranchType`
       public struct Branch: LlegoAPI.SelectionSet {
         @_spi(Unsafe) public let __data: DataDict
         @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
 
-        @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.BranchType }
+        @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.ScoredBranchType }
         @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
           .field("__typename", String.self),
           .field("id", String.self),

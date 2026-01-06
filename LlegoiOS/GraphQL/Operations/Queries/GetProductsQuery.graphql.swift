@@ -9,27 +9,35 @@ public extension LlegoAPI {
     public static let operationName: String = "GetProducts"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetProducts($branchId: String, $categoryId: String, $availableOnly: Boolean) { products( branchId: $branchId categoryId: $categoryId availableOnly: $availableOnly ) { __typename id branchId name price currency imageUrl availability createdAt business { __typename id name } } }"#
+        #"query GetProducts($branchId: String, $categoryId: String, $availableOnly: Boolean, $radiusKm: Float, $jwt: String) { products( branchId: $branchId categoryId: $categoryId availableOnly: $availableOnly radiusKm: $radiusKm jwt: $jwt ) { __typename id branchId name price currency imageUrl availability createdAt distanceKm score business { __typename id name } } }"#
       ))
 
     public var branchId: GraphQLNullable<String>
     public var categoryId: GraphQLNullable<String>
     public var availableOnly: GraphQLNullable<Bool>
+    public var radiusKm: GraphQLNullable<Double>
+    public var jwt: GraphQLNullable<String>
 
     public init(
       branchId: GraphQLNullable<String>,
       categoryId: GraphQLNullable<String>,
-      availableOnly: GraphQLNullable<Bool>
+      availableOnly: GraphQLNullable<Bool>,
+      radiusKm: GraphQLNullable<Double>,
+      jwt: GraphQLNullable<String>
     ) {
       self.branchId = branchId
       self.categoryId = categoryId
       self.availableOnly = availableOnly
+      self.radiusKm = radiusKm
+      self.jwt = jwt
     }
 
     @_spi(Unsafe) public var __variables: Variables? { [
       "branchId": branchId,
       "categoryId": categoryId,
-      "availableOnly": availableOnly
+      "availableOnly": availableOnly,
+      "radiusKm": radiusKm,
+      "jwt": jwt
     ] }
 
     public struct Data: LlegoAPI.SelectionSet {
@@ -41,24 +49,26 @@ public extension LlegoAPI {
         .field("products", [Product].self, arguments: [
           "branchId": .variable("branchId"),
           "categoryId": .variable("categoryId"),
-          "availableOnly": .variable("availableOnly")
+          "availableOnly": .variable("availableOnly"),
+          "radiusKm": .variable("radiusKm"),
+          "jwt": .variable("jwt")
         ]),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
         GetProductsQuery.Data.self
       ] }
 
-      /// Lista de productos
+      /// Lista de productos con scoring por cercanía
       public var products: [Product] { __data["products"] }
 
       /// Product
       ///
-      /// Parent Type: `ProductType`
+      /// Parent Type: `ScoredProductType`
       public struct Product: LlegoAPI.SelectionSet {
         @_spi(Unsafe) public let __data: DataDict
         @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
 
-        @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.ProductType }
+        @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.ScoredProductType }
         @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
           .field("__typename", String.self),
           .field("id", String.self),
@@ -69,6 +79,8 @@ public extension LlegoAPI {
           .field("imageUrl", String.self),
           .field("availability", Bool.self),
           .field("createdAt", LlegoAPI.DateTime.self),
+          .field("distanceKm", Double?.self),
+          .field("score", Double.self),
           .field("business", Business?.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
@@ -84,6 +96,9 @@ public extension LlegoAPI {
         public var imageUrl: String { __data["imageUrl"] }
         public var availability: Bool { __data["availability"] }
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
+        /// Distance in kilometers from user
+        public var distanceKm: Double? { __data["distanceKm"] }
+        public var score: Double { __data["score"] }
         /// Business associated with this product (through branch)
         public var business: Business? { __data["business"] }
 

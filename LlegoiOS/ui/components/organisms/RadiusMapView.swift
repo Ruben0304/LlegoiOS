@@ -10,6 +10,7 @@ import MapKit
 
 struct RadiusMapView: View {
     @Binding var radiusKm: Double
+    @ObservedObject private var userLocationManager = UserLocationManager.shared
 
     @State private var pulseAnimation = false
     @State private var region = MKCoordinateRegion(
@@ -111,6 +112,17 @@ struct RadiusMapView: View {
         .frame(minHeight: 300)
         .onAppear {
             pulseAnimation = true
+            // Centrar en la ubicación del usuario si está disponible
+            if let userLocation = userLocationManager.userLocation {
+                region.center = userLocation
+            }
+        }
+        .onChange(of: userLocationManager.userLocation) { newLocation in
+            if let location = newLocation {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    region.center = location
+                }
+            }
         }
     }
 

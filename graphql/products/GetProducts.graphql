@@ -1,5 +1,5 @@
-query GetProducts($branchId: String, $categoryId: String, $availableOnly: Boolean) {
-  products(branchId: $branchId, categoryId: $categoryId, availableOnly: $availableOnly) {
+query GetProducts($branchId: String, $categoryId: String, $availableOnly: Boolean, $radiusKm: Float, $jwt: String) {
+  products(branchId: $branchId, categoryId: $categoryId, availableOnly: $availableOnly, radiusKm: $radiusKm, jwt: $jwt) {
     id
     branchId
     name
@@ -8,6 +8,8 @@ query GetProducts($branchId: String, $categoryId: String, $availableOnly: Boolea
     imageUrl
     availability
     createdAt
+    distanceKm
+    score
     business {
       id
       name

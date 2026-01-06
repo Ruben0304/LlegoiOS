@@ -48,17 +48,17 @@ public extension LlegoAPI {
         SearchBranchesQuery.Data.self
       ] }
 
-      /// Buscar sucursales
+      /// Buscar sucursales con scoring por cercanía
       public var searchBranches: [SearchBranch] { __data["searchBranches"] }
 
       /// SearchBranch
       ///
-      /// Parent Type: `BranchType`
+      /// Parent Type: `ScoredBranchType`
       public struct SearchBranch: LlegoAPI.SelectionSet {
         @_spi(Unsafe) public let __data: DataDict
         @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
 
-        @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.BranchType }
+        @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.ScoredBranchType }
         @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
           .field("__typename", String.self),
           .field("id", String.self),

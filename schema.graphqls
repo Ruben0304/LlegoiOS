@@ -20,19 +20,23 @@ type Query {
   "Obtener negocio por ID"
   business(id: String!, jwt: String = null): BusinessType
   "Buscar negocios"
-  searchBusinesses(query: String!, jwt: String = null): [BusinessType!]!
-  "Lista de sucursales"
-  branches(businessId: String = null, jwt: String = null): [BranchType!]!
+  searchBusinesses(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true, jwt: String = null): [BusinessType!]!
+  "Lista de sucursales con scoring por cercanía"
+  branches(businessId: String = null, radiusKm: Float = null, jwt: String = null): [ScoredBranchType!]!
   "Obtener sucursal por ID"
   branch(id: String!, jwt: String = null): BranchType
-  "Buscar sucursales"
-  searchBranches(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true, jwt: String = null): [BranchType!]!
-  "Lista de productos"
-  products(ids: [String!] = null, branchId: String = null, categoryId: String = null, availableOnly: Boolean! = false, jwt: String = null): [ProductType!]!
+  "Buscar sucursales con scoring por cercanía"
+  searchBranches(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true, radiusKm: Float = null, jwt: String = null): [ScoredBranchType!]!
+  "Buscar sucursales cercanas por coordenadas"
+  nearbyBranches(longitude: Float!, latitude: Float!, radiusKm: Float! = 5, onlyActive: Boolean! = true, jwt: String = null): [NearbyBranchType!]!
+  "Obtener ubicación de una sucursal desde MongoDB"
+  branchLocation(branchId: String!, jwt: String = null): CoordinatesType
+  "Lista de productos con scoring por cercanía"
+  products(ids: [String!] = null, branchId: String = null, categoryId: String = null, availableOnly: Boolean! = false, radiusKm: Float = null, jwt: String = null): [ScoredProductType!]!
   "Obtener producto por ID"
   product(id: String!, jwt: String = null): ProductType
-  "Buscar productos"
-  searchProducts(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true, jwt: String = null): [ProductType!]!
+  "Buscar productos con scoring por cercanía"
+  searchProducts(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true, radiusKm: Float = null, jwt: String = null): [ScoredProductType!]!
   "Lista de categorías con subcategorías"
   categories(jwt: String = null): [CategoryType!]!
   "Obtener categoría por ID"
@@ -78,6 +82,34 @@ type BusinessType {
   "Presigned URL for the business cover image"
   coverUrl: String
 }
+type ScoredBranchType {
+  id: String!
+  businessId: String!
+  name: String!
+  address: String
+  coordinates: CoordinatesType!
+  phone: String!
+  schedule: JSON!
+  managerIds: [String!]!
+  status: String!
+  avatar: String
+  coverImage: String
+  deliveryRadius: Float
+  facilities: [String!]!
+  createdAt: DateTime!
+  score: Float!
+  distanceM: Float
+  "Presigned URL for the branch avatar"
+  avatarUrl: String
+  "Presigned URL for the branch cover image"
+  coverUrl: String
+  "Distance in kilometers from user"
+  distanceKm: Float
+}
+type CoordinatesType {
+  type: String!
+  coordinates: [Float!]!
+}
 type BranchType {
   id: String!
   businessId: String!
@@ -98,9 +130,51 @@ type BranchType {
   "Presigned URL for the branch cover image"
   coverUrl: String
 }
-type CoordinatesType {
-  type: String!
-  coordinates: [Float!]!
+type NearbyBranchType {
+  id: String!
+  businessId: String!
+  name: String!
+  address: String
+  coordinates: CoordinatesType!
+  phone: String!
+  schedule: JSON!
+  managerIds: [String!]!
+  status: String!
+  avatar: String
+  coverImage: String
+  deliveryRadius: Float
+  facilities: [String!]!
+  createdAt: DateTime!
+  distanceM: Float!
+  "Presigned URL for the branch avatar"
+  avatarUrl: String
+  "Presigned URL for the branch cover image"
+  coverUrl: String
+  "Distance in kilometers"
+  distanceKm: Float!
+}
+type ScoredProductType {
+  id: String!
+  branchId: String!
+  name: String!
+  description: String!
+  weight: String!
+  price: Float!
+  currency: String!
+  image: String!
+  availability: Boolean!
+  categoryId: String
+  createdAt: DateTime!
+  score: Float!
+  distanceM: Float
+  "Presigned URL for the product image"
+  imageUrl: String!
+  "Distance in kilometers from user"
+  distanceKm: Float
+  "Branch associated with this product"
+  branch: BranchType
+  "Business associated with this product (through branch)"
+  business: BusinessType
 }
 type ProductType {
   id: String!
@@ -171,6 +245,8 @@ type Mutation {
   removeBranchFromUser(branchId: String!, jwt: String = null): UserType!
   "Eliminar cuenta de usuario"
   deleteUser(jwt: String = null): Boolean!
+  "Actualizar ubicación del usuario"
+  updateLocation(input: UpdateLocationInput!, jwt: String = null): UserType!
   "Registrar un nuevo negocio con al menos una sucursal"
   registerBusiness(businessInput: CreateBusinessInput!, branchesInput: [RegisterBranchInput!]!, jwt: String = null): BusinessType!
   "Actualizar un negocio"
@@ -235,6 +311,10 @@ input UpdateUserInput {
 input AddBranchToUserInput {
   branchId: String!
 }
+input UpdateLocationInput {
+  longitude: Float!
+  latitude: Float!
+}
 input CreateBusinessInput {
   name: String!
   type: String!
@@ -286,6 +366,7 @@ input CreateBranchInput {
 input UpdateBranchInput {
   name: String = null
   address: String = null
+  coordinates: CoordinatesInput = null
   phone: String = null
   schedule: JSON = null
   status: String = null

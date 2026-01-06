@@ -9,27 +9,35 @@ public extension LlegoAPI {
     public static let operationName: String = "SearchProducts"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query SearchProducts($query: String!, $limit: Int, $useVectorSearch: Boolean) { searchProducts(query: $query, limit: $limit, useVectorSearch: $useVectorSearch) { __typename id branchId name description weight price currency imageUrl availability createdAt business { __typename id name } } }"#
+        #"query SearchProducts($query: String!, $limit: Int, $useVectorSearch: Boolean, $radiusKm: Float, $jwt: String) { searchProducts( query: $query limit: $limit useVectorSearch: $useVectorSearch radiusKm: $radiusKm jwt: $jwt ) { __typename id branchId name description weight price currency imageUrl availability createdAt distanceKm score business { __typename id name } } }"#
       ))
 
     public var query: String
     public var limit: GraphQLNullable<Int32>
     public var useVectorSearch: GraphQLNullable<Bool>
+    public var radiusKm: GraphQLNullable<Double>
+    public var jwt: GraphQLNullable<String>
 
     public init(
       query: String,
       limit: GraphQLNullable<Int32>,
-      useVectorSearch: GraphQLNullable<Bool>
+      useVectorSearch: GraphQLNullable<Bool>,
+      radiusKm: GraphQLNullable<Double>,
+      jwt: GraphQLNullable<String>
     ) {
       self.query = query
       self.limit = limit
       self.useVectorSearch = useVectorSearch
+      self.radiusKm = radiusKm
+      self.jwt = jwt
     }
 
     @_spi(Unsafe) public var __variables: Variables? { [
       "query": query,
       "limit": limit,
-      "useVectorSearch": useVectorSearch
+      "useVectorSearch": useVectorSearch,
+      "radiusKm": radiusKm,
+      "jwt": jwt
     ] }
 
     public struct Data: LlegoAPI.SelectionSet {
@@ -41,24 +49,26 @@ public extension LlegoAPI {
         .field("searchProducts", [SearchProduct].self, arguments: [
           "query": .variable("query"),
           "limit": .variable("limit"),
-          "useVectorSearch": .variable("useVectorSearch")
+          "useVectorSearch": .variable("useVectorSearch"),
+          "radiusKm": .variable("radiusKm"),
+          "jwt": .variable("jwt")
         ]),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
         SearchProductsQuery.Data.self
       ] }
 
-      /// Buscar productos
+      /// Buscar productos con scoring por cercanía
       public var searchProducts: [SearchProduct] { __data["searchProducts"] }
 
       /// SearchProduct
       ///
-      /// Parent Type: `ProductType`
+      /// Parent Type: `ScoredProductType`
       public struct SearchProduct: LlegoAPI.SelectionSet {
         @_spi(Unsafe) public let __data: DataDict
         @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
 
-        @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.ProductType }
+        @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.ScoredProductType }
         @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
           .field("__typename", String.self),
           .field("id", String.self),
@@ -71,6 +81,8 @@ public extension LlegoAPI {
           .field("imageUrl", String.self),
           .field("availability", Bool.self),
           .field("createdAt", LlegoAPI.DateTime.self),
+          .field("distanceKm", Double?.self),
+          .field("score", Double.self),
           .field("business", Business?.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
@@ -88,6 +100,9 @@ public extension LlegoAPI {
         public var imageUrl: String { __data["imageUrl"] }
         public var availability: Bool { __data["availability"] }
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
+        /// Distance in kilometers from user
+        public var distanceKm: Double? { __data["distanceKm"] }
+        public var score: Double { __data["score"] }
         /// Business associated with this product (through branch)
         public var business: Business? { __data["business"] }
 

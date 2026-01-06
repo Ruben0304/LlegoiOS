@@ -10,7 +10,9 @@ class SearchRepository {
             query: LlegoAPI.SearchProductsQuery(
                 query: query,
                 limit: .some(Int32(limit)),
-                useVectorSearch: .some(useVectorSearch)
+                useVectorSearch: .some(useVectorSearch),
+                radiusKm: .none,
+                jwt: .none
             ),
             cachePolicy: .returnCacheDataAndFetch
         ) { [apolloClient = self.apolloClient] result in
@@ -30,7 +32,9 @@ class SearchRepository {
                             query: LlegoAPI.SearchProductsQuery(
                                 query: query,
                                 limit: .some(Int32(limit)),
-                                useVectorSearch: .some(false)
+                                useVectorSearch: .some(false),
+                                radiusKm: .none,
+                                jwt: .none
                             ),
                             cachePolicy: .returnCacheDataAndFetch
                         ) { fallbackResult in

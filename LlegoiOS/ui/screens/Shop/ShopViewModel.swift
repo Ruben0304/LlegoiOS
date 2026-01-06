@@ -50,6 +50,7 @@ class ShopViewModel: ObservableObject {
     var branchId: String? = nil
 
     private let repository = ShopRepository()
+    private let userLocationManager = UserLocationManager.shared
 
     // Categorías rápidas para chips horizontales
     let quickCategories = [
@@ -64,6 +65,18 @@ class ShopViewModel: ObservableObject {
     var hasActiveFilters: Bool {
         maxDistance < 50 || selectedCategory != nil || !searchQuery.isEmpty
     }
+    
+    /// Radio efectivo para las queries (nil si es 50 o más)
+    private var effectiveRadiusKm: Double? {
+        maxDistance < 50 ? maxDistance : nil
+    }
+    
+    init() {
+        // Cargar el radio guardado del UserLocationManager
+        if let savedRadius = userLocationManager.searchRadiusKm {
+            maxDistance = savedRadius
+        }
+    }
 
     func loadProducts(isRefreshing: Bool = false) {
         // Solo mostrar loading si NO es un refresh
@@ -72,7 +85,7 @@ class ShopViewModel: ObservableObject {
             state = .loading
         }
 
-        repository.fetchProducts(branchId: branchId) { [weak self] result in
+        repository.fetchProducts(branchId: branchId, radiusKm: effectiveRadiusKm) { [weak self] result in
             guard let self = self else { return }
 
             Task { @MainActor in
@@ -126,8 +139,8 @@ class ShopViewModel: ObservableObject {
     }
 
     func applyFilters() {
-        // When filters change, re-execute search if there's a query
-        executeSearch()
+        // Cuando cambia el radio, recargar productos del backend
+        loadProducts(isRefreshing: true)
     }
 
     func applySort() {
@@ -163,7 +176,7 @@ class ShopViewModel: ObservableObject {
         print("🔍 performVectorSearch() - Starting search for: '\(searchQuery)'")
         isSearching = true
 
-        repository.searchProducts(query: searchQuery, branchId: branchId, limit: 50) { [weak self] result in
+        repository.searchProducts(query: searchQuery, branchId: branchId, limit: 50, radiusKm: effectiveRadiusKm) { [weak self] result in
             guard let self = self else { return }
 
             Task { @MainActor in
@@ -220,13 +233,8 @@ class ShopViewModel: ObservableObject {
             }
         }
 
-        // Aplicar filtro de distancia
-        // TODO: Implementar cuando tengamos coordenadas de las tiendas
-        // Por ahora, si maxDistance < 50, simplemente limitamos el número de productos
-        if maxDistance < 50 {
-            let limit = Int(maxDistance * 2) // Aproximación: 2 productos por km
-            result = Array(result.prefix(limit))
-        }
+        // El filtro de distancia ahora se aplica en el backend via radiusKm
+        // No necesitamos filtrar localmente
 
         // Aplicar ordenación
         switch sortOption {

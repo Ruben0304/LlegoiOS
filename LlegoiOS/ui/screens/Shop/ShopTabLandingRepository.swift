@@ -1,5 +1,6 @@
 import Foundation
 import Apollo
+import Combine
 
 class ShopTabLandingRepository {
     private let apolloClient = ApolloClientManager.shared.apollo
@@ -112,7 +113,9 @@ class ShopTabLandingRepository {
         let query = LlegoAPI.GetProductsQuery(
             branchId: .some(branchId),
             categoryId: .none,
-            availableOnly: .some(true)
+            availableOnly: .some(true),
+            radiusKm: .none,
+            jwt: .none
         )
 
         apolloClient.fetch(query: query, cachePolicy: .returnCacheDataAndFetch) { [apolloClient = self.apolloClient] result in
@@ -140,7 +143,8 @@ class ShopTabLandingRepository {
                         imageUrl: product.imageUrl,
                         availability: product.availability,
                         createdAt: product.createdAt,
-                        businessName: "" // Not available in this context
+                        businessName: "", // Not available in this context
+                        distanceKm: product.distanceKm
                     )
                 }
 
@@ -175,7 +179,8 @@ class ShopTabLandingRepository {
                                         imageUrl: product.imageUrl,
                                         availability: product.availability,
                                         createdAt: product.createdAt,
-                                        businessName: "" // Not available in this context
+                                        businessName: "", // Not available in this context
+                                        distanceKm: product.distanceKm
                                     )
                                 }
 

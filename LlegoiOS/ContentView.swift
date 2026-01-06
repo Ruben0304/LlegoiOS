@@ -68,6 +68,7 @@ struct ContentView: View {
 struct MainAppView: View {
     @Binding var selectedTab: Int
     @StateObject private var orderManager = OrderManager.shared
+    @ObservedObject private var userLocationManager = UserLocationManager.shared
     @State private var searchText = ""
     @State private var showTrackingView = false
     @State private var showTrackingFullScreen = false
@@ -81,121 +82,131 @@ struct MainAppView: View {
     }
 
     var body: some View {
-        Group {
-            if #available(iOS 26.0, *) {
+        ZStack {
+            Group {
+                if #available(iOS 26.0, *) {
 
-                    TabView() {
-                        Tab("Inicio", systemImage: "house") {
-                            WelcomeView()
-                                .ignoresSafeArea(.container, edges: .bottom)
-                        }
-                        Tab("Productos", systemImage: "bag") {
-                            ShopView()
-                                .ignoresSafeArea(.container, edges: .bottom)
-                        }
-                        Tab("Tiendas", systemImage: "storefront") {
-                            ShopTabLandingView()
+                        TabView() {
+                            Tab("Inicio", systemImage: "house") {
+                                WelcomeView()
+                                    .ignoresSafeArea(.container, edges: .bottom)
+                            }
+                            Tab("Productos", systemImage: "bag") {
+                                ShopView()
+                                    .ignoresSafeArea(.container, edges: .bottom)
+                            }
+                            Tab("Tiendas", systemImage: "storefront") {
+                                ShopTabLandingView()
+                            }
+                            
+    //                        Tab("Cuenta", systemImage: "person") {
+    //                            HomeView()
+    //                        }
+    //                        Tab("Tutoriales", systemImage: "play.rectangle") {
+    //                            HomeView()
+    //                        }
+    //                        Tab(role: .search) {
+    //                            NavigationStack {
+    //                                                   SearchView(searchText: $searchText)
+    //                                                   }.searchable(
+    //                                                    text: $searchText,
+    //                                                    placement: .toolbar,
+    //                                                    prompt: "Buscar productos o negocios..."
+    //                                                )
+    //                        }
+    //                        Tab("Categorías", systemImage: "square.grid.2x2") {
+    //                            CategoriesView()
+    //                                .ignoresSafeArea(.container, edges: .bottom)
+    //                        }
+    //
+    //                        Tab("Lugares", systemImage: "map") {
+    //                            MapView()
+    //                                .ignoresSafeArea(.container, edges: .bottom)
+    //                        }
                         }
                         
-//                        Tab("Cuenta", systemImage: "person") {
-//                            HomeView()
-//                        }
-//                        Tab("Tutoriales", systemImage: "play.rectangle") {
-//                            HomeView()
-//                        }
-//                        Tab(role: .search) {
-//                            NavigationStack {
-//                                                   SearchView(searchText: $searchText)
-//                                                   }.searchable(
-//                                                    text: $searchText,
-//                                                    placement: .toolbar,
-//                                                    prompt: "Buscar productos o negocios..."
-//                                                )
-//                        }
-//                        Tab("Categorías", systemImage: "square.grid.2x2") {
-//                            CategoriesView()
-//                                .ignoresSafeArea(.container, edges: .bottom)
-//                        }
-//
-//                        Tab("Lugares", systemImage: "map") {
-//                            MapView()
-//                                .ignoresSafeArea(.container, edges: .bottom)
-//                        }
+
+
+                                    .searchToolbarBehavior(.minimize)
+    //                    .tabViewBottomAccessory {
+    //                        // Solo mostrar si hay pedido activo
+    //                        if hasActiveOrder {
+    //                            OrderTrackingCard(
+    //                                orderManager: orderManager,
+    //                                onTap: {
+    //                                    print("🔵 OrderTrackingCard tapped")
+    //                                    showTrackingFullScreen = true
+    //                                }
+    //                            )
+    //                            .transition(.move(edge: .bottom).combined(with: .opacity))
+    //                        }
+    //                    }
+                        .tabBarMinimizeBehavior(.onScrollDown)
+                        .accentColor(Color.llegoPrimary)
+                      
+
+                    // .toolbarBackground(.hidden, for: .tabBar)
+                    // .background(.clear)
+                } else {
+                    TabView(selection: $selectedTab) {
+                        NavigationStack {
+    //                        SearchTabContent(searchText: $searchText)
+                        }
+                        .searchable(text: $searchText)
+                        .tabItem {
+                            Image(systemName: "magnifyingglass")
+                            Text("Buscar")
+                        }
+                        .tag(-1) // Use negative tag for search to avoid conflicts
+
+                        HomeView()
+                            .ignoresSafeArea(.container, edges: .bottom)
+                            .tabItem {
+                                Image(systemName: "house")
+                                Text("Inicio")
+                            }
+                            .tag(0)
+
+                        CategorySelectionView()
+                            .ignoresSafeArea(.container, edges: .bottom)
+                            .tabItem {
+                                Image(systemName: "square.grid.2x2")
+                                Text("Categoría")
+                            }
+                            .tag(1)
+
+                        CategoriesView()
+                            .ignoresSafeArea(.container, edges: .bottom)
+                            .tabItem {
+                                Image(systemName: "square.grid.2x2")
+                                Text("Categorías")
+                            }
+                            .tag(2)
+
+                        ProfileView()
+                            .ignoresSafeArea(.container, edges: .bottom)
+                            .tabItem {
+                                Image(systemName: "person")
+                                Text("Cuenta")
+                            }
+                            .tag(3)
+
+                        
                     }
-                    
-
-
-                                .searchToolbarBehavior(.minimize)
-//                    .tabViewBottomAccessory {
-//                        // Solo mostrar si hay pedido activo
-//                        if hasActiveOrder {
-//                            OrderTrackingCard(
-//                                orderManager: orderManager,
-//                                onTap: {
-//                                    print("🔵 OrderTrackingCard tapped")
-//                                    showTrackingFullScreen = true
-//                                }
-//                            )
-//                            .transition(.move(edge: .bottom).combined(with: .opacity))
-//                        }
-//                    }
-                    .tabBarMinimizeBehavior(.onScrollDown)
                     .accentColor(Color.llegoPrimary)
-                  
-
-                // .toolbarBackground(.hidden, for: .tabBar)
-                // .background(.clear)
-            } else {
-                TabView(selection: $selectedTab) {
-                    NavigationStack {
-//                        SearchTabContent(searchText: $searchText)
-                    }
-                    .searchable(text: $searchText)
-                    .tabItem {
-                        Image(systemName: "magnifyingglass")
-                        Text("Buscar")
-                    }
-                    .tag(-1) // Use negative tag for search to avoid conflicts
-
-                    HomeView()
-                        .ignoresSafeArea(.container, edges: .bottom)
-                        .tabItem {
-                            Image(systemName: "house")
-                            Text("Inicio")
-                        }
-                        .tag(0)
-
-                    CategorySelectionView()
-                        .ignoresSafeArea(.container, edges: .bottom)
-                        .tabItem {
-                            Image(systemName: "square.grid.2x2")
-                            Text("Categoría")
-                        }
-                        .tag(1)
-
-                    CategoriesView()
-                        .ignoresSafeArea(.container, edges: .bottom)
-                        .tabItem {
-                            Image(systemName: "square.grid.2x2")
-                            Text("Categorías")
-                        }
-                        .tag(2)
-
-                    ProfileView()
-                        .ignoresSafeArea(.container, edges: .bottom)
-                        .tabItem {
-                            Image(systemName: "person")
-                            Text("Cuenta")
-                        }
-                        .tag(3)
-
-                    
+                    .toolbarBackground(.hidden, for: .tabBar)
+                    .background(.clear)
                 }
-                .accentColor(Color.llegoPrimary)
-                .toolbarBackground(.hidden, for: .tabBar)
-                .background(.clear)
+            }
+            
+            // Overlay de ubicación obligatoria
+            if !userLocationManager.hasLocation {
+                LocationRequiredOverlay()
+                    .transition(.opacity)
+                    .zIndex(100)
             }
         }
+        .animation(.easeInOut(duration: 0.3), value: userLocationManager.hasLocation)
         .onReceive(NotificationCenter.default.publisher(for: .navigateToHome)) { _ in
             selectedTab = 0
         }

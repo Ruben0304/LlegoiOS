@@ -9,7 +9,9 @@ class ProductRepository {
         apolloClient.fetch(query: LlegoAPI.GetProductsQuery(
             branchId: .none,
             categoryId: .none,
-            availableOnly: .none
+            availableOnly: .none,
+            radiusKm: .none,
+            jwt: .none
         ), cachePolicy: .returnCacheDataAndFetch) { result in
             switch result {
             case .success(let graphQLResult):

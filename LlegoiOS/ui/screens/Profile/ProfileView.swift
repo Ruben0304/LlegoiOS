@@ -11,7 +11,7 @@ extension CLLocationCoordinate2D: Equatable {
 struct ProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = ProfileViewModel()
-    @StateObject private var locationManager = LocationManager()
+    @ObservedObject private var userLocationManager = UserLocationManager.shared
     @State private var showingLocationPicker = false
     @State private var showingEditName = false
     @State private var showingPaymentMethods = false
@@ -52,8 +52,8 @@ struct ProfileView: View {
         .onAppear {
             viewModel.checkAuthenticationStatus()
             loadCachedProfile()
-            locationManager.requestPermission()
-            if let location = locationManager.location {
+            userLocationManager.requestPermission()
+            if let location = userLocationManager.userLocation {
                 region.center = location
             }
             if !didTriggerRefresh {
@@ -63,26 +63,11 @@ struct ProfileView: View {
                 }
             }
         }
-        .onChange(of: locationManager.location) { newLocation in
+        .onChange(of: userLocationManager.userLocation) { newLocation in
             if let location = newLocation {
                 withAnimation {
                     region.center = location
                 }
-                if viewModel.currentUser != nil {
-                    ProfileLocalCache.update { snapshot in
-                        snapshot.latitude = location.latitude
-                        snapshot.longitude = location.longitude
-                    }
-                    cachedProfile = ProfileLocalCache.load()
-                }
-            }
-        }
-        .onChange(of: locationManager.address) { newAddress in
-            if viewModel.currentUser != nil {
-                ProfileLocalCache.update { snapshot in
-                    snapshot.address = newAddress
-                }
-                cachedProfile = ProfileLocalCache.load()
             }
         }
     }
@@ -121,14 +106,9 @@ struct ProfileView: View {
         let cached = ProfileLocalCache.load()
         cachedProfile = cached
 
-        if let cached = cached,
-           let latitude = cached.latitude,
-           let longitude = cached.longitude {
-            let coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
-            locationManager.applyCachedLocation(coordinate: coordinate, address: cached.address)
-            region.center = coordinate
-        } else if let address = cached?.address, !address.isEmpty {
-            locationManager.address = address
+        // Usar ubicación del UserLocationManager global
+        if let location = userLocationManager.userLocation {
+            region.center = location
         }
 
         guard viewModel.currentUser != nil else { return }
@@ -227,7 +207,7 @@ struct ProfileView: View {
             WalletView()
         }
         .sheet(isPresented: $showingLocationPicker) {
-            LocationPickerView(locationManager: locationManager)
+            ProfileLocationPickerView()
         }
         .sheet(isPresented: $showingEditName) {
             EditNameView(userName: Binding(
@@ -481,7 +461,7 @@ struct ProfileView: View {
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.llegoPrimary)
 
-                    Text(locationManager.address)
+                    Text(userLocationManager.userAddress)
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.gray)
                         .lineLimit(2)

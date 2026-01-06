@@ -1,0 +1,7 @@
+mutation UpdateLocation($input: UpdateLocationInput!, $jwt: String) {
+  updateLocation(input: $input, jwt: $jwt) {
+    id
+    name
+    email
+  }
+}

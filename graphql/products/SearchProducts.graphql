@@ -1,5 +1,5 @@
-query SearchProducts($query: String!, $limit: Int, $useVectorSearch: Boolean) {
-  searchProducts(query: $query, limit: $limit, useVectorSearch: $useVectorSearch) {
+query SearchProducts($query: String!, $limit: Int, $useVectorSearch: Boolean, $radiusKm: Float, $jwt: String) {
+  searchProducts(query: $query, limit: $limit, useVectorSearch: $useVectorSearch, radiusKm: $radiusKm, jwt: $jwt) {
     id
     branchId
     name
@@ -10,6 +10,8 @@ query SearchProducts($query: String!, $limit: Int, $useVectorSearch: Boolean) {
     imageUrl
     availability
     createdAt
+    distanceKm
+    score
     business {
       id
       name

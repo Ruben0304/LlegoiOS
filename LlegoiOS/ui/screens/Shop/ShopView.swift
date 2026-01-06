@@ -74,35 +74,14 @@ struct ShopView: View {
                 // Contenido principal
                 if viewModel.isLoading {
                     loadingState
+                } else if viewModel.isSearching {
+                    searchSkeletonView
                 } else if case .error(let message) = viewModel.state {
                     errorState(message: message)
                 } else if viewModel.filteredProducts.isEmpty {
                     emptyStateScroll
                 } else {
                     productsGrid
-                }
-
-                // Search skeleton overlay
-                if viewModel.isSearching {
-                    ScrollView {
-                        categoryScroll
-                            .padding(.top, 6)
-                        
-                        LazyVGrid(
-                            columns: [
-                                GridItem(.flexible(), spacing: 16),
-                                GridItem(.flexible(), spacing: 16)
-                            ],
-                            alignment: .center,
-                            spacing: 20
-                        ) {
-                            ForEach(0..<6, id: \.self) { _ in
-                                ProductCardSkeleton()
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.top, 8)
-                    }
                 }
             }
             .onAppear {
@@ -299,6 +278,30 @@ struct ShopView: View {
                 animationDelay = Double(viewModel.filteredProducts.count) * 0.1 + 0.1
             }
         }
+    }
+
+    // MARK: - Search Skeleton View
+    private var searchSkeletonView: some View {
+        ScrollView {
+            categoryScroll
+                .padding(.top, 6)
+            
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), spacing: 16),
+                    GridItem(.flexible(), spacing: 16)
+                ],
+                alignment: .center,
+                spacing: 20
+            ) {
+                ForEach(0..<6, id: \.self) { _ in
+                    ProductCardSkeleton()
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+        }
+        .transition(.opacity)
     }
 
     private var emptyStateScroll: some View {
@@ -540,6 +543,7 @@ private struct FiltersSheet: View {
     @Binding var maxDistance: Double
     let onApply: () -> Void
     @State private var tempDistance: Double
+    @ObservedObject private var userLocationManager = UserLocationManager.shared
 
     init(maxDistance: Binding<Double>, onApply: @escaping () -> Void) {
         self._maxDistance = maxDistance
@@ -698,6 +702,8 @@ private struct FiltersSheet: View {
 
                     Button(action: {
                         maxDistance = tempDistance
+                        // Guardar el radio en el UserLocationManager para persistencia
+                        userLocationManager.setSearchRadius(tempDistance < 50 ? tempDistance : nil)
                         onApply()
                     }) {
                         Text("Aplicar distancia")

@@ -32,17 +32,17 @@ public extension LlegoAPI {
         GetCartProductsQuery.Data.self
       ] }
 
-      /// Lista de productos
+      /// Lista de productos con scoring por cercanía
       public var products: [Product] { __data["products"] }
 
       /// Product
       ///
-      /// Parent Type: `ProductType`
+      /// Parent Type: `ScoredProductType`
       public struct Product: LlegoAPI.SelectionSet {
         @_spi(Unsafe) public let __data: DataDict
         @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
 
-        @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.ProductType }
+        @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.ScoredProductType }
         @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
           .field("__typename", String.self),
           .field("id", String.self),

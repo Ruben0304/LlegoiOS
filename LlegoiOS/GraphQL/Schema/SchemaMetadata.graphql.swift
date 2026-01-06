@@ -39,6 +39,8 @@ public extension LlegoAPI {
       case "PaymentMethodType": return LlegoAPI.Objects.PaymentMethodType
       case "ProductType": return LlegoAPI.Objects.ProductType
       case "Query": return LlegoAPI.Objects.Query
+      case "ScoredBranchType": return LlegoAPI.Objects.ScoredBranchType
+      case "ScoredProductType": return LlegoAPI.Objects.ScoredProductType
       case "UserData": return LlegoAPI.Objects.UserData
       case "UserType": return LlegoAPI.Objects.UserType
       default: return nil
