@@ -4,12 +4,16 @@ import Apollo
 class SearchRepository {
     private let apolloClient = ApolloClientManager.shared.apollo
 
-    // Search products by query
-    func searchProducts(query: String, completion: @escaping @Sendable (Result<[SearchProductGraphQL], Error>) -> Void) {
+    // Search products by query with vector search (with automatic fallback)
+    func searchProducts(query: String, limit: Int = 20, useVectorSearch: Bool = true, completion: @escaping @Sendable (Result<[SearchProductGraphQL], Error>) -> Void) {
         apolloClient.fetch(
-            query: LlegoAPI.SearchProductsQuery(query: query),
+            query: LlegoAPI.SearchProductsQuery(
+                query: query,
+                limit: .some(Int32(limit)),
+                useVectorSearch: .some(useVectorSearch)
+            ),
             cachePolicy: .returnCacheDataAndFetch
-        ) { result in
+        ) { [apolloClient = self.apolloClient] result in
             switch result {
             case .success(let graphQLResult):
                 if let errors = graphQLResult.errors {
@@ -18,6 +22,59 @@ class SearchRepository {
                     messages.forEach { msg in
                         print("  - \(msg)")
                     }
+
+                    // If vector search failed, retry with text search
+                    if useVectorSearch {
+                        print("⚠️ Vector search failed, falling back to text search...")
+                        apolloClient.fetch(
+                            query: LlegoAPI.SearchProductsQuery(
+                                query: query,
+                                limit: .some(Int32(limit)),
+                                useVectorSearch: .some(false)
+                            ),
+                            cachePolicy: .returnCacheDataAndFetch
+                        ) { fallbackResult in
+                            switch fallbackResult {
+                            case .success(let fallbackGraphQLResult):
+                                if let fallbackErrors = fallbackGraphQLResult.errors {
+                                    print("❌ Text search also failed")
+                                    let combined = messages.joined(separator: "; ")
+                                    completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: combined.isEmpty ? "Both searches failed" : combined])))
+                                    return
+                                }
+
+                                guard let products = fallbackGraphQLResult.data?.searchProducts else {
+                                    completion(.success([]))
+                                    return
+                                }
+
+                                let mappedProducts = products.map { product in
+                                    SearchProductGraphQL(
+                                        id: product.id,
+                                        branchId: product.branchId,
+                                        name: product.name,
+                                        description: product.description,
+                                        weight: product.weight,
+                                        price: product.price,
+                                        currency: product.currency,
+                                        image: product.imageUrl,
+                                        availability: product.availability,
+                                        createdAt: product.createdAt,
+                                        businessName: product.business?.name ?? "Tienda"
+                                    )
+                                }
+
+                                print("✅ Text search fallback found \(mappedProducts.count) products")
+                                completion(.success(mappedProducts))
+
+                            case .failure(let error):
+                                print("❌ Text search fallback failed: \(error.localizedDescription)")
+                                completion(.failure(error))
+                            }
+                        }
+                        return
+                    }
+
                     let combined = messages.joined(separator: "; ")
                     completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: combined.isEmpty ? "GraphQL errors occurred" : combined])))
                     return
@@ -56,16 +113,16 @@ class SearchRepository {
         }
     }
 
-    // Search branches (stores) by query
-    func searchBranches(query: String, completion: @escaping @Sendable (Result<[SearchBranchGraphQL], Error>) -> Void) {
+    // Search branches (stores) by query with vector search (with automatic fallback)
+    func searchBranches(query: String, limit: Int = 20, useVectorSearch: Bool = true, completion: @escaping @Sendable (Result<[SearchBranchGraphQL], Error>) -> Void) {
         apolloClient.fetch(
             query: LlegoAPI.SearchBranchesQuery(
                 query: query,
-                limit: .none,
-                useVectorSearch: .none
+                limit: .some(Int32(limit)),
+                useVectorSearch: .some(useVectorSearch)
             ),
             cachePolicy: .returnCacheDataAndFetch
-        ) { result in
+        ) { [apolloClient = self.apolloClient] result in
             switch result {
             case .success(let graphQLResult):
                 if let errors = graphQLResult.errors {
@@ -74,6 +131,59 @@ class SearchRepository {
                     messages.forEach { msg in
                         print("  - \(msg)")
                     }
+
+                    // If vector search failed, retry with text search
+                    if useVectorSearch {
+                        print("⚠️ Vector search failed, falling back to text search...")
+                        apolloClient.fetch(
+                            query: LlegoAPI.SearchBranchesQuery(
+                                query: query,
+                                limit: .some(Int32(limit)),
+                                useVectorSearch: .some(false)
+                            ),
+                            cachePolicy: .returnCacheDataAndFetch
+                        ) { fallbackResult in
+                            switch fallbackResult {
+                            case .success(let fallbackGraphQLResult):
+                                if let fallbackErrors = fallbackGraphQLResult.errors {
+                                    print("❌ Text search also failed")
+                                    let combined = messages.joined(separator: "; ")
+                                    completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: combined.isEmpty ? "Both searches failed" : combined])))
+                                    return
+                                }
+
+                                guard let branches = fallbackGraphQLResult.data?.searchBranches else {
+                                    completion(.success([]))
+                                    return
+                                }
+
+                                let mappedBranches = branches.map { branch in
+                                    SearchBranchGraphQL(
+                                        id: branch.id,
+                                        businessId: branch.businessId,
+                                        name: branch.name,
+                                        address: branch.address ?? "",
+                                        coordinates: CoordinatesGraphQL(
+                                            type: branch.coordinates.type,
+                                            coordinates: branch.coordinates.coordinates
+                                        ),
+                                        phone: branch.phone,
+                                        status: branch.status,
+                                        createdAt: branch.createdAt
+                                    )
+                                }
+
+                                print("✅ Text search fallback found \(mappedBranches.count) branches")
+                                completion(.success(mappedBranches))
+
+                            case .failure(let error):
+                                print("❌ Text search fallback failed: \(error.localizedDescription)")
+                                completion(.failure(error))
+                            }
+                        }
+                        return
+                    }
+
                     let combined = messages.joined(separator: "; ")
                     completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: combined.isEmpty ? "GraphQL errors occurred" : combined])))
                     return

@@ -198,7 +198,7 @@ class ShopTabLandingRepository {
         }
     }
 
-    // Search branches by query
+    // Search branches by query (with automatic fallback to text search)
     func searchBranches(query: String, limit: Int = 10, useVectorSearch: Bool = true, completion: @escaping @Sendable (Result<[BranchGraphQL], Error>) -> Void) {
         let searchQuery = LlegoAPI.SearchBranchesQuery(
             query: query,
@@ -206,7 +206,7 @@ class ShopTabLandingRepository {
             useVectorSearch: .some(useVectorSearch)
         )
 
-        apolloClient.fetch(query: searchQuery, cachePolicy: .fetchIgnoringCacheData) { result in
+        apolloClient.fetch(query: searchQuery, cachePolicy: .fetchIgnoringCacheData) { [apolloClient = self.apolloClient] result in
             switch result {
             case .success(let graphQLResult):
                 if let errors = graphQLResult.errors {
@@ -214,6 +214,62 @@ class ShopTabLandingRepository {
                     errors.forEach { error in
                         print("  - \(error.localizedDescription)")
                     }
+
+                    // If vector search failed, retry with text search
+                    if useVectorSearch {
+                        print("⚠️ Vector search failed, falling back to text search...")
+                        let textSearchQuery = LlegoAPI.SearchBranchesQuery(
+                            query: query,
+                            limit: .some(Int32(limit)),
+                            useVectorSearch: .some(false)
+                        )
+
+                        apolloClient.fetch(query: textSearchQuery, cachePolicy: .fetchIgnoringCacheData) { fallbackResult in
+                            switch fallbackResult {
+                            case .success(let fallbackGraphQLResult):
+                                if let fallbackErrors = fallbackGraphQLResult.errors {
+                                    print("❌ Text search also failed")
+                                    completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: "Both searches failed"])))
+                                    return
+                                }
+
+                                guard let data = fallbackGraphQLResult.data else {
+                                    print("⚠️ No search results from text search")
+                                    completion(.success([]))
+                                    return
+                                }
+
+                                let mappedBranches = data.searchBranches.map { branch in
+                                    BranchGraphQL(
+                                        id: branch.id,
+                                        businessId: branch.businessId,
+                                        name: branch.name,
+                                        address: branch.address,
+                                        coordinates: CoordinatesGraphQL(
+                                            type: branch.coordinates.type,
+                                            coordinates: branch.coordinates.coordinates
+                                        ),
+                                        phone: branch.phone,
+                                        status: branch.status,
+                                        avatarUrl: branch.avatarUrl,
+                                        coverUrl: branch.coverUrl,
+                                        deliveryRadius: branch.deliveryRadius,
+                                        facilities: nil,
+                                        createdAt: branch.createdAt
+                                    )
+                                }
+
+                                print("✅ Text search fallback found \(mappedBranches.count) branches")
+                                completion(.success(mappedBranches))
+
+                            case .failure(let error):
+                                print("❌ Text search fallback failed: \(error.localizedDescription)")
+                                completion(.failure(error))
+                            }
+                        }
+                        return
+                    }
+
                     completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: "GraphQL search errors occurred"])))
                     return
                 }

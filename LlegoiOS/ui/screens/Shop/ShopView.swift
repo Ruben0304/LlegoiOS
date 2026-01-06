@@ -68,7 +68,7 @@ struct ShopView: View {
 
                 // Contador de resultados
                 if !viewModel.isLoading {
-                  
+
                 }
 
                 // Contenido principal
@@ -80,6 +80,29 @@ struct ShopView: View {
                     emptyStateScroll
                 } else {
                     productsGrid
+                }
+
+                // Search skeleton overlay
+                if viewModel.isSearching {
+                    ScrollView {
+                        categoryScroll
+                            .padding(.top, 6)
+                        
+                        LazyVGrid(
+                            columns: [
+                                GridItem(.flexible(), spacing: 16),
+                                GridItem(.flexible(), spacing: 16)
+                            ],
+                            alignment: .center,
+                            spacing: 20
+                        ) {
+                            ForEach(0..<6, id: \.self) { _ in
+                                ProductCardSkeleton()
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 8)
+                    }
                 }
             }
             .onAppear {
@@ -125,6 +148,16 @@ struct ShopView: View {
                 placement: initialBranchId != nil ? .navigationBarDrawer(displayMode: .always) : .toolbar,
                 prompt: "Buscar productos..."
             )
+            .onSubmit(of: .search) {
+                // Execute search only when user submits (presses Enter/Search button)
+                viewModel.executeSearch()
+            }
+            .onChange(of: viewModel.searchQuery) { newValue in
+                // Clear results when user clears search
+                if newValue.isEmpty {
+                    viewModel.executeSearch()
+                }
+            }
             .searchFocused($isSearchFocused)
             .toolbar{
                 // Show different toolbar items based on context

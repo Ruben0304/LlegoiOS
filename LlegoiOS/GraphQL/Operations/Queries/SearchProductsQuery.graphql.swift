@@ -9,16 +9,28 @@ public extension LlegoAPI {
     public static let operationName: String = "SearchProducts"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query SearchProducts($query: String!) { searchProducts(query: $query) { __typename id branchId name description weight price currency imageUrl availability createdAt business { __typename id name } } }"#
+        #"query SearchProducts($query: String!, $limit: Int, $useVectorSearch: Boolean) { searchProducts(query: $query, limit: $limit, useVectorSearch: $useVectorSearch) { __typename id branchId name description weight price currency imageUrl availability createdAt business { __typename id name } } }"#
       ))
 
     public var query: String
+    public var limit: GraphQLNullable<Int32>
+    public var useVectorSearch: GraphQLNullable<Bool>
 
-    public init(query: String) {
+    public init(
+      query: String,
+      limit: GraphQLNullable<Int32>,
+      useVectorSearch: GraphQLNullable<Bool>
+    ) {
       self.query = query
+      self.limit = limit
+      self.useVectorSearch = useVectorSearch
     }
 
-    @_spi(Unsafe) public var __variables: Variables? { ["query": query] }
+    @_spi(Unsafe) public var __variables: Variables? { [
+      "query": query,
+      "limit": limit,
+      "useVectorSearch": useVectorSearch
+    ] }
 
     public struct Data: LlegoAPI.SelectionSet {
       @_spi(Unsafe) public let __data: DataDict
@@ -26,7 +38,11 @@ public extension LlegoAPI {
 
       @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.Query }
       @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
-        .field("searchProducts", [SearchProduct].self, arguments: ["query": .variable("query")]),
+        .field("searchProducts", [SearchProduct].self, arguments: [
+          "query": .variable("query"),
+          "limit": .variable("limit"),
+          "useVectorSearch": .variable("useVectorSearch")
+        ]),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
         SearchProductsQuery.Data.self

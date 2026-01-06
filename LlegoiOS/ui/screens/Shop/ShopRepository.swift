@@ -97,6 +97,118 @@ class ShopRepository {
             }
         }
     }
+
+    // Search products with vector search (with automatic fallback to text search)
+    func searchProducts(query: String, branchId: String? = nil, limit: Int = 10, useVectorSearch: Bool = true, completion: @escaping @Sendable (Result<[ShopProductGraphQL], Error>) -> Void) {
+        let searchQuery = LlegoAPI.SearchProductsQuery(
+            query: query,
+            limit: .some(Int32(limit)),
+            useVectorSearch: .some(useVectorSearch)
+        )
+
+        apolloClient.fetch(query: searchQuery, cachePolicy: .fetchIgnoringCacheData) { [apolloClient = self.apolloClient] result in
+            switch result {
+            case .success(let graphQLResult):
+                if let errors = graphQLResult.errors {
+                    print("❌ GraphQL Search Errors (Products):")
+                    errors.forEach { error in
+                        print("  - \(error.localizedDescription)")
+                    }
+
+                    // If vector search failed and we were using it, retry with text search
+                    if useVectorSearch {
+                        print("⚠️ Vector search failed, falling back to text search...")
+                        let textSearchQuery = LlegoAPI.SearchProductsQuery(
+                            query: query,
+                            limit: .some(Int32(limit)),
+                            useVectorSearch: .some(false)
+                        )
+
+                        apolloClient.fetch(query: textSearchQuery, cachePolicy: .fetchIgnoringCacheData) { fallbackResult in
+                            switch fallbackResult {
+                            case .success(let fallbackGraphQLResult):
+                                if let fallbackErrors = fallbackGraphQLResult.errors {
+                                    print("❌ Text search also failed:")
+                                    fallbackErrors.forEach { print("  - \($0.localizedDescription)") }
+                                    completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: "Both vector and text search failed"])))
+                                    return
+                                }
+
+                                guard let data = fallbackGraphQLResult.data else {
+                                    print("⚠️ No search results from text search")
+                                    completion(.success([]))
+                                    return
+                                }
+
+                                // Map search results from text search
+                                var mappedProducts = data.searchProducts.map { product in
+                                    ShopProductGraphQL(
+                                        id: product.id,
+                                        branchId: product.branchId,
+                                        name: product.name,
+                                        price: product.price,
+                                        currency: product.currency,
+                                        imageUrl: product.imageUrl,
+                                        availability: product.availability,
+                                        createdAt: product.createdAt,
+                                        businessName: product.business?.name ?? "Tienda"
+                                    )
+                                }
+
+                                if let branchId = branchId {
+                                    mappedProducts = mappedProducts.filter { $0.branchId == branchId }
+                                }
+
+                                print("✅ Text search fallback found \(mappedProducts.count) products")
+                                completion(.success(mappedProducts))
+
+                            case .failure(let error):
+                                print("❌ Text search fallback failed: \(error.localizedDescription)")
+                                completion(.failure(error))
+                            }
+                        }
+                        return
+                    }
+
+                    completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: "GraphQL search errors occurred"])))
+                    return
+                }
+
+                guard let data = graphQLResult.data else {
+                    print("⚠️ No search results received")
+                    completion(.success([]))
+                    return
+                }
+
+                // Map search results
+                var mappedProducts = data.searchProducts.map { product in
+                    ShopProductGraphQL(
+                        id: product.id,
+                        branchId: product.branchId,
+                        name: product.name,
+                        price: product.price,
+                        currency: product.currency,
+                        imageUrl: product.imageUrl,
+                        availability: product.availability,
+                        createdAt: product.createdAt,
+                        businessName: product.business?.name ?? "Tienda"
+                    )
+                }
+
+                // Filter by branchId if specified
+                if let branchId = branchId {
+                    mappedProducts = mappedProducts.filter { $0.branchId == branchId }
+                }
+
+                print("✅ Found \(mappedProducts.count) products matching '\(query)'" + (branchId != nil ? " for branch \(branchId!)" : ""))
+                completion(.success(mappedProducts))
+
+            case .failure(let error):
+                print("❌ Search Error (Products): \(error.localizedDescription)")
+                completion(.failure(error))
+            }
+        }
+    }
 }
 
 // MARK: - Models

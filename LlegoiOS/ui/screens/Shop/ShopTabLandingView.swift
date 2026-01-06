@@ -11,11 +11,8 @@ struct ShopTabLandingView: View {
     @StateObject private var viewModel = ShopTabLandingViewModel()
     @State private var searchText = ""
     @FocusState private var isSearchFocused: Bool
-    @State private var isSearchExpanded = false
     @State private var isMapFullScreen = false
     @State private var isSearchLoading: Bool = false
-    @State private var showSearchResults: Bool = false
-    @State private var searchResultsOffset: CGFloat = -50
     @State private var searchDebounceTask: Task<Void, Never>? = nil
 
     // Modo de visualización
@@ -68,31 +65,86 @@ struct ShopTabLandingView: View {
                             .foregroundColor(.secondary)
                     }
                 } else if viewMode == .list {
-                    // MODO LISTADO: Lista de tiendas con productos
+                    // MODO LISTADO: Lista de tiendas con productos o resultados de búsqueda
                     ScrollView {
                         VStack(spacing: 24) {
-                            ForEach(viewModel.stores, id: \.id) { store in
-                                StoreProductsCard(
-                                    store: store,
-                                    products: viewModel.products(for: store.id),
-                                    isLoadingProducts: viewModel.isLoadingProductsFor(storeId: store.id),
-                                    onStoreTap: { gradient in
-                                        selectedStore = store
-                                        selectedStoreGradient = gradient
-                                    },
-                                    onProductTap: { product, gradient in
-                                        // Navigate to product detail
-                                        navigationDestination = .shop(
-                                            branchId: store.id,
-                                            branchName: store.name,
-                                            storeGradient: gradient
-                                        )
-                                    },
-                                    onFavoriteTap: { product in
-                                        // Toggle favorite - handled by card's internal FavoritesManager
-                                        FavoritesManager.shared.toggleFavorite(productId: product.id)
+                            // Mostrar resultados de búsqueda si está buscando
+                            if !searchText.isEmpty {
+                                if isSearchLoading {
+                                    // Skeleton elegante de búsqueda
+                                    VStack(spacing: 16) {
+                                        ForEach(0..<3, id: \.self) { _ in
+                                            StoreProductsCardSkeleton()
+                                        }
                                     }
-                                )
+                                } else if !filteredSearchStores.isEmpty {
+                                    // Resultados de búsqueda con StoreProductsCard
+                                    ForEach(filteredSearchStores, id: \.id) { store in
+                                        StoreProductsCard(
+                                            store: store,
+                                            products: viewModel.products(for: store.id),
+                                            isLoadingProducts: viewModel.isLoadingProductsFor(storeId: store.id),
+                                            onStoreTap: { gradient in
+                                                selectedStore = store
+                                                selectedStoreGradient = gradient
+                                            },
+                                            onProductTap: { product, gradient in
+                                                // Navigate to product detail
+                                                navigationDestination = .shop(
+                                                    branchId: store.id,
+                                                    branchName: store.name,
+                                                    storeGradient: gradient
+                                                )
+                                            },
+                                            onFavoriteTap: { product in
+                                                // Toggle favorite - handled by card's internal FavoritesManager
+                                                FavoritesManager.shared.toggleFavorite(productId: product.id)
+                                            }
+                                        )
+                                    }
+                                } else {
+                                    // Sin resultados
+                                    VStack(spacing: 16) {
+                                        Image(systemName: "magnifyingglass")
+                                            .font(.system(size: 50, weight: .light))
+                                            .foregroundColor(.gray)
+
+                                        Text("No se encontraron vendedores")
+                                            .font(.system(size: 18, weight: .semibold))
+                                            .foregroundColor(.llegoPrimary)
+
+                                        Text("Intenta con otra búsqueda")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(.gray)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 60)
+                                }
+                            } else {
+                                // Lista normal de tiendas
+                                ForEach(viewModel.stores, id: \.id) { store in
+                                    StoreProductsCard(
+                                        store: store,
+                                        products: viewModel.products(for: store.id),
+                                        isLoadingProducts: viewModel.isLoadingProductsFor(storeId: store.id),
+                                        onStoreTap: { gradient in
+                                            selectedStore = store
+                                            selectedStoreGradient = gradient
+                                        },
+                                        onProductTap: { product, gradient in
+                                            // Navigate to product detail
+                                            navigationDestination = .shop(
+                                                branchId: store.id,
+                                                branchName: store.name,
+                                                storeGradient: gradient
+                                            )
+                                        },
+                                        onFavoriteTap: { product in
+                                            // Toggle favorite - handled by card's internal FavoritesManager
+                                            FavoritesManager.shared.toggleFavorite(productId: product.id)
+                                        }
+                                    )
+                                }
                             }
                         }
                         .padding(.horizontal, 16)
@@ -113,34 +165,6 @@ struct ShopTabLandingView: View {
                     )
                     .ignoresSafeArea()
                     .transition(.opacity.combined(with: .move(edge: .trailing)))
-                }
-
-                // Card de búsqueda como overlay flotante (visible en ambos modos)
-                if isSearchExpanded {
-                    VStack {
-                        ScrollView {
-                            VStack(spacing: 0) {
-                                if isSearchLoading {
-                                    // Skeleton con solo 3 items
-                                    searchSkeletonCard
-                                } else if showSearchResults {
-                                    // Resultados de búsqueda (solo vendedores)
-                                    searchResultsView
-                                        .offset(y: searchResultsOffset)
-                                        .opacity(showSearchResults ? 1 : 0)
-                                }
-                            }
-                        }
-                        .padding(.top, 8)
-                        .padding(.horizontal, 16)
-
-                        Spacer()
-                    }
-                    .transition(.asymmetric(
-                        insertion: .scale(scale: 0.95).combined(with: .opacity),
-                        removal: .scale(scale: 0.95).combined(with: .opacity)
-                    ))
-                    .zIndex(10) // Asegurar que esté sobre el contenido
                 }
             }
             .toolbar {
@@ -163,14 +187,9 @@ struct ShopTabLandingView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .onChange(of: isSearchFocused) { focused in
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                    isSearchExpanded = focused
-                }
-
                 if !focused {
                     // Limpiar resultados al cerrar
                     isSearchLoading = false
-                    showSearchResults = false
                     filteredSearchStores = []
                     searchDebounceTask?.cancel()
                 }
@@ -180,12 +199,6 @@ struct ShopTabLandingView: View {
                 searchDebounceTask?.cancel()
 
                 if !newValue.isEmpty {
-                    if !isSearchExpanded {
-                        withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                            isSearchExpanded = true
-                        }
-                    }
-
                     // Debounce de 1 segundo
                     searchDebounceTask = Task {
                         try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 segundo
@@ -196,7 +209,6 @@ struct ShopTabLandingView: View {
                 } else {
                     // Limpiar resultados si el texto está vacío
                     isSearchLoading = false
-                    showSearchResults = false
                     filteredSearchStores = []
                 }
             }
@@ -250,23 +262,15 @@ struct ShopTabLandingView: View {
     private func performSearch() {
         guard !searchText.isEmpty else {
             filteredSearchStores = []
-            showSearchResults = false
             return
         }
 
         isSearchLoading = true
-        showSearchResults = false
 
         // Buscar usando el ViewModel
         viewModel.searchStores(query: searchText) { results in
             filteredSearchStores = results
             isSearchLoading = false
-            showSearchResults = true
-
-            // Animación de caída
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.75)) {
-                searchResultsOffset = 0
-            }
         }
     }
 
@@ -275,8 +279,6 @@ struct ShopTabLandingView: View {
         // Cerrar búsqueda
         isSearchFocused = false
         searchText = ""
-        isSearchExpanded = false
-        showSearchResults = false
 
         // Cambiar a modo mapa
         withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
@@ -317,7 +319,7 @@ struct ShopTabLandingView: View {
                 }
             }
 
-            if isSearchExpanded {
+            if isSearchFocused {
                 Button(action: {
                     isSearchFocused = false
                     searchText = ""
@@ -333,112 +335,6 @@ struct ShopTabLandingView: View {
         .padding(.vertical, 8)
         .cornerRadius(10)
         .frame(maxWidth: .infinity)
-    }
-
-    // MARK: - Search Skeleton Card (solo 3 items compactos)
-    private var searchSkeletonCard: some View {
-        VStack(spacing: 8) {
-            ForEach(0..<3, id: \.self) { index in
-                HStack(spacing: 10) {
-                    // Imagen skeleton circular
-                    Circle()
-                        .fill(Color.llegoPrimary.opacity(0.2))
-                        .frame(width: 50, height: 50)
-                        .shimmer()
-
-                    // Contenido skeleton
-                    VStack(alignment: .leading, spacing: 4) {
-                        // Título
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.llegoPrimary.opacity(0.2))
-                            .frame(height: 12)
-                            .shimmer()
-
-                        // Subtítulo
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.llegoPrimary.opacity(0.2))
-                            .frame(height: 10)
-                            .frame(maxWidth: 140)
-                            .shimmer()
-
-                        // Info
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.llegoPrimary.opacity(0.2))
-                            .frame(height: 13)
-                            .frame(maxWidth: 80)
-                            .shimmer()
-                    }
-
-                    Spacer()
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-            }
-        }
-        .padding(12)
-        .cornerRadius(12)
-        .glassEffect(.regular.interactive(),in: .rect(cornerRadius: 12))
-        .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 3)
-    }
-
-    // MARK: - Search Results View (solo vendedores)
-    private var searchResultsView: some View {
-        let hasStores = !filteredSearchStores.isEmpty
-
-        return Group {
-            if hasStores {
-                VStack(spacing: 20) {
-                    // Sección de Vendedores
-                    sellersSection
-                }
-                .padding(.vertical, 16)
-                .cornerRadius(12)
-                .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 3)
-                .glassEffect(.regular.interactive(),in: .rect(cornerRadius: 12))
-            } else {
-                // Sin resultados
-                VStack(spacing: 16) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 50, weight: .light))
-                        .foregroundColor(.gray)
-
-                    Text("No se encontraron vendedores")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.llegoPrimary)
-
-                    Text("Intenta con otra búsqueda")
-                        .font(.system(size: 14))
-                        .foregroundColor(.gray)
-                }
-                .padding(.vertical, 40)
-                .frame(maxWidth: .infinity)
-                .cornerRadius(12)
-                .glassEffect(.regular.interactive(),in: .rect(cornerRadius: 12))
-            }
-        }
-    }
-
-    // MARK: - Vendedores Section (compacta, máximo 3)
-    private var sellersSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Vendedores")
-                .font(.system(size: 16, weight: .bold, design: .rounded))
-                .foregroundColor(.llegoPrimary)
-                .padding(.horizontal, 12)
-
-            VStack(spacing: 8) {
-                ForEach(filteredSearchStores, id: \.id) { store in
-                    Button(action: {
-                        selectedStore = store
-                        animateToStore(store)
-                    }) {
-                        SellerListItem(store: store.toStore(), compact: true)
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                }
-            }
-            .padding(.horizontal, 12)
-        }
     }
 
 }

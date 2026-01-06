@@ -1,5 +1,5 @@
-query SearchProducts($query: String!) {
-  searchProducts(query: $query) {
+query SearchProducts($query: String!, $limit: Int, $useVectorSearch: Boolean) {
+  searchProducts(query: $query, limit: $limit, useVectorSearch: $useVectorSearch) {
     id
     branchId
     name

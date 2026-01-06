@@ -40,11 +40,8 @@ class ShopViewModel: ObservableObject {
     // Filtros
     @Published var maxDistance: Double = 50.0 // 50 = sin límite
     @Published var selectedCategory: String? = nil
-    @Published var searchQuery: String = "" {
-        didSet {
-            applyFiltersAndSort()
-        }
-    }
+    @Published var searchQuery: String = ""
+    @Published var isSearching: Bool = false
 
     // Ordenación
     @Published var sortOption: SortOption = .proximity
@@ -129,7 +126,8 @@ class ShopViewModel: ObservableObject {
     }
 
     func applyFilters() {
-        applyFiltersAndSort()
+        // When filters change, re-execute search if there's a query
+        executeSearch()
     }
 
     func applySort() {
@@ -143,16 +141,75 @@ class ShopViewModel: ObservableObject {
         applyFiltersAndSort()
     }
 
-    private func applyFiltersAndSort() {
-        var result = products
-
-        // Aplicar búsqueda por texto
+    // Execute search (called when user submits search)
+    func executeSearch() {
+        print("🔍 executeSearch() - query: '\(searchQuery)'")
         if !searchQuery.isEmpty {
-            result = result.filter { product in
-                product.name.localizedCaseInsensitiveContains(searchQuery) ||
-                product.shop.localizedCaseInsensitiveContains(searchQuery)
+            performVectorSearch()
+        } else {
+            // If search is empty, show all products with current filters
+            print("🔍 Search query is empty, applying local filters")
+            applyFiltersAndSort()
+        }
+    }
+
+    // Perform vector search using GraphQL
+    private func performVectorSearch() {
+        guard !searchQuery.isEmpty else {
+            applyFiltersAndSort()
+            return
+        }
+
+        print("🔍 performVectorSearch() - Starting search for: '\(searchQuery)'")
+        isSearching = true
+
+        repository.searchProducts(query: searchQuery, branchId: branchId, limit: 50) { [weak self] result in
+            guard let self = self else { return }
+
+            Task { @MainActor in
+                self.isSearching = false
+
+                switch result {
+                case .success(let productsGraphQL):
+                    print("✅ Vector search returned \(productsGraphQL.count) products")
+
+                    // Map to UI models
+                    let searchResults = productsGraphQL.map { productGraphQL in
+                        Product(
+                            id: productGraphQL.id,
+                            name: productGraphQL.name,
+                            shop: productGraphQL.businessName,
+                            weight: "0",
+                            price: self.formatPrice(
+                                price: productGraphQL.price,
+                                currency: productGraphQL.currency
+                            ),
+                            imageUrl: productGraphQL.imageUrl
+                        )
+                    }
+
+                    print("🔍 Mapped to \(searchResults.count) UI products")
+
+                    // Apply filters and sorting to search results
+                    self.applyFiltersAndSort(to: searchResults)
+
+                    print("🔍 Final filtered products: \(self.filteredProducts.count)")
+
+                case .failure(let error):
+                    print("❌ Vector search failed: \(error.localizedDescription)")
+                    // Fallback to local filtering if search fails
+                    self.applyFiltersAndSort()
+                }
             }
         }
+    }
+
+    private func applyFiltersAndSort(to sourceProducts: [Product]? = nil) {
+        var result = sourceProducts ?? products
+        print("🔍 applyFiltersAndSort() - Input: \(result.count) products")
+
+        // Note: When using vector search, text search is already done by the backend
+        // So we skip the local text search when sourceProducts is provided
 
         // Aplicar filtro de categoría
         if let category = selectedCategory {
@@ -190,6 +247,7 @@ class ShopViewModel: ObservableObject {
         }
 
         filteredProducts = result
+        print("🔍 applyFiltersAndSort() - Output: \(filteredProducts.count) products")
     }
 
     // MARK: - Helper Methods
