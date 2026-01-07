@@ -84,7 +84,7 @@ struct LoginView: View {
         NavigationView {
             ZStack(alignment: .top) {
                 // Fondo primary completo
-                WelcomeGradientBackground()
+                HomeGradientBackground()
                     .ignoresSafeArea()
 
                 VStack(spacing: 0) {

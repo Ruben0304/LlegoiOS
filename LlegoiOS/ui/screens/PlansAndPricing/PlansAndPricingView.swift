@@ -212,29 +212,6 @@ struct PlansAndPricingView: View {
     }
 }
 
-struct FeatureBulletRow: View {
-    let title: String
-    let description: String
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: "crown.fill")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(Color(red: 0.96, green: 0.74, blue: 0.18))
-                .frame(width: 26, height: 26, alignment: .top)
-
-            (
-                Text(title).fontWeight(.bold)
-                + Text(" " + description)
-            )
-            .font(.system(size: 16, weight: .regular))
-            .foregroundColor(.black.opacity(0.8))
-            .fixedSize(horizontal: false, vertical: true)
-
-            Spacer(minLength: 0)
-        }
-    }
-}
 
 struct PlanOptionCard: View {
     let title: String
@@ -314,27 +291,6 @@ struct PlanOptionCard: View {
     }
 }
 
-struct PlanSelectionIndicator: View {
-    let isSelected: Bool
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .stroke(Color.black.opacity(0.15), lineWidth: 2)
-                .frame(width: 26, height: 26)
-
-            if isSelected {
-                Circle()
-                    .fill(Color(red: 0.16, green: 0.73, blue: 0.42))
-                    .frame(width: 22, height: 22)
-
-                Image(systemName: "checkmark")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(.white)
-            }
-        }
-    }
-}
 
 #Preview {
     NavigationStack {

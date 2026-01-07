@@ -87,7 +87,7 @@ struct MainAppView: View {
 
                         TabView() {
                             Tab("Inicio", systemImage: "house") {
-                                WelcomeView()
+                                HomeView()
                                     .ignoresSafeArea(.container, edges: .bottom)
                             }
                             Tab("Productos", systemImage: "bag") {
@@ -148,7 +148,7 @@ struct MainAppView: View {
                     // .background(.clear)
                 } else {
                     TabView(selection: $selectedTab) {
-                        WelcomeView()
+                        HomeView()
                             .ignoresSafeArea(.container, edges: .bottom)
                             .tabItem {
                                 Image(systemName: "house")

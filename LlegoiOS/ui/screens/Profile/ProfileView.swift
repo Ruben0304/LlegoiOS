@@ -882,52 +882,6 @@ struct ProfileView: View {
 
 }
 
-struct SimpleInfoCard: View {
-    let icon: String
-    let title: String
-    let subtitle: String
-    let color: Color
-    let onTap: () -> Void
-
-    var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(color.opacity(0.12))
-                        .frame(width: 50, height: 50)
-
-                    Image(systemName: icon)
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(color)
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundColor(.llegoPrimary)
-
-                    Text(subtitle)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.gray)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.gray.opacity(0.5))
-            }
-            .padding(18)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.white)
-                    .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-            )
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
 
 struct EditNameView: View {
     @Binding var userName: String

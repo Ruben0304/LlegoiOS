@@ -358,12 +358,3 @@ struct CategoryModel3D: Identifiable {
         self.customScale = customScale
     }
 }
-
-#Preview {
-    ZStack {
-        WelcomeGradientBackground()
-            .ignoresSafeArea()
-
-        Model3DCarousel()
-    }
-}

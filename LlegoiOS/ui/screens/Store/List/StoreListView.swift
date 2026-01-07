@@ -77,7 +77,7 @@ struct StoreListView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // WelcomeGradientBackground()
+                // HomeGradientBackground()
                 //     .ignoresSafeArea()
 
                 // Contenido según el modo de visualización
@@ -245,7 +245,7 @@ struct StoreListView: View {
                 case .shop(let branchId, let branchName, let storeGradient):
                     ProductListView(branchId: branchId, branchName: branchName, storeGradient: storeGradient)
                 case .home:
-                    WelcomeView()
+                    HomeView()
                 }
             }
             .sheet(item: $selectedStore, onDismiss: {
@@ -593,36 +593,6 @@ private struct StoreOptionsModal: View {
     }
 }
 
-// MARK: - Info Pill Component
-private struct InfoPill: View {
-    let icon: String
-    let iconColor: Color
-    let value: String
-    let label: String
-    
-    var body: some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(iconColor)
-                Text(value)
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
-            }
-            
-            Text(label)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 14)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color(.tertiarySystemBackground))
-        )
-    }
-}
 
 private struct RadialShopMapView: View {
     @Binding var isFullScreen: Bool
@@ -874,16 +844,6 @@ private struct ShopMapPinView: View {
     }
 }
 
-private struct PinTriangle: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.midX, y: rect.maxY))
-        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
-        path.closeSubpath()
-        return path
-    }
-}
 
 private struct ShopMapCenterIndicator: View {
     let isPulsing: Bool

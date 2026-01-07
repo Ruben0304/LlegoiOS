@@ -2,7 +2,7 @@ import SwiftUI
 import Combine
 
 /// Manages the global gradient state across the application
-/// When the category changes in WelcomeView, all views using WelcomeGradientBackground will update
+/// When the category changes in HomeView, all views using HomeGradientBackground will update
 @MainActor
 class GradientStateManager: ObservableObject {
     /// Shared singleton instance

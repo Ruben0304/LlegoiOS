@@ -28,7 +28,7 @@ struct ConversationalSearchView: View {
     @StateObject private var viewModel = ConversationalSearchViewModel()
     @ObservedObject private var gradientManager = GradientStateManager.shared
 
-    // Índice de categoría desde WelcomeView para mantener el mismo fondo
+    // Índice de categoría desde HomeView para mantener el mismo fondo
     let categoryIndex: Int
 
     // Search mode
@@ -41,8 +41,8 @@ struct ConversationalSearchView: View {
 
     var body: some View {
         ZStack {
-            // Background exactamente igual que WelcomeView
-            WelcomeGradientBackground()
+            // Background exactamente igual que HomeView
+            HomeGradientBackground()
                 .ignoresSafeArea()
             
 
@@ -170,7 +170,7 @@ struct ConversationalSearchView: View {
             }
         }
         .onAppear {
-            // Establecer el índice de categoría para mantener el mismo fondo de WelcomeView
+            // Establecer el índice de categoría para mantener el mismo fondo de HomeView
             gradientManager.setCategoryIndex(categoryIndex)
             
             // Mensaje inicial del asistente
