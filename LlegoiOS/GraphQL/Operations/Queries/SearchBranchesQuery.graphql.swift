@@ -9,27 +9,35 @@ public extension LlegoAPI {
     public static let operationName: String = "SearchBranches"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query SearchBranches($query: String!, $limit: Int, $useVectorSearch: Boolean) { searchBranches(query: $query, limit: $limit, useVectorSearch: $useVectorSearch) { __typename id businessId name address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius createdAt } }"#
+        #"query SearchBranches($query: String!, $limit: Int, $useVectorSearch: Boolean, $radiusKm: Float, $jwt: String) { searchBranches( query: $query limit: $limit useVectorSearch: $useVectorSearch radiusKm: $radiusKm jwt: $jwt ) { __typename id businessId name address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius createdAt score distanceKm } }"#
       ))
 
     public var query: String
     public var limit: GraphQLNullable<Int32>
     public var useVectorSearch: GraphQLNullable<Bool>
+    public var radiusKm: GraphQLNullable<Double>
+    public var jwt: GraphQLNullable<String>
 
     public init(
       query: String,
       limit: GraphQLNullable<Int32>,
-      useVectorSearch: GraphQLNullable<Bool>
+      useVectorSearch: GraphQLNullable<Bool>,
+      radiusKm: GraphQLNullable<Double>,
+      jwt: GraphQLNullable<String>
     ) {
       self.query = query
       self.limit = limit
       self.useVectorSearch = useVectorSearch
+      self.radiusKm = radiusKm
+      self.jwt = jwt
     }
 
     @_spi(Unsafe) public var __variables: Variables? { [
       "query": query,
       "limit": limit,
-      "useVectorSearch": useVectorSearch
+      "useVectorSearch": useVectorSearch,
+      "radiusKm": radiusKm,
+      "jwt": jwt
     ] }
 
     public struct Data: LlegoAPI.SelectionSet {
@@ -41,7 +49,9 @@ public extension LlegoAPI {
         .field("searchBranches", [SearchBranch].self, arguments: [
           "query": .variable("query"),
           "limit": .variable("limit"),
-          "useVectorSearch": .variable("useVectorSearch")
+          "useVectorSearch": .variable("useVectorSearch"),
+          "radiusKm": .variable("radiusKm"),
+          "jwt": .variable("jwt")
         ]),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
@@ -72,6 +82,8 @@ public extension LlegoAPI {
           .field("coverUrl", String?.self),
           .field("deliveryRadius", Double?.self),
           .field("createdAt", LlegoAPI.DateTime.self),
+          .field("score", Double.self),
+          .field("distanceKm", Double?.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
           SearchBranchesQuery.Data.SearchBranch.self
@@ -90,6 +102,9 @@ public extension LlegoAPI {
         public var coverUrl: String? { __data["coverUrl"] }
         public var deliveryRadius: Double? { __data["deliveryRadius"] }
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
+        public var score: Double { __data["score"] }
+        /// Distance in kilometers from user
+        public var distanceKm: Double? { __data["distanceKm"] }
 
         /// SearchBranch.Coordinates
         ///

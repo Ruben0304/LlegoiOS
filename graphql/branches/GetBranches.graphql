@@ -1,5 +1,5 @@
-query GetBranches($businessId: String) {
-  branches(businessId: $businessId) {
+query GetBranches($businessId: String, $tipo: BranchTipo, $radiusKm: Float, $jwt: String) {
+  branches(businessId: $businessId, tipo: $tipo, radiusKm: $radiusKm, jwt: $jwt) {
     id
     businessId
     name
@@ -14,5 +14,7 @@ query GetBranches($businessId: String) {
     coverUrl
     deliveryRadius
     createdAt
+    score
+    distanceKm
   }
 }

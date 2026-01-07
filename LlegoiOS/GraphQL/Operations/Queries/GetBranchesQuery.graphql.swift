@@ -9,16 +9,32 @@ public extension LlegoAPI {
     public static let operationName: String = "GetBranches"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetBranches($businessId: String) { branches(businessId: $businessId) { __typename id businessId name address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius createdAt } }"#
+        #"query GetBranches($businessId: String, $tipo: BranchTipo, $radiusKm: Float, $jwt: String) { branches(businessId: $businessId, tipo: $tipo, radiusKm: $radiusKm, jwt: $jwt) { __typename id businessId name address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius createdAt score distanceKm } }"#
       ))
 
     public var businessId: GraphQLNullable<String>
+    public var tipo: GraphQLNullable<GraphQLEnum<BranchTipo>>
+    public var radiusKm: GraphQLNullable<Double>
+    public var jwt: GraphQLNullable<String>
 
-    public init(businessId: GraphQLNullable<String>) {
+    public init(
+      businessId: GraphQLNullable<String>,
+      tipo: GraphQLNullable<GraphQLEnum<BranchTipo>>,
+      radiusKm: GraphQLNullable<Double>,
+      jwt: GraphQLNullable<String>
+    ) {
       self.businessId = businessId
+      self.tipo = tipo
+      self.radiusKm = radiusKm
+      self.jwt = jwt
     }
 
-    @_spi(Unsafe) public var __variables: Variables? { ["businessId": businessId] }
+    @_spi(Unsafe) public var __variables: Variables? { [
+      "businessId": businessId,
+      "tipo": tipo,
+      "radiusKm": radiusKm,
+      "jwt": jwt
+    ] }
 
     public struct Data: LlegoAPI.SelectionSet {
       @_spi(Unsafe) public let __data: DataDict
@@ -26,7 +42,12 @@ public extension LlegoAPI {
 
       @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.Query }
       @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
-        .field("branches", [Branch].self, arguments: ["businessId": .variable("businessId")]),
+        .field("branches", [Branch].self, arguments: [
+          "businessId": .variable("businessId"),
+          "tipo": .variable("tipo"),
+          "radiusKm": .variable("radiusKm"),
+          "jwt": .variable("jwt")
+        ]),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
         GetBranchesQuery.Data.self
@@ -56,6 +77,8 @@ public extension LlegoAPI {
           .field("coverUrl", String?.self),
           .field("deliveryRadius", Double?.self),
           .field("createdAt", LlegoAPI.DateTime.self),
+          .field("score", Double.self),
+          .field("distanceKm", Double?.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
           GetBranchesQuery.Data.Branch.self
@@ -74,6 +97,9 @@ public extension LlegoAPI {
         public var coverUrl: String? { __data["coverUrl"] }
         public var deliveryRadius: Double? { __data["deliveryRadius"] }
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
+        public var score: Double { __data["score"] }
+        /// Distance in kilometers from user
+        public var distanceKm: Double? { __data["distanceKm"] }
 
         /// Branch.Coordinates
         ///

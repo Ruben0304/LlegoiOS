@@ -7,6 +7,9 @@ struct WelcomeView: View {
     // Global gradient state manager
     @StateObject private var gradientManager = GradientStateManager.shared
 
+    // Global branch type manager
+    @StateObject private var branchTypeManager = BranchTypeManager.shared
+
     // Cart manager
     @StateObject private var cartManager = CartManager.shared
     @ObservedObject private var authManager = AuthManager.shared
@@ -448,6 +451,8 @@ struct WelcomeView: View {
                 startEntranceAnimations()
                 startFloatingAnimations()
                 preparePressSound()
+                // Initialize branch type based on current category
+                branchTypeManager.setTypeFromCategoryIndex(currentIndex)
             }
             .onDisappear {
                 pressSoundStopTimer?.invalidate()
@@ -510,6 +515,7 @@ struct WelcomeView: View {
         animateModelTransition(direction: .left) {
             currentIndex -= 1
             gradientManager.setCategoryIndex(currentIndex)
+            branchTypeManager.setTypeFromCategoryIndex(currentIndex)
         }
     }
 
@@ -523,6 +529,7 @@ struct WelcomeView: View {
         animateModelTransition(direction: .right) {
             currentIndex += 1
             gradientManager.setCategoryIndex(currentIndex)
+            branchTypeManager.setTypeFromCategoryIndex(currentIndex)
         }
     }
 

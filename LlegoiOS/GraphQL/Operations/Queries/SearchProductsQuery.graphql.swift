@@ -9,12 +9,13 @@ public extension LlegoAPI {
     public static let operationName: String = "SearchProducts"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query SearchProducts($query: String!, $limit: Int, $useVectorSearch: Boolean, $radiusKm: Float, $jwt: String) { searchProducts( query: $query limit: $limit useVectorSearch: $useVectorSearch radiusKm: $radiusKm jwt: $jwt ) { __typename id branchId name description weight price currency imageUrl availability createdAt distanceKm score business { __typename id name } } }"#
+        #"query SearchProducts($query: String!, $limit: Int, $useVectorSearch: Boolean, $branchTipo: BranchTipo, $radiusKm: Float, $jwt: String) { searchProducts( query: $query limit: $limit useVectorSearch: $useVectorSearch branchTipo: $branchTipo radiusKm: $radiusKm jwt: $jwt ) { __typename id branchId name description weight price currency imageUrl availability createdAt distanceKm score business { __typename id name } } }"#
       ))
 
     public var query: String
     public var limit: GraphQLNullable<Int32>
     public var useVectorSearch: GraphQLNullable<Bool>
+    public var branchTipo: GraphQLNullable<GraphQLEnum<BranchTipo>>
     public var radiusKm: GraphQLNullable<Double>
     public var jwt: GraphQLNullable<String>
 
@@ -22,12 +23,14 @@ public extension LlegoAPI {
       query: String,
       limit: GraphQLNullable<Int32>,
       useVectorSearch: GraphQLNullable<Bool>,
+      branchTipo: GraphQLNullable<GraphQLEnum<BranchTipo>>,
       radiusKm: GraphQLNullable<Double>,
       jwt: GraphQLNullable<String>
     ) {
       self.query = query
       self.limit = limit
       self.useVectorSearch = useVectorSearch
+      self.branchTipo = branchTipo
       self.radiusKm = radiusKm
       self.jwt = jwt
     }
@@ -36,6 +39,7 @@ public extension LlegoAPI {
       "query": query,
       "limit": limit,
       "useVectorSearch": useVectorSearch,
+      "branchTipo": branchTipo,
       "radiusKm": radiusKm,
       "jwt": jwt
     ] }
@@ -50,6 +54,7 @@ public extension LlegoAPI {
           "query": .variable("query"),
           "limit": .variable("limit"),
           "useVectorSearch": .variable("useVectorSearch"),
+          "branchTipo": .variable("branchTipo"),
           "radiusKm": .variable("radiusKm"),
           "jwt": .variable("jwt")
         ]),

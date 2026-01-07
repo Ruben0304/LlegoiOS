@@ -22,21 +22,21 @@ type Query {
   "Buscar negocios"
   searchBusinesses(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true, jwt: String = null): [BusinessType!]!
   "Lista de sucursales con scoring por cercanía"
-  branches(businessId: String = null, radiusKm: Float = null, jwt: String = null): [ScoredBranchType!]!
+  branches(businessId: String = null, tipo: BranchTipo = null, radiusKm: Float = null, jwt: String = null): [ScoredBranchType!]!
   "Obtener sucursal por ID"
   branch(id: String!, jwt: String = null): BranchType
   "Buscar sucursales con scoring por cercanía"
   searchBranches(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true, radiusKm: Float = null, jwt: String = null): [ScoredBranchType!]!
   "Buscar sucursales cercanas por coordenadas"
-  nearbyBranches(longitude: Float!, latitude: Float!, radiusKm: Float! = 5, onlyActive: Boolean! = true, jwt: String = null): [NearbyBranchType!]!
+  nearbyBranches(longitude: Float!, latitude: Float!, radiusKm: Float! = 5, onlyActive: Boolean! = true, tipo: BranchTipo = null, jwt: String = null): [NearbyBranchType!]!
   "Obtener ubicación de una sucursal desde MongoDB"
   branchLocation(branchId: String!, jwt: String = null): CoordinatesType
   "Lista de productos con scoring por cercanía"
-  products(ids: [String!] = null, branchId: String = null, categoryId: String = null, availableOnly: Boolean! = false, radiusKm: Float = null, jwt: String = null): [ScoredProductType!]!
+  products(ids: [String!] = null, branchId: String = null, categoryId: String = null, availableOnly: Boolean! = false, branchTipo: BranchTipo = null, radiusKm: Float = null, jwt: String = null): [ScoredProductType!]!
   "Obtener producto por ID"
   product(id: String!, jwt: String = null): ProductType
   "Buscar productos con scoring por cercanía"
-  searchProducts(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true, radiusKm: Float = null, jwt: String = null): [ScoredProductType!]!
+  searchProducts(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true, branchTipo: BranchTipo = null, radiusKm: Float = null, jwt: String = null): [ScoredProductType!]!
   "Lista de categorías con subcategorías"
   categories(jwt: String = null): [CategoryType!]!
   "Obtener categoría por ID"
@@ -96,6 +96,7 @@ type ScoredBranchType {
   coverImage: String
   deliveryRadius: Float
   facilities: [String!]!
+  tipos: [BranchTipo!]!
   createdAt: DateTime!
   score: Float!
   distanceM: Float
@@ -124,6 +125,7 @@ type BranchType {
   coverImage: String
   deliveryRadius: Float
   facilities: [String!]!
+  tipos: [BranchTipo!]!
   createdAt: DateTime!
   "Presigned URL for the branch avatar"
   avatarUrl: String
@@ -144,6 +146,7 @@ type NearbyBranchType {
   coverImage: String
   deliveryRadius: Float
   facilities: [String!]!
+  tipos: [BranchTipo!]!
   createdAt: DateTime!
   distanceM: Float!
   "Presigned URL for the branch avatar"
@@ -276,6 +279,11 @@ type UserData {
   createdAt: String!
 }
 union EntityType = ProductType | BranchType | PaymentMethodType
+enum BranchTipo {
+  RESTAURANTE
+  DULCERIA
+  TIENDA
+}
 input AiAssistantChatInput {
   "The user message/query to send"
   message: String!
@@ -329,6 +337,7 @@ input RegisterBranchInput {
   coordinates: CoordinatesInput!
   phone: String!
   schedule: JSON!
+  tipos: [BranchTipo!]!
   address: String = null
   managerIds: [String!] = null
   avatar: String = null
@@ -356,6 +365,7 @@ input CreateBranchInput {
   coordinates: CoordinatesInput!
   phone: String!
   schedule: JSON!
+  tipos: [BranchTipo!]!
   address: String = null
   managerIds: [String!] = null
   avatar: String = null
@@ -375,6 +385,7 @@ input UpdateBranchInput {
   managerIds: [String!] = null
   avatar: String = null
   coverImage: String = null
+  tipos: [BranchTipo!] = null
 }
 input CreateProductInput {
   name: String!

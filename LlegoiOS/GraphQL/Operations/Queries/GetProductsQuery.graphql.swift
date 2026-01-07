@@ -9,12 +9,13 @@ public extension LlegoAPI {
     public static let operationName: String = "GetProducts"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetProducts($branchId: String, $categoryId: String, $availableOnly: Boolean, $radiusKm: Float, $jwt: String) { products( branchId: $branchId categoryId: $categoryId availableOnly: $availableOnly radiusKm: $radiusKm jwt: $jwt ) { __typename id branchId name price currency imageUrl availability createdAt distanceKm score business { __typename id name } } }"#
+        #"query GetProducts($branchId: String, $categoryId: String, $availableOnly: Boolean, $branchTipo: BranchTipo, $radiusKm: Float, $jwt: String) { products( branchId: $branchId categoryId: $categoryId availableOnly: $availableOnly branchTipo: $branchTipo radiusKm: $radiusKm jwt: $jwt ) { __typename id branchId name price currency imageUrl availability createdAt distanceKm score business { __typename id name } } }"#
       ))
 
     public var branchId: GraphQLNullable<String>
     public var categoryId: GraphQLNullable<String>
     public var availableOnly: GraphQLNullable<Bool>
+    public var branchTipo: GraphQLNullable<GraphQLEnum<BranchTipo>>
     public var radiusKm: GraphQLNullable<Double>
     public var jwt: GraphQLNullable<String>
 
@@ -22,12 +23,14 @@ public extension LlegoAPI {
       branchId: GraphQLNullable<String>,
       categoryId: GraphQLNullable<String>,
       availableOnly: GraphQLNullable<Bool>,
+      branchTipo: GraphQLNullable<GraphQLEnum<BranchTipo>>,
       radiusKm: GraphQLNullable<Double>,
       jwt: GraphQLNullable<String>
     ) {
       self.branchId = branchId
       self.categoryId = categoryId
       self.availableOnly = availableOnly
+      self.branchTipo = branchTipo
       self.radiusKm = radiusKm
       self.jwt = jwt
     }
@@ -36,6 +39,7 @@ public extension LlegoAPI {
       "branchId": branchId,
       "categoryId": categoryId,
       "availableOnly": availableOnly,
+      "branchTipo": branchTipo,
       "radiusKm": radiusKm,
       "jwt": jwt
     ] }
@@ -50,6 +54,7 @@ public extension LlegoAPI {
           "branchId": .variable("branchId"),
           "categoryId": .variable("categoryId"),
           "availableOnly": .variable("availableOnly"),
+          "branchTipo": .variable("branchTipo"),
           "radiusKm": .variable("radiusKm"),
           "jwt": .variable("jwt")
         ]),

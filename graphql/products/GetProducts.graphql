@@ -1,5 +1,5 @@
-query GetProducts($branchId: String, $categoryId: String, $availableOnly: Boolean, $radiusKm: Float, $jwt: String) {
-  products(branchId: $branchId, categoryId: $categoryId, availableOnly: $availableOnly, radiusKm: $radiusKm, jwt: $jwt) {
+query GetProducts($branchId: String, $categoryId: String, $availableOnly: Boolean, $branchTipo: BranchTipo, $radiusKm: Float, $jwt: String) {
+  products(branchId: $branchId, categoryId: $categoryId, availableOnly: $availableOnly, branchTipo: $branchTipo, radiusKm: $radiusKm, jwt: $jwt) {
     id
     branchId
     name

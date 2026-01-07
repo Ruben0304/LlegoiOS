@@ -1085,7 +1085,88 @@ Task { @MainActor in
 }
 ```
 
-### 4. Sendable Compliance
+### 4. Concurrencia y Main Actor en Repositories
+
+**IMPORTANTE**: Evitar data races cuando se accede a propiedades `@MainActor` desde un Repository.
+
+#### Problema Común:
+Los `AuthManager` y `BranchTypeManager` están marcados con `@MainActor`, pero los Repositories NO lo están. Intentar acceder a propiedades de Main Actor desde un contexto no aislado causa errores de compilación:
+
+```swift
+// ❌ INCORRECTO - Causa "Main actor-isolated property cannot be referenced from a nonisolated context"
+class MyRepository {
+    func fetchData(completion: @escaping (Result<Data, Error>) -> Void) {
+        let jwt = AuthManager.shared.getAccessToken()  // ❌ Error!
+        let branchType = BranchTypeManager.shared.selectedType.rawValue  // ❌ Error!
+
+        apolloClient.fetch(query: query) { result in
+            // ...
+        }
+    }
+}
+```
+
+#### Solución Correcta:
+
+**Patrón 1: Capturar valores dentro de un Task @MainActor**
+```swift
+// ✅ CORRECTO - Capturar apolloClient y valores de Main Actor dentro del Task
+class MyRepository {
+    private let apolloClient = ApolloClientManager.shared.apollo
+
+    func fetchData(completion: @escaping @Sendable (Result<Data, Error>) -> Void) {
+        // Capturar apolloClient antes del Task para evitar data races
+        let client = apolloClient
+
+        // Capturar valores del Main Actor en el contexto principal
+        Task { @MainActor in
+            let jwt = AuthManager.shared.getAccessToken()
+            let branchType = BranchTypeManager.shared.selectedType.rawValue
+
+            let query = LlegoAPI.GetDataQuery(
+                jwt: jwt.map { .some($0) } ?? .none,
+                branchType: branchType
+            )
+
+            // Usar client (no apolloClient) para evitar capturar self
+            client.fetch(query: query, cachePolicy: .returnCacheDataAndFetch) { result in
+                switch result {
+                case .success(let graphQLResult):
+                    // Procesar resultado
+                    completion(.success(data))
+                case .failure(let error):
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+}
+```
+
+#### Razones del Patrón:
+
+1. **Capturar `apolloClient` como `client`**: Evita capturar `self` implícitamente dentro del Task, lo que previene data races
+2. **Usar `Task { @MainActor in }`**: Permite acceder de forma segura a propiedades `@MainActor` como `AuthManager.shared` y `BranchTypeManager.shared`
+3. **Evitar métodos auxiliares**: No crear métodos `private func perform...()` que capturen `self` desde el Task
+4. **Usar `@Sendable` en closures**: Marcar el closure de completion como `@Sendable` para cumplir con las reglas de concurrencia de Swift
+
+#### Ejemplo Real del Proyecto:
+
+Ver [`ShopTabLandingRepository.swift`](LlegoiOS/ui/screens/Shop/ShopTabLandingRepository.swift) para ejemplos completos de este patrón implementado en:
+- `fetchBranches()` - Líneas 9-123
+- `fetchBranchProducts()` - Líneas 125-228
+- `searchBranches()` - Líneas 230-353
+
+#### Regla General:
+
+**Siempre que necesites acceder a `AuthManager` o `BranchTypeManager` desde un Repository:**
+1. Captura `apolloClient` como `let client = apolloClient` antes del Task
+2. Envuelve el código en `Task { @MainActor in }`
+3. Captura los valores de Main Actor dentro del Task
+4. Usa `client` (no `apolloClient`) en los closures de Apollo
+5. **NUNCA** llames a métodos auxiliares con `await self.method()` desde dentro del Task
+
+### 5. Sendable Compliance
 Marcar closures y structs como `@Sendable`:
 ```swift
 func fetchData(completion: @escaping @Sendable (Result<Data, Error>) -> Void)
@@ -1095,7 +1176,7 @@ struct MyData: Sendable {
 }
 ```
 
-### 5. Logging
+### 6. Logging
 ```swift
 print("✅ Fetched \(count) items from GraphQL")
 print("❌ Error: \(error.localizedDescription)")

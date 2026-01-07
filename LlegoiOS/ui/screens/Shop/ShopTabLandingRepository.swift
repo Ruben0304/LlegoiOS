@@ -6,10 +6,23 @@ class ShopTabLandingRepository {
     private let apolloClient = ApolloClientManager.shared.apollo
 
     // Fetch all branches from GraphQL
-    func fetchBranches(businessId: String? = nil, completion: @escaping @Sendable (Result<[BranchGraphQL], Error>) -> Void) {
-        let query = LlegoAPI.GetBranchesQuery(businessId: businessId.map { .some($0) } ?? .none)
+    func fetchBranches(businessId: String? = nil, radiusKm: Double? = nil, completion: @escaping @Sendable (Result<[BranchGraphQL], Error>) -> Void) {
+        // Capturar apolloClient antes del Task para evitar data races
+        let client = apolloClient
 
-        apolloClient.fetch(query: query, cachePolicy: .returnCacheDataAndFetch) { [apolloClient = self.apolloClient] result in
+        // Capturar valores del Main Actor en el contexto principal
+        Task { @MainActor in
+            let jwt = AuthManager.shared.getAccessToken()
+            let branchType = BranchTypeManager.shared.selectedType.rawValue
+
+            let query = LlegoAPI.GetBranchesQuery(
+                businessId: businessId.map { .some($0) } ?? .none,
+                tipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) } ?? .none,
+                radiusKm: radiusKm.map { .some($0) } ?? .none,
+                jwt: jwt.map { .some($0) } ?? .none
+            )
+
+            client.fetch(query: query, cachePolicy: .returnCacheDataAndFetch) { result in
             switch result {
             case .success(let graphQLResult):
                 if let errors = graphQLResult.errors {
@@ -65,7 +78,7 @@ class ShopTabLandingRepository {
                     print("🔄 Sin conexión - Intentando cargar branches desde caché...")
 
                     // Intentar cargar SOLO desde caché (sin red)
-                    apolloClient.fetch(query: query, cachePolicy: .returnCacheDataDontFetch) { cacheResult in
+                    client.fetch(query: query, cachePolicy: .returnCacheDataDontFetch) { cacheResult in
                         switch cacheResult {
                         case .success(let graphQLResult):
                             if let data = graphQLResult.data {
@@ -106,19 +119,29 @@ class ShopTabLandingRepository {
                 }
             }
         }
+        }
     }
 
     // Fetch products for a specific branch
     func fetchBranchProducts(branchId: String, limit: Int = 6, completion: @escaping @Sendable (Result<[ShopProductGraphQL], Error>) -> Void) {
-        let query = LlegoAPI.GetProductsQuery(
-            branchId: .some(branchId),
-            categoryId: .none,
-            availableOnly: .some(true),
-            radiusKm: .none,
-            jwt: .none
-        )
+        // Capturar apolloClient antes del Task para evitar data races
+        let client = apolloClient
 
-        apolloClient.fetch(query: query, cachePolicy: .returnCacheDataAndFetch) { [apolloClient = self.apolloClient] result in
+        // Capturar valores del Main Actor en el contexto principal
+        Task { @MainActor in
+            let jwt = AuthManager.shared.getAccessToken()
+            let branchType = BranchTypeManager.shared.selectedType.rawValue
+
+            let query = LlegoAPI.GetProductsQuery(
+                branchId: .some(branchId),
+                categoryId: .none,
+                availableOnly: .some(true),
+                branchTipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) } ?? .none,
+                radiusKm: .none,
+                jwt: jwt.map { .some($0) } ?? .none
+            )
+
+            client.fetch(query: query, cachePolicy: .returnCacheDataAndFetch) { result in
             switch result {
             case .success(let graphQLResult):
                 if let errors = graphQLResult.errors {
@@ -165,7 +188,7 @@ class ShopTabLandingRepository {
                     print("🔄 Sin conexión - Intentando cargar productos de \(branchId) desde caché...")
 
                     // Intentar cargar SOLO desde caché (sin red)
-                    apolloClient.fetch(query: query, cachePolicy: .returnCacheDataDontFetch) { cacheResult in
+                    client.fetch(query: query, cachePolicy: .returnCacheDataDontFetch) { cacheResult in
                         switch cacheResult {
                         case .success(let graphQLResult):
                             if let products = graphQLResult.data?.products {
@@ -201,17 +224,27 @@ class ShopTabLandingRepository {
                 }
             }
         }
+        }
     }
 
     // Search branches by query (with automatic fallback to text search)
-    func searchBranches(query: String, limit: Int = 10, useVectorSearch: Bool = true, completion: @escaping @Sendable (Result<[BranchGraphQL], Error>) -> Void) {
-        let searchQuery = LlegoAPI.SearchBranchesQuery(
-            query: query,
-            limit: .some(Int32(limit)),
-            useVectorSearch: .some(useVectorSearch)
-        )
+    func searchBranches(query: String, limit: Int = 10, useVectorSearch: Bool = true, radiusKm: Double? = nil, completion: @escaping @Sendable (Result<[BranchGraphQL], Error>) -> Void) {
+        // Capturar apolloClient antes del Task para evitar data races
+        let client = apolloClient
 
-        apolloClient.fetch(query: searchQuery, cachePolicy: .fetchIgnoringCacheData) { [apolloClient = self.apolloClient] result in
+        // Capturar valores del Main Actor en el contexto principal
+        Task { @MainActor in
+            let jwt = AuthManager.shared.getAccessToken()
+
+            let searchQuery = LlegoAPI.SearchBranchesQuery(
+                query: query,
+                limit: .some(Int32(limit)),
+                useVectorSearch: .some(useVectorSearch),
+                radiusKm: radiusKm.map { .some($0) } ?? .none,
+                jwt: jwt.map { .some($0) } ?? .none
+            )
+
+            client.fetch(query: searchQuery, cachePolicy: .fetchIgnoringCacheData) { result in
             switch result {
             case .success(let graphQLResult):
                 if let errors = graphQLResult.errors {
@@ -226,10 +259,12 @@ class ShopTabLandingRepository {
                         let textSearchQuery = LlegoAPI.SearchBranchesQuery(
                             query: query,
                             limit: .some(Int32(limit)),
-                            useVectorSearch: .some(false)
+                            useVectorSearch: .some(false),
+                            radiusKm: radiusKm.map { .some($0) } ?? .none,
+                            jwt: jwt.map { .some($0) } ?? .none
                         )
 
-                        apolloClient.fetch(query: textSearchQuery, cachePolicy: .fetchIgnoringCacheData) { fallbackResult in
+                        client.fetch(query: textSearchQuery, cachePolicy: .fetchIgnoringCacheData) { fallbackResult in
                             switch fallbackResult {
                             case .success(let fallbackGraphQLResult):
                                 if let fallbackErrors = fallbackGraphQLResult.errors {
@@ -313,6 +348,7 @@ class ShopTabLandingRepository {
                 print("❌ Search Error: \(error.localizedDescription)")
                 completion(.failure(error))
             }
+        }
         }
     }
 }

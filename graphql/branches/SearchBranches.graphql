@@ -1,5 +1,5 @@
-query SearchBranches($query: String!, $limit: Int, $useVectorSearch: Boolean) {
-  searchBranches(query: $query, limit: $limit, useVectorSearch: $useVectorSearch) {
+query SearchBranches($query: String!, $limit: Int, $useVectorSearch: Boolean, $radiusKm: Float, $jwt: String) {
+  searchBranches(query: $query, limit: $limit, useVectorSearch: $useVectorSearch, radiusKm: $radiusKm, jwt: $jwt) {
     id
     businessId
     name
@@ -14,5 +14,7 @@ query SearchBranches($query: String!, $limit: Int, $useVectorSearch: Boolean) {
     coverUrl
     deliveryRadius
     createdAt
+    score
+    distanceKm
   }
 }

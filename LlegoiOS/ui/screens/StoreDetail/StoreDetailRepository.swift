@@ -100,10 +100,21 @@ class StoreDetailRepository {
 
     // Fetch sibling branches (branches of the same business)
     func fetchSiblingBranches(businessId: String, completion: @escaping @Sendable (Result<[BranchGraphQL], Error>) -> Void) {
-        apolloClient.fetch(
-            query: LlegoAPI.GetBranchesQuery(businessId: .some(businessId)),
-            cachePolicy: .returnCacheDataAndFetch
-        ) { result in
+        let client = apolloClient
+        
+        Task { @MainActor in
+            let jwt = AuthManager.shared.getAccessToken()
+            let branchType = BranchTypeManager.shared.selectedType.rawValue
+            
+            client.fetch(
+                query: LlegoAPI.GetBranchesQuery(
+                    businessId: .some(businessId),
+                    tipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) } ?? .none,
+                    radiusKm: .none,
+                    jwt: jwt.map { .some($0) } ?? .none
+                ),
+                cachePolicy: .returnCacheDataAndFetch
+            ) { result in
             switch result {
             case .success(let graphQLResult):
                 if let errors = graphQLResult.errors {
@@ -149,20 +160,28 @@ class StoreDetailRepository {
                 completion(.failure(error))
             }
         }
+        }
     }
 
     // Fetch products for a specific branch
     func fetchBranchProducts(branchId: String, limit: Int = 10, completion: @escaping @Sendable (Result<[StoreProductGraphQL], Error>) -> Void) {
-        apolloClient.fetch(
-            query: LlegoAPI.GetProductsQuery(
-                branchId: .some(branchId),
-                categoryId: .none,
-                availableOnly: .some(true),
-                radiusKm: .none,
-                jwt: .none
-            ),
-            cachePolicy: .returnCacheDataAndFetch
-        ) { result in
+        let client = apolloClient
+        
+        Task { @MainActor in
+            let jwt = AuthManager.shared.getAccessToken()
+            let branchType = BranchTypeManager.shared.selectedType.rawValue
+            
+            client.fetch(
+                query: LlegoAPI.GetProductsQuery(
+                    branchId: .some(branchId),
+                    categoryId: .none,
+                    availableOnly: .some(true),
+                    branchTipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) } ?? .none,
+                    radiusKm: .none,
+                    jwt: jwt.map { .some($0) } ?? .none
+                ),
+                cachePolicy: .returnCacheDataAndFetch
+            ) { result in
             switch result {
             case .success(let graphQLResult):
                 if let errors = graphQLResult.errors {
@@ -203,6 +222,7 @@ class StoreDetailRepository {
                 print("❌ Network Error (Branch Products): \(error.localizedDescription)")
                 completion(.failure(error))
             }
+        }
         }
     }
 

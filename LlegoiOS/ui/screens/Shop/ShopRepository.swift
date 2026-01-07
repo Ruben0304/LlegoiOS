@@ -9,11 +9,15 @@ class ShopRepository {
     @MainActor func fetchProducts(branchId: String? = nil, radiusKm: Double? = nil, completion: @escaping @Sendable (Result<[ShopProductGraphQL], Error>) -> Void) {
         // Obtener JWT si está disponible
         let jwt = AuthManager.shared.getAccessToken()
-        
+
+        // Obtener tipo de branch global
+        let branchType = BranchTypeManager.shared.selectedType.rawValue
+
         let query = LlegoAPI.GetProductsQuery(
             branchId: branchId.map { .some($0) } ?? .none,
             categoryId: .none,
             availableOnly: .none,
+            branchTipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) } ?? .none,
             radiusKm: radiusKm.map { .some($0) } ?? .none,
             jwt: jwt.map { .some($0) } ?? .none
         )
@@ -109,11 +113,15 @@ class ShopRepository {
     @MainActor func searchProducts(query: String, branchId: String? = nil, limit: Int = 10, useVectorSearch: Bool = true, radiusKm: Double? = nil, completion: @escaping @Sendable (Result<[ShopProductGraphQL], Error>) -> Void) {
         // Obtener JWT si está disponible
         let jwt = AuthManager.shared.getAccessToken()
-        
+
+        // Obtener tipo de branch global
+        let branchType = BranchTypeManager.shared.selectedType.rawValue
+
         let searchQuery = LlegoAPI.SearchProductsQuery(
             query: query,
             limit: .some(Int32(limit)),
             useVectorSearch: .some(useVectorSearch),
+            branchTipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) } ?? .none,
             radiusKm: radiusKm.map { .some($0) } ?? .none,
             jwt: jwt.map { .some($0) } ?? .none
         )
@@ -134,6 +142,7 @@ class ShopRepository {
                             query: query,
                             limit: .some(Int32(limit)),
                             useVectorSearch: .some(false),
+                            branchTipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) } ?? .none,
                             radiusKm: radiusKm.map { .some($0) } ?? .none,
                             jwt: jwt.map { .some($0) } ?? .none
                         )

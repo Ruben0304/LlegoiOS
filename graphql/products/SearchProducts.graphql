@@ -1,5 +1,5 @@
-query SearchProducts($query: String!, $limit: Int, $useVectorSearch: Boolean, $radiusKm: Float, $jwt: String) {
-  searchProducts(query: $query, limit: $limit, useVectorSearch: $useVectorSearch, radiusKm: $radiusKm, jwt: $jwt) {
+query SearchProducts($query: String!, $limit: Int, $useVectorSearch: Boolean, $branchTipo: BranchTipo, $radiusKm: Float, $jwt: String) {
+  searchProducts(query: $query, limit: $limit, useVectorSearch: $useVectorSearch, branchTipo: $branchTipo, radiusKm: $radiusKm, jwt: $jwt) {
     id
     branchId
     name

@@ -10,6 +10,7 @@ class ProductRepository {
             branchId: .none,
             categoryId: .none,
             availableOnly: .none,
+            branchTipo: .none,
             radiusKm: .none,
             jwt: .none
         ), cachePolicy: .returnCacheDataAndFetch) { result in
