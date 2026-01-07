@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct ProductShowcaseView: View {
+struct ProductDetailView: View {
     let productId: String
 
     @Environment(\.dismiss) private var dismiss
@@ -612,6 +612,6 @@ private func startEntranceAnimations() {
 
 #Preview {
     NavigationStack {
-        ProductShowcaseView(productId: "6777f74afe6bab27db6c4aa0")
+        ProductDetailView(productId: "6777f74afe6bab27db6c4aa0")
     }
 }

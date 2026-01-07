@@ -35,10 +35,7 @@ struct OnboardingView: View {
                 }
 
                 // CategorySelectionView como última página del onboarding
-                CategorySelectionView(showContinueButton: true) {
-                    isOnboardingCompleted = true
-                }
-                .tag(onboardingPages.count)
+               
             }
             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
             .animation(.easeInOut(duration: 0.3), value: currentPage)

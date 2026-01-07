@@ -4,11 +4,11 @@ import MapKit
 // MARK: - 3D Flip Card Wrapper
 struct StoreProductsCard: View {
     let store: StoreWithCoordinates
-    let products: [ShopProductGraphQL]
+    let products: [ProductGraphQL]
     let isLoadingProducts: Bool
     let onStoreTap: (ExtractedGradient?) -> Void
-    let onProductTap: (ShopProductGraphQL, ExtractedGradient?) -> Void
-    let onFavoriteTap: (ShopProductGraphQL) -> Void
+    let onProductTap: (ProductGraphQL, ExtractedGradient?) -> Void
+    let onFavoriteTap: (ProductGraphQL) -> Void
     var onGradientExtracted: ((ExtractedGradient) -> Void)? = nil
 
     @State private var isFlipped = false
@@ -112,11 +112,11 @@ struct StoreProductsCard: View {
 // MARK: - Front Side (Original Card with Products)
 private struct StoreProductsCardFront: View {
     let store: StoreWithCoordinates
-    let products: [ShopProductGraphQL]
+    let products: [ProductGraphQL]
     let isLoadingProducts: Bool
     let onStoreTap: (ExtractedGradient?) -> Void
-    let onProductTap: (ShopProductGraphQL, ExtractedGradient?) -> Void
-    let onFavoriteTap: (ShopProductGraphQL) -> Void
+    let onProductTap: (ProductGraphQL, ExtractedGradient?) -> Void
+    let onFavoriteTap: (ProductGraphQL) -> Void
     let onFlip: () -> Void
     var onGradientExtracted: ((ExtractedGradient) -> Void)? = nil
 
@@ -618,7 +618,7 @@ private struct StoreMapPinTriangle: Shape {
 
 // MARK: - Product Full Cover Card (Image fills entire card)
 struct ProductFullCoverCard: View {
-    let product: ShopProductGraphQL
+    let product: ProductGraphQL
     let isFavorite: Bool
     let onTap: () -> Void
     let onFavoriteTap: () -> Void

@@ -32,7 +32,7 @@ class StoreDetailRepository {
                     id: branch.id,
                     businessId: branch.businessId,
                     name: branch.name,
-                    address: branch.address,
+                    address: branch.address ?? "",
                     coordinates: CoordinatesGraphQL(
                         type: branch.coordinates.type,
                         coordinates: branch.coordinates.coordinates
@@ -137,7 +137,7 @@ class StoreDetailRepository {
                         id: branch.id,
                         businessId: branch.businessId,
                         name: branch.name,
-                        address: branch.address,
+                        address: branch.address ?? "",
                         coordinates: CoordinatesGraphQL(
                             type: branch.coordinates.type,
                             coordinates: branch.coordinates.coordinates
@@ -239,6 +239,7 @@ class StoreDetailRepository {
 }
 
 // MARK: - Models
+// BranchGraphQL and CoordinatesGraphQL are defined in Store/StoreModels.swift
 
 // Model to represent complete GraphQL Branch details
 struct BranchDetailGraphQL: Identifiable, Sendable {

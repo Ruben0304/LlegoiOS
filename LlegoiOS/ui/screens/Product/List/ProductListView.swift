@@ -1,7 +1,7 @@
 import SwiftUI
 
-struct ShopView: View {
-    @StateObject private var viewModel = ShopViewModel()
+struct ProductListView: View {
+    @StateObject private var viewModel = ProductListViewModel()
     @StateObject private var favoritesManager = FavoritesManager.shared
     @State private var productCounts: [String: Int] = [:]
     @State private var showFiltersSheet = false
@@ -209,7 +209,7 @@ struct ShopView: View {
             ) {
                 ForEach(Array(viewModel.filteredProducts.enumerated()), id: \.element.id) { index, product in
                     NavigationLink(
-                        destination: ProductShowcaseView(productId: product.id)
+                        destination: ProductDetailView(productId: product.id)
                     ) {
                         ProductCard(
                             product: product,
@@ -736,5 +736,5 @@ private struct FiltersSheet: View {
 }
 
 #Preview {
-    ShopView()
+    ProductListView()
 }

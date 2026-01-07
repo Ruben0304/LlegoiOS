@@ -328,9 +328,7 @@ struct WelcomeView: View {
                         cancelPressAnimation()
                     }
             )
-            .fullScreenCover(isPresented: $navigateToIntroVideo) {
-                OrderFlowCoordinatorView()
-            }
+            
             .fullScreenCover(isPresented: $navigateToConversationalSearch) {
                 NavigationStack {
                     ConversationalSearchView(categoryIndex: currentIndex)

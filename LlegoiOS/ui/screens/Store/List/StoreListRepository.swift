@@ -2,7 +2,7 @@ import Foundation
 import Apollo
 import Combine
 
-class ShopTabLandingRepository {
+class StoreListRepository {
     private let apolloClient = ApolloClientManager.shared.apollo
 
     // Fetch all branches from GraphQL
@@ -30,7 +30,8 @@ class ShopTabLandingRepository {
                     errors.forEach { error in
                         print("  - \(error.localizedDescription)")
                     }
-                    completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: "GraphQL errors occurred"])))
+                    let error = NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: "GraphQL errors occurred"])
+                    completion(.failure(error))
                     return
                 }
 
@@ -46,7 +47,7 @@ class ShopTabLandingRepository {
                         id: branch.id,
                         businessId: branch.businessId,
                         name: branch.name,
-                        address: branch.address,
+                        address: branch.address ?? "",
                         coordinates: CoordinatesGraphQL(
                             type: branch.coordinates.type,
                             coordinates: branch.coordinates.coordinates
@@ -87,7 +88,7 @@ class ShopTabLandingRepository {
                                         id: branch.id,
                                         businessId: branch.businessId,
                                         name: branch.name,
-                                        address: branch.address,
+                                        address: branch.address ?? "",
                                         coordinates: CoordinatesGraphQL(
                                             type: branch.coordinates.type,
                                             coordinates: branch.coordinates.coordinates
@@ -123,7 +124,7 @@ class ShopTabLandingRepository {
     }
 
     // Fetch products for a specific branch
-    func fetchBranchProducts(branchId: String, limit: Int = 6, completion: @escaping @Sendable (Result<[ShopProductGraphQL], Error>) -> Void) {
+    func fetchBranchProducts(branchId: String, limit: Int = 6, completion: @escaping @Sendable (Result<[ProductGraphQL], Error>) -> Void) {
         // Capturar apolloClient antes del Task para evitar data races
         let client = apolloClient
 
@@ -157,7 +158,7 @@ class ShopTabLandingRepository {
                 }
 
                 let mappedProducts = Array(products.prefix(limit)).map { product in
-                    ShopProductGraphQL(
+                    ProductGraphQL(
                         id: product.id,
                         branchId: product.branchId,
                         name: product.name,
@@ -193,7 +194,7 @@ class ShopTabLandingRepository {
                         case .success(let graphQLResult):
                             if let products = graphQLResult.data?.products {
                                 let mappedProducts = Array(products.prefix(limit)).map { product in
-                                    ShopProductGraphQL(
+                                    ProductGraphQL(
                                         id: product.id,
                                         branchId: product.branchId,
                                         name: product.name,
@@ -269,7 +270,8 @@ class ShopTabLandingRepository {
                             case .success(let fallbackGraphQLResult):
                                 if let fallbackErrors = fallbackGraphQLResult.errors {
                                     print("❌ Text search also failed")
-                                    completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: "Both searches failed"])))
+                                    let error = NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: "Both searches failed"])
+                                    completion(.failure(error))
                                     return
                                 }
 
@@ -284,7 +286,7 @@ class ShopTabLandingRepository {
                                         id: branch.id,
                                         businessId: branch.businessId,
                                         name: branch.name,
-                                        address: branch.address,
+                                        address: branch.address ?? "",
                                         coordinates: CoordinatesGraphQL(
                                             type: branch.coordinates.type,
                                             coordinates: branch.coordinates.coordinates
@@ -326,7 +328,7 @@ class ShopTabLandingRepository {
                         id: branch.id,
                         businessId: branch.businessId,
                         name: branch.name,
-                        address: branch.address,
+                        address: branch.address ?? "",
                         coordinates: CoordinatesGraphQL(
                             type: branch.coordinates.type,
                             coordinates: branch.coordinates.coordinates
@@ -354,5 +356,5 @@ class ShopTabLandingRepository {
 }
 
 // MARK: - Models
-// BranchGraphQL and CoordinatesGraphQL are defined in HomeRepository.swift
-// ShopProductGraphQL is defined in ShopRepository.swift
+// BranchGraphQL and CoordinatesGraphQL are defined in Store/StoreModels.swift
+// ProductGraphQL is defined in ProductListRepository.swift

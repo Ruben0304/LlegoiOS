@@ -490,7 +490,7 @@ struct StoreDetailView: View {
 
                                             Spacer()
 
-                                            NavigationLink(destination: ShopView(branchId: storeId, branchName: store.name)) {
+                                            NavigationLink(destination: ProductListView(branchId: storeId, branchName: store.name)) {
                                                 HStack(spacing: 4) {
                                                     Text("Ver más")
                                                         .font(.system(size: 14, weight: .semibold))

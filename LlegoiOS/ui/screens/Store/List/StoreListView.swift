@@ -7,8 +7,34 @@ enum ShopViewMode {
     case map     // Modo mapa: solo mapa a pantalla completa
 }
 
-struct ShopTabLandingView: View {
-    @StateObject private var viewModel = ShopTabLandingViewModel()
+// MARK: - Navigation Destination
+enum NavigationDestination: Identifiable, Hashable {
+    case detail(StoreWithCoordinates)
+    case shop(branchId: String, branchName: String, storeGradient: ExtractedGradient?)
+    case home
+
+    var id: String {
+        switch self {
+        case .detail(let store):
+            return "detail-\(store.id)"
+        case .shop(let branchId, _, _):
+            return "shop-\(branchId)"
+        case .home:
+            return "home"
+        }
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
+    static func == (lhs: NavigationDestination, rhs: NavigationDestination) -> Bool {
+        lhs.id == rhs.id
+    }
+}
+
+struct StoreListView: View {
+    @StateObject private var viewModel = StoreListViewModel()
     @State private var searchText = ""
     @FocusState private var isSearchFocused: Bool
     @State private var isMapFullScreen = false
@@ -215,11 +241,11 @@ struct ShopTabLandingView: View {
             .navigationDestination(item: $navigationDestination) { destination in
                 switch destination {
                 case .detail(let store):
-                    StoreDetailView(store: store)
+                    StoreDetailView(store: store.toStore())
                 case .shop(let branchId, let branchName, let storeGradient):
-                    ShopView(branchId: branchId, branchName: branchName, storeGradient: storeGradient)
+                    ProductListView(branchId: branchId, branchName: branchName, storeGradient: storeGradient)
                 case .home:
-                    HomeView()
+                    WelcomeView()
                 }
             }
             .sheet(item: $selectedStore, onDismiss: {
@@ -235,7 +261,7 @@ struct ShopTabLandingView: View {
                 StoreOptionsModal(
                     store: store,
                     onViewProfile: {
-                        pendingDestination = .detail(store.toStore())
+                        pendingDestination = .detail(store)
                         selectedStore = nil // Esto cierra el sheet e invoca onDismiss
                     },
                     onViewProducts: {
@@ -1106,5 +1132,5 @@ private struct FullScreenMapView: View {
 }
 
 #Preview {
-    ShopTabLandingView()
+    StoreListView()
 }

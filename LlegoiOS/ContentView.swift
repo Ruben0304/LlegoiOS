@@ -16,7 +16,6 @@ struct ContentView: View {
     @State private var selectedTab = 0
 //     @State private var isOnboardingCompleted = OnboardingHelper.isOnboardingCompleted
     @State private var isOnboardingCompleted = true
-    private let productRepository = ProductRepository()
 
     var body: some View {
         if isOnboardingCompleted {
@@ -92,11 +91,11 @@ struct MainAppView: View {
                                     .ignoresSafeArea(.container, edges: .bottom)
                             }
                             Tab("Productos", systemImage: "bag") {
-                                ShopView()
+                                ProductListView()
                                     .ignoresSafeArea(.container, edges: .bottom)
                             }
                             Tab("Tiendas", systemImage: "storefront") {
-                                ShopTabLandingView()
+                                StoreListView()
                             }
                             
     //                        Tab("Cuenta", systemImage: "person") {
@@ -149,17 +148,7 @@ struct MainAppView: View {
                     // .background(.clear)
                 } else {
                     TabView(selection: $selectedTab) {
-                        NavigationStack {
-    //                        SearchTabContent(searchText: $searchText)
-                        }
-                        .searchable(text: $searchText)
-                        .tabItem {
-                            Image(systemName: "magnifyingglass")
-                            Text("Buscar")
-                        }
-                        .tag(-1) // Use negative tag for search to avoid conflicts
-
-                        HomeView()
+                        WelcomeView()
                             .ignoresSafeArea(.container, edges: .bottom)
                             .tabItem {
                                 Image(systemName: "house")
@@ -167,19 +156,19 @@ struct MainAppView: View {
                             }
                             .tag(0)
 
-                        CategorySelectionView()
+                        ProductListView()
                             .ignoresSafeArea(.container, edges: .bottom)
                             .tabItem {
-                                Image(systemName: "square.grid.2x2")
-                                Text("Categoría")
+                                Image(systemName: "bag")
+                                Text("Productos")
                             }
                             .tag(1)
 
-                        CategoriesView()
+                        StoreListView()
                             .ignoresSafeArea(.container, edges: .bottom)
                             .tabItem {
-                                Image(systemName: "square.grid.2x2")
-                                Text("Categorías")
+                                Image(systemName: "storefront")
+                                Text("Tiendas")
                             }
                             .tag(2)
 
@@ -190,8 +179,6 @@ struct MainAppView: View {
                                 Text("Cuenta")
                             }
                             .tag(3)
-
-                        
                     }
                     .accentColor(Color.llegoPrimary)
                     .toolbarBackground(.hidden, for: .tabBar)

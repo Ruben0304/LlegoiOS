@@ -43,7 +43,7 @@ struct CategoriesView: View {
             .navigationBarTitleDisplayMode(.large)
         }
         .fullScreenCover(isPresented: $navigateToShop) {
-            ShopView(category: selectedCategory)
+            ProductListView(category: selectedCategory)
         }
     }
 }

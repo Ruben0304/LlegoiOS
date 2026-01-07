@@ -23,7 +23,7 @@ enum SortOption: String, CaseIterable {
     }
 }
 
-enum ShopViewState {
+enum ProductListViewState {
     case idle
     case loading
     case success
@@ -31,8 +31,8 @@ enum ShopViewState {
 }
 
 @MainActor
-class ShopViewModel: ObservableObject {
-    @Published var state: ShopViewState = .idle
+class ProductListViewModel: ObservableObject {
+    @Published var state: ProductListViewState = .idle
     @Published var products: [Product] = []
     @Published var filteredProducts: [Product] = []
     @Published var isLoading: Bool = false
@@ -49,7 +49,7 @@ class ShopViewModel: ObservableObject {
     // Branch filter
     var branchId: String? = nil
 
-    private let repository = ShopRepository()
+    private let repository = ProductListRepository()
     private let userLocationManager = UserLocationManager.shared
 
     // Categorías rápidas para chips horizontales

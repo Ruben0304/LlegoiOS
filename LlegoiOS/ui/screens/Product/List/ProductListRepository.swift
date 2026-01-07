@@ -2,11 +2,11 @@ import Foundation
 import Apollo
 import Combine
 
-class ShopRepository {
+class ProductListRepository {
     private let apolloClient = ApolloClientManager.shared.apollo
 
     // Fetch all products from GraphQL
-    @MainActor func fetchProducts(branchId: String? = nil, radiusKm: Double? = nil, completion: @escaping @Sendable (Result<[ShopProductGraphQL], Error>) -> Void) {
+    @MainActor func fetchProducts(branchId: String? = nil, radiusKm: Double? = nil, completion: @escaping @Sendable (Result<[ProductGraphQL], Error>) -> Void) {
         // Obtener JWT si está disponible
         let jwt = AuthManager.shared.getAccessToken()
 
@@ -40,7 +40,7 @@ class ShopRepository {
                 }
 
                 let mappedProducts = data.products.map { product in
-                    ShopProductGraphQL(
+                    ProductGraphQL(
                         id: product.id,
                         branchId: product.branchId,
                         name: product.name,
@@ -76,7 +76,7 @@ class ShopRepository {
                         case .success(let graphQLResult):
                             if let data = graphQLResult.data {
                                 let mappedProducts = data.products.map { product in
-                                    ShopProductGraphQL(
+                                    ProductGraphQL(
                                         id: product.id,
                                         branchId: product.branchId,
                                         name: product.name,
@@ -110,7 +110,7 @@ class ShopRepository {
     }
 
     // Search products with vector search (with automatic fallback to text search)
-    @MainActor func searchProducts(query: String, branchId: String? = nil, limit: Int = 10, useVectorSearch: Bool = true, radiusKm: Double? = nil, completion: @escaping @Sendable (Result<[ShopProductGraphQL], Error>) -> Void) {
+    @MainActor func searchProducts(query: String, branchId: String? = nil, limit: Int = 10, useVectorSearch: Bool = true, radiusKm: Double? = nil, completion: @escaping @Sendable (Result<[ProductGraphQL], Error>) -> Void) {
         // Obtener JWT si está disponible
         let jwt = AuthManager.shared.getAccessToken()
 
@@ -165,7 +165,7 @@ class ShopRepository {
 
                                 // Map search results from text search
                                 var mappedProducts = data.searchProducts.map { product in
-                                    ShopProductGraphQL(
+                                    ProductGraphQL(
                                         id: product.id,
                                         branchId: product.branchId,
                                         name: product.name,
@@ -206,7 +206,7 @@ class ShopRepository {
 
                 // Map search results
                 var mappedProducts = data.searchProducts.map { product in
-                    ShopProductGraphQL(
+                    ProductGraphQL(
                         id: product.id,
                         branchId: product.branchId,
                         name: product.name,
@@ -239,7 +239,7 @@ class ShopRepository {
 // MARK: - Models
 
 // Model to represent GraphQL Product for Shop list view (optimized)
-struct ShopProductGraphQL: Identifiable, Sendable {
+struct ProductGraphQL: Identifiable, Sendable {
     let id: String
     let branchId: String
     let name: String

@@ -3,7 +3,7 @@ import SwiftUI
 import Combine
 import MapKit
 
-enum ShopTabLandingViewState {
+enum StoreListViewState {
     case idle
     case loading
     case success
@@ -11,14 +11,14 @@ enum ShopTabLandingViewState {
 }
 
 @MainActor
-class ShopTabLandingViewModel: ObservableObject {
-    @Published var state: ShopTabLandingViewState = .idle
+class StoreListViewModel: ObservableObject {
+    @Published var state: StoreListViewState = .idle
     @Published var stores: [StoreWithCoordinates] = []
-    @Published var storeProducts: [String: [ShopProductGraphQL]] = [:] // storeId -> products
+    @Published var storeProducts: [String: [ProductGraphQL]] = [:] // storeId -> products
     @Published var isLoading: Bool = false
     @Published var isLoadingProducts: [String: Bool] = [:] // storeId -> isLoading
 
-    private let repository = ShopTabLandingRepository()
+    private let repository = StoreListRepository()
 
     // Load all branches/stores
     func loadStores(isRefreshing: Bool = false) {
@@ -93,7 +93,7 @@ class ShopTabLandingViewModel: ObservableObject {
     }
 
     // Get products for a store
-    func products(for storeId: String) -> [ShopProductGraphQL] {
+    func products(for storeId: String) -> [ProductGraphQL] {
         return storeProducts[storeId] ?? []
     }
 
