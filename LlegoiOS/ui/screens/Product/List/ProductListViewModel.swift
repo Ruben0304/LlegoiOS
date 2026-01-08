@@ -107,7 +107,7 @@ class ProductListViewModel: ObservableObject {
             state = .loading
         }
 
-        repository.fetchProducts(first: 20, after: nil, branchId: branchId, radiusKm: effectiveRadiusKm) { [weak self] result in
+        repository.fetchProducts(first: 8, after: nil, branchId: branchId, radiusKm: effectiveRadiusKm) { [weak self] result in
             guard let self = self else { return }
 
             Task { @MainActor in
@@ -184,7 +184,7 @@ class ProductListViewModel: ObservableObject {
         print("📦 loadMoreProducts - Loading next page with cursor: \(cursor)")
         isLoadingMore = true
 
-        repository.fetchProducts(first: 20, after: cursor, branchId: branchId, radiusKm: effectiveRadiusKm) { [weak self] result in
+        repository.fetchProducts(first: 8, after: cursor, branchId: branchId, radiusKm: effectiveRadiusKm) { [weak self] result in
             guard let self = self else { return }
 
             Task { @MainActor in

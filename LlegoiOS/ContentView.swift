@@ -68,6 +68,7 @@ struct MainAppView: View {
     @Binding var selectedTab: Int
     @StateObject private var orderManager = OrderManager.shared
     @ObservedObject private var userLocationManager = UserLocationManager.shared
+    @ObservedObject private var branchTypeManager = BranchTypeManager.shared
     @State private var searchText = ""
     @State private var showTrackingView = false
     @State private var showTrackingFullScreen = false
@@ -198,6 +199,12 @@ struct MainAppView: View {
             }
         }
         .animation(.easeInOut(duration: 0.3), value: userLocationManager.hasLocation)
+        .onChange(of: branchTypeManager.selectedType) { newType in
+            // Recargar datos cuando cambia el tipo de branch
+            print("🔄 Branch type changed to: \(newType.rawValue)")
+            productListViewModel.loadProducts(isRefreshing: true)
+            storeListViewModel.loadStores(isRefreshing: true)
+        }
         .onReceive(NotificationCenter.default.publisher(for: .navigateToHome)) { _ in
             selectedTab = 0
         }

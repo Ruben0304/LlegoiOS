@@ -87,13 +87,15 @@ struct ProductListView: View {
                 }
             }
             .onAppear {
+                // Primero configurar los filtros
                 if let category = initialCategory {
                     viewModel.selectedCategory = category
                 }
                 if let branchId = initialBranchId {
                     viewModel.branchId = branchId
                 }
-                viewModel.loadProducts()
+                // Forzar recarga cuando hay branchId para asegurar que se carguen los productos de esa tienda
+                viewModel.loadProducts(isRefreshing: initialBranchId != nil)
             }
             .sheet(isPresented: $showFiltersSheet) {
                 FiltersSheet(
