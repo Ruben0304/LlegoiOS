@@ -34,7 +34,7 @@ enum NavigationDestination: Identifiable, Hashable {
 }
 
 struct StoreListView: View {
-    @StateObject private var viewModel = StoreListViewModel()
+    @ObservedObject var viewModel: StoreListViewModel
     @State private var searchText = ""
     @FocusState private var isSearchFocused: Bool
     @State private var isMapFullScreen = false
@@ -62,6 +62,11 @@ struct StoreListView: View {
         center: CLLocationCoordinate2D(latitude: 23.1345, longitude: -82.3589),
         span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
     )
+    
+    init(viewModel: StoreListViewModel? = nil) {
+        // Si no se pasa viewModel, crear uno nuevo (para uso desde navegación interna)
+        self._viewModel = ObservedObject(wrappedValue: viewModel ?? StoreListViewModel())
+    }
 
     // MARK: - Refresh Function
     private func refreshStores() async {
@@ -97,12 +102,17 @@ struct StoreListView: View {
                             // Mostrar resultados de búsqueda si está buscando
                             if !searchText.isEmpty {
                                 if isSearchLoading {
-                                    // Skeleton elegante de búsqueda
+                                    // Loading nativo
                                     VStack(spacing: 16) {
-                                        ForEach(0..<3, id: \.self) { _ in
-                                            StoreProductsCardSkeleton()
-                                        }
+                                        ProgressView()
+                                            .controlSize(.large)
+                                            .tint(.llegoPrimary)
+                                        Text("Cargando tiendas...")
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundColor(.secondary)
                                     }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 60)
                                 } else if !filteredSearchStores.isEmpty {
                                     // Resultados de búsqueda con StoreProductsCard
                                     ForEach(filteredSearchStores, id: \.id) { store in
@@ -170,6 +180,20 @@ struct StoreListView: View {
                                             FavoritesManager.shared.toggleFavorite(productId: product.id)
                                         }
                                     )
+                                    .onAppear {
+                                        viewModel.loadMoreIfNeeded(currentStore: store)
+                                    }
+                                }
+
+                                // Loading indicator for pagination
+                                if viewModel.isLoadingMore {
+                                    HStack {
+                                        Spacer()
+                                        ProgressView()
+                                            .tint(Color.llegoPrimary)
+                                            .padding()
+                                        Spacer()
+                                    }
                                 }
                             }
                         }

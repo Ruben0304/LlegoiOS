@@ -22,7 +22,11 @@ class FavoritesRepository {
         print("🔎 Querying GraphQL for favorite IDs: \(productIds)")
 
         apolloClient.fetch(
-            query: LlegoAPI.GetCartProductsQuery(ids: productIds),
+            query: LlegoAPI.GetCartProductsQuery(
+                first: Int32(100),
+                after: .none,
+                ids: productIds
+            ),
             cachePolicy: .fetchIgnoringCacheData
         ) { result in
             switch result {
@@ -34,22 +38,22 @@ class FavoritesRepository {
                     return
                 }
 
-                guard let products = graphQLResult.data?.products else {
+                guard let data = graphQLResult.data?.products else {
                     completion(.success([]))
                     return
                 }
 
-                let mappedProducts = products.map { product in
+                let mappedProducts = data.edges.map { edge in
                     FavoriteProductGraphQL(
-                        id: product.id,
-                        branchId: product.branchId,
-                        name: product.name,
-                        description: product.description,
-                        weight: product.weight,
-                        price: product.price,
-                        currency: product.currency,
-                        image: product.image,
-                        availability: product.availability
+                        id: edge.node.id,
+                        branchId: edge.node.branchId,
+                        name: edge.node.name,
+                        description: edge.node.description,
+                        weight: edge.node.weight,
+                        price: edge.node.price,
+                        currency: edge.node.currency,
+                        image: edge.node.image,
+                        availability: edge.node.availability
                     )
                 }
 

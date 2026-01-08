@@ -1,20 +1,32 @@
-query SearchBranches($query: String!, $limit: Int, $useVectorSearch: Boolean, $radiusKm: Float, $jwt: String) {
-  searchBranches(query: $query, limit: $limit, useVectorSearch: $useVectorSearch, radiusKm: $radiusKm, jwt: $jwt) {
-    id
-    businessId
-    name
-    address
-    coordinates {
-      type
-      coordinates
+query SearchBranches($query: String!, $first: Int! = 20, $after: String, $useVectorSearch: Boolean, $radiusKm: Float, $jwt: String) {
+  searchBranches(query: $query, first: $first, after: $after, useVectorSearch: $useVectorSearch, radiusKm: $radiusKm, jwt: $jwt) {
+    edges {
+      node {
+        id
+        businessId
+        name
+        address
+        coordinates {
+          type
+          coordinates
+        }
+        phone
+        status
+        avatarUrl
+        coverUrl
+        deliveryRadius
+        createdAt
+        score
+        distanceKm
+      }
+      cursor
     }
-    phone
-    status
-    avatarUrl
-    coverUrl
-    deliveryRadius
-    createdAt
-    score
-    distanceKm
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      startCursor
+      endCursor
+      totalCount
+    }
   }
 }

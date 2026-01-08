@@ -64,6 +64,7 @@ public extension LlegoAPI {
         ] }
 
         public var id: String { __data["id"] }
+        /// Order comments
         public var comments: [Comment] { __data["comments"] }
 
         /// AddOrderComment.Comment

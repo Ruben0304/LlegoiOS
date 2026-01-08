@@ -33,10 +33,10 @@ final class CreateOrderRepository {
             // Build delivery address input
             let addressInput = LlegoAPI.DeliveryAddressInput(
                 street: deliveryAddress.street,
-                city: deliveryAddress.city.map { .some($0) } ?? .none,
-                reference: deliveryAddress.reference.map { .some($0) } ?? .none,
                 latitude: deliveryAddress.latitude,
-                longitude: deliveryAddress.longitude
+                longitude: deliveryAddress.longitude,
+                city: deliveryAddress.city.map { .some($0) } ?? .none,
+                reference: deliveryAddress.reference.map { .some($0) } ?? .none
             )
             
             // Build create order input

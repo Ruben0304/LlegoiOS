@@ -15,6 +15,8 @@ class MapRepository {
             let branchType = BranchTypeManager.shared.selectedType.rawValue
 
             let query = LlegoAPI.GetBranchesQuery(
+                first: 100,
+                after: .none,
                 businessId: businessId.map { .some($0) } ?? .none,
                 tipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) } ?? .none,
                 radiusKm: radiusKm.map { .some($0) } ?? .none,
@@ -40,24 +42,24 @@ class MapRepository {
                     }
 
                     // Map GraphQL branches to our model
-                    let mappedBranches = data.branches.map { branch in
+                    let mappedBranches = data.branches.edges.map { edge in
                         MapBranchGraphQL(
-                            id: branch.id,
-                            businessId: branch.businessId,
-                            name: branch.name,
-                            address: branch.address ?? "",
+                            id: edge.node.id,
+                            businessId: edge.node.businessId,
+                            name: edge.node.name,
+                            address: edge.node.address ?? "",
                             coordinates: MapCoordinatesGraphQL(
-                                type: branch.coordinates.type,
-                                coordinates: branch.coordinates.coordinates
+                                type: edge.node.coordinates.type,
+                                coordinates: edge.node.coordinates.coordinates
                             ),
-                            phone: branch.phone,
-                            status: branch.status,
-                            avatarUrl: branch.avatarUrl,
-                            coverUrl: branch.coverUrl,
-                            deliveryRadius: branch.deliveryRadius,
-                            createdAt: branch.createdAt,
-                            score: branch.score,
-                            distanceKm: branch.distanceKm
+                            phone: edge.node.phone,
+                            status: edge.node.status,
+                            avatarUrl: edge.node.avatarUrl,
+                            coverUrl: edge.node.coverUrl,
+                            deliveryRadius: edge.node.deliveryRadius,
+                            createdAt: edge.node.createdAt,
+                            score: edge.node.score,
+                            distanceKm: edge.node.distanceKm
                         )
                     }
 

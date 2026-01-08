@@ -78,10 +78,5 @@ query GetOrderDetail($id: String!, $jwt: String!) {
       name
       avatarUrl
     }
-    customer {
-      id
-      name
-      phone
-    }
   }
 }

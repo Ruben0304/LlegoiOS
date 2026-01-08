@@ -15,15 +15,13 @@ public extension LlegoAPI {
       name: String,
       email: String,
       password: String,
-      phone: GraphQLNullable<String> = nil,
-      role: GraphQLNullable<String> = nil
+      phone: GraphQLNullable<String> = nil
     ) {
       __data = InputDict([
         "name": name,
         "email": email,
         "password": password,
-        "phone": phone,
-        "role": role
+        "phone": phone
       ])
     }
 
@@ -45,11 +43,6 @@ public extension LlegoAPI {
     public var phone: GraphQLNullable<String> {
       get { __data["phone"] }
       set { __data["phone"] = newValue }
-    }
-
-    public var role: GraphQLNullable<String> {
-      get { __data["role"] }
-      set { __data["role"] = newValue }
     }
   }
 

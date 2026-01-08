@@ -1,32 +1,56 @@
-query GetHomeData {
-  products {
-    id
-    branchId
-    name
-    price
-    currency
-    imageUrl
-    availability
-    createdAt
-    business {
-      id
-      name
+query GetHomeData($first: Int! = 20, $after: String) {
+  products(first: $first, after: $after) {
+    edges {
+      node {
+        id
+        branchId
+        name
+        price
+        currency
+        imageUrl
+        availability
+        createdAt
+        business {
+          id
+          name
+        }
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      startCursor
+      endCursor
+      totalCount
     }
   }
-  branches {
-    id
-    businessId
-    name
-    address
-    coordinates {
-      type
-      coordinates
+  branches(first: $first, after: $after) {
+    edges {
+      node {
+        id
+        businessId
+        name
+        address
+        coordinates {
+          type
+          coordinates
+        }
+        phone
+        status
+        avatarUrl
+        coverUrl
+        deliveryRadius
+        createdAt
+      }
+      cursor
     }
-    phone
-    status
-    avatarUrl
-    coverUrl
-    deliveryRadius
-    createdAt
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      startCursor
+      endCursor
+      totalCount
+    }
   }
 }

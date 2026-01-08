@@ -1,18 +1,30 @@
-query GetProducts($branchId: String, $categoryId: String, $availableOnly: Boolean, $branchTipo: BranchTipo, $radiusKm: Float, $jwt: String) {
-  products(branchId: $branchId, categoryId: $categoryId, availableOnly: $availableOnly, branchTipo: $branchTipo, radiusKm: $radiusKm, jwt: $jwt) {
-    id
-    branchId
-    name
-    price
-    currency
-    imageUrl
-    availability
-    createdAt
-    distanceKm
-    score
-    business {
-      id
-      name
+query GetProducts($first: Int! = 20, $after: String, $branchId: String, $categoryId: String, $availableOnly: Boolean, $branchTipo: BranchTipo, $radiusKm: Float, $jwt: String) {
+  products(first: $first, after: $after, branchId: $branchId, categoryId: $categoryId, availableOnly: $availableOnly, branchTipo: $branchTipo, radiusKm: $radiusKm, jwt: $jwt) {
+    edges {
+      node {
+        id
+        branchId
+        name
+        price
+        currency
+        imageUrl
+        availability
+        createdAt
+        distanceKm
+        score
+        business {
+          id
+          name
+        }
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      startCursor
+      endCursor
+      totalCount
     }
   }
 }

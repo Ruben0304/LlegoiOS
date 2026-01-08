@@ -71,6 +71,10 @@ struct MainAppView: View {
     @State private var searchText = ""
     @State private var showTrackingView = false
     @State private var showTrackingFullScreen = false
+    
+    // ViewModels persistentes a nivel del TabView para evitar recreación
+    @StateObject private var productListViewModel = ProductListViewModel()
+    @StateObject private var storeListViewModel = StoreListViewModel()
 
     // Determinar si hay un pedido activo
     private var hasActiveOrder: Bool {
@@ -91,11 +95,11 @@ struct MainAppView: View {
                                     .ignoresSafeArea(.container, edges: .bottom)
                             }
                             Tab("Productos", systemImage: "bag") {
-                                ProductListView()
+                                ProductListView(viewModel: productListViewModel)
                                     .ignoresSafeArea(.container, edges: .bottom)
                             }
                             Tab("Tiendas", systemImage: "storefront") {
-                                StoreListView()
+                                StoreListView(viewModel: storeListViewModel)
                             }
                             
     //                        Tab("Cuenta", systemImage: "person") {
@@ -156,7 +160,7 @@ struct MainAppView: View {
                             }
                             .tag(0)
 
-                        ProductListView()
+                        ProductListView(viewModel: productListViewModel)
                             .ignoresSafeArea(.container, edges: .bottom)
                             .tabItem {
                                 Image(systemName: "bag")
@@ -164,7 +168,7 @@ struct MainAppView: View {
                             }
                             .tag(1)
 
-                        StoreListView()
+                        StoreListView(viewModel: storeListViewModel)
                             .ignoresSafeArea(.container, edges: .bottom)
                             .tabItem {
                                 Image(systemName: "storefront")

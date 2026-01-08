@@ -13,33 +13,23 @@ public extension LlegoAPI {
 
     public init(
       street: String,
-      city: GraphQLNullable<String> = nil,
-      reference: GraphQLNullable<String> = nil,
       latitude: Double,
-      longitude: Double
+      longitude: Double,
+      city: GraphQLNullable<String> = nil,
+      reference: GraphQLNullable<String> = nil
     ) {
       __data = InputDict([
         "street": street,
-        "city": city,
-        "reference": reference,
         "latitude": latitude,
-        "longitude": longitude
+        "longitude": longitude,
+        "city": city,
+        "reference": reference
       ])
     }
 
     public var street: String {
       get { __data["street"] }
       set { __data["street"] = newValue }
-    }
-
-    public var city: GraphQLNullable<String> {
-      get { __data["city"] }
-      set { __data["city"] = newValue }
-    }
-
-    public var reference: GraphQLNullable<String> {
-      get { __data["reference"] }
-      set { __data["reference"] = newValue }
     }
 
     public var latitude: Double {
@@ -50,6 +40,16 @@ public extension LlegoAPI {
     public var longitude: Double {
       get { __data["longitude"] }
       set { __data["longitude"] = newValue }
+    }
+
+    public var city: GraphQLNullable<String> {
+      get { __data["city"] }
+      set { __data["city"] = newValue }
+    }
+
+    public var reference: GraphQLNullable<String> {
+      get { __data["reference"] }
+      set { __data["reference"] = newValue }
     }
   }
 

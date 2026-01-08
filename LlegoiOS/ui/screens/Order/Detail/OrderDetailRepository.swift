@@ -198,12 +198,18 @@ final class OrderDetailRepository {
         )
         
         let deliveryPerson: OrderDeliveryPerson? = order.deliveryPerson.map { dp in
-            OrderDeliveryPerson(
+            let vehicleTypeValue: String?
+            if case .case(let value) = dp.vehicleType {
+                vehicleTypeValue = value.rawValue
+            } else {
+                vehicleTypeValue = nil
+            }
+            return OrderDeliveryPerson(
                 id: dp.id,
                 name: dp.name,
                 phone: dp.phone,
                 rating: dp.rating,
-                vehicleType: dp.vehicleType,
+                vehicleType: vehicleTypeValue,
                 vehiclePlate: dp.vehiclePlate,
                 profileImageUrl: dp.profileImageUrl,
                 isOnline: dp.isOnline,
@@ -265,10 +271,7 @@ final class OrderDetailRepository {
             branchCoordinates: branchCoordinate,
             businessId: order.business.id,
             businessName: order.business.name,
-            businessImageUrl: order.business.avatarUrl,
-            customerId: order.customer.id,
-            customerName: order.customer.name,
-            customerPhone: order.customer.phone
+            businessImageUrl: order.business.avatarUrl
         )
     }
     

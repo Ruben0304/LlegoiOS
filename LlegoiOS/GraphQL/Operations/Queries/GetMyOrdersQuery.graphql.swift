@@ -113,9 +113,13 @@ public extension LlegoAPI {
           public var paymentStatus: GraphQLEnum<LlegoAPI.PaymentStatusEnum> { __data["paymentStatus"] }
           public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
           public var lastStatusAt: LlegoAPI.DateTime { __data["lastStatusAt"] }
+          /// Estimated minutes remaining for delivery
           public var estimatedMinutesRemaining: Int? { __data["estimatedMinutesRemaining"] }
+          /// Order items
           public var items: [Item] { __data["items"] }
+          /// Branch preparing the order
           public var branch: Branch { __data["branch"] }
+          /// Business owning the branch
           public var business: Business { __data["business"] }
 
           /// MyOrders.Order.Item

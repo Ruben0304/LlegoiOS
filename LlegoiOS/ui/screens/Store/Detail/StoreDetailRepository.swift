@@ -108,6 +108,8 @@ class StoreDetailRepository {
             
             client.fetch(
                 query: LlegoAPI.GetBranchesQuery(
+                    first: 100,
+                    after: .none,
                     businessId: .some(businessId),
                     tipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) } ?? .none,
                     radiusKm: .none,
@@ -132,23 +134,23 @@ class StoreDetailRepository {
                     return
                 }
 
-                let mappedBranches = data.branches.map { branch in
+                let mappedBranches = data.branches.edges.map { edge in
                     BranchGraphQL(
-                        id: branch.id,
-                        businessId: branch.businessId,
-                        name: branch.name,
-                        address: branch.address ?? "",
+                        id: edge.node.id,
+                        businessId: edge.node.businessId,
+                        name: edge.node.name,
+                        address: edge.node.address ?? "",
                         coordinates: CoordinatesGraphQL(
-                            type: branch.coordinates.type,
-                            coordinates: branch.coordinates.coordinates
+                            type: edge.node.coordinates.type,
+                            coordinates: edge.node.coordinates.coordinates
                         ),
-                        phone: branch.phone,
-                        status: branch.status,
-                        avatarUrl: branch.avatarUrl,
-                        coverUrl: branch.coverUrl,
-                        deliveryRadius: branch.deliveryRadius,
+                        phone: edge.node.phone,
+                        status: edge.node.status,
+                        avatarUrl: edge.node.avatarUrl,
+                        coverUrl: edge.node.coverUrl,
+                        deliveryRadius: edge.node.deliveryRadius,
                         facilities: nil,
-                        createdAt: branch.createdAt
+                        createdAt: edge.node.createdAt
                     )
                 }
 
@@ -173,6 +175,8 @@ class StoreDetailRepository {
             
             client.fetch(
                 query: LlegoAPI.GetProductsQuery(
+                    first: Int32(limit),
+                    after: .none,
                     branchId: .some(branchId),
                     categoryId: .none,
                     availableOnly: .some(true),
@@ -200,18 +204,18 @@ class StoreDetailRepository {
                 }
 
                 // Limit to first 'limit' products
-                let limitedProducts = Array(products.prefix(limit))
+                let limitedProducts = Array(products.edges.prefix(limit))
 
-                let mappedProducts = limitedProducts.map { product in
+                let mappedProducts = limitedProducts.map { edge in
                     StoreProductGraphQL(
-                        id: product.id,
-                        branchId: product.branchId,
-                        name: product.name,
-                        price: product.price,
-                        currency: product.currency,
-                        imageUrl: product.imageUrl,
-                        availability: product.availability,
-                        createdAt: product.createdAt
+                        id: edge.node.id,
+                        branchId: edge.node.branchId,
+                        name: edge.node.name,
+                        price: edge.node.price,
+                        currency: edge.node.currency,
+                        imageUrl: edge.node.imageUrl,
+                        availability: edge.node.availability,
+                        createdAt: edge.node.createdAt
                     )
                 }
 

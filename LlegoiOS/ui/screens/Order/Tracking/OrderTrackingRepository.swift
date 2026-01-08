@@ -73,12 +73,19 @@ final class OrderTrackingRepository {
                 currentLocation = CLLocationCoordinate2D(latitude: coords[1], longitude: coords[0])
             }
             
+            let vehicleTypeValue: String?
+            if case .case(let value) = dp.vehicleType {
+                vehicleTypeValue = value.rawValue
+            } else {
+                vehicleTypeValue = nil
+            }
+            
             return OrderDeliveryPerson(
                 id: dp.id,
                 name: dp.name,
                 phone: dp.phone,
                 rating: dp.rating,
-                vehicleType: dp.vehicleType,
+                vehicleType: vehicleTypeValue,
                 vehiclePlate: dp.vehiclePlate,
                 profileImageUrl: dp.profileImageUrl,
                 isOnline: dp.isOnline,

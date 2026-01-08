@@ -5,8 +5,8 @@ import Combine
 class StoreListRepository {
     private let apolloClient = ApolloClientManager.shared.apollo
 
-    // Fetch all branches from GraphQL
-    func fetchBranches(businessId: String? = nil, radiusKm: Double? = nil, completion: @escaping @Sendable (Result<[BranchGraphQL], Error>) -> Void) {
+    // Fetch all branches from GraphQL with cursor pagination
+    func fetchBranches(first: Int = 20, after: String? = nil, businessId: String? = nil, radiusKm: Double? = nil, completion: @escaping @Sendable (Result<(branches: [BranchGraphQL], pageInfo: PageInfo), Error>) -> Void) {
         // Capturar apolloClient antes del Task para evitar data races
         let client = apolloClient
 
@@ -16,6 +16,8 @@ class StoreListRepository {
             let branchType = BranchTypeManager.shared.selectedType.rawValue
 
             let query = LlegoAPI.GetBranchesQuery(
+                first: Int32(first),
+                after: after.map { .some($0) } ?? .none,
                 businessId: businessId.map { .some($0) } ?? .none,
                 tipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) } ?? .none,
                 radiusKm: radiusKm.map { .some($0) } ?? .none,
@@ -37,33 +39,54 @@ class StoreListRepository {
 
                 guard let data = graphQLResult.data else {
                     print("⚠️ No branches data received")
-                    completion(.success([]))
+                    let emptyPageInfo = PageInfo(hasNextPage: false, hasPreviousPage: false, startCursor: nil, endCursor: nil, totalCount: 0)
+                    completion(.success((branches: [], pageInfo: emptyPageInfo)))
                     return
                 }
 
-                // Map GraphQL branches to our model
-                let mappedBranches = data.branches.map { branch in
-                    BranchGraphQL(
-                        id: branch.id,
-                        businessId: branch.businessId,
-                        name: branch.name,
-                        address: branch.address ?? "",
+                // Map GraphQL branches to our model (with nested products)
+                let mappedBranches = data.branches.edges.map { edge in
+                    // Map nested products
+                    let mappedProducts = edge.node.products.map { product in
+                        BranchProductGraphQL(
+                            id: product.id,
+                            name: product.name,
+                            price: product.price,
+                            currency: product.currency,
+                            imageUrl: product.imageUrl
+                        )
+                    }
+
+                    return BranchGraphQL(
+                        id: edge.node.id,
+                        businessId: edge.node.businessId,
+                        name: edge.node.name,
+                        address: edge.node.address ?? "",
                         coordinates: CoordinatesGraphQL(
-                            type: branch.coordinates.type,
-                            coordinates: branch.coordinates.coordinates
+                            type: edge.node.coordinates.type,
+                            coordinates: edge.node.coordinates.coordinates
                         ),
-                        phone: branch.phone,
-                        status: branch.status,
-                        avatarUrl: branch.avatarUrl,
-                        coverUrl: branch.coverUrl,
-                        deliveryRadius: branch.deliveryRadius,
+                        phone: edge.node.phone,
+                        status: edge.node.status,
+                        avatarUrl: edge.node.avatarUrl,
+                        coverUrl: edge.node.coverUrl,
+                        deliveryRadius: edge.node.deliveryRadius,
                         facilities: nil,
-                        createdAt: branch.createdAt
+                        createdAt: edge.node.createdAt,
+                        products: mappedProducts
                     )
                 }
 
-                print("✅ Fetched \(mappedBranches.count) branches from GraphQL")
-                completion(.success(mappedBranches))
+                let pageInfo = PageInfo(
+                    hasNextPage: data.branches.pageInfo.hasNextPage,
+                    hasPreviousPage: data.branches.pageInfo.hasPreviousPage,
+                    startCursor: data.branches.pageInfo.startCursor,
+                    endCursor: data.branches.pageInfo.endCursor,
+                    totalCount: Int(data.branches.pageInfo.totalCount)
+                )
+
+                print("✅ Fetched \(mappedBranches.count) branches with nested products (hasNextPage: \(pageInfo.hasNextPage), totalCount: \(pageInfo.totalCount))")
+                completion(.success((branches: mappedBranches, pageInfo: pageInfo)))
 
             case .failure(let error):
                 print("❌ Network Error: \(error.localizedDescription)")
@@ -83,35 +106,57 @@ class StoreListRepository {
                         switch cacheResult {
                         case .success(let graphQLResult):
                             if let data = graphQLResult.data {
-                                let mappedBranches = data.branches.map { branch in
-                                    BranchGraphQL(
-                                        id: branch.id,
-                                        businessId: branch.businessId,
-                                        name: branch.name,
-                                        address: branch.address ?? "",
+                                let mappedBranches = data.branches.edges.map { edge in
+                                    // Map nested products
+                                    let mappedProducts = edge.node.products.map { product in
+                                        BranchProductGraphQL(
+                                            id: product.id,
+                                            name: product.name,
+                                            price: product.price,
+                                            currency: product.currency,
+                                            imageUrl: product.imageUrl
+                                        )
+                                    }
+
+                                    return BranchGraphQL(
+                                        id: edge.node.id,
+                                        businessId: edge.node.businessId,
+                                        name: edge.node.name,
+                                        address: edge.node.address ?? "",
                                         coordinates: CoordinatesGraphQL(
-                                            type: branch.coordinates.type,
-                                            coordinates: branch.coordinates.coordinates
+                                            type: edge.node.coordinates.type,
+                                            coordinates: edge.node.coordinates.coordinates
                                         ),
-                                        phone: branch.phone,
-                                        status: branch.status,
-                                        avatarUrl: branch.avatarUrl,
-                                        coverUrl: branch.coverUrl,
-                                        deliveryRadius: branch.deliveryRadius,
+                                        phone: edge.node.phone,
+                                        status: edge.node.status,
+                                        avatarUrl: edge.node.avatarUrl,
+                                        coverUrl: edge.node.coverUrl,
+                                        deliveryRadius: edge.node.deliveryRadius,
                                         facilities: nil,
-                                        createdAt: branch.createdAt
+                                        createdAt: edge.node.createdAt,
+                                        products: mappedProducts
                                     )
                                 }
 
+                                let pageInfo = PageInfo(
+                                    hasNextPage: data.branches.pageInfo.hasNextPage,
+                                    hasPreviousPage: data.branches.pageInfo.hasPreviousPage,
+                                    startCursor: data.branches.pageInfo.startCursor,
+                                    endCursor: data.branches.pageInfo.endCursor,
+                                    totalCount: Int(data.branches.pageInfo.totalCount)
+                                )
+
                                 print("✅ Cargados \(mappedBranches.count) branches desde caché (offline)")
-                                completion(.success(mappedBranches))
+                                completion(.success((branches: mappedBranches, pageInfo: pageInfo)))
                             } else {
                                 print("⚠️ No hay branches en caché")
-                                completion(.success([]))
+                                let emptyPageInfo = PageInfo(hasNextPage: false, hasPreviousPage: false, startCursor: nil, endCursor: nil, totalCount: 0)
+                                completion(.success((branches: [], pageInfo: emptyPageInfo)))
                             }
                         case .failure:
                             print("❌ No hay branches en caché")
-                            completion(.success([]))
+                            let emptyPageInfo = PageInfo(hasNextPage: false, hasPreviousPage: false, startCursor: nil, endCursor: nil, totalCount: 0)
+                            completion(.success((branches: [], pageInfo: emptyPageInfo)))
                         }
                     }
                 } else {
@@ -134,6 +179,8 @@ class StoreListRepository {
             let branchType = BranchTypeManager.shared.selectedType.rawValue
 
             let query = LlegoAPI.GetProductsQuery(
+                first: Int32(limit),
+                after: .none,
                 branchId: .some(branchId),
                 categoryId: .none,
                 availableOnly: .some(true),
@@ -157,18 +204,18 @@ class StoreListRepository {
                     return
                 }
 
-                let mappedProducts = Array(products.prefix(limit)).map { product in
+                let mappedProducts = Array(products.edges.prefix(limit)).map { edge in
                     ProductGraphQL(
-                        id: product.id,
-                        branchId: product.branchId,
-                        name: product.name,
-                        price: product.price,
-                        currency: product.currency,
-                        imageUrl: product.imageUrl,
-                        availability: product.availability,
-                        createdAt: product.createdAt,
-                        businessName: "", // Not available in this context
-                        distanceKm: product.distanceKm
+                        id: edge.node.id,
+                        branchId: edge.node.branchId,
+                        name: edge.node.name,
+                        price: edge.node.price,
+                        currency: edge.node.currency,
+                        imageUrl: edge.node.imageUrl,
+                        availability: edge.node.availability,
+                        createdAt: edge.node.createdAt,
+                        businessName: edge.node.business?.name ?? "",
+                        distanceKm: edge.node.distanceKm
                     )
                 }
 
@@ -193,18 +240,18 @@ class StoreListRepository {
                         switch cacheResult {
                         case .success(let graphQLResult):
                             if let products = graphQLResult.data?.products {
-                                let mappedProducts = Array(products.prefix(limit)).map { product in
+                                let mappedProducts = Array(products.edges.prefix(limit)).map { edge in
                                     ProductGraphQL(
-                                        id: product.id,
-                                        branchId: product.branchId,
-                                        name: product.name,
-                                        price: product.price,
-                                        currency: product.currency,
-                                        imageUrl: product.imageUrl,
-                                        availability: product.availability,
-                                        createdAt: product.createdAt,
-                                        businessName: "", // Not available in this context
-                                        distanceKm: product.distanceKm
+                                        id: edge.node.id,
+                                        branchId: edge.node.branchId,
+                                        name: edge.node.name,
+                                        price: edge.node.price,
+                                        currency: edge.node.currency,
+                                        imageUrl: edge.node.imageUrl,
+                                        availability: edge.node.availability,
+                                        createdAt: edge.node.createdAt,
+                                        businessName: edge.node.business?.name ?? "",
+                                        distanceKm: edge.node.distanceKm
                                     )
                                 }
 
@@ -239,7 +286,8 @@ class StoreListRepository {
 
             let searchQuery = LlegoAPI.SearchBranchesQuery(
                 query: query,
-                limit: .some(Int32(limit)),
+                first: Int32(limit),
+                after: .none,
                 useVectorSearch: .some(useVectorSearch),
                 radiusKm: radiusKm.map { .some($0) } ?? .none,
                 jwt: jwt.map { .some($0) } ?? .none
@@ -249,9 +297,28 @@ class StoreListRepository {
             switch result {
             case .success(let graphQLResult):
                 if let errors = graphQLResult.errors {
-                    print("❌ GraphQL Search Errors:")
+                    print("❌ GraphQL Search Errors (Branches):")
                     errors.forEach { error in
                         print("  - \(error.localizedDescription)")
+                    }
+
+                    // Check if it's a rate limit error
+                    let isRateLimitError = errors.contains { error in
+                        error.localizedDescription.lowercased().contains("rate limit")
+                    }
+
+                    if isRateLimitError {
+                        print("⏱️ RATE LIMIT DETECTED - Backend ha excedido el límite de búsquedas por minuto")
+                        print("⏱️ Límite: 10 búsquedas/minuto")
+                        print("⏱️ Sugerencia: Espera unos segundos antes de realizar otra búsqueda")
+                        print("💡 Recomendación: El usuario debe esperar aproximadamente 1 minuto")
+                        
+                        completion(.failure(NSError(
+                            domain: "RateLimit",
+                            code: 429,
+                            userInfo: [NSLocalizedDescriptionKey: "Demasiadas búsquedas. Por favor espera un momento e intenta de nuevo."]
+                        )))
+                        return
                     }
 
                     // If vector search failed, retry with text search
@@ -259,7 +326,8 @@ class StoreListRepository {
                         print("⚠️ Vector search failed, falling back to text search...")
                         let textSearchQuery = LlegoAPI.SearchBranchesQuery(
                             query: query,
-                            limit: .some(Int32(limit)),
+                            first: Int32(limit),
+                            after: .none,
                             useVectorSearch: .some(false),
                             radiusKm: radiusKm.map { .some($0) } ?? .none,
                             jwt: jwt.map { .some($0) } ?? .none
@@ -269,9 +337,26 @@ class StoreListRepository {
                             switch fallbackResult {
                             case .success(let fallbackGraphQLResult):
                                 if let fallbackErrors = fallbackGraphQLResult.errors {
-                                    print("❌ Text search also failed")
-                                    let error = NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: "Both searches failed"])
-                                    completion(.failure(error))
+                                    print("❌ Text search also failed:")
+                                    fallbackErrors.forEach { print("  - \($0.localizedDescription)") }
+                                    
+                                    // Check rate limit in fallback too
+                                    let isFallbackRateLimit = fallbackErrors.contains { error in
+                                        error.localizedDescription.lowercased().contains("rate limit")
+                                    }
+                                    
+                                    if isFallbackRateLimit {
+                                        print("⏱️ RATE LIMIT en text search también")
+                                        print("💡 El backend está limitando las búsquedas - espera 1 minuto")
+                                        completion(.failure(NSError(
+                                            domain: "RateLimit",
+                                            code: 429,
+                                            userInfo: [NSLocalizedDescriptionKey: "Demasiadas búsquedas. Por favor espera un momento e intenta de nuevo."]
+                                        )))
+                                    } else {
+                                        let error = NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: "Both searches failed"])
+                                        completion(.failure(error))
+                                    }
                                     return
                                 }
 
@@ -281,23 +366,23 @@ class StoreListRepository {
                                     return
                                 }
 
-                                let mappedBranches = data.searchBranches.map { branch in
+                                let mappedBranches = data.searchBranches.edges.map { edge in
                                     BranchGraphQL(
-                                        id: branch.id,
-                                        businessId: branch.businessId,
-                                        name: branch.name,
-                                        address: branch.address ?? "",
+                                        id: edge.node.id,
+                                        businessId: edge.node.businessId,
+                                        name: edge.node.name,
+                                        address: edge.node.address ?? "",
                                         coordinates: CoordinatesGraphQL(
-                                            type: branch.coordinates.type,
-                                            coordinates: branch.coordinates.coordinates
+                                            type: edge.node.coordinates.type,
+                                            coordinates: edge.node.coordinates.coordinates
                                         ),
-                                        phone: branch.phone,
-                                        status: branch.status,
-                                        avatarUrl: branch.avatarUrl,
-                                        coverUrl: branch.coverUrl,
-                                        deliveryRadius: branch.deliveryRadius,
+                                        phone: edge.node.phone,
+                                        status: edge.node.status,
+                                        avatarUrl: edge.node.avatarUrl,
+                                        coverUrl: edge.node.coverUrl,
+                                        deliveryRadius: edge.node.deliveryRadius,
                                         facilities: nil,
-                                        createdAt: branch.createdAt
+                                        createdAt: edge.node.createdAt
                                     )
                                 }
 
@@ -323,23 +408,23 @@ class StoreListRepository {
                 }
 
                 // Map search results
-                let mappedBranches = data.searchBranches.map { branch in
+                let mappedBranches = data.searchBranches.edges.map { edge in
                     BranchGraphQL(
-                        id: branch.id,
-                        businessId: branch.businessId,
-                        name: branch.name,
-                        address: branch.address ?? "",
+                        id: edge.node.id,
+                        businessId: edge.node.businessId,
+                        name: edge.node.name,
+                        address: edge.node.address ?? "",
                         coordinates: CoordinatesGraphQL(
-                            type: branch.coordinates.type,
-                            coordinates: branch.coordinates.coordinates
+                            type: edge.node.coordinates.type,
+                            coordinates: edge.node.coordinates.coordinates
                         ),
-                        phone: branch.phone,
-                        status: branch.status,
-                        avatarUrl: branch.avatarUrl,
-                        coverUrl: branch.coverUrl,
-                        deliveryRadius: branch.deliveryRadius,
+                        phone: edge.node.phone,
+                        status: edge.node.status,
+                        avatarUrl: edge.node.avatarUrl,
+                        coverUrl: edge.node.coverUrl,
+                        deliveryRadius: edge.node.deliveryRadius,
                         facilities: nil,
-                        createdAt: branch.createdAt
+                        createdAt: edge.node.createdAt
                     )
                 }
 

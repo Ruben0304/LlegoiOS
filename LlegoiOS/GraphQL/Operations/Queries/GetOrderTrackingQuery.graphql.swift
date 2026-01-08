@@ -108,10 +108,15 @@ public extension LlegoAPI {
           public var total: Double { __data["total"] }
           public var currency: String { __data["currency"] }
           public var estimatedDeliveryTime: LlegoAPI.DateTime? { __data["estimatedDeliveryTime"] }
+          /// Estimated minutes remaining for delivery
           public var estimatedMinutesRemaining: Int? { __data["estimatedMinutesRemaining"] }
+          /// Order items
           public var items: [Item] { __data["items"] }
+          /// Assigned delivery person
           public var deliveryPerson: DeliveryPerson? { __data["deliveryPerson"] }
+          /// Order timeline
           public var timeline: [Timeline] { __data["timeline"] }
+          /// Branch preparing the order
           public var branch: Branch { __data["branch"] }
 
           /// OrderTracking.Order.Item
@@ -155,7 +160,7 @@ public extension LlegoAPI {
               .field("name", String.self),
               .field("phone", String.self),
               .field("rating", Double.self),
-              .field("vehicleType", String.self),
+              .field("vehicleType", GraphQLEnum<LlegoAPI.VehicleTypeEnum>.self),
               .field("vehiclePlate", String?.self),
               .field("profileImageUrl", String?.self),
               .field("currentLocation", CurrentLocation?.self),
@@ -169,9 +174,10 @@ public extension LlegoAPI {
             public var name: String { __data["name"] }
             public var phone: String { __data["phone"] }
             public var rating: Double { __data["rating"] }
-            public var vehicleType: String { __data["vehicleType"] }
+            public var vehicleType: GraphQLEnum<LlegoAPI.VehicleTypeEnum> { __data["vehicleType"] }
             public var vehiclePlate: String? { __data["vehiclePlate"] }
             public var profileImageUrl: String? { __data["profileImageUrl"] }
+            /// Current location of delivery person
             public var currentLocation: CurrentLocation? { __data["currentLocation"] }
             public var isOnline: Bool { __data["isOnline"] }
 

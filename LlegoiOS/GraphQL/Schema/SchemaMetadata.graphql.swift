@@ -32,6 +32,8 @@ public extension LlegoAPI {
       case "AiAssistantOutputType": return LlegoAPI.Objects.AiAssistantOutputType
       case "AiAssistantResponseType": return LlegoAPI.Objects.AiAssistantResponseType
       case "AuthResponse": return LlegoAPI.Objects.AuthResponse
+      case "BranchConnection": return LlegoAPI.Objects.BranchConnection
+      case "BranchEdge": return LlegoAPI.Objects.BranchEdge
       case "BranchType": return LlegoAPI.Objects.BranchType
       case "BusinessType": return LlegoAPI.Objects.BusinessType
       case "CoordinatesType": return LlegoAPI.Objects.CoordinatesType
@@ -45,7 +47,10 @@ public extension LlegoAPI {
       case "OrderTrackingType": return LlegoAPI.Objects.OrderTrackingType
       case "OrderType": return LlegoAPI.Objects.OrderType
       case "OrdersConnectionType": return LlegoAPI.Objects.OrdersConnectionType
+      case "PageInfo": return LlegoAPI.Objects.PageInfo
       case "PaymentMethodType": return LlegoAPI.Objects.PaymentMethodType
+      case "ProductConnection": return LlegoAPI.Objects.ProductConnection
+      case "ProductEdge": return LlegoAPI.Objects.ProductEdge
       case "ProductType": return LlegoAPI.Objects.ProductType
       case "Query": return LlegoAPI.Objects.Query
       case "ScoredBranchType": return LlegoAPI.Objects.ScoredBranchType

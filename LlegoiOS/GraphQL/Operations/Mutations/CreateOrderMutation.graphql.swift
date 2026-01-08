@@ -43,7 +43,7 @@ public extension LlegoAPI {
         CreateOrderMutation.Data.self
       ] }
 
-      /// Crear nuevo pedido desde el carrito
+      /// Crear nuevo pedido
       public var createOrder: CreateOrder { __data["createOrder"] }
 
       /// CreateOrder
@@ -86,10 +86,15 @@ public extension LlegoAPI {
         public var paymentMethod: String { __data["paymentMethod"] }
         public var paymentStatus: GraphQLEnum<LlegoAPI.PaymentStatusEnum> { __data["paymentStatus"] }
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
+        /// Order items
         public var items: [Item] { __data["items"] }
+        /// Applied discounts
         public var discounts: [Discount] { __data["discounts"] }
+        /// Delivery address
         public var deliveryAddress: DeliveryAddress { __data["deliveryAddress"] }
+        /// Branch preparing the order
         public var branch: Branch { __data["branch"] }
+        /// Business owning the branch
         public var business: Business { __data["business"] }
 
         /// CreateOrder.Item
@@ -118,6 +123,7 @@ public extension LlegoAPI {
           public var price: Double { __data["price"] }
           public var quantity: Int { __data["quantity"] }
           public var imageUrl: String { __data["imageUrl"] }
+          /// Line total (price * quantity)
           public var lineTotal: Double { __data["lineTotal"] }
         }
 

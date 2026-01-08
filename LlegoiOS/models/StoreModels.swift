@@ -68,6 +68,32 @@ struct BranchGraphQL: Identifiable, Sendable {
     let deliveryRadius: Double?
     let facilities: [String]?
     let createdAt: String
+    let products: [BranchProductGraphQL]  // Productos anidados (opcional, puede estar vacío)
+    
+    init(id: String, businessId: String, name: String, address: String, coordinates: CoordinatesGraphQL, phone: String, status: String, avatarUrl: String?, coverUrl: String?, deliveryRadius: Double?, facilities: [String]?, createdAt: String, products: [BranchProductGraphQL] = []) {
+        self.id = id
+        self.businessId = businessId
+        self.name = name
+        self.address = address
+        self.coordinates = coordinates
+        self.phone = phone
+        self.status = status
+        self.avatarUrl = avatarUrl
+        self.coverUrl = coverUrl
+        self.deliveryRadius = deliveryRadius
+        self.facilities = facilities
+        self.createdAt = createdAt
+        self.products = products
+    }
+}
+
+// Model to represent a product nested in a branch (lightweight)
+struct BranchProductGraphQL: Identifiable, Sendable {
+    let id: String
+    let name: String
+    let price: Double
+    let currency: String
+    let imageUrl: String
 }
 
 // MARK: - Story Models

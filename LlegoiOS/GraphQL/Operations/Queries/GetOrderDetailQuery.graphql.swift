@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetOrderDetail"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetOrderDetail($id: String!, $jwt: String!) { order(id: $id, jwt: $jwt) { __typename id orderNumber status subtotal deliveryFee total currency paymentMethod paymentStatus createdAt updatedAt lastStatusAt isEditable canCancel estimatedDeliveryTime estimatedMinutesRemaining items { __typename productId name price quantity imageUrl wasModifiedByStore lineTotal } discounts { __typename id title amount type } deliveryAddress { __typename street city reference coordinates { __typename type coordinates } } deliveryPerson { __typename id name phone rating vehicleType vehiclePlate profileImageUrl isOnline } timeline { __typename status timestamp message actor } comments { __typename id author message timestamp } branch { __typename id name address phone avatarUrl coordinates { __typename type coordinates } } business { __typename id name avatarUrl } customer { __typename id name phone } } }"#
+        #"query GetOrderDetail($id: String!, $jwt: String!) { order(id: $id, jwt: $jwt) { __typename id orderNumber status subtotal deliveryFee total currency paymentMethod paymentStatus createdAt updatedAt lastStatusAt isEditable canCancel estimatedDeliveryTime estimatedMinutesRemaining items { __typename productId name price quantity imageUrl wasModifiedByStore lineTotal } discounts { __typename id title amount type } deliveryAddress { __typename street city reference coordinates { __typename type coordinates } } deliveryPerson { __typename id name phone rating vehicleType vehiclePlate profileImageUrl isOnline } timeline { __typename status timestamp message actor } comments { __typename id author message timestamp } branch { __typename id name address phone avatarUrl coordinates { __typename type coordinates } } business { __typename id name avatarUrl } } }"#
       ))
 
     public var id: String
@@ -43,7 +43,7 @@ public extension LlegoAPI {
         GetOrderDetailQuery.Data.self
       ] }
 
-      /// Obtener un pedido específico por ID
+      /// Obtener un pedido por ID
       public var order: Order? { __data["order"] }
 
       /// Order
@@ -80,7 +80,6 @@ public extension LlegoAPI {
           .field("comments", [Comment].self),
           .field("branch", Branch.self),
           .field("business", Business.self),
-          .field("customer", Customer.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
           GetOrderDetailQuery.Data.Order.self
@@ -98,19 +97,29 @@ public extension LlegoAPI {
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
         public var updatedAt: LlegoAPI.DateTime { __data["updatedAt"] }
         public var lastStatusAt: LlegoAPI.DateTime { __data["lastStatusAt"] }
+        /// Whether order can be edited by customer
         public var isEditable: Bool { __data["isEditable"] }
+        /// Whether order can be cancelled
         public var canCancel: Bool { __data["canCancel"] }
         public var estimatedDeliveryTime: LlegoAPI.DateTime? { __data["estimatedDeliveryTime"] }
+        /// Estimated minutes remaining for delivery
         public var estimatedMinutesRemaining: Int? { __data["estimatedMinutesRemaining"] }
+        /// Order items
         public var items: [Item] { __data["items"] }
+        /// Applied discounts
         public var discounts: [Discount] { __data["discounts"] }
+        /// Delivery address
         public var deliveryAddress: DeliveryAddress { __data["deliveryAddress"] }
+        /// Assigned delivery person
         public var deliveryPerson: DeliveryPerson? { __data["deliveryPerson"] }
+        /// Order timeline
         public var timeline: [Timeline] { __data["timeline"] }
+        /// Order comments
         public var comments: [Comment] { __data["comments"] }
+        /// Branch preparing the order
         public var branch: Branch { __data["branch"] }
+        /// Business owning the branch
         public var business: Business { __data["business"] }
-        public var customer: Customer { __data["customer"] }
 
         /// Order.Item
         ///
@@ -140,6 +149,7 @@ public extension LlegoAPI {
           public var quantity: Int { __data["quantity"] }
           public var imageUrl: String { __data["imageUrl"] }
           public var wasModifiedByStore: Bool { __data["wasModifiedByStore"] }
+          /// Line total (price * quantity)
           public var lineTotal: Double { __data["lineTotal"] }
         }
 
@@ -190,6 +200,7 @@ public extension LlegoAPI {
           public var street: String { __data["street"] }
           public var city: String? { __data["city"] }
           public var reference: String? { __data["reference"] }
+          /// Delivery coordinates
           public var coordinates: Coordinates { __data["coordinates"] }
 
           /// Order.DeliveryAddress.Coordinates
@@ -228,7 +239,7 @@ public extension LlegoAPI {
             .field("name", String.self),
             .field("phone", String.self),
             .field("rating", Double.self),
-            .field("vehicleType", String.self),
+            .field("vehicleType", GraphQLEnum<LlegoAPI.VehicleTypeEnum>.self),
             .field("vehiclePlate", String?.self),
             .field("profileImageUrl", String?.self),
             .field("isOnline", Bool.self),
@@ -241,7 +252,7 @@ public extension LlegoAPI {
           public var name: String { __data["name"] }
           public var phone: String { __data["phone"] }
           public var rating: Double { __data["rating"] }
-          public var vehicleType: String { __data["vehicleType"] }
+          public var vehicleType: GraphQLEnum<LlegoAPI.VehicleTypeEnum> { __data["vehicleType"] }
           public var vehiclePlate: String? { __data["vehiclePlate"] }
           public var profileImageUrl: String? { __data["profileImageUrl"] }
           public var isOnline: Bool { __data["isOnline"] }
@@ -370,29 +381,6 @@ public extension LlegoAPI {
           public var name: String { __data["name"] }
           /// Presigned URL for the business avatar
           public var avatarUrl: String? { __data["avatarUrl"] }
-        }
-
-        /// Order.Customer
-        ///
-        /// Parent Type: `UserType`
-        public struct Customer: LlegoAPI.SelectionSet {
-          @_spi(Unsafe) public let __data: DataDict
-          @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
-
-          @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.UserType }
-          @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
-            .field("__typename", String.self),
-            .field("id", String.self),
-            .field("name", String.self),
-            .field("phone", String?.self),
-          ] }
-          @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
-            GetOrderDetailQuery.Data.Order.Customer.self
-          ] }
-
-          public var id: String { __data["id"] }
-          public var name: String { __data["name"] }
-          public var phone: String? { __data["phone"] }
         }
       }
     }

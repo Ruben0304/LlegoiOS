@@ -1,18 +1,19 @@
 schema {
   query: Query
   mutation: Mutation
+  subscription: Subscription
 }
 "Date with time (isoformat)"
 scalar DateTime
 "The `JSON` scalar type represents JSON values as specified by [ECMA-404](https://ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf)."
 scalar JSON
 type Query {
-  "Lista de usuarios"
-  users(jwt: String = null): [UserType!]!
-  "Obtener usuario por ID"
-  user(id: String!, jwt: String = null): UserType
-  "Buscar usuarios"
-  searchUsers(query: String!, jwt: String = null): [UserType!]!
+  "Lista de usuarios (requiere rol admin o manager)"
+  users(jwt: String!): [UserType!]!
+  "Obtener usuario por ID (requiere rol admin o manager)"
+  user(id: String!, jwt: String!): UserType
+  "Buscar usuarios (requiere rol admin o manager)"
+  searchUsers(query: String!, jwt: String!): [UserType!]!
   "Usuario actual desde JWT"
   me(jwt: String!): UserType
   "Lista de negocios"
@@ -21,42 +22,50 @@ type Query {
   business(id: String!, jwt: String = null): BusinessType
   "Buscar negocios"
   searchBusinesses(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true, jwt: String = null): [BusinessType!]!
-  "Lista de sucursales con scoring por cercanía"
-  branches(businessId: String = null, tipo: BranchTipo = null, radiusKm: Float = null, jwt: String = null): [ScoredBranchType!]!
+  "Lista de sucursales con scoring por cercanía (paginado)"
+  branches(first: Int! = 20, after: String = null, businessId: String = null, tipo: BranchTipo = null, radiusKm: Float = null, jwt: String = null): BranchConnection!
   "Obtener sucursal por ID"
   branch(id: String!, jwt: String = null): BranchType
-  "Buscar sucursales con scoring por cercanía"
-  searchBranches(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true, radiusKm: Float = null, jwt: String = null): [ScoredBranchType!]!
-  "Buscar sucursales cercanas por coordenadas"
-  nearbyBranches(longitude: Float!, latitude: Float!, radiusKm: Float! = 5, onlyActive: Boolean! = true, tipo: BranchTipo = null, jwt: String = null): [NearbyBranchType!]!
+  "Buscar sucursales con scoring por cercanía (paginado)"
+  searchBranches(query: String!, first: Int! = 20, after: String = null, useVectorSearch: Boolean! = true, radiusKm: Float = null, jwt: String = null): BranchConnection!
+  "Buscar sucursales cercanas por coordenadas (paginado)"
+  nearbyBranches(longitude: Float!, latitude: Float!, first: Int! = 20, after: String = null, radiusKm: Float! = 5, onlyActive: Boolean! = true, tipo: BranchTipo = null, jwt: String = null): NearbyBranchConnection!
   "Obtener ubicación de una sucursal desde MongoDB"
   branchLocation(branchId: String!, jwt: String = null): CoordinatesType
-  "Lista de productos con scoring por cercanía"
-  products(ids: [String!] = null, branchId: String = null, categoryId: String = null, availableOnly: Boolean! = false, branchTipo: BranchTipo = null, radiusKm: Float = null, jwt: String = null): [ScoredProductType!]!
+  "Lista de productos con scoring por cercanía (paginado)"
+  products(first: Int! = 20, after: String = null, ids: [String!] = null, branchId: String = null, categoryId: String = null, availableOnly: Boolean! = false, branchTipo: BranchTipo = null, radiusKm: Float = null, jwt: String = null): ProductConnection!
   "Obtener producto por ID"
   product(id: String!, jwt: String = null): ProductType
-  "Buscar productos con scoring por cercanía"
-  searchProducts(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true, branchTipo: BranchTipo = null, radiusKm: Float = null, jwt: String = null): [ScoredProductType!]!
+  "Buscar productos con scoring por cercanía (paginado)"
+  searchProducts(query: String!, first: Int! = 20, after: String = null, useVectorSearch: Boolean! = true, branchTipo: BranchTipo = null, radiusKm: Float = null, jwt: String = null): ProductConnection!
   "Lista de categorías con subcategorías"
   categories(jwt: String = null): [CategoryType!]!
   "Obtener categoría por ID"
   category(id: String!, jwt: String = null): CategoryType
   "Send a message to the AI assistant and get a response"
   aiChat(input: AiAssistantChatInput!, jwt: String = null): AiAssistantResponseType
-  "Saludo de ejemplo"
-  hello(jwt: String = null): String!
-  "Saluda por nombre"
-  greet(name: String! = "mundo", jwt: String = null): String!
-  
-  # ============ ORDER QUERIES ============
   "Obtener mis pedidos con paginación"
-  myOrders(status: OrderStatusEnum = null, limit: Int = 20, offset: Int = 0, jwt: String!): OrdersConnectionType!
-  "Obtener un pedido específico por ID"
+  myOrders(jwt: String!, status: OrderStatusEnum = null, limit: Int! = 20, offset: Int! = 0): OrdersConnectionType!
+  "Obtener un pedido por ID"
   order(id: String!, jwt: String!): OrderType
   "Obtener pedido por número de orden"
   orderByNumber(orderNumber: String!, jwt: String!): OrderType
   "Tracking completo de un pedido"
   orderTracking(orderId: String!, jwt: String!): OrderTrackingType
+  "Pedidos de una sucursal"
+  branchOrders(branchId: String!, jwt: String!, status: OrderStatusEnum = null, fromDate: DateTime = null, toDate: DateTime = null, limit: Int! = 50, offset: Int! = 0): OrdersConnectionType!
+  "Pedidos pendientes de una sucursal"
+  pendingBranchOrders(branchId: String!, jwt: String!): [OrderType!]!
+  "Pedidos disponibles para repartidores cerca"
+  availableOrdersForDelivery(latitude: Float!, longitude: Float!, jwt: String!, radiusKm: Float! = 5): [OrderType!]!
+  "Pedido actual del repartidor"
+  myCurrentDelivery(jwt: String!): OrderType
+  "Estadísticas de pedidos"
+  orderStats(fromDate: DateTime!, toDate: DateTime!, jwt: String!, branchId: String = null): OrderStatsType!
+  "Saludo de ejemplo"
+  hello(jwt: String = null): String!
+  "Saluda por nombre"
+  greet(name: String! = "mundo", jwt: String = null): String!
 }
 type UserType {
   id: String!
@@ -92,6 +101,14 @@ type BusinessType {
   "Presigned URL for the business cover image"
   coverUrl: String
 }
+type BranchConnection {
+  edges: [BranchEdge!]!
+  pageInfo: PageInfo!
+}
+type BranchEdge {
+  node: ScoredBranchType!
+  cursor: String!
+}
 type ScoredBranchType {
   id: String!
   businessId: String!
@@ -116,10 +133,31 @@ type ScoredBranchType {
   coverUrl: String
   "Distance in kilometers from user"
   distanceKm: Float
+  "Products from this branch"
+  products(limit: Int! = 6, availableOnly: Boolean! = true): [ProductType!]!
 }
 type CoordinatesType {
   type: String!
   coordinates: [Float!]!
+}
+type ProductType {
+  id: String!
+  branchId: String!
+  name: String!
+  description: String!
+  weight: String!
+  price: Float!
+  currency: String!
+  image: String!
+  availability: Boolean!
+  categoryId: String
+  createdAt: DateTime!
+  "Presigned URL for the product image"
+  imageUrl: String!
+  "Branch associated with this product"
+  branch: BranchType
+  "Business associated with this product (through branch)"
+  business: BusinessType
 }
 type BranchType {
   id: String!
@@ -141,6 +179,23 @@ type BranchType {
   avatarUrl: String
   "Presigned URL for the branch cover image"
   coverUrl: String
+  "Products from this branch"
+  products(limit: Int! = 6, availableOnly: Boolean! = true): [ProductType!]!
+}
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+  totalCount: Int!
+}
+type NearbyBranchConnection {
+  edges: [NearbyBranchEdge!]!
+  pageInfo: PageInfo!
+}
+type NearbyBranchEdge {
+  node: NearbyBranchType!
+  cursor: String!
 }
 type NearbyBranchType {
   id: String!
@@ -165,6 +220,16 @@ type NearbyBranchType {
   coverUrl: String
   "Distance in kilometers"
   distanceKm: Float!
+  "Products from this branch"
+  products(limit: Int! = 6, availableOnly: Boolean! = true): [ProductType!]!
+}
+type ProductConnection {
+  edges: [ProductEdge!]!
+  pageInfo: PageInfo!
+}
+type ProductEdge {
+  node: ScoredProductType!
+  cursor: String!
 }
 type ScoredProductType {
   id: String!
@@ -184,25 +249,6 @@ type ScoredProductType {
   imageUrl: String!
   "Distance in kilometers from user"
   distanceKm: Float
-  "Branch associated with this product"
-  branch: BranchType
-  "Business associated with this product (through branch)"
-  business: BusinessType
-}
-type ProductType {
-  id: String!
-  branchId: String!
-  name: String!
-  description: String!
-  weight: String!
-  price: Float!
-  currency: String!
-  image: String!
-  availability: Boolean!
-  categoryId: String
-  createdAt: DateTime!
-  "Presigned URL for the product image"
-  imageUrl: String!
   "Branch associated with this product"
   branch: BranchType
   "Business associated with this product (through branch)"
@@ -241,6 +287,122 @@ type PaymentMethodType {
   "Payment method (e.g., tarjeta, efectivo, transferencia)"
   method: String!
 }
+type OrdersConnectionType {
+  orders: [OrderType!]!
+  totalCount: Int!
+  hasMore: Boolean!
+}
+type OrderType {
+  id: String!
+  orderNumber: String!
+  customerId: String!
+  branchId: String!
+  businessId: String!
+  subtotal: Float!
+  deliveryFee: Float!
+  total: Float!
+  currency: String!
+  status: OrderStatusEnum!
+  paymentMethod: String!
+  paymentStatus: PaymentStatusEnum!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  lastStatusAt: DateTime!
+  deliveryPersonId: String
+  estimatedDeliveryTime: DateTime
+  paymentId: String
+  rating: Int
+  ratingComment: String
+  "Order items"
+  items: [OrderItemType!]!
+  "Applied discounts"
+  discounts: [OrderDiscountType!]!
+  "Delivery address"
+  deliveryAddress: DeliveryAddressType!
+  "Order timeline"
+  timeline: [OrderTimelineType!]!
+  "Order comments"
+  comments: [OrderCommentType!]!
+  "Customer who placed the order"
+  customer: UserType!
+  "Branch preparing the order"
+  branch: BranchType!
+  "Business owning the branch"
+  business: BusinessType!
+  "Assigned delivery person"
+  deliveryPerson: DeliveryPersonType
+  "Whether order can be edited by customer"
+  isEditable: Boolean!
+  "Whether order can be cancelled"
+  canCancel: Boolean!
+  "Estimated minutes remaining for delivery"
+  estimatedMinutesRemaining: Int
+}
+type OrderItemType {
+  productId: String!
+  name: String!
+  price: Float!
+  quantity: Int!
+  imageUrl: String!
+  wasModifiedByStore: Boolean!
+  "Line total (price * quantity)"
+  lineTotal: Float!
+}
+type OrderDiscountType {
+  id: String!
+  title: String!
+  amount: Float!
+  type: DiscountTypeEnum!
+}
+type DeliveryAddressType {
+  street: String!
+  city: String
+  reference: String
+  "Delivery coordinates"
+  coordinates: CoordinatesType!
+}
+type OrderTimelineType {
+  status: OrderStatusEnum!
+  timestamp: DateTime!
+  message: String!
+  actor: OrderActorEnum!
+}
+type OrderCommentType {
+  id: String!
+  author: OrderActorEnum!
+  message: String!
+  timestamp: DateTime!
+}
+type DeliveryPersonType {
+  id: String!
+  name: String!
+  phone: String!
+  rating: Float!
+  totalDeliveries: Int!
+  vehicleType: VehicleTypeEnum!
+  vehiclePlate: String
+  profileImageUrl: String
+  isOnline: Boolean!
+  "Current location of delivery person"
+  currentLocation: CoordinatesType
+}
+type OrderTrackingType {
+  order: OrderType!
+  storeLocation: CoordinatesType!
+  deliveryLocation: CoordinatesType!
+  deliveryPersonLocation: CoordinatesType
+  estimatedMinutes: Int
+  distanceKm: Float
+  routePolyline: String
+}
+type OrderStatsType {
+  totalOrders: Int!
+  completedOrders: Int!
+  cancelledOrders: Int!
+  totalRevenue: Float!
+  averageOrderValue: Float!
+  averageDeliveryTime: Int!
+}
 type Mutation {
   "Register a new user"
   register(input: RegisterInput!, jwt: String = null): AuthResponse!
@@ -274,20 +436,40 @@ type Mutation {
   updateProduct(productId: String!, input: UpdateProductInput!, jwt: String = null): ProductType!
   "Eliminar un producto"
   deleteProduct(productId: String!, jwt: String = null): Boolean!
-  
-  # ============ ORDER MUTATIONS ============
-  "Crear nuevo pedido desde el carrito"
+  "Crear nuevo pedido"
   createOrder(input: CreateOrderInput!, jwt: String!): OrderType!
-  "Aceptar modificaciones hechas por la tienda"
+  "Aceptar modificaciones de la tienda"
   acceptOrderModifications(orderId: String!, jwt: String!): OrderType!
   "Rechazar modificaciones y cancelar pedido"
   rejectOrderModifications(orderId: String!, jwt: String!): OrderType!
   "Cancelar pedido"
-  cancelOrder(orderId: String!, reason: String, jwt: String!): OrderType!
+  cancelOrder(orderId: String!, jwt: String!, reason: String = null): OrderType!
   "Añadir comentario al pedido"
   addOrderComment(input: AddOrderCommentInput!, jwt: String!): OrderType!
   "Calificar pedido después de entrega"
-  rateOrder(orderId: String!, rating: Int!, comment: String, jwt: String!): OrderType!
+  rateOrder(orderId: String!, rating: Int!, jwt: String!, comment: String = null): OrderType!
+  "Aceptar pedido"
+  acceptOrder(orderId: String!, estimatedMinutes: Int!, jwt: String!): OrderType!
+  "Rechazar pedido"
+  rejectOrder(orderId: String!, reason: String!, jwt: String!): OrderType!
+  "Modificar items del pedido"
+  modifyOrderItems(input: ModifyOrderItemsInput!, jwt: String!): OrderType!
+  "Actualizar estado del pedido"
+  updateOrderStatus(input: UpdateOrderStatusInput!, jwt: String!): OrderType!
+  "Marcar pedido como listo para recoger"
+  markOrderReady(orderId: String!, jwt: String!): OrderType!
+  "Aceptar pedido para entrega"
+  acceptDelivery(orderId: String!, jwt: String!): OrderType!
+  "Confirmar recogida del pedido"
+  confirmPickup(orderId: String!, jwt: String!): OrderType!
+  "Actualizar ubicación durante la entrega"
+  updateDeliveryLocation(input: UpdateDeliveryLocationInput!, jwt: String!): Boolean!
+  "Confirmar entrega completada"
+  confirmDelivery(orderId: String!, jwt: String!): OrderType!
+  "Asignar repartidor manualmente"
+  assignDeliveryPerson(input: AssignDeliveryPersonInput!, jwt: String!): OrderType!
+  "Forzar cambio de estado (admin)"
+  forceOrderStatus(orderId: String!, status: OrderStatusEnum!, reason: String!, jwt: String!): OrderType!
 }
 type AuthResponse {
   accessToken: String!
@@ -302,11 +484,61 @@ type UserData {
   role: String!
   createdAt: String!
 }
+type Subscription {
+  "Escuchar cambios en un pedido específico"
+  orderUpdated(orderId: String!): OrderType!
+  "Ubicación del repartidor en tiempo real"
+  deliveryLocationUpdated(orderId: String!): DeliveryLocationUpdateType!
+  "Nuevos pedidos para una sucursal"
+  newBranchOrder(branchId: String!): OrderType!
+  "Cambios en pedidos de una sucursal"
+  branchOrderUpdated(branchId: String!): OrderType!
+}
+type DeliveryLocationUpdateType {
+  orderId: String!
+  location: CoordinatesType!
+  timestamp: DateTime!
+  estimatedMinutesRemaining: Int
+  distanceRemainingKm: Float
+}
 union EntityType = ProductType | BranchType | PaymentMethodType
 enum BranchTipo {
   RESTAURANTE
   DULCERIA
   TIENDA
+}
+enum OrderStatusEnum {
+  PENDING_ACCEPTANCE
+  MODIFIED_BY_STORE
+  ACCEPTED
+  PREPARING
+  READY_FOR_PICKUP
+  ON_THE_WAY
+  DELIVERED
+  CANCELLED
+}
+enum PaymentStatusEnum {
+  PENDING
+  VALIDATED
+  COMPLETED
+  FAILED
+}
+enum DiscountTypeEnum {
+  PREMIUM
+  LEVEL
+  PROMO
+}
+enum OrderActorEnum {
+  CUSTOMER
+  BUSINESS
+  SYSTEM
+  DELIVERY
+}
+enum VehicleTypeEnum {
+  MOTO
+  BICICLETA
+  AUTO
+  A_PIE
 }
 input AiAssistantChatInput {
   "The user message/query to send"
@@ -319,7 +551,6 @@ input RegisterInput {
   email: String!
   password: String!
   phone: String = null
-  role: String = "customer"
 }
 input LoginInput {
   email: String!
@@ -432,186 +663,52 @@ input UpdateProductInput {
   categoryId: String = null
   image: String = null
 }
-# ============ ORDER TYPES ============
-
-type OrderType {
-  id: String!
-  orderNumber: String!
-  customer: UserType!
-  branch: BranchType!
-  business: BusinessType!
-  items: [OrderItemType!]!
-  subtotal: Float!
-  deliveryFee: Float!
-  discounts: [OrderDiscountType!]!
-  total: Float!
-  currency: String!
-  status: OrderStatusEnum!
-  deliveryAddress: DeliveryAddressType!
-  deliveryPerson: DeliveryPersonType
-  estimatedDeliveryTime: DateTime
-  timeline: [OrderTimelineType!]!
-  comments: [OrderCommentType!]!
-  paymentMethod: String!
-  paymentStatus: PaymentStatusEnum!
-  createdAt: DateTime!
-  updatedAt: DateTime!
-  lastStatusAt: DateTime!
-  isEditable: Boolean!
-  canCancel: Boolean!
-  estimatedMinutesRemaining: Int
-}
-
-type OrderItemType {
-  productId: String!
-  name: String!
-  price: Float!
-  quantity: Int!
-  imageUrl: String!
-  wasModifiedByStore: Boolean!
-  lineTotal: Float!
-}
-
-type OrderDiscountType {
-  id: String!
-  title: String!
-  amount: Float!
-  type: DiscountTypeEnum!
-}
-
-type DeliveryAddressType {
-  street: String!
-  city: String
-  reference: String
-  coordinates: CoordinatesType!
-}
-
-type DeliveryPersonType {
-  id: String!
-  name: String!
-  phone: String!
-  rating: Float!
-  totalDeliveries: Int!
-  vehicleType: String!
-  vehiclePlate: String
-  profileImageUrl: String
-  currentLocation: CoordinatesType
-  isOnline: Boolean!
-}
-
-type OrderTimelineType {
-  status: OrderStatusEnum!
-  timestamp: DateTime!
-  message: String!
-  actor: OrderActorEnum!
-}
-
-type OrderCommentType {
-  id: String!
-  author: OrderActorEnum!
-  message: String!
-  timestamp: DateTime!
-}
-
-type OrderTrackingType {
-  order: OrderType!
-  deliveryPersonLocation: CoordinatesType
-  storeLocation: CoordinatesType!
-  deliveryLocation: CoordinatesType!
-  estimatedMinutes: Int
-  distanceKm: Float
-  routePolyline: String
-}
-
-type OrdersConnectionType {
-  orders: [OrderType!]!
-  totalCount: Int!
-  hasMore: Boolean!
-}
-
-type DeliveryLocationUpdateType {
-  orderId: String!
-  location: CoordinatesType!
-  timestamp: DateTime!
-  estimatedMinutesRemaining: Int
-  distanceRemainingKm: Float
-}
-
-# ============ ORDER ENUMS ============
-
-enum OrderStatusEnum {
-  PENDING_ACCEPTANCE
-  MODIFIED_BY_STORE
-  ACCEPTED
-  PREPARING
-  READY_FOR_PICKUP
-  ON_THE_WAY
-  DELIVERED
-  CANCELLED
-}
-
-enum PaymentStatusEnum {
-  PENDING
-  VALIDATED
-  COMPLETED
-  FAILED
-}
-
-enum DiscountTypeEnum {
-  PREMIUM
-  LEVEL
-  PROMO
-}
-
-enum OrderActorEnum {
-  CUSTOMER
-  BUSINESS
-  SYSTEM
-  DELIVERY
-}
-
-# ============ ORDER INPUTS ============
-
 input CreateOrderInput {
   branchId: String!
   items: [OrderItemInput!]!
   deliveryAddress: DeliveryAddressInput!
   paymentMethod: String!
-  paymentIntentId: String
-  comments: String
-  promoCode: String
+  paymentIntentId: String = null
+  comments: String = null
+  promoCode: String = null
 }
-
 input OrderItemInput {
   productId: String!
   quantity: Int!
 }
-
 input DeliveryAddressInput {
   street: String!
-  city: String
-  reference: String
   latitude: Float!
   longitude: Float!
+  city: String = null
+  reference: String = null
 }
-
-input UpdateOrderStatusInput {
-  orderId: String!
-  status: OrderStatusEnum!
-  message: String
-}
-
 input AddOrderCommentInput {
   orderId: String!
   message: String!
 }
-
 input ModifyOrderItemsInput {
   orderId: String!
   items: [OrderItemInput!]!
   reason: String!
 }
-
+input UpdateOrderStatusInput {
+  orderId: String!
+  status: OrderStatusEnum!
+  message: String = null
+}
+input UpdateDeliveryLocationInput {
+  orderId: String!
+  latitude: Float!
+  longitude: Float!
+  speed: Float = null
+  heading: Float = null
+}
+input AssignDeliveryPersonInput {
+  orderId: String!
+  deliveryPersonId: String!
+  estimatedMinutes: Int = null
+}
 "Exposes a URL that specifies the behavior of this scalar."
 directive @specifiedBy(
     "The URL that specifies the behavior of this scalar."

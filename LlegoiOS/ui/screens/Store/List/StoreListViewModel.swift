@@ -18,22 +18,44 @@ class StoreListViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var isLoadingProducts: [String: Bool] = [:] // storeId -> isLoading
 
+    // Paginación
+    @Published var isLoadingMore: Bool = false
+    @Published var currentCursor: String? = nil
+    @Published var hasNextPage: Bool = false
+    @Published var totalCount: Int = 0
+
+    // Flag para evitar recargar si ya se cargaron los datos
+    private var hasLoaded: Bool = false
+
     private let repository = StoreListRepository()
 
     // Load all branches/stores
     func loadStores(isRefreshing: Bool = false) {
+        // Evitar recargar si ya se cargaron los datos (excepto en refresh explícito)
+        if hasLoaded && !isRefreshing {
+            print("🏪 StoreListViewModel - Datos ya cargados, omitiendo recarga")
+            return
+        }
+
+        // Reset pagination state on refresh
+        if isRefreshing {
+            currentCursor = nil
+            hasNextPage = false
+            totalCount = 0
+        }
+
         // Solo mostrar loading si NO es un refresh
         if !isRefreshing {
             isLoading = true
             state = .loading
         }
 
-        repository.fetchBranches { [weak self] result in
+        repository.fetchBranches(first: 20, after: nil) { [weak self] result in
             guard let self = self else { return }
 
             Task { @MainActor in
                 switch result {
-                case .success(let branchesGraphQL):
+                case .success(let (branchesGraphQL, pageInfo)):
                     // Mapear branches GraphQL a modelos UI
                     self.stores = branchesGraphQL.map { branchGraphQL in
                         StoreWithCoordinates(
@@ -53,19 +75,126 @@ class StoreListViewModel: ObservableObject {
                         )
                     }
 
+                    // Update pagination state
+                    self.currentCursor = pageInfo.endCursor
+                    self.hasNextPage = pageInfo.hasNextPage
+                    self.totalCount = pageInfo.totalCount
+
                     self.isLoading = false
+                    self.hasLoaded = true
                     self.state = .success
 
-                    // Load products for each store
-                    for store in self.stores {
-                        self.loadProductsForStore(storeId: store.id)
+                    // Los productos ya vienen anidados en la query, no necesitamos queries adicionales
+                    // Mapear productos anidados al diccionario storeProducts
+                    for branch in branchesGraphQL {
+                        let mappedProducts = branch.products.map { product in
+                            ProductGraphQL(
+                                id: product.id,
+                                branchId: branch.id,
+                                name: product.name,
+                                price: product.price,
+                                currency: product.currency,
+                                imageUrl: product.imageUrl,
+                                availability: true,
+                                createdAt: "",
+                                businessName: branch.name,
+                                distanceKm: nil
+                            )
+                        }
+                        self.storeProducts[branch.id] = mappedProducts
                     }
+
+                    print("✅ Loaded \(branchesGraphQL.count) stores (hasNextPage: \(pageInfo.hasNextPage), totalCount: \(pageInfo.totalCount))")
 
                 case .failure(let error):
                     self.isLoading = false
                     self.state = .error("No se pudieron cargar las tiendas: \(error.localizedDescription)")
                 }
             }
+        }
+    }
+
+    func loadMoreStores() {
+        guard !isLoadingMore, hasNextPage, let cursor = currentCursor else {
+            print("🏪 loadMoreStores - Skipping (isLoadingMore: \(isLoadingMore), hasNextPage: \(hasNextPage), cursor: \(currentCursor ?? "nil"))")
+            return
+        }
+
+        print("🏪 loadMoreStores - Loading next page with cursor: \(cursor)")
+        isLoadingMore = true
+
+        repository.fetchBranches(first: 20, after: cursor) { [weak self] result in
+            guard let self = self else { return }
+
+            Task { @MainActor in
+                self.isLoadingMore = false
+
+                switch result {
+                case .success(let (branchesGraphQL, pageInfo)):
+                    // Mapear branches GraphQL a modelos UI
+                    let newStores = branchesGraphQL.map { branchGraphQL in
+                        StoreWithCoordinates(
+                            id: branchGraphQL.id,
+                            name: branchGraphQL.name,
+                            etaMinutes: self.calculateETA(
+                                deliveryRadius: branchGraphQL.deliveryRadius
+                            ),
+                            logoUrl: branchGraphQL.avatarUrl ?? self.defaultLogoUrl,
+                            bannerUrl: branchGraphQL.coverUrl ?? self.defaultBannerUrl,
+                            address: branchGraphQL.address,
+                            rating: nil,
+                            coordinate: CLLocationCoordinate2D(
+                                latitude: branchGraphQL.coordinates.latitude,
+                                longitude: branchGraphQL.coordinates.longitude
+                            )
+                        )
+                    }
+
+                    // Append new stores to existing list
+                    self.stores.append(contentsOf: newStores)
+
+                    // Update pagination state
+                    self.currentCursor = pageInfo.endCursor
+                    self.hasNextPage = pageInfo.hasNextPage
+
+                    // Mapear productos anidados
+                    for branch in branchesGraphQL {
+                        let mappedProducts = branch.products.map { product in
+                            ProductGraphQL(
+                                id: product.id,
+                                branchId: branch.id,
+                                name: product.name,
+                                price: product.price,
+                                currency: product.currency,
+                                imageUrl: product.imageUrl,
+                                availability: true,
+                                createdAt: "",
+                                businessName: branch.name,
+                                distanceKm: nil
+                            )
+                        }
+                        self.storeProducts[branch.id] = mappedProducts
+                    }
+
+                    print("✅ Loaded \(newStores.count) more stores (total: \(self.stores.count), hasNextPage: \(pageInfo.hasNextPage))")
+
+                case .failure(let error):
+                    print("❌ Error loading more stores: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    func loadMoreIfNeeded(currentStore: StoreWithCoordinates?) {
+        guard let currentStore = currentStore else {
+            loadMoreStores()
+            return
+        }
+
+        let thresholdIndex = stores.index(stores.endIndex, offsetBy: -3)
+        if let currentIndex = stores.firstIndex(where: { $0.id == currentStore.id }),
+           currentIndex >= thresholdIndex {
+            loadMoreStores()
         }
     }
 
@@ -130,7 +259,16 @@ class StoreListViewModel: ObservableObject {
                     completion(searchResults)
 
                 case .failure(let error):
-                    print("❌ Search failed: \(error.localizedDescription)")
+                    let nsError = error as NSError
+                    
+                    // Check if it's a rate limit error
+                    if nsError.domain == "RateLimit" && nsError.code == 429 {
+                        print("⏱️ Rate limit alcanzado en búsqueda de tiendas")
+                        print("💡 Sugerencia: El backend está limitando las búsquedas a 10 por minuto")
+                        self.state = .error("Demasiadas búsquedas. Por favor espera un momento e intenta de nuevo.")
+                    } else {
+                        print("❌ Search failed: \(error.localizedDescription)")
+                    }
                     completion([])
                 }
             }

@@ -40,11 +40,6 @@ struct OrderDetail: Identifiable {
     let businessName: String
     let businessImageUrl: String?
     
-    // Customer info
-    let customerId: String
-    let customerName: String
-    let customerPhone: String?
-    
     var formattedSubtotal: String { String(format: "$%.2f", subtotal) }
     var formattedDeliveryFee: String { String(format: "$%.2f", deliveryFee) }
     var formattedTotal: String { String(format: "$%.2f", total) }
@@ -98,7 +93,7 @@ struct OrderDeliveryPerson: Identifiable {
     let name: String
     let phone: String
     let rating: Double
-    let vehicleType: String
+    let vehicleType: String?
     let vehiclePlate: String?
     let profileImageUrl: String?
     let isOnline: Bool

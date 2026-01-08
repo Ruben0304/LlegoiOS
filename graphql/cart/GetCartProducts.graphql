@@ -1,18 +1,30 @@
-query GetCartProducts($ids: [String!]!) {
-  products(ids: $ids) {
-    id
-    branchId
-    name
-    description
-    weight
-    price
-    currency
-    image
-    availability
-    createdAt
-    business {
-      id
-      name
+query GetCartProducts($first: Int! = 100, $after: String, $ids: [String!]!) {
+  products(first: $first, after: $after, ids: $ids) {
+    edges {
+      node {
+        id
+        branchId
+        name
+        description
+        weight
+        price
+        currency
+        image
+        availability
+        createdAt
+        business {
+          id
+          name
+        }
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      startCursor
+      endCursor
+      totalCount
     }
   }
 }

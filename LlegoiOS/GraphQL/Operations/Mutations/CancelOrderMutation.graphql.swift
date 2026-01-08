@@ -75,6 +75,7 @@ public extension LlegoAPI {
         public var orderNumber: String { __data["orderNumber"] }
         public var status: GraphQLEnum<LlegoAPI.OrderStatusEnum> { __data["status"] }
         public var lastStatusAt: LlegoAPI.DateTime { __data["lastStatusAt"] }
+        /// Order timeline
         public var timeline: [Timeline] { __data["timeline"] }
 
         /// CancelOrder.Timeline

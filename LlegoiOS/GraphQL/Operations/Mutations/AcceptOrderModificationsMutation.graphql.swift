@@ -43,7 +43,7 @@ public extension LlegoAPI {
         AcceptOrderModificationsMutation.Data.self
       ] }
 
-      /// Aceptar modificaciones hechas por la tienda
+      /// Aceptar modificaciones de la tienda
       public var acceptOrderModifications: AcceptOrderModifications { __data["acceptOrderModifications"] }
 
       /// AcceptOrderModifications
@@ -75,7 +75,9 @@ public extension LlegoAPI {
         public var subtotal: Double { __data["subtotal"] }
         public var total: Double { __data["total"] }
         public var lastStatusAt: LlegoAPI.DateTime { __data["lastStatusAt"] }
+        /// Order items
         public var items: [Item] { __data["items"] }
+        /// Order timeline
         public var timeline: [Timeline] { __data["timeline"] }
 
         /// AcceptOrderModifications.Item
@@ -106,6 +108,7 @@ public extension LlegoAPI {
           public var quantity: Int { __data["quantity"] }
           public var imageUrl: String { __data["imageUrl"] }
           public var wasModifiedByStore: Bool { __data["wasModifiedByStore"] }
+          /// Line total (price * quantity)
           public var lineTotal: Double { __data["lineTotal"] }
         }
 

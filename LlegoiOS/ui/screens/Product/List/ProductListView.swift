@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ProductListView: View {
-    @StateObject private var viewModel = ProductListViewModel()
+    @ObservedObject var viewModel: ProductListViewModel
     @StateObject private var favoritesManager = FavoritesManager.shared
     @State private var productCounts: [String: Int] = [:]
     @State private var showFiltersSheet = false
@@ -16,7 +16,9 @@ struct ProductListView: View {
     let branchName: String?
     let storeGradient: ExtractedGradient?
 
-    init(category: String? = nil, branchId: String? = nil, branchName: String? = nil, storeGradient: ExtractedGradient? = nil) {
+    init(viewModel: ProductListViewModel? = nil, category: String? = nil, branchId: String? = nil, branchName: String? = nil, storeGradient: ExtractedGradient? = nil) {
+        // Si no se pasa viewModel, crear uno nuevo (para uso desde navegación interna)
+        self._viewModel = ObservedObject(wrappedValue: viewModel ?? ProductListViewModel())
         self.initialCategory = category
         self.initialBranchId = branchId
         self.branchName = branchName
@@ -242,6 +244,9 @@ struct ProductListView: View {
                             },
                             onProductTap: nil
                         )
+                        .onAppear {
+                            viewModel.loadMoreIfNeeded(currentItem: product)
+                        }
                     }
                     .buttonStyle(.glassProminent)
                     .buttonBorderShape(.roundedRectangle(radius: 26))
@@ -260,6 +265,20 @@ struct ProductListView: View {
                         .delay(Double(index) * 0.05),
                         value: animationDelay
                     )
+                }
+
+                // Loading indicator for pagination
+                if viewModel.isLoadingMore {
+                    GridRow {
+                        HStack {
+                            Spacer()
+                            ProgressView()
+                                .tint(Color.llegoPrimary)
+                                .padding()
+                            Spacer()
+                        }
+                        .gridCellColumns(2)
+                    }
                 }
             }
             .padding(.horizontal, 20)

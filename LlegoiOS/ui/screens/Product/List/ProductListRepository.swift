@@ -5,8 +5,8 @@ import Combine
 class ProductListRepository {
     private let apolloClient = ApolloClientManager.shared.apollo
 
-    // Fetch all products from GraphQL
-    @MainActor func fetchProducts(branchId: String? = nil, radiusKm: Double? = nil, completion: @escaping @Sendable (Result<[ProductGraphQL], Error>) -> Void) {
+    // Fetch all products from GraphQL with cursor pagination
+    @MainActor func fetchProducts(first: Int = 20, after: String? = nil, branchId: String? = nil, radiusKm: Double? = nil, completion: @escaping @Sendable (Result<(products: [ProductGraphQL], pageInfo: PageInfo), Error>) -> Void) {
         // Obtener JWT si está disponible
         let jwt = AuthManager.shared.getAccessToken()
 
@@ -14,6 +14,8 @@ class ProductListRepository {
         let branchType = BranchTypeManager.shared.selectedType.rawValue
 
         let query = LlegoAPI.GetProductsQuery(
+            first: Int32(first),
+            after: after.map { .some($0) } ?? .none,
             branchId: branchId.map { .some($0) } ?? .none,
             categoryId: .none,
             availableOnly: .none,
@@ -35,27 +37,36 @@ class ProductListRepository {
 
                 guard let data = graphQLResult.data else {
                     print("⚠️ No products data received")
-                    completion(.success([]))
+                    let emptyPageInfo = PageInfo(hasNextPage: false, hasPreviousPage: false, startCursor: nil, endCursor: nil, totalCount: 0)
+                    completion(.success((products: [], pageInfo: emptyPageInfo)))
                     return
                 }
 
-                let mappedProducts = data.products.map { product in
+                let mappedProducts = data.products.edges.map { edge in
                     ProductGraphQL(
-                        id: product.id,
-                        branchId: product.branchId,
-                        name: product.name,
-                        price: product.price,
-                        currency: product.currency,
-                        imageUrl: product.imageUrl,
-                        availability: product.availability,
-                        createdAt: product.createdAt,
-                        businessName: product.business?.name ?? "Tienda",
-                        distanceKm: product.distanceKm
+                        id: edge.node.id,
+                        branchId: edge.node.branchId,
+                        name: edge.node.name,
+                        price: edge.node.price,
+                        currency: edge.node.currency,
+                        imageUrl: edge.node.imageUrl,
+                        availability: edge.node.availability,
+                        createdAt: edge.node.createdAt,
+                        businessName: edge.node.business?.name ?? "Tienda",
+                        distanceKm: edge.node.distanceKm
                     )
                 }
 
-                print("✅ Fetched \(mappedProducts.count) products from GraphQL for Shop")
-                completion(.success(mappedProducts))
+                let pageInfo = PageInfo(
+                    hasNextPage: data.products.pageInfo.hasNextPage,
+                    hasPreviousPage: data.products.pageInfo.hasPreviousPage,
+                    startCursor: data.products.pageInfo.startCursor,
+                    endCursor: data.products.pageInfo.endCursor,
+                    totalCount: Int(data.products.pageInfo.totalCount)
+                )
+
+                print("✅ Fetched \(mappedProducts.count) products from GraphQL for Shop (hasNextPage: \(pageInfo.hasNextPage), totalCount: \(pageInfo.totalCount))")
+                completion(.success((products: mappedProducts, pageInfo: pageInfo)))
 
             case .failure(let error):
                 print("❌ Network Error: \(error.localizedDescription)")
@@ -75,30 +86,40 @@ class ProductListRepository {
                         switch cacheResult {
                         case .success(let graphQLResult):
                             if let data = graphQLResult.data {
-                                let mappedProducts = data.products.map { product in
+                                let mappedProducts = data.products.edges.map { edge in
                                     ProductGraphQL(
-                                        id: product.id,
-                                        branchId: product.branchId,
-                                        name: product.name,
-                                        price: product.price,
-                                        currency: product.currency,
-                                        imageUrl: product.imageUrl,
-                                        availability: product.availability,
-                                        createdAt: product.createdAt,
-                                        businessName: product.business?.name ?? "Tienda",
-                                        distanceKm: product.distanceKm
+                                        id: edge.node.id,
+                                        branchId: edge.node.branchId,
+                                        name: edge.node.name,
+                                        price: edge.node.price,
+                                        currency: edge.node.currency,
+                                        imageUrl: edge.node.imageUrl,
+                                        availability: edge.node.availability,
+                                        createdAt: edge.node.createdAt,
+                                        businessName: edge.node.business?.name ?? "Tienda",
+                                        distanceKm: edge.node.distanceKm
                                     )
                                 }
 
+                                let pageInfo = PageInfo(
+                                    hasNextPage: data.products.pageInfo.hasNextPage,
+                                    hasPreviousPage: data.products.pageInfo.hasPreviousPage,
+                                    startCursor: data.products.pageInfo.startCursor,
+                                    endCursor: data.products.pageInfo.endCursor,
+                                    totalCount: Int(data.products.pageInfo.totalCount)
+                                )
+
                                 print("✅ Cargados \(mappedProducts.count) productos desde caché (offline)")
-                                completion(.success(mappedProducts))
+                                completion(.success((products: mappedProducts, pageInfo: pageInfo)))
                             } else {
                                 print("⚠️ No hay datos de productos en caché")
-                                completion(.success([]))
+                                let emptyPageInfo = PageInfo(hasNextPage: false, hasPreviousPage: false, startCursor: nil, endCursor: nil, totalCount: 0)
+                                completion(.success((products: [], pageInfo: emptyPageInfo)))
                             }
                         case .failure:
                             print("❌ No hay productos en caché")
-                            completion(.success([]))
+                            let emptyPageInfo = PageInfo(hasNextPage: false, hasPreviousPage: false, startCursor: nil, endCursor: nil, totalCount: 0)
+                            completion(.success((products: [], pageInfo: emptyPageInfo)))
                         }
                     }
                 } else {
@@ -110,7 +131,7 @@ class ProductListRepository {
     }
 
     // Search products with vector search (with automatic fallback to text search)
-    @MainActor func searchProducts(query: String, branchId: String? = nil, limit: Int = 10, useVectorSearch: Bool = true, radiusKm: Double? = nil, completion: @escaping @Sendable (Result<[ProductGraphQL], Error>) -> Void) {
+    @MainActor func searchProducts(query: String, first: Int = 20, after: String? = nil, branchId: String? = nil, useVectorSearch: Bool = true, radiusKm: Double? = nil, completion: @escaping @Sendable (Result<(products: [ProductGraphQL], pageInfo: PageInfo), Error>) -> Void) {
         // Obtener JWT si está disponible
         let jwt = AuthManager.shared.getAccessToken()
 
@@ -119,7 +140,8 @@ class ProductListRepository {
 
         let searchQuery = LlegoAPI.SearchProductsQuery(
             query: query,
-            limit: .some(Int32(limit)),
+            first: Int32(first),
+            after: after.map { .some($0) } ?? .none,
             useVectorSearch: .some(useVectorSearch),
             branchTipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) } ?? .none,
             radiusKm: radiusKm.map { .some($0) } ?? .none,
@@ -135,12 +157,32 @@ class ProductListRepository {
                         print("  - \(error.localizedDescription)")
                     }
 
+                    // Check if it's a rate limit error
+                    let isRateLimitError = errors.contains { error in
+                        error.localizedDescription.lowercased().contains("rate limit")
+                    }
+
+                    if isRateLimitError {
+                        print("⏱️ RATE LIMIT DETECTED - Backend ha excedido el límite de búsquedas por minuto")
+                        print("⏱️ Límite: 10 búsquedas/minuto")
+                        print("⏱️ Sugerencia: Espera unos segundos antes de realizar otra búsqueda")
+                        print("💡 Recomendación: El usuario debe esperar aproximadamente 1 minuto")
+                        
+                        completion(.failure(NSError(
+                            domain: "RateLimit",
+                            code: 429,
+                            userInfo: [NSLocalizedDescriptionKey: "Demasiadas búsquedas. Por favor espera un momento e intenta de nuevo."]
+                        )))
+                        return
+                    }
+
                     // If vector search failed and we were using it, retry with text search
                     if useVectorSearch {
                         print("⚠️ Vector search failed, falling back to text search...")
                         let textSearchQuery = LlegoAPI.SearchProductsQuery(
                             query: query,
-                            limit: .some(Int32(limit)),
+                            first: Int32(first),
+                            after: after.map { .some($0) } ?? .none,
                             useVectorSearch: .some(false),
                             branchTipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) } ?? .none,
                             radiusKm: radiusKm.map { .some($0) } ?? .none,
@@ -153,29 +195,46 @@ class ProductListRepository {
                                 if let fallbackErrors = fallbackGraphQLResult.errors {
                                     print("❌ Text search also failed:")
                                     fallbackErrors.forEach { print("  - \($0.localizedDescription)") }
-                                    completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: "Both vector and text search failed"])))
+                                    
+                                    // Check rate limit in fallback too
+                                    let isFallbackRateLimit = fallbackErrors.contains { error in
+                                        error.localizedDescription.lowercased().contains("rate limit")
+                                    }
+                                    
+                                    if isFallbackRateLimit {
+                                        print("⏱️ RATE LIMIT en text search también")
+                                        print("💡 El backend está limitando las búsquedas - espera 1 minuto")
+                                        completion(.failure(NSError(
+                                            domain: "RateLimit",
+                                            code: 429,
+                                            userInfo: [NSLocalizedDescriptionKey: "Demasiadas búsquedas. Por favor espera un momento e intenta de nuevo."]
+                                        )))
+                                    } else {
+                                        completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: "Both vector and text search failed"])))
+                                    }
                                     return
                                 }
 
                                 guard let data = fallbackGraphQLResult.data else {
                                     print("⚠️ No search results from text search")
-                                    completion(.success([]))
+                                    let emptyPageInfo = PageInfo(hasNextPage: false, hasPreviousPage: false, startCursor: nil, endCursor: nil, totalCount: 0)
+                                    completion(.success((products: [], pageInfo: emptyPageInfo)))
                                     return
                                 }
 
                                 // Map search results from text search
-                                var mappedProducts = data.searchProducts.map { product in
+                                var mappedProducts = data.searchProducts.edges.map { edge in
                                     ProductGraphQL(
-                                        id: product.id,
-                                        branchId: product.branchId,
-                                        name: product.name,
-                                        price: product.price,
-                                        currency: product.currency,
-                                        imageUrl: product.imageUrl,
-                                        availability: product.availability,
-                                        createdAt: product.createdAt,
-                                        businessName: product.business?.name ?? "Tienda",
-                                        distanceKm: product.distanceKm
+                                        id: edge.node.id,
+                                        branchId: edge.node.branchId,
+                                        name: edge.node.name,
+                                        price: edge.node.price,
+                                        currency: edge.node.currency,
+                                        imageUrl: edge.node.imageUrl,
+                                        availability: edge.node.availability,
+                                        createdAt: edge.node.createdAt,
+                                        businessName: edge.node.business?.name ?? "Tienda",
+                                        distanceKm: edge.node.distanceKm
                                     )
                                 }
 
@@ -183,8 +242,16 @@ class ProductListRepository {
                                     mappedProducts = mappedProducts.filter { $0.branchId == branchId }
                                 }
 
+                                let pageInfo = PageInfo(
+                                    hasNextPage: data.searchProducts.pageInfo.hasNextPage,
+                                    hasPreviousPage: data.searchProducts.pageInfo.hasPreviousPage,
+                                    startCursor: data.searchProducts.pageInfo.startCursor,
+                                    endCursor: data.searchProducts.pageInfo.endCursor,
+                                    totalCount: Int(data.searchProducts.pageInfo.totalCount)
+                                )
+
                                 print("✅ Text search fallback found \(mappedProducts.count) products")
-                                completion(.success(mappedProducts))
+                                completion(.success((products: mappedProducts, pageInfo: pageInfo)))
 
                             case .failure(let error):
                                 print("❌ Text search fallback failed: \(error.localizedDescription)")
@@ -200,23 +267,24 @@ class ProductListRepository {
 
                 guard let data = graphQLResult.data else {
                     print("⚠️ No search results received")
-                    completion(.success([]))
+                    let emptyPageInfo = PageInfo(hasNextPage: false, hasPreviousPage: false, startCursor: nil, endCursor: nil, totalCount: 0)
+                    completion(.success((products: [], pageInfo: emptyPageInfo)))
                     return
                 }
 
                 // Map search results
-                var mappedProducts = data.searchProducts.map { product in
+                var mappedProducts = data.searchProducts.edges.map { edge in
                     ProductGraphQL(
-                        id: product.id,
-                        branchId: product.branchId,
-                        name: product.name,
-                        price: product.price,
-                        currency: product.currency,
-                        imageUrl: product.imageUrl,
-                        availability: product.availability,
-                        createdAt: product.createdAt,
-                        businessName: product.business?.name ?? "Tienda",
-                        distanceKm: product.distanceKm
+                        id: edge.node.id,
+                        branchId: edge.node.branchId,
+                        name: edge.node.name,
+                        price: edge.node.price,
+                        currency: edge.node.currency,
+                        imageUrl: edge.node.imageUrl,
+                        availability: edge.node.availability,
+                        createdAt: edge.node.createdAt,
+                        businessName: edge.node.business?.name ?? "Tienda",
+                        distanceKm: edge.node.distanceKm
                     )
                 }
 
@@ -225,8 +293,16 @@ class ProductListRepository {
                     mappedProducts = mappedProducts.filter { $0.branchId == branchId }
                 }
 
+                let pageInfo = PageInfo(
+                    hasNextPage: data.searchProducts.pageInfo.hasNextPage,
+                    hasPreviousPage: data.searchProducts.pageInfo.hasPreviousPage,
+                    startCursor: data.searchProducts.pageInfo.startCursor,
+                    endCursor: data.searchProducts.pageInfo.endCursor,
+                    totalCount: Int(data.searchProducts.pageInfo.totalCount)
+                )
+
                 print("✅ Found \(mappedProducts.count) products matching '\(query)'" + (branchId != nil ? " for branch \(branchId!)" : ""))
-                completion(.success(mappedProducts))
+                completion(.success((products: mappedProducts, pageInfo: pageInfo)))
 
             case .failure(let error):
                 print("❌ Search Error (Products): \(error.localizedDescription)")

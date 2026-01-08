@@ -37,6 +37,12 @@ class ProductListViewModel: ObservableObject {
     @Published var filteredProducts: [Product] = []
     @Published var isLoading: Bool = false
 
+    // Paginación
+    @Published var isLoadingMore: Bool = false
+    @Published var currentCursor: String? = nil
+    @Published var hasNextPage: Bool = false
+    @Published var totalCount: Int = 0
+
     // Filtros
     @Published var maxDistance: Double = 50.0 // 50 = sin límite
     @Published var selectedCategory: String? = nil
@@ -48,6 +54,9 @@ class ProductListViewModel: ObservableObject {
 
     // Branch filter
     var branchId: String? = nil
+
+    // Flag para evitar recargar si ya se cargaron los datos
+    private var hasLoaded: Bool = false
 
     private let repository = ProductListRepository()
     private let userLocationManager = UserLocationManager.shared
@@ -79,18 +88,31 @@ class ProductListViewModel: ObservableObject {
     }
 
     func loadProducts(isRefreshing: Bool = false) {
+        // Evitar recargar si ya se cargaron los datos (excepto en refresh explícito)
+        if hasLoaded && !isRefreshing {
+            print("📦 ProductListViewModel - Datos ya cargados, omitiendo recarga")
+            return
+        }
+
+        // Reset pagination state on refresh
+        if isRefreshing {
+            currentCursor = nil
+            hasNextPage = false
+            totalCount = 0
+        }
+
         // Solo mostrar loading si NO es un refresh
         if !isRefreshing {
             isLoading = true
             state = .loading
         }
 
-        repository.fetchProducts(branchId: branchId, radiusKm: effectiveRadiusKm) { [weak self] result in
+        repository.fetchProducts(first: 20, after: nil, branchId: branchId, radiusKm: effectiveRadiusKm) { [weak self] result in
             guard let self = self else { return }
 
             Task { @MainActor in
                 switch result {
-                case .success(let productsGraphQL):
+                case .success(let (productsGraphQL, pageInfo)):
                     // Mapear productos GraphQL a modelos UI
                     self.products = productsGraphQL.map { productGraphQL in
                         Product(
@@ -106,15 +128,21 @@ class ProductListViewModel: ObservableObject {
                         )
                     }
 
+                    // Update pagination state
+                    self.currentCursor = pageInfo.endCursor
+                    self.hasNextPage = pageInfo.hasNextPage
+                    self.totalCount = pageInfo.totalCount
+
                     self.applyFiltersAndSort()
 
                     // Marcar como completado
                     self.isLoading = false
+                    self.hasLoaded = true
                     if !isRefreshing {
                         self.state = .success
                     }
 
-                    print("✅ Loaded \(self.products.count) products" + (self.branchId != nil ? " for branch \(self.branchId!)" : ""))
+                    print("✅ Loaded \(self.products.count) products (hasNextPage: \(pageInfo.hasNextPage), totalCount: \(pageInfo.totalCount))" + (self.branchId != nil ? " for branch \(self.branchId!)" : ""))
 
                 case .failure(let error):
                     self.isLoading = false
@@ -147,6 +175,69 @@ class ProductListViewModel: ObservableObject {
         applyFiltersAndSort()
     }
 
+    func loadMoreProducts() {
+        guard !isLoadingMore, hasNextPage, let cursor = currentCursor else {
+            print("📦 loadMoreProducts - Skipping (isLoadingMore: \(isLoadingMore), hasNextPage: \(hasNextPage), cursor: \(currentCursor ?? "nil"))")
+            return
+        }
+
+        print("📦 loadMoreProducts - Loading next page with cursor: \(cursor)")
+        isLoadingMore = true
+
+        repository.fetchProducts(first: 20, after: cursor, branchId: branchId, radiusKm: effectiveRadiusKm) { [weak self] result in
+            guard let self = self else { return }
+
+            Task { @MainActor in
+                self.isLoadingMore = false
+
+                switch result {
+                case .success(let (productsGraphQL, pageInfo)):
+                    // Mapear productos GraphQL a modelos UI
+                    let newProducts = productsGraphQL.map { productGraphQL in
+                        Product(
+                            id: productGraphQL.id,
+                            name: productGraphQL.name,
+                            shop: productGraphQL.businessName,
+                            weight: "0",
+                            price: self.formatPrice(
+                                price: productGraphQL.price,
+                                currency: productGraphQL.currency
+                            ),
+                            imageUrl: productGraphQL.imageUrl
+                        )
+                    }
+
+                    // Append new products to existing list
+                    self.products.append(contentsOf: newProducts)
+
+                    // Update pagination state
+                    self.currentCursor = pageInfo.endCursor
+                    self.hasNextPage = pageInfo.hasNextPage
+
+                    self.applyFiltersAndSort()
+
+                    print("✅ Loaded \(newProducts.count) more products (total: \(self.products.count), hasNextPage: \(pageInfo.hasNextPage))")
+
+                case .failure(let error):
+                    print("❌ Error loading more products: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    func loadMoreIfNeeded(currentItem: Product?) {
+        guard let currentItem = currentItem else {
+            loadMoreProducts()
+            return
+        }
+
+        let thresholdIndex = filteredProducts.index(filteredProducts.endIndex, offsetBy: -3)
+        if let currentIndex = filteredProducts.firstIndex(where: { $0.id == currentItem.id }),
+           currentIndex >= thresholdIndex {
+            loadMoreProducts()
+        }
+    }
+
     func clearFilters() {
         maxDistance = 50.0
         selectedCategory = nil
@@ -176,15 +267,15 @@ class ProductListViewModel: ObservableObject {
         print("🔍 performVectorSearch() - Starting search for: '\(searchQuery)'")
         isSearching = true
 
-        repository.searchProducts(query: searchQuery, branchId: branchId, limit: 50, radiusKm: effectiveRadiusKm) { [weak self] result in
+        repository.searchProducts(query: searchQuery, first: 50, after: nil, branchId: branchId, radiusKm: effectiveRadiusKm) { [weak self] result in
             guard let self = self else { return }
 
             Task { @MainActor in
                 self.isSearching = false
 
                 switch result {
-                case .success(let productsGraphQL):
-                    print("✅ Vector search returned \(productsGraphQL.count) products")
+                case .success(let (productsGraphQL, pageInfo)):
+                    print("✅ Vector search returned \(productsGraphQL.count) products (hasNextPage: \(pageInfo.hasNextPage))")
 
                     // Map to UI models
                     let searchResults = productsGraphQL.map { productGraphQL in
@@ -203,15 +294,30 @@ class ProductListViewModel: ObservableObject {
 
                     print("🔍 Mapped to \(searchResults.count) UI products")
 
+                    // Update pagination state for search
+                    self.currentCursor = pageInfo.endCursor
+                    self.hasNextPage = pageInfo.hasNextPage
+                    self.totalCount = pageInfo.totalCount
+
                     // Apply filters and sorting to search results
                     self.applyFiltersAndSort(to: searchResults)
 
                     print("🔍 Final filtered products: \(self.filteredProducts.count)")
 
                 case .failure(let error):
-                    print("❌ Vector search failed: \(error.localizedDescription)")
-                    // Fallback to local filtering if search fails
-                    self.applyFiltersAndSort()
+                    let nsError = error as NSError
+                    
+                    // Check if it's a rate limit error
+                    if nsError.domain == "RateLimit" && nsError.code == 429 {
+                        print("⏱️ Rate limit alcanzado en búsqueda de productos")
+                        print("💡 Sugerencia: El backend está limitando las búsquedas a 10 por minuto")
+                        // Show user-friendly message
+                        self.state = .error("Demasiadas búsquedas. Por favor espera un momento e intenta de nuevo.")
+                    } else {
+                        print("❌ Vector search failed: \(error.localizedDescription)")
+                        // Fallback to local filtering if search fails
+                        self.applyFiltersAndSort()
+                    }
                 }
             }
         }

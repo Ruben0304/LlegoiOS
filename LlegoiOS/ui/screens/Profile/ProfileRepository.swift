@@ -67,8 +67,7 @@ class ProfileRepository {
                 name: name,
                 email: email,
                 password: password,
-                phone: phone.map { .some($0) } ?? .none,
-                role: .some("customer")
+                phone: phone.map { .some($0) } ?? .none
             )
             let mutation = LlegoAPI.RegisterMutation(input: input)
 

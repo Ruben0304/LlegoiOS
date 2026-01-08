@@ -1,20 +1,32 @@
-query SearchProducts($query: String!, $limit: Int, $useVectorSearch: Boolean, $branchTipo: BranchTipo, $radiusKm: Float, $jwt: String) {
-  searchProducts(query: $query, limit: $limit, useVectorSearch: $useVectorSearch, branchTipo: $branchTipo, radiusKm: $radiusKm, jwt: $jwt) {
-    id
-    branchId
-    name
-    description
-    weight
-    price
-    currency
-    imageUrl
-    availability
-    createdAt
-    distanceKm
-    score
-    business {
-      id
-      name
+query SearchProducts($query: String!, $first: Int! = 20, $after: String, $useVectorSearch: Boolean, $branchTipo: BranchTipo, $radiusKm: Float, $jwt: String) {
+  searchProducts(query: $query, first: $first, after: $after, useVectorSearch: $useVectorSearch, branchTipo: $branchTipo, radiusKm: $radiusKm, jwt: $jwt) {
+    edges {
+      node {
+        id
+        branchId
+        name
+        description
+        weight
+        price
+        currency
+        imageUrl
+        availability
+        createdAt
+        distanceKm
+        score
+        business {
+          id
+          name
+        }
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      startCursor
+      endCursor
+      totalCount
     }
   }
 }

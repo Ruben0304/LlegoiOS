@@ -29,7 +29,11 @@ class CartRepository {
         print("🔎 Querying GraphQL for product IDs: \(productIds)")
 
         apolloClient.fetch(
-            query: LlegoAPI.GetCartProductsQuery(ids: productIds),
+            query: LlegoAPI.GetCartProductsQuery(
+                first: Int32(100),
+                after: .none,
+                ids: productIds
+            ),
             cachePolicy: .fetchIgnoringCacheData // Siempre datos frescos para el carrito
         ) { result in
             switch result {
@@ -41,29 +45,29 @@ class CartRepository {
                     return
                 }
 
-                guard let products = graphQLResult.data?.products else {
+                guard let data = graphQLResult.data?.products else {
                     completion(.success([]))
                     return
                 }
 
                 // Mapear GraphQL products y combinar con cantidades locales
-                let mappedProducts = products.compactMap { product -> CartProductGraphQL? in
-                    guard let localItem = localItems.first(where: { $0.productId == product.id }) else {
+                let mappedProducts = data.edges.compactMap { edge -> CartProductGraphQL? in
+                    guard let localItem = localItems.first(where: { $0.productId == edge.node.id }) else {
                         return nil
                     }
 
                     return CartProductGraphQL(
-                        id: product.id,
-                        branchId: product.branchId,
-                        name: product.name,
-                        description: product.description,
-                        weight: product.weight,
-                        price: product.price,
-                        currency: product.currency,
-                        image: product.image,
-                        availability: product.availability,
+                        id: edge.node.id,
+                        branchId: edge.node.branchId,
+                        name: edge.node.name,
+                        description: edge.node.description,
+                        weight: edge.node.weight,
+                        price: edge.node.price,
+                        currency: edge.node.currency,
+                        image: edge.node.image,
+                        availability: edge.node.availability,
                         quantity: localItem.quantity,
-                        businessName: product.business?.name ?? "Tienda"
+                        businessName: edge.node.business?.name ?? "Tienda"
                     )
                 }
 
