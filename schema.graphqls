@@ -47,6 +47,16 @@ type Query {
   hello(jwt: String = null): String!
   "Saluda por nombre"
   greet(name: String! = "mundo", jwt: String = null): String!
+  
+  # ============ ORDER QUERIES ============
+  "Obtener mis pedidos con paginación"
+  myOrders(status: OrderStatusEnum = null, limit: Int = 20, offset: Int = 0, jwt: String!): OrdersConnectionType!
+  "Obtener un pedido específico por ID"
+  order(id: String!, jwt: String!): OrderType
+  "Obtener pedido por número de orden"
+  orderByNumber(orderNumber: String!, jwt: String!): OrderType
+  "Tracking completo de un pedido"
+  orderTracking(orderId: String!, jwt: String!): OrderTrackingType
 }
 type UserType {
   id: String!
@@ -264,6 +274,20 @@ type Mutation {
   updateProduct(productId: String!, input: UpdateProductInput!, jwt: String = null): ProductType!
   "Eliminar un producto"
   deleteProduct(productId: String!, jwt: String = null): Boolean!
+  
+  # ============ ORDER MUTATIONS ============
+  "Crear nuevo pedido desde el carrito"
+  createOrder(input: CreateOrderInput!, jwt: String!): OrderType!
+  "Aceptar modificaciones hechas por la tienda"
+  acceptOrderModifications(orderId: String!, jwt: String!): OrderType!
+  "Rechazar modificaciones y cancelar pedido"
+  rejectOrderModifications(orderId: String!, jwt: String!): OrderType!
+  "Cancelar pedido"
+  cancelOrder(orderId: String!, reason: String, jwt: String!): OrderType!
+  "Añadir comentario al pedido"
+  addOrderComment(input: AddOrderCommentInput!, jwt: String!): OrderType!
+  "Calificar pedido después de entrega"
+  rateOrder(orderId: String!, rating: Int!, comment: String, jwt: String!): OrderType!
 }
 type AuthResponse {
   accessToken: String!
@@ -408,6 +432,186 @@ input UpdateProductInput {
   categoryId: String = null
   image: String = null
 }
+# ============ ORDER TYPES ============
+
+type OrderType {
+  id: String!
+  orderNumber: String!
+  customer: UserType!
+  branch: BranchType!
+  business: BusinessType!
+  items: [OrderItemType!]!
+  subtotal: Float!
+  deliveryFee: Float!
+  discounts: [OrderDiscountType!]!
+  total: Float!
+  currency: String!
+  status: OrderStatusEnum!
+  deliveryAddress: DeliveryAddressType!
+  deliveryPerson: DeliveryPersonType
+  estimatedDeliveryTime: DateTime
+  timeline: [OrderTimelineType!]!
+  comments: [OrderCommentType!]!
+  paymentMethod: String!
+  paymentStatus: PaymentStatusEnum!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  lastStatusAt: DateTime!
+  isEditable: Boolean!
+  canCancel: Boolean!
+  estimatedMinutesRemaining: Int
+}
+
+type OrderItemType {
+  productId: String!
+  name: String!
+  price: Float!
+  quantity: Int!
+  imageUrl: String!
+  wasModifiedByStore: Boolean!
+  lineTotal: Float!
+}
+
+type OrderDiscountType {
+  id: String!
+  title: String!
+  amount: Float!
+  type: DiscountTypeEnum!
+}
+
+type DeliveryAddressType {
+  street: String!
+  city: String
+  reference: String
+  coordinates: CoordinatesType!
+}
+
+type DeliveryPersonType {
+  id: String!
+  name: String!
+  phone: String!
+  rating: Float!
+  totalDeliveries: Int!
+  vehicleType: String!
+  vehiclePlate: String
+  profileImageUrl: String
+  currentLocation: CoordinatesType
+  isOnline: Boolean!
+}
+
+type OrderTimelineType {
+  status: OrderStatusEnum!
+  timestamp: DateTime!
+  message: String!
+  actor: OrderActorEnum!
+}
+
+type OrderCommentType {
+  id: String!
+  author: OrderActorEnum!
+  message: String!
+  timestamp: DateTime!
+}
+
+type OrderTrackingType {
+  order: OrderType!
+  deliveryPersonLocation: CoordinatesType
+  storeLocation: CoordinatesType!
+  deliveryLocation: CoordinatesType!
+  estimatedMinutes: Int
+  distanceKm: Float
+  routePolyline: String
+}
+
+type OrdersConnectionType {
+  orders: [OrderType!]!
+  totalCount: Int!
+  hasMore: Boolean!
+}
+
+type DeliveryLocationUpdateType {
+  orderId: String!
+  location: CoordinatesType!
+  timestamp: DateTime!
+  estimatedMinutesRemaining: Int
+  distanceRemainingKm: Float
+}
+
+# ============ ORDER ENUMS ============
+
+enum OrderStatusEnum {
+  PENDING_ACCEPTANCE
+  MODIFIED_BY_STORE
+  ACCEPTED
+  PREPARING
+  READY_FOR_PICKUP
+  ON_THE_WAY
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatusEnum {
+  PENDING
+  VALIDATED
+  COMPLETED
+  FAILED
+}
+
+enum DiscountTypeEnum {
+  PREMIUM
+  LEVEL
+  PROMO
+}
+
+enum OrderActorEnum {
+  CUSTOMER
+  BUSINESS
+  SYSTEM
+  DELIVERY
+}
+
+# ============ ORDER INPUTS ============
+
+input CreateOrderInput {
+  branchId: String!
+  items: [OrderItemInput!]!
+  deliveryAddress: DeliveryAddressInput!
+  paymentMethod: String!
+  paymentIntentId: String
+  comments: String
+  promoCode: String
+}
+
+input OrderItemInput {
+  productId: String!
+  quantity: Int!
+}
+
+input DeliveryAddressInput {
+  street: String!
+  city: String
+  reference: String
+  latitude: Float!
+  longitude: Float!
+}
+
+input UpdateOrderStatusInput {
+  orderId: String!
+  status: OrderStatusEnum!
+  message: String
+}
+
+input AddOrderCommentInput {
+  orderId: String!
+  message: String!
+}
+
+input ModifyOrderItemsInput {
+  orderId: String!
+  items: [OrderItemInput!]!
+  reason: String!
+}
+
 "Exposes a URL that specifies the behavior of this scalar."
 directive @specifiedBy(
     "The URL that specifies the behavior of this scalar."

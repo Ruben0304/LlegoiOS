@@ -1,49 +1,343 @@
 import Foundation
+import Apollo
+import CoreLocation
 
+@MainActor
 final class OrderDetailRepository {
-    func fetchOrder(status: OrderDetailStatus) async -> OrderDetail {
-        let now = Date()
-        let placedAt = Calendar.current.date(byAdding: .minute, value: -45, to: now) ?? now
-        let statusAt = Calendar.current.date(byAdding: .minute, value: -8, to: now) ?? now
-
-        let items = [
-            OrderDetailItem(id: "1", name: "Sandwich de pollo", imageName: "takeoutbag.and.cup.and.straw", quantity: 1, price: 5.50, wasModifiedByStore: false),
-            OrderDetailItem(id: "2", name: "Jugo natural", imageName: "cup.and.saucer.fill", quantity: 2, price: 2.25, wasModifiedByStore: true),
-            OrderDetailItem(id: "3", name: "Papas fritas", imageName: "leaf", quantity: 1, price: 1.80, wasModifiedByStore: false)
-        ]
-
-        let discounts = [
-            OrderDetailDiscount(id: "d1", title: "Descuento Premium", amount: 1.50, type: .premium),
-            OrderDetailDiscount(id: "d2", title: "Descuento por nivel", amount: 0.75, type: .level)
-        ]
-
-        let comments = [
-            OrderDetailComment(
-                id: "c1",
-                author: .business,
-                message: "El jugo natural paso a ser de 300ml por disponibilidad.",
-                timestamp: Calendar.current.date(byAdding: .minute, value: -7, to: now) ?? now
-            ),
-            OrderDetailComment(
-                id: "c2",
-                author: .customer,
-                message: "Ok, mantengan el jugo pero con hielo, por favor.",
-                timestamp: Calendar.current.date(byAdding: .minute, value: -5, to: now) ?? now
+    private let apolloClient = ApolloClientManager.shared.apollo
+    
+    // MARK: - Fetch Order Detail
+    
+    func fetchOrder(
+        id: String,
+        completion: @escaping @Sendable (Result<OrderDetail, Error>) -> Void
+    ) {
+        let client = apolloClient
+        
+        Task { @MainActor in
+            guard let jwt = AuthManager.shared.getAccessToken() else {
+                completion(.failure(NSError(domain: "OrderDetailRepository", code: 401, userInfo: [NSLocalizedDescriptionKey: "No autenticado"])))
+                return
+            }
+            
+            let query = LlegoAPI.GetOrderDetailQuery(id: id, jwt: jwt)
+            
+            client.fetch(query: query, cachePolicy: .fetchIgnoringCacheData) { [weak self] result in
+                Task { @MainActor in
+                    guard let self = self else { return }
+                    
+                    switch result {
+                    case .success(let graphQLResult):
+                        if let errors = graphQLResult.errors {
+                            print("❌ GraphQL Errors: \(errors)")
+                            completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: errors.first?.localizedDescription ?? "Error desconocido"])))
+                            return
+                        }
+                        
+                        guard let order = graphQLResult.data?.order else {
+                            completion(.failure(NSError(domain: "OrderDetailRepository", code: 404, userInfo: [NSLocalizedDescriptionKey: "Pedido no encontrado"])))
+                            return
+                        }
+                        
+                        let detail = self.mapToOrderDetail(order)
+                        completion(.success(detail))
+                        
+                    case .failure(let error):
+                        print("❌ Network error: \(error.localizedDescription)")
+                        completion(.failure(error))
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Accept Modifications
+    
+    func acceptModifications(
+        orderId: String,
+        completion: @escaping @Sendable (Result<OrderDetail, Error>) -> Void
+    ) {
+        let client = apolloClient
+        
+        Task { @MainActor in
+            guard let jwt = AuthManager.shared.getAccessToken() else {
+                completion(.failure(NSError(domain: "OrderDetailRepository", code: 401, userInfo: [NSLocalizedDescriptionKey: "No autenticado"])))
+                return
+            }
+            
+            let mutation = LlegoAPI.AcceptOrderModificationsMutation(orderId: orderId, jwt: jwt)
+            
+            client.perform(mutation: mutation) { [weak self] result in
+                Task { @MainActor in
+                    switch result {
+                    case .success(let graphQLResult):
+                        if let errors = graphQLResult.errors {
+                            completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: errors.first?.localizedDescription ?? "Error"])))
+                            return
+                        }
+                        self?.fetchOrder(id: orderId, completion: completion)
+                        
+                    case .failure(let error):
+                        completion(.failure(error))
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Cancel Order
+    
+    func cancelOrder(
+        orderId: String,
+        reason: String?,
+        completion: @escaping @Sendable (Result<OrderDetail, Error>) -> Void
+    ) {
+        let client = apolloClient
+        
+        Task { @MainActor in
+            guard let jwt = AuthManager.shared.getAccessToken() else {
+                completion(.failure(NSError(domain: "OrderDetailRepository", code: 401, userInfo: [NSLocalizedDescriptionKey: "No autenticado"])))
+                return
+            }
+            
+            let mutation = LlegoAPI.CancelOrderMutation(
+                orderId: orderId,
+                reason: reason.map { .some($0) } ?? .none,
+                jwt: jwt
             )
-        ]
+            
+            client.perform(mutation: mutation) { [weak self] result in
+                Task { @MainActor in
+                    switch result {
+                    case .success(let graphQLResult):
+                        if let errors = graphQLResult.errors {
+                            completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: errors.first?.localizedDescription ?? "Error"])))
+                            return
+                        }
+                        self?.fetchOrder(id: orderId, completion: completion)
+                        
+                    case .failure(let error):
+                        completion(.failure(error))
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Add Comment
+    
+    func addComment(
+        orderId: String,
+        message: String,
+        completion: @escaping @Sendable (Result<Void, Error>) -> Void
+    ) {
+        let client = apolloClient
+        
+        Task { @MainActor in
+            guard let jwt = AuthManager.shared.getAccessToken() else {
+                completion(.failure(NSError(domain: "OrderDetailRepository", code: 401, userInfo: [NSLocalizedDescriptionKey: "No autenticado"])))
+                return
+            }
+            
+            let input = LlegoAPI.AddOrderCommentInput(orderId: orderId, message: message)
+            let mutation = LlegoAPI.AddOrderCommentMutation(input: input, jwt: jwt)
+            
+            client.perform(mutation: mutation) { result in
+                Task { @MainActor in
+                    switch result {
+                    case .success(let graphQLResult):
+                        if let errors = graphQLResult.errors {
+                            completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: errors.first?.localizedDescription ?? "Error"])))
+                            return
+                        }
+                        completion(.success(()))
+                        
+                    case .failure(let error):
+                        completion(.failure(error))
+                    }
+                }
+            }
+        }
+    }
 
-        return OrderDetail(
-            id: "order_123",
-            businessName: "Cafe Habana",
-            businessImageName: "storefront",
-            items: items,
-            deliveryFee: 1.20,
-            discounts: discounts,
-            status: status,
-            estimatedTime: (status == .accepted || status == .inProgress) ? "30m" : nil,
-            placedAt: placedAt,
-            lastStatusAt: statusAt,
-            comments: comments
+    
+    // MARK: - Mapping Helpers
+    
+    private func mapToOrderDetail(_ order: LlegoAPI.GetOrderDetailQuery.Data.Order) -> OrderDetail {
+        let items = order.items.map { item in
+            OrderDetailItem(
+                id: item.productId,
+                productId: item.productId,
+                name: item.name,
+                price: item.price,
+                quantity: item.quantity,
+                imageUrl: item.imageUrl,
+                wasModifiedByStore: item.wasModifiedByStore
+            )
+        }
+        
+        let discounts = order.discounts.map { discount in
+            OrderDetailDiscount(
+                id: discount.id,
+                title: discount.title,
+                amount: discount.amount,
+                type: mapDiscountType(discount.type)
+            )
+        }
+        
+        let deliveryCoords = order.deliveryAddress.coordinates.coordinates
+        let deliveryCoordinate: CLLocationCoordinate2D? = deliveryCoords.count >= 2
+            ? CLLocationCoordinate2D(latitude: deliveryCoords[1], longitude: deliveryCoords[0])
+            : nil
+        
+        let deliveryAddress = OrderDeliveryAddress(
+            street: order.deliveryAddress.street,
+            city: order.deliveryAddress.city,
+            reference: order.deliveryAddress.reference,
+            coordinates: deliveryCoordinate
         )
+        
+        let deliveryPerson: OrderDeliveryPerson? = order.deliveryPerson.map { dp in
+            OrderDeliveryPerson(
+                id: dp.id,
+                name: dp.name,
+                phone: dp.phone,
+                rating: dp.rating,
+                vehicleType: dp.vehicleType,
+                vehiclePlate: dp.vehiclePlate,
+                profileImageUrl: dp.profileImageUrl,
+                isOnline: dp.isOnline,
+                currentLocation: nil
+            )
+        }
+        
+        let timeline = order.timeline.map { event in
+            OrderTimelineEvent(
+                status: mapGraphQLToStatus(event.status),
+                timestamp: parseDate(event.timestamp) ?? Date(),
+                message: event.message,
+                actor: mapActor(event.actor)
+            )
+        }
+        
+        let comments = order.comments.map { comment in
+            OrderDetailComment(
+                id: comment.id,
+                author: mapActor(comment.author),
+                message: comment.message,
+                timestamp: parseDate(comment.timestamp) ?? Date()
+            )
+        }
+        
+        let branchCoords = order.branch.coordinates.coordinates
+        let branchCoordinate: CLLocationCoordinate2D? = branchCoords.count >= 2
+            ? CLLocationCoordinate2D(latitude: branchCoords[1], longitude: branchCoords[0])
+            : nil
+        
+        return OrderDetail(
+            id: order.id,
+            orderNumber: order.orderNumber,
+            status: mapGraphQLToStatus(order.status),
+            subtotal: order.subtotal,
+            deliveryFee: order.deliveryFee,
+            total: order.total,
+            currency: order.currency,
+            paymentMethod: order.paymentMethod,
+            paymentStatus: mapPaymentStatus(order.paymentStatus),
+            createdAt: parseDate(order.createdAt) ?? Date(),
+            updatedAt: parseDate(order.updatedAt) ?? Date(),
+            lastStatusAt: parseDate(order.lastStatusAt) ?? Date(),
+            isEditable: order.isEditable,
+            canCancel: order.canCancel,
+            estimatedDeliveryTime: order.estimatedDeliveryTime.flatMap { parseDate($0) },
+            estimatedMinutesRemaining: order.estimatedMinutesRemaining,
+            items: items,
+            discounts: discounts,
+            deliveryAddress: deliveryAddress,
+            deliveryPerson: deliveryPerson,
+            timeline: timeline,
+            comments: comments,
+            branchId: order.branch.id,
+            branchName: order.branch.name,
+            branchAddress: order.branch.address,
+            branchPhone: order.branch.phone,
+            branchImageUrl: order.branch.avatarUrl,
+            branchCoordinates: branchCoordinate,
+            businessId: order.business.id,
+            businessName: order.business.name,
+            businessImageUrl: order.business.avatarUrl,
+            customerId: order.customer.id,
+            customerName: order.customer.name,
+            customerPhone: order.customer.phone
+        )
+    }
+    
+    private func mapGraphQLToStatus(_ status: GraphQLEnum<LlegoAPI.OrderStatusEnum>) -> OrderStatusEnum {
+        switch status {
+        case .case(let value):
+            switch value {
+            case .pendingAcceptance: return .pendingAcceptance
+            case .modifiedByStore: return .modifiedByStore
+            case .accepted: return .accepted
+            case .preparing: return .preparing
+            case .readyForPickup: return .readyForPickup
+            case .onTheWay: return .onTheWay
+            case .delivered: return .delivered
+            case .cancelled: return .cancelled
+            }
+        case .unknown:
+            return .pendingAcceptance
+        }
+    }
+    
+    private func mapPaymentStatus(_ status: GraphQLEnum<LlegoAPI.PaymentStatusEnum>) -> PaymentStatusEnum {
+        switch status {
+        case .case(let value):
+            switch value {
+            case .pending: return .pending
+            case .validated: return .validated
+            case .completed: return .completed
+            case .failed: return .failed
+            }
+        case .unknown:
+            return .pending
+        }
+    }
+    
+    private func mapDiscountType(_ type: GraphQLEnum<LlegoAPI.DiscountTypeEnum>) -> DiscountTypeEnum {
+        switch type {
+        case .case(let value):
+            switch value {
+            case .premium: return .premium
+            case .level: return .level
+            case .promo: return .promo
+            }
+        case .unknown:
+            return .promo
+        }
+    }
+    
+    private func mapActor(_ actor: GraphQLEnum<LlegoAPI.OrderActorEnum>) -> OrderActorEnum {
+        switch actor {
+        case .case(let value):
+            switch value {
+            case .customer: return .customer
+            case .business: return .business
+            case .system: return .system
+            case .delivery: return .delivery
+            }
+        case .unknown:
+            return .system
+        }
+    }
+    
+    private func parseDate(_ dateString: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: dateString) {
+            return date
+        }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: dateString)
     }
 }

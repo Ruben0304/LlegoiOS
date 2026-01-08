@@ -1,0 +1,7 @@
+mutation RateOrder($orderId: String!, $rating: Int!, $comment: String, $jwt: String!) {
+  rateOrder(orderId: $orderId, rating: $rating, comment: $comment, jwt: $jwt) {
+    id
+    orderNumber
+    status
+  }
+}

@@ -279,6 +279,217 @@ rm -rf LlegoiOS/GraphQL/Operations
 2. Confirmar sintaxis GraphQL correcta
 3. Ejecutar `./apollo-ios-cli generate` de nuevo
 
+---
+
+## 🚨 Errores Comunes en Repositories y ViewModels
+
+Esta sección documenta errores frecuentes al trabajar con Apollo iOS y cómo evitarlos.
+
+### 1. MainActor Isolation en Callbacks de Apollo
+
+**Error:**
+```
+Call to main actor-isolated instance method 'mapToModel' in a synchronous nonisolated context
+```
+
+**Causa:** Los callbacks de Apollo (`fetch`, `perform`) se ejecutan en un hilo de background, pero los métodos del Repository marcados con `@MainActor` solo pueden llamarse desde el MainActor.
+
+**Solución:** Envolver el callback en `Task { @MainActor in }`:
+
+```swift
+// ❌ INCORRECTO
+client.fetch(query: query) { result in
+    let mapped = self.mapToModel(result) // Error: mapToModel es @MainActor
+    completion(.success(mapped))
+}
+
+// ✅ CORRECTO
+client.fetch(query: query) { [weak self] result in
+    Task { @MainActor in
+        guard let self = self else { return }
+        let mapped = self.mapToModel(result)
+        completion(.success(mapped))
+    }
+}
+```
+
+### 2. Tipos Int vs Int32 en GraphQL
+
+**Error:**
+```
+Cannot convert value of type 'Int' to expected argument type 'Int32'
+```
+
+**Causa:** Apollo iOS genera tipos `Int32` para campos `Int` de GraphQL, pero Swift usa `Int` por defecto.
+
+**Solución:** Convertir explícitamente a `Int32`:
+
+```swift
+// ❌ INCORRECTO
+let query = LlegoAPI.GetOrdersQuery(limit: limit, offset: offset)
+
+// ✅ CORRECTO
+let query = LlegoAPI.GetOrdersQuery(limit: .some(Int32(limit)), offset: .some(Int32(offset)))
+```
+
+### 3. Optional Chaining en Tipos No Opcionales
+
+**Error:**
+```
+Cannot use optional chaining on non-optional value of type 'SomeType'
+```
+
+**Causa:** El schema GraphQL define el campo como requerido (`!`), pero el código usa `?.` como si fuera opcional.
+
+**Solución:** Verificar el archivo `.graphql.swift` generado para ver si el tipo es opcional:
+
+```swift
+// Si el schema dice: branch: BranchType! (requerido)
+// El código generado será: public var branch: Branch { ... }
+
+// ❌ INCORRECTO
+let name = order.branch?.name ?? "Default"
+
+// ✅ CORRECTO
+let name = order.branch.name
+```
+
+**Tip:** Revisa siempre el archivo generado en `GraphQL/Operations/` para ver los tipos exactos.
+
+### 4. Import Combine Faltante en ViewModels
+
+**Error:**
+```
+Type 'MyViewModel' does not conform to protocol 'ObservableObject'
+Initializer 'init(wrappedValue:)' is not available due to missing import of defining module 'Combine'
+```
+
+**Causa:** `@Published` y `ObservableObject` requieren `import Combine`.
+
+**Solución:** Siempre importar Combine en ViewModels:
+
+```swift
+// ❌ INCORRECTO
+import Foundation
+
+@MainActor
+final class MyViewModel: ObservableObject {
+    @Published var data: [Item] = [] // Error
+}
+
+// ✅ CORRECTO
+import Foundation
+import Combine
+
+@MainActor
+final class MyViewModel: ObservableObject {
+    @Published var data: [Item] = []
+}
+```
+
+### 5. Redeclaración de Structs/Views
+
+**Error:**
+```
+Invalid redeclaration of 'MyComponent'
+```
+
+**Causa:** El mismo struct/view está definido en múltiples archivos.
+
+**Solución:** 
+- Buscar duplicados con `Cmd+Shift+F` en Xcode
+- Mantener componentes reutilizables en `ui/components/`
+- No duplicar componentes dentro de archivos de View
+
+### 6. Mapeo de Enums GraphQL
+
+**Error:**
+```
+Value of type 'GraphQLEnum<LlegoAPI.SomeEnum>' has no member 'rawValue'
+```
+
+**Causa:** Los enums de Apollo están envueltos en `GraphQLEnum<>`.
+
+**Solución:** Usar switch con `.case()`:
+
+```swift
+// ❌ INCORRECTO
+let status = order.status.rawValue
+
+// ✅ CORRECTO
+func mapStatus(_ status: GraphQLEnum<LlegoAPI.OrderStatusEnum>) -> OrderStatusEnum {
+    switch status {
+    case .case(let value):
+        switch value {
+        case .pending: return .pending
+        case .completed: return .completed
+        // ... otros casos
+        }
+    case .unknown:
+        return .pending // valor por defecto
+    }
+}
+```
+
+### 7. Coordenadas GeoJSON
+
+**Causa:** MongoDB/GraphQL usa formato GeoJSON donde `coordinates = [longitude, latitude]` (invertido respecto a iOS).
+
+**Solución:** Invertir al crear `CLLocationCoordinate2D`:
+
+```swift
+// GeoJSON: [longitude, latitude]
+// iOS CLLocationCoordinate2D: (latitude, longitude)
+
+let coords = order.coordinates.coordinates // [lng, lat]
+let coordinate: CLLocationCoordinate2D? = coords.count >= 2
+    ? CLLocationCoordinate2D(latitude: coords[1], longitude: coords[0])
+    : nil
+```
+
+### 8. Parseo de Fechas ISO8601
+
+**Solución estándar para parsear fechas del backend:**
+
+```swift
+private func parseDate(_ dateString: String) -> Date? {
+    let formatter = ISO8601DateFormatter()
+    // Intentar con fracciones de segundo primero
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    if let date = formatter.date(from: dateString) {
+        return date
+    }
+    // Fallback sin fracciones
+    formatter.formatOptions = [.withInternetDateTime]
+    return formatter.date(from: dateString)
+}
+```
+
+---
+
+## Checklist para Nuevos Repositories
+
+Al crear un nuevo Repository, verificar:
+
+- [ ] `import Apollo` incluido
+- [ ] `@MainActor` en la clase
+- [ ] Callbacks de Apollo envueltos en `Task { @MainActor in }`
+- [ ] `[weak self]` en closures para evitar retain cycles
+- [ ] Tipos `Int` convertidos a `Int32` donde sea necesario
+- [ ] Verificar si campos son opcionales en el código generado
+- [ ] Mapeo correcto de enums con `GraphQLEnum<>`
+- [ ] Coordenadas invertidas (GeoJSON → iOS)
+
+## Checklist para Nuevos ViewModels
+
+Al crear un nuevo ViewModel, verificar:
+
+- [ ] `import Foundation` e `import Combine` incluidos
+- [ ] `@MainActor` en la clase
+- [ ] Hereda de `ObservableObject`
+- [ ] Propiedades reactivas con `@Published`
+- [ ] Repository inicializado correctamente
+
 ## Backend
 
 - **URL**: `https://llegobackend-production.up.railway.app/graphql`

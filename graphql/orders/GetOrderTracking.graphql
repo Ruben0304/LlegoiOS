@@ -1,0 +1,60 @@
+query GetOrderTracking($orderId: String!, $jwt: String!) {
+  orderTracking(orderId: $orderId, jwt: $jwt) {
+    order {
+      id
+      orderNumber
+      status
+      total
+      currency
+      estimatedDeliveryTime
+      estimatedMinutesRemaining
+      items {
+        productId
+        name
+        quantity
+        price
+        imageUrl
+      }
+      deliveryPerson {
+        id
+        name
+        phone
+        rating
+        vehicleType
+        vehiclePlate
+        profileImageUrl
+        currentLocation {
+          type
+          coordinates
+        }
+        isOnline
+      }
+      timeline {
+        status
+        timestamp
+        message
+        actor
+      }
+      branch {
+        id
+        name
+        avatarUrl
+      }
+    }
+    deliveryPersonLocation {
+      type
+      coordinates
+    }
+    storeLocation {
+      type
+      coordinates
+    }
+    deliveryLocation {
+      type
+      coordinates
+    }
+    estimatedMinutes
+    distanceKm
+    routePolyline
+  }
+}

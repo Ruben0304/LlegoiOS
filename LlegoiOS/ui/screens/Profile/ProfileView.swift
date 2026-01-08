@@ -683,7 +683,7 @@ struct ProfileView: View {
 
     // MARK: - Recent Orders Preview Section
     private var recentOrdersSection: some View {
-        let orders = sampleRecentOrders
+        let orders = viewModel.recentOrders
 
         return VStack(spacing: 12) {
             HStack {
@@ -693,29 +693,65 @@ struct ProfileView: View {
 
                 Spacer()
 
-                NavigationLink(destination: OrderHistoryView()) {
+                NavigationLink(destination: OrderListView()) {
                     Text("Ver todos")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.gray)
                 }
             }
-
-            VStack(spacing: 0) {
-                ForEach(Array(orders.enumerated()), id: \.element.id) { index, order in
-                    NavigationLink(destination: OrderDetailView(status: order.detailStatus)) {
-                        minimalOrderRow(order, isLast: index == orders.count - 1)
-                    }
-                    .buttonStyle(.plain)
+            
+            if viewModel.isLoadingOrders {
+                HStack(spacing: 12) {
+                    ProgressView()
+                        .tint(.llegoPrimary)
+                    Text("Cargando pedidos...")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.gray)
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.white)
+                )
+            } else if orders.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "bag")
+                        .font(.system(size: 32, weight: .light))
+                        .foregroundColor(.gray.opacity(0.5))
+                    
+                    Text("No tienes pedidos aún")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.gray)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 24)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.white)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                )
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(Array(orders.enumerated()), id: \.element.id) { index, order in
+                        NavigationLink(destination: OrderDetailView(orderId: order.id)) {
+                            minimalOrderRow(order, isLast: index == orders.count - 1)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.white)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                )
             }
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.white)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
-            )
         }
     }
 
@@ -727,7 +763,7 @@ struct ProfileView: View {
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(.llegoPrimary)
 
-                    Text(order.date)
+                    Text(order.formattedDate)
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.gray)
                 }
@@ -735,11 +771,11 @@ struct ProfileView: View {
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text(order.total)
+                    Text(order.formattedTotal)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(.llegoPrimary)
 
-                    Text(order.status.text)
+                    Text(order.status.displayName)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(order.status.color)
                 }
@@ -1003,111 +1039,7 @@ enum CustomerLevel: Int, CaseIterable {
     }
 }
 
-// MARK: - Recent Order Model
-struct RecentOrder: Identifiable {
-    let id: String
-    let storeName: String
-    let date: String
-    let total: String
-    let status: OrderStatus
-    let detailStatus: OrderDetailStatus
-    let itemCount: Int
 
-    enum OrderStatus {
-        case pendingAcceptance
-        case modifiedByStore
-        case cancelled
-        case inProgress
-        case accepted
-
-        var text: String {
-            switch self {
-            case .pendingAcceptance: return "Pendiente"
-            case .modifiedByStore: return "Modificado"
-            case .cancelled: return "Cancelado"
-            case .inProgress: return "En progreso"
-            case .accepted: return "Aceptado"
-            }
-        }
-
-        var color: Color {
-            switch self {
-            case .pendingAcceptance: return .orange
-            case .modifiedByStore: return .blue
-            case .cancelled: return .red
-            case .inProgress: return .llegoPrimary
-            case .accepted: return .green
-            }
-        }
-
-        var icon: String {
-            switch self {
-            case .pendingAcceptance: return "clock.fill"
-            case .modifiedByStore: return "square.and.pencil"
-            case .cancelled: return "xmark.circle.fill"
-            case .inProgress: return "shippingbox.fill"
-            case .accepted: return "checkmark.circle.fill"
-            }
-        }
-    }
-}
-
-// MARK: - Recent Order Card Component
-struct RecentOrderCard: View {
-    let order: RecentOrder
-
-    var body: some View {
-        HStack(spacing: 14) {
-            // Status icon
-            ZStack {
-                Circle()
-                    .fill(order.status.color.opacity(0.15))
-                    .frame(width: 48, height: 48)
-
-                Image(systemName: order.status.icon)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(order.status.color)
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(order.storeName)
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
-                    .foregroundColor(.llegoPrimary)
-
-                HStack(spacing: 6) {
-                    Text(order.date)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.gray)
-
-                    Text("•")
-                        .foregroundColor(.gray.opacity(0.5))
-
-                    Text("\(order.itemCount) productos")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.gray)
-                }
-            }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 4) {
-                Text(order.total)
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.llegoPrimary)
-
-                Text(order.status.text)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(order.status.color)
-            }
-        }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white)
-                .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
-        )
-    }
-}
 
 // MARK: - Payment Methods Sheet
 struct PaymentMethodsSheet: View {
@@ -1264,74 +1196,7 @@ struct PaymentCardView: View {
     }
 }
 
-// MARK: - Order History View (Stub)
-struct OrderHistoryView: View {
-    var body: some View {
-        ZStack {
-            Color.llegoBackground.ignoresSafeArea()
 
-            ScrollView {
-                VStack(spacing: 16) {
-                    ForEach(sampleRecentOrders) { order in
-                        RecentOrderCard(order: order)
-                    }
-                }
-                .padding(20)
-            }
-        }
-        .navigationTitle("Historial de Pedidos")
-        .navigationBarTitleDisplayMode(.large)
-    }
-}
-
-// MARK: - Sample Data
-private let sampleRecentOrders = [
-    RecentOrder(
-        id: "1",
-        storeName: "Cafe Habana",
-        date: "Hace 12 min",
-        total: "$12.50",
-        status: .pendingAcceptance,
-        detailStatus: .pendingAcceptance,
-        itemCount: 3
-    ),
-    RecentOrder(
-        id: "2",
-        storeName: "Pizzeria Roma",
-        date: "Ayer",
-        total: "$22.80",
-        status: .inProgress,
-        detailStatus: .inProgress,
-        itemCount: 2
-    ),
-    RecentOrder(
-        id: "3",
-        storeName: "Sushi House",
-        date: "23 May",
-        total: "$18.20",
-        status: .cancelled,
-        detailStatus: .cancelled,
-        itemCount: 4
-    ),
-    RecentOrder(
-        id: "4",
-        storeName: "La Central",
-        date: "22 May",
-        total: "$9.40",
-        status: .modifiedByStore,
-        detailStatus: .modifiedByStore,
-        itemCount: 1
-    ),
-    RecentOrder(
-        id: "5",
-        storeName: "Bistro 21",
-        date: "21 May",
-        total: "$16.10",
-        status: .accepted,
-        detailStatus: .accepted,
-        itemCount: 2
-    )
-]
 
 #Preview {
     ProfileView()

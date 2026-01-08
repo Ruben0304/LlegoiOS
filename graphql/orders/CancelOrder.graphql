@@ -1,0 +1,14 @@
+mutation CancelOrder($orderId: String!, $reason: String, $jwt: String!) {
+  cancelOrder(orderId: $orderId, reason: $reason, jwt: $jwt) {
+    id
+    orderNumber
+    status
+    lastStatusAt
+    timeline {
+      status
+      timestamp
+      message
+      actor
+    }
+  }
+}

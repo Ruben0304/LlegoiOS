@@ -17,6 +17,10 @@ class ProfileViewModel: ObservableObject {
     @Published var currentUser: User?
     @Published var errorMessage: String?
     @Published var isRefreshingProfile: Bool = false
+    
+    // Recent orders
+    @Published var recentOrders: [RecentOrder] = []
+    @Published var isLoadingOrders: Bool = false
 
     // Login form state
     @Published var email: String = ""
@@ -29,6 +33,7 @@ class ProfileViewModel: ObservableObject {
     @Published var registerPhone: String = ""
 
     private let repository = ProfileRepository()
+    private let orderRepository = OrderListRepository()
     private let authManager = AuthManager.shared
 
     init() {
@@ -239,6 +244,9 @@ class ProfileViewModel: ObservableObject {
             currentUser = user
             updateCachedUserInfo(user)
             state = .authenticated
+            
+            // Load recent orders after profile refresh
+            await loadRecentOrders()
         } catch {
             if shouldInvalidateSession(for: error) {
                 authManager.signOut()
@@ -248,6 +256,40 @@ class ProfileViewModel: ObservableObject {
                 return
             }
             state = .authenticated
+        }
+    }
+    
+    // MARK: - Orders
+    
+    /// Load recent orders from backend
+    func loadRecentOrders() async {
+        guard authManager.isAuthenticated else { return }
+        
+        isLoadingOrders = true
+        
+        await withCheckedContinuation { continuation in
+            orderRepository.fetchOrders(limit: 3, offset: 0) { [weak self] result in
+                Task { @MainActor in
+                    guard let self = self else {
+                        continuation.resume()
+                        return
+                    }
+                    
+                    self.isLoadingOrders = false
+                    
+                    switch result {
+                    case .success(let orderResult):
+                        self.recentOrders = orderResult.orders
+                        print("✅ Loaded \(orderResult.orders.count) recent orders")
+                        
+                    case .failure(let error):
+                        print("❌ Error loading recent orders: \(error.localizedDescription)")
+                        // Keep empty array on error, don't show error to user
+                    }
+                    
+                    continuation.resume()
+                }
+            }
         }
     }
 

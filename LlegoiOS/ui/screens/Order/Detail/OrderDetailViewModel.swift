@@ -5,73 +5,120 @@ import Combine
 final class OrderDetailViewModel: ObservableObject {
     @Published var order: OrderDetail?
     @Published var isLoading = false
+    @Published var isProcessing = false
     @Published var errorMessage: String?
+    @Published var successMessage: String?
+    @Published var newComment: String = ""
 
     private let repository = OrderDetailRepository()
-    private var newItemCounter = 1
-    private let status: OrderDetailStatus
+    private let orderId: String
 
-    init(status: OrderDetailStatus) {
-        self.status = status
-        Task {
-            await load()
-        }
+    init(orderId: String) {
+        self.orderId = orderId
+        load()
     }
 
-    func load() async {
+    // MARK: - Load Order
+    
+    func load() {
         isLoading = true
         errorMessage = nil
-        order = await repository.fetchOrder(status: status)
-        isLoading = false
-    }
-
-    func incrementItem(_ item: OrderDetailItem) {
-        updateItem(item) { $0.quantity += 1 }
-    }
-
-    func decrementItem(_ item: OrderDetailItem) {
-        updateItem(item) { current in
-            current.quantity = max(current.quantity - 1, 0)
+        
+        repository.fetchOrder(id: orderId) { [weak self] result in
+            Task { @MainActor in
+                guard let self = self else { return }
+                self.isLoading = false
+                
+                switch result {
+                case .success(let detail):
+                    self.order = detail
+                case .failure(let error):
+                    self.errorMessage = error.localizedDescription
+                }
+            }
         }
-        removeEmptyItems()
+    }
+    
+    // MARK: - Refresh
+    
+    func refresh() {
+        load()
     }
 
-    func addItem() {
-        guard var order else { return }
-        let newItem = OrderDetailItem(
-            id: "new_\(newItemCounter)",
-            name: "Item adicional \(newItemCounter)",
-            imageName: "cart",
-            quantity: 1,
-            price: 1.25,
-            wasModifiedByStore: false
-        )
-        newItemCounter += 1
-        order.items.append(newItem)
-        self.order = order
+    // MARK: - Accept Modifications
+    
+    func acceptModifications() {
+        guard let order = order, order.status == .modifiedByStore else { return }
+        
+        isProcessing = true
+        errorMessage = nil
+        
+        repository.acceptModifications(orderId: orderId) { [weak self] result in
+            Task { @MainActor in
+                guard let self = self else { return }
+                self.isProcessing = false
+                
+                switch result {
+                case .success(let updatedOrder):
+                    self.order = updatedOrder
+                    self.successMessage = "Modificaciones aceptadas"
+                case .failure(let error):
+                    self.errorMessage = error.localizedDescription
+                }
+            }
+        }
     }
 
-    func cancelOrder() {
-        guard var order else { return }
-        order.status = .cancelled
-        order.lastStatusAt = Date()
-        self.order = order
+    // MARK: - Cancel Order
+    
+    func cancelOrder(reason: String? = nil) {
+        guard let order = order, order.canCancel else { return }
+        
+        isProcessing = true
+        errorMessage = nil
+        
+        repository.cancelOrder(orderId: orderId, reason: reason) { [weak self] result in
+            Task { @MainActor in
+                guard let self = self else { return }
+                self.isProcessing = false
+                
+                switch result {
+                case .success(let updatedOrder):
+                    self.order = updatedOrder
+                    self.successMessage = "Pedido cancelado"
+                case .failure(let error):
+                    self.errorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+    
+    // MARK: - Add Comment
+    
+    func sendComment() {
+        let message = newComment.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !message.isEmpty else { return }
+        
+        isProcessing = true
+        
+        repository.addComment(orderId: orderId, message: message) { [weak self] result in
+            Task { @MainActor in
+                guard let self = self else { return }
+                self.isProcessing = false
+                
+                switch result {
+                case .success:
+                    self.newComment = ""
+                    self.load() // Reload to get updated comments
+                case .failure(let error):
+                    self.errorMessage = error.localizedDescription
+                }
+            }
+        }
     }
 
-    func acceptOrder() {
-        guard var order else { return }
-        order.status = .accepted
-        order.lastStatusAt = Date()
-        self.order = order
-    }
-
-    func payOrder() {
-        guard var order else { return }
-        order.status = .inProgress
-        order.lastStatusAt = Date()
-        self.order = order
-    }
-
+    // MARK: - Formatting Helpers
+    
     func formatCurrency(_ amount: Double) -> String {
         return String(format: "$%.2f", amount)
     }
@@ -81,19 +128,30 @@ final class OrderDetailViewModel: ObservableObject {
         formatter.dateFormat = "HH:mm"
         return formatter.string(from: date)
     }
-
-    private func updateItem(_ item: OrderDetailItem, update: (inout OrderDetailItem) -> Void) {
-        guard var order else { return }
-        guard let index = order.items.firstIndex(where: { $0.id == item.id }) else { return }
-        var updatedItem = order.items[index]
-        update(&updatedItem)
-        order.items[index] = updatedItem
-        self.order = order
+    
+    func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd MMM, HH:mm"
+        formatter.locale = Locale(identifier: "es")
+        return formatter.string(from: date)
     }
-
-    private func removeEmptyItems() {
-        guard var order else { return }
-        order.items.removeAll { $0.quantity == 0 }
-        self.order = order
+    
+    // MARK: - Computed Properties
+    
+    var canAcceptModifications: Bool {
+        order?.status == .modifiedByStore
+    }
+    
+    var canCancelOrder: Bool {
+        order?.canCancel ?? false
+    }
+    
+    var showDeliveryPerson: Bool {
+        guard let status = order?.status else { return false }
+        return status == .onTheWay || status == .readyForPickup
+    }
+    
+    var showTimeline: Bool {
+        !(order?.timeline.isEmpty ?? true)
     }
 }

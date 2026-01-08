@@ -157,9 +157,27 @@ Ver detalles en [DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md)
 ✅ **USAR**: `ProgressView` nativo 
 ❌ **NO USAR**: `LottieView` para indicadores de carga
 
+### 2. Import Combine en ViewModels
+⚠️ **IMPORTANTE**: Siempre importar `Combine` en archivos ViewModel que usen `@Published`
 
+```swift
+// ✅ Correcto - ViewModel con import Combine
+import Foundation
+import Combine
 
-### 2. Main Actor en Repositories
+@MainActor
+final class MyViewModel: ObservableObject {
+    @Published var data: [Item] = []
+    @Published var isLoading = false
+    // ...
+}
+```
+
+Sin `import Combine`, el compilador mostrará errores como:
+- "Type does not conform to protocol 'ObservableObject'"
+- "Initializer 'init(wrappedValue:)' is not available due to missing import of defining module 'Combine'"
+
+### 3. Main Actor en Repositories
 ⚠️ **IMPORTANTE**: Acceder a `@MainActor` managers desde Repositories
 
 ```swift

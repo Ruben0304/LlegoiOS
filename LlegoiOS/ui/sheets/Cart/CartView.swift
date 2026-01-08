@@ -352,15 +352,8 @@ struct CartView: View {
                     totalAmount: viewModel.formattedTotal,
                     onConfirm: { _ in
                         showBankTransferSheet = false
-                        // Mostrar pantalla de confirmación (FullScreenCover)
-                        // Limpiar carrito después un momento o dejar que la confirmación lo maneje si fuera necesario,
-                        // pero aquí limpiamos los datos del ViewModel.
-                        viewModel.clearCart()
-                        
-                        // Pequeño delay para una transición suave
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            showOrderConfirmation = true
-                        }
+                        // Crear pedido real con transferencia bancaria
+                        createOrderWithPaymentMethod("bank_transfer")
                     },
                     onDismiss: {
                         showBankTransferSheet = false
@@ -594,18 +587,37 @@ struct CartView: View {
         else if paymentMethod.id == "credit_card" {
             initiateStripePayment()
         } else {
-            // Para otros métodos de pago (Efectivo, QvaPay, etc.) simular proceso
-            isLoadingPayment = true
-            
-            // Simular delay de red
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                isLoadingPayment = false
+            // Para otros métodos de pago (Efectivo, QvaPay, etc.) crear pedido real
+            createOrderWithPaymentMethod(paymentMethod.id)
+        }
+    }
+    
+    // MARK: - Create Order
+    private func createOrderWithPaymentMethod(_ paymentMethodId: String, paymentIntentId: String? = nil) {
+        isLoadingPayment = true
+        
+        viewModel.createOrder(
+            paymentMethod: paymentMethodId,
+            paymentIntentId: paymentIntentId
+        ) { [self] result in
+            Task { @MainActor in
+                self.isLoadingPayment = false
                 
-                // Limpiar carrito
-                viewModel.clearCart()
-                
-                // Mostrar confirmación
-                showOrderConfirmation = true
+                switch result {
+                case .success(let order):
+                    print("✅ Pedido creado: \(order.orderNumber)")
+                    
+                    // Limpiar carrito
+                    self.viewModel.clearCart()
+                    
+                    // Mostrar confirmación
+                    self.showOrderConfirmation = true
+                    
+                case .failure(let error):
+                    print("❌ Error creando pedido: \(error.localizedDescription)")
+                    self.paymentAlertMessage = "Error al crear el pedido: \(error.localizedDescription)"
+                    self.showPaymentAlert = true
+                }
             }
         }
     }
@@ -807,11 +819,8 @@ struct CartView: View {
         case .completed:
             print("✅ Pago completado exitosamente")
             
-            // Limpiar carrito
-            viewModel.clearCart()
-            
-            // Mostrar Confirmación
-            showOrderConfirmation = true
+            // Crear pedido real después del pago exitoso
+            createOrderWithPaymentMethod("credit_card")
 
         case .canceled:
             print("⚠️ Pago cancelado por el usuario")

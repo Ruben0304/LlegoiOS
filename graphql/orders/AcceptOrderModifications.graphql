@@ -1,0 +1,25 @@
+mutation AcceptOrderModifications($orderId: String!, $jwt: String!) {
+  acceptOrderModifications(orderId: $orderId, jwt: $jwt) {
+    id
+    orderNumber
+    status
+    subtotal
+    total
+    lastStatusAt
+    items {
+      productId
+      name
+      price
+      quantity
+      imageUrl
+      wasModifiedByStore
+      lineTotal
+    }
+    timeline {
+      status
+      timestamp
+      message
+      actor
+    }
+  }
+}

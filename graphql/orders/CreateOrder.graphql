@@ -1,0 +1,42 @@
+mutation CreateOrder($input: CreateOrderInput!, $jwt: String!) {
+  createOrder(input: $input, jwt: $jwt) {
+    id
+    orderNumber
+    status
+    subtotal
+    deliveryFee
+    total
+    currency
+    paymentMethod
+    paymentStatus
+    createdAt
+    items {
+      productId
+      name
+      price
+      quantity
+      imageUrl
+      lineTotal
+    }
+    discounts {
+      id
+      title
+      amount
+      type
+    }
+    deliveryAddress {
+      street
+      city
+      reference
+    }
+    branch {
+      id
+      name
+      avatarUrl
+    }
+    business {
+      id
+      name
+    }
+  }
+}

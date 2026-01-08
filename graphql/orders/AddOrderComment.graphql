@@ -1,0 +1,11 @@
+mutation AddOrderComment($input: AddOrderCommentInput!, $jwt: String!) {
+  addOrderComment(input: $input, jwt: $jwt) {
+    id
+    comments {
+      id
+      author
+      message
+      timestamp
+    }
+  }
+}

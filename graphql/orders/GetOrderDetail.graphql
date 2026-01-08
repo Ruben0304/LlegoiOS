@@ -1,0 +1,87 @@
+query GetOrderDetail($id: String!, $jwt: String!) {
+  order(id: $id, jwt: $jwt) {
+    id
+    orderNumber
+    status
+    subtotal
+    deliveryFee
+    total
+    currency
+    paymentMethod
+    paymentStatus
+    createdAt
+    updatedAt
+    lastStatusAt
+    isEditable
+    canCancel
+    estimatedDeliveryTime
+    estimatedMinutesRemaining
+    items {
+      productId
+      name
+      price
+      quantity
+      imageUrl
+      wasModifiedByStore
+      lineTotal
+    }
+    discounts {
+      id
+      title
+      amount
+      type
+    }
+    deliveryAddress {
+      street
+      city
+      reference
+      coordinates {
+        type
+        coordinates
+      }
+    }
+    deliveryPerson {
+      id
+      name
+      phone
+      rating
+      vehicleType
+      vehiclePlate
+      profileImageUrl
+      isOnline
+    }
+    timeline {
+      status
+      timestamp
+      message
+      actor
+    }
+    comments {
+      id
+      author
+      message
+      timestamp
+    }
+    branch {
+      id
+      name
+      address
+      phone
+      avatarUrl
+      coordinates {
+        type
+        coordinates
+      }
+    }
+    business {
+      id
+      name
+      avatarUrl
+    }
+    customer {
+      id
+      name
+      phone
+    }
+  }
+}
