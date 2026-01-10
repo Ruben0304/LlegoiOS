@@ -15,14 +15,38 @@ struct ProductListView: View {
     let initialBranchId: String?
     let branchName: String?
     let storeGradient: ExtractedGradient?
+    
+    // ViewModel propio para cuando hay branchId (no compartido)
+    @StateObject private var branchViewModel = ProductListViewModel()
 
     init(viewModel: ProductListViewModel? = nil, category: String? = nil, branchId: String? = nil, branchName: String? = nil, storeGradient: ExtractedGradient? = nil) {
-        // Si no se pasa viewModel, crear uno nuevo (para uso desde navegación interna)
+        // Si hay branchId, usaremos branchViewModel (StateObject propio)
+        // Si no hay branchId, usamos el viewModel pasado o creamos uno nuevo
         self._viewModel = ObservedObject(wrappedValue: viewModel ?? ProductListViewModel())
         self.initialCategory = category
         self.initialBranchId = branchId
         self.branchName = branchName
         self.storeGradient = storeGradient
+    }
+    
+    // ViewModel activo: usa branchViewModel si hay branchId, sino usa el viewModel compartido
+    private var activeViewModel: ProductListViewModel {
+        initialBranchId != nil ? branchViewModel : viewModel
+    }
+    
+    // Bindings para el ViewModel activo
+    private var maxDistanceBinding: Binding<Double> {
+        Binding(
+            get: { activeViewModel.maxDistance },
+            set: { activeViewModel.maxDistance = $0 }
+        )
+    }
+    
+    private var searchQueryBinding: Binding<String> {
+        Binding(
+            get: { activeViewModel.searchQuery },
+            set: { activeViewModel.searchQuery = $0 }
+        )
     }
 
     private struct ShopCategory: Identifiable {
@@ -54,7 +78,7 @@ struct ProductListView: View {
     // MARK: - Refresh Function
     private func refreshProducts() async {
         await withCheckedContinuation { continuation in
-            viewModel.loadProducts(isRefreshing: true)
+            activeViewModel.loadProducts(isRefreshing: true)
             // Wait a bit to allow the animation to complete
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 continuation.resume()
@@ -69,18 +93,18 @@ struct ProductListView: View {
                     .ignoresSafeArea()
 
                 // Contador de resultados
-                if !viewModel.isLoading {
+                if !activeViewModel.isLoading {
 
                 }
 
                 // Contenido principal
-                if viewModel.isLoading {
+                if activeViewModel.isLoading {
                     loadingState
-                } else if viewModel.isSearching {
+                } else if activeViewModel.isSearching {
                     searchSkeletonView
-                } else if case .error(let message) = viewModel.state {
+                } else if case .error(let message) = activeViewModel.state {
                     errorState(message: message)
-                } else if viewModel.filteredProducts.isEmpty {
+                } else if activeViewModel.filteredProducts.isEmpty {
                     emptyStateScroll
                 } else {
                     productsGrid
@@ -89,20 +113,24 @@ struct ProductListView: View {
             .onAppear {
                 // Primero configurar los filtros
                 if let category = initialCategory {
-                    viewModel.selectedCategory = category
+                    activeViewModel.selectedCategory = category
                 }
                 if let branchId = initialBranchId {
-                    viewModel.branchId = branchId
+                    activeViewModel.branchId = branchId
+                    print("🏪 ProductListView.onAppear - Setting branchId: \(branchId) on branchViewModel")
+                } else {
+                    print("🏪 ProductListView.onAppear - No branchId (general product list)")
                 }
                 // Forzar recarga cuando hay branchId para asegurar que se carguen los productos de esa tienda
-                viewModel.loadProducts(isRefreshing: initialBranchId != nil)
+                print("🏪 ProductListView.onAppear - Calling loadProducts with branchId: \(activeViewModel.branchId ?? "nil"), isRefreshing: \(initialBranchId != nil)")
+                activeViewModel.loadProducts(isRefreshing: initialBranchId != nil)
             }
             .sheet(isPresented: $showFiltersSheet) {
                 FiltersSheet(
-                    maxDistance: $viewModel.maxDistance,
+                    maxDistance: maxDistanceBinding,
                     onApply: {
                         showFiltersSheet = false
-                        viewModel.applyFilters()
+                        activeViewModel.applyFilters()
                     }
                 )
                 .presentationDetents([.large])
@@ -126,19 +154,19 @@ struct ProductListView: View {
             .navigationTitle(branchName ?? "15.40$")
             .navigationBarTitleDisplayMode(.inline)
             .searchable(
-                text: $viewModel.searchQuery,
+                text: searchQueryBinding,
                 isPresented: $isSearchPresented,
                 placement: initialBranchId != nil ? .navigationBarDrawer(displayMode: .always) : .toolbar,
                 prompt: "Buscar productos..."
             )
             .onSubmit(of: .search) {
                 // Execute search only when user submits (presses Enter/Search button)
-                viewModel.executeSearch()
+                activeViewModel.executeSearch()
             }
-            .onChange(of: viewModel.searchQuery) { newValue in
+            .onChange(of: activeViewModel.searchQuery) { newValue in
                 // Clear results when user clears search
                 if newValue.isEmpty {
-                    viewModel.executeSearch()
+                    activeViewModel.executeSearch()
                 }
             }
             .searchFocused($isSearchFocused)
@@ -154,7 +182,7 @@ struct ProductListView: View {
                                 Image(systemName: "location.circle")
                                     .font(.system(size: 14, weight: .semibold))
                                
-                                if viewModel.maxDistance < 50 {
+                                if activeViewModel.maxDistance < 50 {
                                     Circle()
                                         .fill(Color.llegoPrimary)
                                         .frame(width: 6, height: 6)
@@ -211,7 +239,7 @@ struct ProductListView: View {
                 alignment: .center,
                 spacing: 20
             ) {
-                ForEach(Array(viewModel.filteredProducts.enumerated()), id: \.element.id) { index, product in
+                ForEach(Array(activeViewModel.filteredProducts.enumerated()), id: \.element.id) { index, product in
                     NavigationLink(
                         destination: ProductDetailView(productId: product.id)
                     ) {
@@ -247,7 +275,7 @@ struct ProductListView: View {
                             onProductTap: nil
                         )
                         .onAppear {
-                            viewModel.loadMoreIfNeeded(currentItem: product)
+                            activeViewModel.loadMoreIfNeeded(currentItem: product)
                         }
                     }
                     .buttonStyle(.glassProminent)
@@ -270,7 +298,7 @@ struct ProductListView: View {
                 }
 
                 // Loading indicator for pagination
-                if viewModel.isLoadingMore {
+                if activeViewModel.isLoadingMore {
                     GridRow {
                         HStack {
                             Spacer()
@@ -291,12 +319,12 @@ struct ProductListView: View {
             await refreshProducts()
         }
         .onAppear {
-            animationDelay = Double(viewModel.filteredProducts.count) * 0.1 + 0.1
+            animationDelay = Double(activeViewModel.filteredProducts.count) * 0.1 + 0.1
         }
-        .onChange(of: viewModel.filteredProducts.count) { _ in
+        .onChange(of: activeViewModel.filteredProducts.count) { _ in
             animationDelay = 0
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                animationDelay = Double(viewModel.filteredProducts.count) * 0.1 + 0.1
+                animationDelay = Double(activeViewModel.filteredProducts.count) * 0.1 + 0.1
             }
         }
     }
@@ -348,8 +376,8 @@ struct ProductListView: View {
             HStack(spacing: 13) {
                 ForEach(shopCategories) { category in
                     let isSelected = category.isAll
-                        ? viewModel.selectedCategory == nil
-                        : viewModel.selectedCategory == category.title
+                        ? activeViewModel.selectedCategory == nil
+                        : activeViewModel.selectedCategory == category.title
                     CategoryChip(
                         title: category.title,
                         icon: category.icon,
@@ -357,12 +385,12 @@ struct ProductListView: View {
                         isFeatured: category.isFeatured,
                         onTap: {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            if category.isAll || viewModel.selectedCategory == category.title {
-                                viewModel.selectedCategory = nil
+                            if category.isAll || activeViewModel.selectedCategory == category.title {
+                                activeViewModel.selectedCategory = nil
                             } else {
-                                viewModel.selectedCategory = category.title
+                                activeViewModel.selectedCategory = category.title
                             }
-                            viewModel.applyFilters()
+                            activeViewModel.applyFilters()
                         }
                     )
                 }
@@ -398,12 +426,12 @@ struct ProductListView: View {
             }
 
             // Botón de acción
-            if viewModel.hasActiveFilters || !viewModel.searchQuery.isEmpty {
+            if activeViewModel.hasActiveFilters || !activeViewModel.searchQuery.isEmpty {
                 Button(action: {
-                    viewModel.searchQuery = ""
-                    viewModel.selectedCategory = nil
-                    viewModel.maxDistance = 50
-                    viewModel.applyFilters()
+                    activeViewModel.searchQuery = ""
+                    activeViewModel.selectedCategory = nil
+                    activeViewModel.maxDistance = 50
+                    activeViewModel.applyFilters()
                 }) {
                     HStack(spacing: 8) {
                         Image(systemName: "arrow.clockwise")
@@ -426,9 +454,9 @@ struct ProductListView: View {
     }
 
     private var emptyStateMessage: String {
-        if !viewModel.searchQuery.isEmpty {
-            return "No hay productos que coincidan con \"\(viewModel.searchQuery)\". Intenta con otros términos de búsqueda."
-        } else if viewModel.hasActiveFilters {
+        if !activeViewModel.searchQuery.isEmpty {
+            return "No hay productos que coincidan con \"\(activeViewModel.searchQuery)\". Intenta con otros términos de búsqueda."
+        } else if activeViewModel.hasActiveFilters {
             return "No hay productos disponibles con los filtros seleccionados. Prueba ajustar tus criterios de búsqueda."
         } else {
             return "Aún no hay productos disponibles en la tienda. Vuelve a revisar más tarde."
@@ -460,7 +488,7 @@ struct ProductListView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
             Button("Reintentar") {
-                viewModel.loadProducts()
+                activeViewModel.loadProducts()
             }
             .frame(height: 50)
             .frame(maxWidth: 200)

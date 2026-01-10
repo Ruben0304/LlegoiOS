@@ -88,8 +88,8 @@ class ProductListViewModel: ObservableObject {
     }
 
     func loadProducts(isRefreshing: Bool = false) {
-        // Evitar recargar si ya se cargaron los datos (excepto en refresh explícito)
-        if hasLoaded && !isRefreshing {
+        // Evitar recargar si ya se cargaron los datos (excepto en refresh explícito o cuando hay branchId)
+        if hasLoaded && !isRefreshing && branchId == nil {
             print("📦 ProductListViewModel - Datos ya cargados, omitiendo recarga")
             return
         }
@@ -99,6 +99,9 @@ class ProductListViewModel: ObservableObject {
             currentCursor = nil
             hasNextPage = false
             totalCount = 0
+            products = []
+            filteredProducts = []
+            hasLoaded = false
         }
 
         // Solo mostrar loading si NO es un refresh
@@ -106,6 +109,8 @@ class ProductListViewModel: ObservableObject {
             isLoading = true
             state = .loading
         }
+        
+        print("📦 ProductListViewModel.loadProducts - branchId: \(branchId ?? "nil"), isRefreshing: \(isRefreshing), hasLoaded: \(hasLoaded)")
 
         repository.fetchProducts(first: 8, after: nil, branchId: branchId, radiusKm: effectiveRadiusKm) { [weak self] result in
             guard let self = self else { return }

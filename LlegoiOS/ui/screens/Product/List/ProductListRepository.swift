@@ -12,6 +12,8 @@ class ProductListRepository {
 
         // Obtener tipo de branch global
         let branchType = BranchTypeManager.shared.selectedType.rawValue
+        
+        print("📦 fetchProducts - branchId: \(branchId ?? "nil"), branchType: \(branchType), first: \(first)")
 
         let query = LlegoAPI.GetProductsQuery(
             first: Int32(first),
@@ -23,7 +25,12 @@ class ProductListRepository {
             radiusKm: radiusKm.map { .some($0) } ?? .none,
             jwt: jwt.map { .some($0) } ?? .none
         )
-        apolloClient.fetch(query: query, cachePolicy: .returnCacheDataAndFetch) { [apolloClient = self.apolloClient] result in
+        
+        // Usar política de caché diferente si hay branchId específico
+        // Para evitar mostrar datos incorrectos del caché
+        let cachePolicy: CachePolicy_v1 = branchId != nil ? .fetchIgnoringCacheData : .returnCacheDataAndFetch
+        
+        apolloClient.fetch(query: query, cachePolicy: cachePolicy) { [apolloClient = self.apolloClient] result in
             switch result {
             case .success(let graphQLResult):
                 if let errors = graphQLResult.errors {
