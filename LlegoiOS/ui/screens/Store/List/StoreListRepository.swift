@@ -215,7 +215,9 @@ class StoreListRepository {
                         availability: edge.node.availability,
                         createdAt: edge.node.createdAt,
                         businessName: edge.node.business?.name ?? "",
-                        distanceKm: edge.node.distanceKm
+                        distanceKm: edge.node.distanceKm,
+                        categoryId: edge.node.categoryId,
+                        categoryName: edge.node.category?.name
                     )
                 }
 
@@ -251,7 +253,9 @@ class StoreListRepository {
                                         availability: edge.node.availability,
                                         createdAt: edge.node.createdAt,
                                         businessName: edge.node.business?.name ?? "",
-                                        distanceKm: edge.node.distanceKm
+                                        distanceKm: edge.node.distanceKm,
+                                        categoryId: edge.node.categoryId,
+                                        categoryName: edge.node.category?.name
                                     )
                                 }
 

@@ -49,28 +49,6 @@ struct ProductListView: View {
         )
     }
 
-    private struct ShopCategory: Identifiable {
-        let title: String
-        let icon: String
-        let isFeatured: Bool
-        let isAll: Bool
-
-        var id: String { title }
-    }
-
-    private let shopCategories: [ShopCategory] = [
-        ShopCategory(title: "Todos", icon: "square.grid.2x2", isFeatured: false, isAll: true),
-        ShopCategory(title: "Platos del día", icon: "sparkles", isFeatured: true, isAll: false),
-        ShopCategory(title: "Desayuno", icon: "sunrise.fill", isFeatured: false, isAll: false),
-        ShopCategory(title: "Entrantes", icon: "leaf.fill", isFeatured: false, isAll: false),
-        ShopCategory(title: "Platos principales", icon: "fork.knife", isFeatured: false, isAll: false),
-        ShopCategory(title: "Postres", icon: "birthday.cake.fill", isFeatured: false, isAll: false),
-        ShopCategory(title: "Italiano", icon: "fork.knife.circle.fill", isFeatured: false, isAll: false),
-        ShopCategory(title: "Cócteles", icon: "wineglass.fill", isFeatured: false, isAll: false),
-        ShopCategory(title: "Bebidas frías", icon: "snowflake", isFeatured: false, isAll: false),
-        ShopCategory(title: "Bebidas calientes", icon: "thermometer.sun.fill", isFeatured: false, isAll: false)
-    ]
-
     private var totalCartItems: Int {
         productCounts.values.reduce(0, +)
     }
@@ -121,6 +99,10 @@ struct ProductListView: View {
                 } else {
                     print("🏪 ProductListView.onAppear - No branchId (general product list)")
                 }
+
+                // Cargar categorías dinámicamente desde el backend
+                activeViewModel.loadCategories()
+
                 // Forzar recarga cuando hay branchId para asegurar que se carguen los productos de esa tienda
                 print("🏪 ProductListView.onAppear - Calling loadProducts with branchId: \(activeViewModel.branchId ?? "nil"), isRefreshing: \(initialBranchId != nil)")
                 activeViewModel.loadProducts(isRefreshing: initialBranchId != nil)
@@ -374,21 +356,21 @@ struct ProductListView: View {
     private var categoryScroll: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 13) {
-                ForEach(shopCategories) { category in
+                ForEach(activeViewModel.categories) { category in
                     let isSelected = category.isAll
                         ? activeViewModel.selectedCategory == nil
-                        : activeViewModel.selectedCategory == category.title
+                        : activeViewModel.selectedCategory == category.name
                     CategoryChip(
-                        title: category.title,
+                        title: category.name,
                         icon: category.icon,
                         isSelected: isSelected,
                         isFeatured: category.isFeatured,
                         onTap: {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            if category.isAll || activeViewModel.selectedCategory == category.title {
+                            if category.isAll || activeViewModel.selectedCategory == category.name {
                                 activeViewModel.selectedCategory = nil
                             } else {
-                                activeViewModel.selectedCategory = category.title
+                                activeViewModel.selectedCategory = category.name
                             }
                             activeViewModel.applyFilters()
                         }

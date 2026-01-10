@@ -60,7 +60,9 @@ class ProductListRepository {
                         availability: edge.node.availability,
                         createdAt: edge.node.createdAt,
                         businessName: edge.node.business?.name ?? "Tienda",
-                        distanceKm: edge.node.distanceKm
+                        distanceKm: edge.node.distanceKm,
+                        categoryId: edge.node.categoryId,
+                        categoryName: edge.node.category?.name
                     )
                 }
 
@@ -104,7 +106,9 @@ class ProductListRepository {
                                         availability: edge.node.availability,
                                         createdAt: edge.node.createdAt,
                                         businessName: edge.node.business?.name ?? "Tienda",
-                                        distanceKm: edge.node.distanceKm
+                                        distanceKm: edge.node.distanceKm,
+                                        categoryId: edge.node.categoryId,
+                                        categoryName: edge.node.category?.name
                                     )
                                 }
 
@@ -241,7 +245,9 @@ class ProductListRepository {
                                         availability: edge.node.availability,
                                         createdAt: edge.node.createdAt,
                                         businessName: edge.node.business?.name ?? "Tienda",
-                                        distanceKm: edge.node.distanceKm
+                                        distanceKm: edge.node.distanceKm,
+                                        categoryId: edge.node.categoryId,
+                                        categoryName: edge.node.category?.name
                                     )
                                 }
 
@@ -291,7 +297,9 @@ class ProductListRepository {
                         availability: edge.node.availability,
                         createdAt: edge.node.createdAt,
                         businessName: edge.node.business?.name ?? "Tienda",
-                        distanceKm: edge.node.distanceKm
+                        distanceKm: edge.node.distanceKm,
+                        categoryId: edge.node.categoryId,
+                        categoryName: edge.node.category?.name
                     )
                 }
 
@@ -317,9 +325,62 @@ class ProductListRepository {
             }
         }
     }
+
+    // Fetch product categories for a specific branch type
+    @MainActor func fetchProductCategories(branchType: String?, completion: @escaping @Sendable (Result<[ProductCategoryGraphQL], Error>) -> Void) {
+        let query = LlegoAPI.GetProductCategoriesQuery(branchType: branchType.map { .some($0) } ?? .none)
+
+        apolloClient.fetch(query: query, cachePolicy: .returnCacheDataAndFetch) { result in
+            switch result {
+            case .success(let graphQLResult):
+                if let errors = graphQLResult.errors {
+                    print("❌ GraphQL Errors fetching categories:")
+                    errors.forEach { error in
+                        print("  - \(error.localizedDescription)")
+                    }
+                    completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: "GraphQL errors occurred"])))
+                    return
+                }
+
+                guard let data = graphQLResult.data else {
+                    print("⚠️ No categories data received")
+                    completion(.success([]))
+                    return
+                }
+
+                let categories = data.productCategories.map { category in
+                    ProductCategoryGraphQL(
+                        id: category.id,
+                        branchType: category.branchType,
+                        name: category.name,
+                        iconIos: category.iconIos,
+                        iconWeb: category.iconWeb,
+                        iconAndroid: category.iconAndroid
+                    )
+                }
+
+                print("✅ Fetched \(categories.count) categories for branch type: \(branchType ?? "all")")
+                completion(.success(categories))
+
+            case .failure(let error):
+                print("❌ Error fetching categories: \(error.localizedDescription)")
+                completion(.failure(error))
+            }
+        }
+    }
 }
 
 // MARK: - Models
+
+// Model to represent GraphQL Product Category
+struct ProductCategoryGraphQL: Identifiable, Sendable {
+    let id: String
+    let branchType: String
+    let name: String
+    let iconIos: String
+    let iconWeb: String
+    let iconAndroid: String
+}
 
 // Model to represent GraphQL Product for Shop list view (optimized)
 struct ProductGraphQL: Identifiable, Sendable {
@@ -333,6 +394,8 @@ struct ProductGraphQL: Identifiable, Sendable {
     let createdAt: String
     let businessName: String
     let distanceKm: Double?
+    let categoryId: String?
+    let categoryName: String?
 
     var formattedPrice: String {
         let symbol: String
@@ -344,7 +407,7 @@ struct ProductGraphQL: Identifiable, Sendable {
         }
         return String(format: "%.2f \(symbol == "" ? "US$" : symbol)", price)
     }
-    
+
     var formattedDistance: String? {
         guard let distance = distanceKm else { return nil }
         if distance < 1 {

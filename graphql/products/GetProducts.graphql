@@ -12,6 +12,15 @@ query GetProducts($first: Int! = 20, $after: String, $branchId: String, $categor
         createdAt
         distanceKm
         score
+        categoryId
+        category {
+          id
+          branchType
+          name
+          iconIos
+          iconWeb
+          iconAndroid
+        }
         business {
           id
           name
@@ -26,5 +35,17 @@ query GetProducts($first: Int! = 20, $after: String, $branchId: String, $categor
       endCursor
       totalCount
     }
+  }
+}
+
+query GetProductCategories($branchType: String) {
+  productCategories(branchType: $branchType) {
+    id
+    branchType
+    name
+    iconIos
+    iconWeb
+    iconAndroid
+    createdAt
   }
 }

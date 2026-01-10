@@ -23,25 +23,29 @@ type Query {
   "Buscar negocios"
   searchBusinesses(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true, jwt: String = null): [BusinessType!]!
   "Lista de sucursales con scoring por cercanía (paginado)"
-  branches(first: Int! = 20, after: String = null, businessId: String = null, tipo: BranchTipo = null, radiusKm: Float = null, jwt: String = null): BranchConnection!
+  branches(first: Int = null, after: String = null, businessId: String = null, tipo: BranchTipo = null, radiusKm: Float = null, jwt: String = null): BranchConnection!
   "Obtener sucursal por ID"
   branch(id: String!, jwt: String = null): BranchType
   "Buscar sucursales con scoring por cercanía (paginado)"
-  searchBranches(query: String!, first: Int! = 20, after: String = null, useVectorSearch: Boolean! = true, radiusKm: Float = null, jwt: String = null): BranchConnection!
+  searchBranches(query: String!, first: Int = null, after: String = null, useVectorSearch: Boolean! = true, radiusKm: Float = null, jwt: String = null): BranchConnection!
   "Buscar sucursales cercanas por coordenadas (paginado)"
-  nearbyBranches(longitude: Float!, latitude: Float!, first: Int! = 20, after: String = null, radiusKm: Float! = 5, onlyActive: Boolean! = true, tipo: BranchTipo = null, jwt: String = null): NearbyBranchConnection!
+  nearbyBranches(longitude: Float!, latitude: Float!, first: Int = null, after: String = null, radiusKm: Float! = 5, onlyActive: Boolean! = true, tipo: BranchTipo = null, jwt: String = null): NearbyBranchConnection!
   "Obtener ubicación de una sucursal desde MongoDB"
   branchLocation(branchId: String!, jwt: String = null): CoordinatesType
   "Lista de productos con scoring por cercanía (paginado)"
-  products(first: Int! = 20, after: String = null, ids: [String!] = null, branchId: String = null, categoryId: String = null, availableOnly: Boolean! = false, branchTipo: BranchTipo = null, radiusKm: Float = null, jwt: String = null): ProductConnection!
+  products(first: Int = null, after: String = null, ids: [String!] = null, branchId: String = null, categoryId: String = null, availableOnly: Boolean! = false, branchTipo: BranchTipo = null, radiusKm: Float = null, jwt: String = null): ProductConnection!
   "Obtener producto por ID"
   product(id: String!, jwt: String = null): ProductType
   "Buscar productos con scoring por cercanía (paginado)"
-  searchProducts(query: String!, first: Int! = 20, after: String = null, useVectorSearch: Boolean! = true, branchTipo: BranchTipo = null, radiusKm: Float = null, jwt: String = null): ProductConnection!
+  searchProducts(query: String!, first: Int = null, after: String = null, useVectorSearch: Boolean! = true, branchTipo: BranchTipo = null, radiusKm: Float = null, jwt: String = null): ProductConnection!
   "Lista de categorías con subcategorías"
   categories(jwt: String = null): [CategoryType!]!
   "Obtener categoría por ID"
   category(id: String!, jwt: String = null): CategoryType
+  "Get all product categories"
+  productCategories(branchType: String = null): [ProductCategoryType!]!
+  "Get product category by ID"
+  productCategory(id: String!): ProductCategoryType
   "Send a message to the AI assistant and get a response"
   aiChat(input: AiAssistantChatInput!, jwt: String = null): AiAssistantResponseType
   "Obtener mis pedidos con paginación"
@@ -154,10 +158,21 @@ type ProductType {
   createdAt: DateTime!
   "Presigned URL for the product image"
   imageUrl: String!
+  "Product category"
+  category: ProductCategoryType
   "Branch associated with this product"
   branch: BranchType
   "Business associated with this product (through branch)"
   business: BusinessType
+}
+type ProductCategoryType {
+  id: String!
+  branchType: String!
+  name: String!
+  iconIos: String!
+  iconWeb: String!
+  iconAndroid: String!
+  createdAt: DateTime!
 }
 type BranchType {
   id: String!
@@ -249,6 +264,8 @@ type ScoredProductType {
   imageUrl: String!
   "Distance in kilometers from user"
   distanceKm: Float
+  "Product category"
+  category: ProductCategoryType
   "Branch associated with this product"
   branch: BranchType
   "Business associated with this product (through branch)"

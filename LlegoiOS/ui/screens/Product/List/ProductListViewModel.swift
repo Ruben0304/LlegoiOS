@@ -2,6 +2,14 @@ import Foundation
 import SwiftUI
 import Combine
 
+struct ProductCategory: Identifiable {
+    let id: String
+    let name: String
+    let icon: String
+    let isFeatured: Bool
+    let isAll: Bool
+}
+
 enum SortOption: String, CaseIterable {
     case proximity = "Cercanía"
     case priceLowToHigh = "Precio: Menor a Mayor"
@@ -55,21 +63,16 @@ class ProductListViewModel: ObservableObject {
     // Branch filter
     var branchId: String? = nil
 
+    // Categorías dinámicas desde el backend
+    @Published var categories: [ProductCategory] = []
+    @Published var isLoadingCategories: Bool = false
+
     // Flag para evitar recargar si ya se cargaron los datos
     private var hasLoaded: Bool = false
 
     private let repository = ProductListRepository()
     private let userLocationManager = UserLocationManager.shared
-
-    // Categorías rápidas para chips horizontales
-    let quickCategories = [
-        "Italiana",
-        "Platos Fuertes",
-        "Vegetariana",
-        "Batidos",
-        "Bebidas",
-        "Botellas"
-    ]
+    private let branchTypeManager = BranchTypeManager.shared
 
     var hasActiveFilters: Bool {
         maxDistance < 50 || selectedCategory != nil || !searchQuery.isEmpty
@@ -84,6 +87,64 @@ class ProductListViewModel: ObservableObject {
         // Cargar el radio guardado del UserLocationManager
         if let savedRadius = userLocationManager.searchRadiusKm {
             maxDistance = savedRadius
+        }
+    }
+
+    func loadCategories() {
+        isLoadingCategories = true
+
+        // Obtener el tipo de negocio actual
+        let branchType = branchTypeManager.selectedType.rawValue
+
+        repository.fetchProductCategories(branchType: branchType) { [weak self] result in
+            guard let self = self else { return }
+
+            Task { @MainActor in
+                self.isLoadingCategories = false
+
+                switch result {
+                case .success(let categoriesGraphQL):
+                    // Siempre agregar la opción "Todos" al principio
+                    var mappedCategories: [ProductCategory] = [
+                        ProductCategory(
+                            id: "all",
+                            name: "Todos",
+                            icon: "square.grid.2x2",
+                            isFeatured: false,
+                            isAll: true
+                        )
+                    ]
+
+                    // Mapear categorías del backend
+                    let backendCategories = categoriesGraphQL.map { categoryGraphQL in
+                        ProductCategory(
+                            id: categoryGraphQL.id,
+                            name: categoryGraphQL.name,
+                            icon: categoryGraphQL.iconIos,
+                            isFeatured: false,
+                            isAll: false
+                        )
+                    }
+
+                    mappedCategories.append(contentsOf: backendCategories)
+                    self.categories = mappedCategories
+
+                    print("✅ Loaded \(backendCategories.count) categories (+ 'Todos') for branch type: \(branchType)")
+
+                case .failure(let error):
+                    print("❌ Error loading categories: \(error.localizedDescription)")
+                    // Si falla, solo mostrar "Todos"
+                    self.categories = [
+                        ProductCategory(
+                            id: "all",
+                            name: "Todos",
+                            icon: "square.grid.2x2",
+                            isFeatured: false,
+                            isAll: true
+                        )
+                    ]
+                }
+            }
         }
     }
 

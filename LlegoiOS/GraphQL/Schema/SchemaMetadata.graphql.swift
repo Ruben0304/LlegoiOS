@@ -49,6 +49,7 @@ public extension LlegoAPI {
       case "OrdersConnectionType": return LlegoAPI.Objects.OrdersConnectionType
       case "PageInfo": return LlegoAPI.Objects.PageInfo
       case "PaymentMethodType": return LlegoAPI.Objects.PaymentMethodType
+      case "ProductCategoryType": return LlegoAPI.Objects.ProductCategoryType
       case "ProductConnection": return LlegoAPI.Objects.ProductConnection
       case "ProductEdge": return LlegoAPI.Objects.ProductEdge
       case "ProductType": return LlegoAPI.Objects.ProductType

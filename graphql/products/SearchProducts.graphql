@@ -14,6 +14,15 @@ query SearchProducts($query: String!, $first: Int! = 20, $after: String, $useVec
         createdAt
         distanceKm
         score
+        categoryId
+        category {
+          id
+          branchType
+          name
+          iconIos
+          iconWeb
+          iconAndroid
+        }
         business {
           id
           name

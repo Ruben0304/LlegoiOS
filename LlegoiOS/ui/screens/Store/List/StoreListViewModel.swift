@@ -98,7 +98,9 @@ class StoreListViewModel: ObservableObject {
                                 availability: true,
                                 createdAt: "",
                                 businessName: branch.name,
-                                distanceKm: nil
+                                distanceKm: nil,
+                                categoryId: nil,
+                                categoryName: nil
                             )
                         }
                         self.storeProducts[branch.id] = mappedProducts
@@ -170,7 +172,9 @@ class StoreListViewModel: ObservableObject {
                                 availability: true,
                                 createdAt: "",
                                 businessName: branch.name,
-                                distanceKm: nil
+                                distanceKm: nil,
+                                categoryId: nil,
+                                categoryName: nil
                             )
                         }
                         self.storeProducts[branch.id] = mappedProducts

@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "SearchProducts"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query SearchProducts($query: String!, $first: Int! = 20, $after: String, $useVectorSearch: Boolean, $branchTipo: BranchTipo, $radiusKm: Float, $jwt: String) { searchProducts( query: $query first: $first after: $after useVectorSearch: $useVectorSearch branchTipo: $branchTipo radiusKm: $radiusKm jwt: $jwt ) { __typename edges { __typename node { __typename id branchId name description weight price currency imageUrl availability createdAt distanceKm score business { __typename id name } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
+        #"query SearchProducts($query: String!, $first: Int! = 20, $after: String, $useVectorSearch: Boolean, $branchTipo: BranchTipo, $radiusKm: Float, $jwt: String) { searchProducts( query: $query first: $first after: $after useVectorSearch: $useVectorSearch branchTipo: $branchTipo radiusKm: $radiusKm jwt: $jwt ) { __typename edges { __typename node { __typename id branchId name description weight price currency imageUrl availability createdAt distanceKm score categoryId category { __typename id branchType name iconIos iconWeb iconAndroid } business { __typename id name } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
       ))
 
     public var query: String
@@ -133,6 +133,8 @@ public extension LlegoAPI {
               .field("createdAt", LlegoAPI.DateTime.self),
               .field("distanceKm", Double?.self),
               .field("score", Double.self),
+              .field("categoryId", String?.self),
+              .field("category", Category?.self),
               .field("business", Business?.self),
             ] }
             @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
@@ -153,8 +155,40 @@ public extension LlegoAPI {
             /// Distance in kilometers from user
             public var distanceKm: Double? { __data["distanceKm"] }
             public var score: Double { __data["score"] }
+            public var categoryId: String? { __data["categoryId"] }
+            /// Product category
+            public var category: Category? { __data["category"] }
             /// Business associated with this product (through branch)
             public var business: Business? { __data["business"] }
+
+            /// SearchProducts.Edge.Node.Category
+            ///
+            /// Parent Type: `ProductCategoryType`
+            public struct Category: LlegoAPI.SelectionSet {
+              @_spi(Unsafe) public let __data: DataDict
+              @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+              @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.ProductCategoryType }
+              @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+                .field("__typename", String.self),
+                .field("id", String.self),
+                .field("branchType", String.self),
+                .field("name", String.self),
+                .field("iconIos", String.self),
+                .field("iconWeb", String.self),
+                .field("iconAndroid", String.self),
+              ] }
+              @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+                SearchProductsQuery.Data.SearchProducts.Edge.Node.Category.self
+              ] }
+
+              public var id: String { __data["id"] }
+              public var branchType: String { __data["branchType"] }
+              public var name: String { __data["name"] }
+              public var iconIos: String { __data["iconIos"] }
+              public var iconWeb: String { __data["iconWeb"] }
+              public var iconAndroid: String { __data["iconAndroid"] }
+            }
 
             /// SearchProducts.Edge.Node.Business
             ///
