@@ -9,6 +9,9 @@ struct HomeView: View {
 
     // Global branch type manager
     @StateObject private var branchTypeManager = BranchTypeManager.shared
+    
+    // Business type config manager (dynamic types)
+    @StateObject private var configManager = BusinessTypeConfigManager.shared
 
     // Cart manager
     @StateObject private var cartManager = CartManager.shared
@@ -51,6 +54,12 @@ struct HomeView: View {
     
     // Color de glow dinámico basado en la categoría
     var glowColorForCategory: Color {
+        // Usar ConfigManager si hay datos
+        if !configManager.businessTypes.isEmpty {
+            return configManager.getGlowColor(at: currentIndex)
+        }
+        
+        // Fallback
         switch currentIndex {
         case 0: // Restaurantes - Rojo-naranja terracota
             return Color(red: 0.9, green: 0.3, blue: 0.2)
@@ -63,8 +72,14 @@ struct HomeView: View {
         }
     }
     
-    // Características dinámicas según la categoría (Subcategorías Principales - Ampliadas)
+    // Características dinámicas según la categoría (desde ConfigManager o fallback)
     var categoryFeatures: [Feature] {
+        // Usar ConfigManager si hay datos
+        if !configManager.businessTypes.isEmpty {
+            return configManager.getFeatures(at: currentIndex)
+        }
+        
+        // Fallback hardcodeado
         switch currentIndex {
         case 0: // Restaurantes
             return [
@@ -96,30 +111,47 @@ struct HomeView: View {
     }
     
     // Models data - Orden: Restaurantes, Supermercado, Dulcería
-    let models: [CategoryModel3D] = [
-        CategoryModel3D(
-            name: "Restaurantes",
-            fileName: "restaurant.usdz",
-            description: "Comida y Bebidas",
-            icon: "fork.knife",
-            cameraPosition: SCNVector3(x: 0, y: 4.0, z: 0), // Cámara más arriba, vista cenital
-            cameraEulerAngles: SCNVector3(x: -Float.pi / 2, y: 0, z: 0) // Vista casi completamente desde arriba
-            
-        ),
-        CategoryModel3D(
-            name: "Tiendas",
-            fileName: "mercadito.usdz",
-            description: "Productos del Hogar",
-            icon: "cart.fill"
-        ),
-        CategoryModel3D(
-            name: "Dulcería",
-            fileName: "dulce.usdz",
-            description: "Pan y Repostería",
-            icon: "birthday.cake.fill",
-            customScale: 0.8
-        )
-    ]
+    // Ahora usa ConfigManager si hay datos, sino fallback a hardcodeado
+    var models: [CategoryModel3D] {
+        if !configManager.businessTypes.isEmpty {
+            return configManager.businessTypes.map { $0.toCategoryModel3D() }
+        }
+        
+        // Fallback hardcodeado
+        return [
+            CategoryModel3D(
+                name: "Restaurantes",
+                fileName: "restaurant.usdz",
+                description: "Comida y Bebidas",
+                icon: "fork.knife",
+                cameraPosition: SCNVector3(x: 0, y: 4.0, z: 0),
+                cameraEulerAngles: SCNVector3(x: -Float.pi / 2, y: 0, z: 0)
+            ),
+            CategoryModel3D(
+                name: "Tiendas",
+                fileName: "mercadito.usdz",
+                description: "Productos del Hogar",
+                icon: "cart.fill"
+            ),
+            CategoryModel3D(
+                name: "Dulcería",
+                fileName: "dulce.usdz",
+                description: "Pan y Repostería",
+                icon: "birthday.cake.fill",
+                customScale: 0.8
+            )
+        ]
+    }
+    
+    // Verifica si el modelo actual necesita descarga
+    var currentModelNeedsDownload: Bool {
+        configManager.needsDownload(at: currentIndex)
+    }
+    
+    // Estado de descarga del modelo actual
+    var currentDownloadState: Model3DDownloadState {
+        configManager.getDownloadState(at: currentIndex)
+    }
 
     var body: some View {
         NavigationStack{
@@ -131,16 +163,31 @@ struct HomeView: View {
                 
                 ZStack(alignment: .topLeading) {
                     // Modelo 3D - optimizado
-                    MultiModel3DCarouselView(
-                        models: models,
-                        currentIndex: currentIndex,
-                        allowsCameraControl: false,
-                        isAnimated: true
-                    )
+                    ZStack {
+                        MultiModel3DCarouselView(
+                            models: models,
+                            currentIndex: currentIndex,
+                            allowsCameraControl: false,
+                            isAnimated: true
+                        )
+                        
+                        // Overlay de descarga si el modelo actual necesita descargarse
+                        if currentModelNeedsDownload || currentDownloadState != .notNeeded && currentDownloadState != .downloaded {
+                            if let config = configManager.getBusinessType(at: currentIndex) {
+                                Model3DDownloadOverlay(
+                                    state: currentDownloadState,
+                                    config: config,
+                                    onDownload: {
+                                        configManager.downloadModel3D(for: config)
+                                    }
+                                )
+                            }
+                        }
+                    }
                     .frame(width: 460, height: 600)
                     .scaleEffect(scaleEffect * 1.05)
                     .offset(
-                        x: -153 + (carouselAppeared ? carouselFloat / 2 : -30), // Más cortado
+                        x: -153 + (carouselAppeared ? carouselFloat / 2 : -30),
                         y: carouselAppeared ? -50 + carouselFloat : -20
                     )
                     .opacity(carouselAppeared ? 1 : 0)
@@ -148,7 +195,6 @@ struct HomeView: View {
                     // Efecto glow sutil basado en la categoría
                     .shadow(color: glowColorForCategory.opacity(0.4), radius: 50, x: 0, y: 0)
                     .shadow(color: glowColorForCategory.opacity(0.2), radius: 80, x: 0, y: 0)
-                    // .allowsHitTesting(false) eliminada para permitir rotación manual
 
                     // Contenido principal - layout vertical
                     VStack(alignment: .center, spacing: 0) {
@@ -451,6 +497,11 @@ struct HomeView: View {
                 preparePressSound()
                 // Initialize branch type based on current category
                 branchTypeManager.setTypeFromCategoryIndex(currentIndex)
+                
+                // Sincronizar tipos de negocio con el backend
+                Task {
+                    await configManager.syncWithBackend()
+                }
             }
             .onDisappear {
                 pressSoundStopTimer?.invalidate()

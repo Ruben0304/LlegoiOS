@@ -344,10 +344,14 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
 
     private func loadImage() {
         guard let url = url else {
+            print("❌ CachedAsyncImage: URL is nil")
             loadFailed = true
             isNetworkError = false
             return
         }
+
+        print("🔍 CachedAsyncImage: Loading image from URL: \(url.absoluteString)")
+        print("🔑 Cache Key: \(effectiveCacheKey.prefix(50))...")
 
         // Resetear estados al intentar cargar de nuevo
         loadFailed = false
@@ -355,6 +359,7 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
 
         // 1. Check cache first (memory + disk)
         if let cachedImage = ImageCacheManager.shared.getImage(for: effectiveCacheKey) {
+            print("✅ CachedAsyncImage: Found image in cache")
             // Mostrar imagen cacheada inmediatamente
             self.image = cachedImage
 
@@ -362,11 +367,13 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
             // (para evitar recargar en modo offline)
             if ImageCacheManager.shared.needsRefresh(for: effectiveCacheKey) &&
                !ImageCacheManager.shared.isExpiredBeyondGracePeriod(for: effectiveCacheKey) {
+                print("🔄 CachedAsyncImage: Image needs refresh, downloading in background")
                 downloadImageInBackground(from: url)
             }
             return
         }
 
+        print("⬇️ CachedAsyncImage: Image not in cache, downloading...")
         // 2. If not in cache, download
         guard !isLoading else { return }
         isLoading = true
@@ -380,14 +387,19 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
         // Add conditional request headers if we have an ETag
         if let etag = ImageCacheManager.shared.getETag(for: effectiveCacheKey) {
             request.setValue(etag, forHTTPHeaderField: "If-None-Match")
+            print("🏷️ CachedAsyncImage: Using ETag for conditional request")
         }
 
+        print("📡 CachedAsyncImage: Starting download...")
         loadTask = URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 self.isLoading = false
 
                 // Si hay error de red (offline), intentar cargar desde caché aunque esté "expirada"
                 if let error = error as NSError? {
+                    print("❌ CachedAsyncImage: Download error - \(error.localizedDescription)")
+                    print("   Error domain: \(error.domain), code: \(error.code)")
+
                     // Errores de conexión (offline, timeout, etc)
                     if error.domain == NSURLErrorDomain &&
                        (error.code == NSURLErrorNotConnectedToInternet ||
@@ -395,31 +407,43 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
                         error.code == NSURLErrorCannotConnectToHost ||
                         error.code == NSURLErrorNetworkConnectionLost) {
 
+                        print("🌐 CachedAsyncImage: Network error detected, trying to load from cache")
                         // Marcar como error de red
                         self.isNetworkError = true
                         self.loadFailed = true
 
                         // Intentar cargar desde caché sin importar expiración
                         if let cachedImage = ImageCacheManager.shared.getImage(for: self.effectiveCacheKey) {
+                            print("✅ CachedAsyncImage: Loaded expired cache due to network error")
                             self.image = cachedImage
                             self.loadFailed = false
                             return
                         }
 
+                        print("⚠️ CachedAsyncImage: No cache available for offline mode")
                         // Si no hay caché, quedarse en estado de loading/placeholder
                         // (no mostrar failure para errores de red sin caché)
                         return
                     }
 
                     // Otros errores (no de red) -> marcar como failed
+                    print("⚠️ CachedAsyncImage: Non-network error, marking as failed")
                     self.isNetworkError = false
                     self.loadFailed = true
                     return
                 }
 
+                // Log response status
+                if let httpResponse = response as? HTTPURLResponse {
+                    print("📥 CachedAsyncImage: HTTP Status: \(httpResponse.statusCode)")
+                    print("   Content-Type: \(httpResponse.allHeaderFields["Content-Type"] ?? "unknown")")
+                    print("   Content-Length: \(httpResponse.allHeaderFields["Content-Length"] ?? "unknown")")
+                }
+
                 // Check for 304 Not Modified
                 if let httpResponse = response as? HTTPURLResponse,
                    httpResponse.statusCode == 304 {
+                    print("♻️ CachedAsyncImage: 304 Not Modified - using cached version")
                     // Image hasn't changed, use cached version
                     if let cachedImage = ImageCacheManager.shared.getImage(for: self.effectiveCacheKey) {
                         self.image = cachedImage
@@ -428,6 +452,10 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
                 }
 
                 if let data = data, let downloadedImage = UIImage(data: data) {
+                    print("✅ CachedAsyncImage: Successfully downloaded and decoded image")
+                    print("   Image size: \(downloadedImage.size)")
+                    print("   Data size: \(data.count) bytes")
+
                     // Extract ETag from response
                     let etag = (response as? HTTPURLResponse)?.allHeaderFields["Etag"] as? String
 
@@ -440,6 +468,11 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
 
                     self.image = downloadedImage
                 } else {
+                    if let data = data {
+                        print("❌ CachedAsyncImage: Failed to decode image data (\(data.count) bytes)")
+                    } else {
+                        print("❌ CachedAsyncImage: No data received")
+                    }
                     self.loadFailed = true
                 }
             }

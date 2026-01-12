@@ -1,0 +1,13 @@
+mutation RegisterDeviceToken($input: RegisterDeviceTokenInput!, $jwt: String) {
+  registerDeviceToken(input: $input, jwt: $jwt) {
+    id
+    userId
+    token
+    platform
+    appVersion
+    osVersion
+    isActive
+    createdAt
+    updatedAt
+  }
+}

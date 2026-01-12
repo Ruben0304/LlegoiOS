@@ -66,6 +66,8 @@ type Query {
   myCurrentDelivery(jwt: String!): OrderType
   "Estadísticas de pedidos"
   orderStats(fromDate: DateTime!, toDate: DateTime!, jwt: String!, branchId: String = null): OrderStatsType!
+  "Get business type configurations (supports incremental sync)"
+  businessTypeConfigs(lastSyncAt: DateTime = null): [BusinessTypeConfigType!]!
   "Saludo de ejemplo"
   hello(jwt: String = null): String!
   "Saluda por nombre"
@@ -90,7 +92,6 @@ type UserType {
 type BusinessType {
   id: String!
   name: String!
-  type: String!
   ownerId: String!
   globalRating: Float!
   avatar: String
@@ -420,6 +421,45 @@ type OrderStatsType {
   averageOrderValue: Float!
   averageDeliveryTime: Int!
 }
+type BusinessTypeConfigType {
+  id: String!
+  key: String!
+  name: String!
+  description: String!
+  icon: String!
+  model3dFileName: String!
+  model3dUrl: String
+  model3dVersion: Int!
+  gradient: GradientConfigType!
+  camera: CameraConfigType!
+  glowColor: String!
+  features: [FeatureType!]!
+  sortOrder: Int!
+  isActive: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+type GradientConfigType {
+  darkColor: String!
+  mediumColor: String!
+  lightColor: String!
+  veryLightColor: String!
+  overlayColor: String!
+}
+type CameraConfigType {
+  positionX: Float!
+  positionY: Float!
+  positionZ: Float!
+  eulerX: Float
+  eulerY: Float
+  eulerZ: Float
+}
+type FeatureType {
+  icon: String!
+  title: String!
+  subtitle: String!
+  sortOrder: Int!
+}
 type Mutation {
   "Register a new user"
   register(input: RegisterInput!, jwt: String = null): AuthResponse!
@@ -487,6 +527,16 @@ type Mutation {
   assignDeliveryPerson(input: AssignDeliveryPersonInput!, jwt: String!): OrderType!
   "Forzar cambio de estado (admin)"
   forceOrderStatus(orderId: String!, status: OrderStatusEnum!, reason: String!, jwt: String!): OrderType!
+  "Register device token for push notifications"
+  registerDeviceToken(input: RegisterDeviceTokenInput!, jwt: String = null): DeviceTokenType!
+  "Unregister device token"
+  unregisterDeviceToken(token: String!): Boolean!
+  "Create new business type configuration (Admin only, triggers push notification)"
+  createBusinessTypeConfig(input: CreateBusinessTypeConfigInput!, jwt: String!): BusinessTypeConfigType!
+  "Update business type configuration (Admin only)"
+  updateBusinessTypeConfig(id: String!, input: UpdateBusinessTypeConfigInput!, jwt: String!): BusinessTypeConfigType!
+  "Deactivate business type configuration (Admin only)"
+  deactivateBusinessTypeConfig(id: String!, jwt: String!): BusinessTypeConfigType!
 }
 type AuthResponse {
   accessToken: String!
@@ -500,6 +550,17 @@ type UserData {
   phone: String
   role: String!
   createdAt: String!
+}
+type DeviceTokenType {
+  id: String!
+  userId: String
+  token: String!
+  platform: DevicePlatformEnum!
+  appVersion: String
+  osVersion: String
+  isActive: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
 }
 type Subscription {
   "Escuchar cambios en un pedido específico"
@@ -557,6 +618,10 @@ enum VehicleTypeEnum {
   AUTO
   A_PIE
 }
+enum DevicePlatformEnum {
+  IOS
+  ANDROID
+}
 input AiAssistantChatInput {
   "The user message/query to send"
   message: String!
@@ -597,7 +662,6 @@ input UpdateLocationInput {
 }
 input CreateBusinessInput {
   name: String!
-  type: String!
   avatar: String = null
   coverImage: String = null
   description: String = null
@@ -623,7 +687,6 @@ input CoordinatesInput {
 }
 input UpdateBusinessInput {
   name: String = null
-  type: String = null
   description: String = null
   socialMedia: JSON = null
   tags: [String!] = null
@@ -725,6 +788,62 @@ input AssignDeliveryPersonInput {
   orderId: String!
   deliveryPersonId: String!
   estimatedMinutes: Int = null
+}
+input RegisterDeviceTokenInput {
+  token: String!
+  platform: DevicePlatformEnum!
+  appVersion: String = null
+  osVersion: String = null
+}
+input CreateBusinessTypeConfigInput {
+  key: String!
+  name: String!
+  description: String!
+  icon: String!
+  model3dFileName: String!
+  model3dUrl: String = null
+  gradient: GradientConfigInput!
+  camera: CameraConfigInput!
+  glowColor: String!
+  features: [FeatureInput!]!
+  sortOrder: Int!
+  pushTitle: String = null
+  pushBody: String = null
+}
+input GradientConfigInput {
+  darkColor: String!
+  mediumColor: String!
+  lightColor: String!
+  veryLightColor: String!
+  overlayColor: String!
+}
+input CameraConfigInput {
+  positionX: Float!
+  positionY: Float!
+  positionZ: Float!
+  eulerX: Float = null
+  eulerY: Float = null
+  eulerZ: Float = null
+}
+input FeatureInput {
+  icon: String!
+  title: String!
+  subtitle: String!
+  sortOrder: Int!
+}
+input UpdateBusinessTypeConfigInput {
+  name: String = null
+  description: String = null
+  icon: String = null
+  model3dFileName: String = null
+  model3dUrl: String = null
+  model3dVersion: Int = null
+  gradient: GradientConfigInput = null
+  camera: CameraConfigInput = null
+  glowColor: String = null
+  features: [FeatureInput!] = null
+  sortOrder: Int = null
+  isActive: Boolean = null
 }
 "Exposes a URL that specifies the behavior of this scalar."
 directive @specifiedBy(

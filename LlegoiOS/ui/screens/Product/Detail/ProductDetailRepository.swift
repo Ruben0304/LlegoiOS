@@ -44,6 +44,19 @@ class ProductDetailRepository {
                 )
 
                 print("✅ Fetched product detail for ID: \(id)")
+                print("📦 PRODUCT DETAIL DATA:")
+                print("  - ID: \(productDetail.id)")
+                print("  - Name: \(productDetail.name)")
+                print("  - Business: \(productDetail.businessName)")
+                print("  - Description: \(productDetail.description)")
+                print("  - Weight: \(productDetail.weight)")
+                print("  - Price: \(productDetail.price)")
+                print("  - Currency: \(productDetail.currency)")
+                print("  - ImageURL: \(productDetail.imageUrl)")
+                print("  - BranchID: \(productDetail.branchId)")
+                print("  - Availability: \(productDetail.availability)")
+                print("  - CategoryID: \(productDetail.categoryId ?? "nil")")
+                print("  - CreatedAt: \(productDetail.createdAt)")
                 completion(.success(productDetail))
 
             case .failure(let error):

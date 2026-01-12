@@ -4,6 +4,7 @@ import SwiftUI
 /// Usado en: HomeView, ProductListView, ConversationalSearchView para fondo visual
 struct HomeGradientBackground: View {
     @ObservedObject private var gradientManager = GradientStateManager.shared
+    @ObservedObject private var configManager = BusinessTypeConfigManager.shared
 
     // Control para expansión del degradado (usado en ConversationalSearchView)
     var isExpanded: Bool = false
@@ -11,7 +12,7 @@ struct HomeGradientBackground: View {
     // Gradiente personalizado opcional (para tiendas específicas)
     var customGradient: ExtractedGradient? = nil
 
-    // Color palettes for each category
+    // Color palettes for each category - ahora usa BusinessTypeConfigManager si hay datos
     private var colorPalette: (dark: Color, medium: Color, light: Color, veryLight: Color, overlay: Color) {
         if let custom = customGradient {
             return (
@@ -22,9 +23,15 @@ struct HomeGradientBackground: View {
                 overlay: custom.primaryColor
             )
         }
+        
+        // Intentar obtener del ConfigManager primero
+        if !configManager.businessTypes.isEmpty {
+            return configManager.getGradientPalette(at: gradientManager.currentCategoryIndex)
+        }
 
+        // Fallback a colores hardcodeados
         switch gradientManager.currentCategoryIndex {
-        case 0: // Restaurantes - Rojo-naranja terracota (original)
+        case 0: // Restaurantes - Rojo-naranja terracota
             return (
                 dark: Color(red: 0.5, green: 0.15, blue: 0.1),
                 medium: Color(red: 0.7, green: 0.25, blue: 0.15),
@@ -32,7 +39,7 @@ struct HomeGradientBackground: View {
                 veryLight: Color(red: 0.95, green: 0.88, blue: 0.85),
                 overlay: Color(red: 0.45, green: 0.12, blue: 0.08)
             )
-        case 1: // Supermercado - Verde (el que tenía ropa)
+        case 1: // Supermercado - Verde
             return (
                 dark: Color(red: 0.05, green: 0.3, blue: 0.25),
                 medium: Color(red: 0.1, green: 0.45, blue: 0.38),
@@ -40,15 +47,15 @@ struct HomeGradientBackground: View {
                 veryLight: Color(red: 0.85, green: 0.92, blue: 0.88),
                 overlay: Color(red: 0.05, green: 0.25, blue: 0.2)
             )
-        case 2: // Dulcería - Marrón-Dorado-Beige (Juankys Pan Flores)
+        case 2: // Dulcería - Marrón-Dorado-Beige
             return (
-                dark: Color(red: 0.737, green: 0.514, blue: 0.345),      // Primary - Marrón dorado
-                medium: Color(red: 0.910, green: 0.796, blue: 0.702),    // Secondary - Beige claro cálido
+                dark: Color(red: 0.737, green: 0.514, blue: 0.345),
+                medium: Color(red: 0.910, green: 0.796, blue: 0.702),
                 light: Color(red: 0.85, green: 0.7, blue: 0.6),
                 veryLight: Color(red: 0.96, green: 0.92, blue: 0.88),
                 overlay: Color(red: 0.65, green: 0.45, blue: 0.3)
             )
-        default: // Default to Rojo-naranja terracota (restaurantes)
+        default:
             return (
                 dark: Color(red: 0.5, green: 0.15, blue: 0.1),
                 medium: Color(red: 0.7, green: 0.25, blue: 0.15),
@@ -64,7 +71,6 @@ struct HomeGradientBackground: View {
 
         ZStack {
             // Base gradient - dynamic colors based on category
-            // Cuando isExpanded = true, el degradado se extiende hasta abajo
             RadialGradient(
                 gradient: Gradient(stops: [
                     .init(color: palette.dark, location: 0.0),

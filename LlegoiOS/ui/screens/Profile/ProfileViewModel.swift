@@ -37,7 +37,10 @@ class ProfileViewModel: ObservableObject {
     private let authManager = AuthManager.shared
 
     init() {
-        checkAuthenticationStatus()
+        // Nota: No llamar checkAuthenticationStatus() aquí para evitar
+        // "Publishing changes from within view updates" cuando el ViewModel
+        // se crea durante el body de una vista.
+        // Usar checkAuthenticationStatus() en onAppear de la vista.
     }
 
     // MARK: - Public Methods

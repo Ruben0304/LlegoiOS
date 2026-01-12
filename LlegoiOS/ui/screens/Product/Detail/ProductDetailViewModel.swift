@@ -17,6 +17,9 @@ class ProductDetailViewModel: ObservableObject {
     @Published var state: ProductDetailState = .idle
     @Published var productDetail: ProductDetailGraphQL?
 
+    // MARK: - Private Properties
+    private var loadedProductId: String?
+
     // MARK: - Computed Properties
     var isLoading: Bool {
         if case .loading = state {
@@ -36,7 +39,13 @@ class ProductDetailViewModel: ObservableObject {
     private let repository = ProductDetailRepository()
 
     // MARK: - Public Methods
-    func loadProductDetail(id: String) {
+    func loadProductDetail(id: String, forceRefresh: Bool = false) {
+        // Evitar cargas duplicadas del mismo producto
+        guard forceRefresh || loadedProductId != id else {
+            return
+        }
+        
+        loadedProductId = id
         state = .loading
 
         repository.fetchProductDetail(id: id) { [weak self] result in
@@ -52,6 +61,7 @@ class ProductDetailViewModel: ObservableObject {
                 case .failure(let error):
                     let message = "Error al cargar detalles: \(error.localizedDescription)"
                     self.state = .error(message)
+                    self.loadedProductId = nil // Permitir reintentar
                     print("❌ ProductDetailViewModel: \(message)")
                 }
             }

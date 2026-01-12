@@ -19,54 +19,25 @@ struct ProductDetailView: View {
 
     // Computed property to get current product from ViewModel
     private var product: Product? {
-        guard let detail = viewModel.productDetail else { return nil }
+        guard let detail = viewModel.productDetail else {
+            return nil
+        }
 
+        let formattedPrice = viewModel.formatPrice(price: detail.price, currency: detail.currency)
         return Product(
             id: detail.id,
             name: detail.name,
             shop: detail.businessName,
             weight: detail.weight,
-            price: viewModel.formatPrice(price: detail.price, currency: detail.currency),
+            price: formattedPrice,
             imageUrl: detail.imageUrl
         )
     }
 
     private let styleOptions = ["Clásico", "Ligero", "Extra queso"]
     private let deliveryOptions = ["Express 25-35m", "Programar hoy", "Recoger en tienda"]
-    private let similarProducts: [Product] = [
-        Product(
-            id: "sim1",
-            name: "Pizza Pepperoni",
-            shop: "Pizza Place",
-            weight: "900g",
-            price: "$16.90",
-            imageUrl: "https://images.unsplash.com/photo-1548365328-95f0cbb89ffd?w=1200"
-        ),
-        Product(
-            id: "sim2",
-            name: "Pizza Cuatro Quesos",
-            shop: "La Nonna",
-            weight: "850g",
-            price: "$15.50",
-            imageUrl: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=1200"
-        ),
-        Product(
-            id: "sim3",
-            name: "Pizza Vegetariana",
-            shop: "Green Bites",
-            weight: "780g",
-            price: "$14.20",
-            imageUrl: "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=1200"
-        ),
-        Product(
-            id: "sim4",
-            name: "Pizza Hawaiana",
-            shop: "TropicalFresh",
-            weight: "820g",
-            price: "$15.80",
-            imageUrl: "https://images.unsplash.com/photo-1548365328-95f0cbb89ffd?w=1200"
-        )
-    ]
+    // TODO: Reemplazar con productos similares reales del backend
+    private let similarProducts: [Product] = []
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -95,7 +66,9 @@ struct ProductDetailView: View {
                         VStack(spacing: 16) {
                             infoSection(product: product)
                             optionsSection
-                            similarProductsSection
+                            if !similarProducts.isEmpty {
+                                similarProductsSection
+                            }
                         }
                         .padding(.horizontal, 20)
                         .opacity(contentAppeared ? 1 : 0)
@@ -221,6 +194,7 @@ struct ProductDetailView: View {
         return VStack(alignment: .leading, spacing: 12) {
             CachedAsyncImage(
                 url: URL(string: product.imageUrl),
+                cacheKey: "product_\(product.id)",
                 content: { image in
                     image
                         .resizable()

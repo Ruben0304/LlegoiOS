@@ -105,7 +105,10 @@ class AuthManager: ObservableObject {
     func getAccessToken() -> String? {
         if let token = accessToken {
             let normalized = normalizeAccessToken(token, tokenType: tokenType)
-            accessToken = normalized
+            // Solo actualizar si el valor cambió para evitar "Publishing changes from within view updates"
+            if normalized != token {
+                accessToken = normalized
+            }
             return normalized
         }
         if let token = KeychainHelper.read(service: keychainService, account: tokenKey) {
@@ -113,7 +116,10 @@ class AuthManager: ObservableObject {
             if normalized != token {
                 KeychainHelper.save(normalized, service: keychainService, account: tokenKey)
             }
-            accessToken = normalized
+            // Solo actualizar si el valor cambió
+            if accessToken != normalized {
+                accessToken = normalized
+            }
             return normalized
         }
         return nil

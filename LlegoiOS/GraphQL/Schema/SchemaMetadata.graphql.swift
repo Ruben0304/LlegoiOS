@@ -36,9 +36,14 @@ public extension LlegoAPI {
       case "BranchEdge": return LlegoAPI.Objects.BranchEdge
       case "BranchType": return LlegoAPI.Objects.BranchType
       case "BusinessType": return LlegoAPI.Objects.BusinessType
+      case "BusinessTypeConfigType": return LlegoAPI.Objects.BusinessTypeConfigType
+      case "CameraConfigType": return LlegoAPI.Objects.CameraConfigType
       case "CoordinatesType": return LlegoAPI.Objects.CoordinatesType
       case "DeliveryAddressType": return LlegoAPI.Objects.DeliveryAddressType
       case "DeliveryPersonType": return LlegoAPI.Objects.DeliveryPersonType
+      case "DeviceTokenType": return LlegoAPI.Objects.DeviceTokenType
+      case "FeatureType": return LlegoAPI.Objects.FeatureType
+      case "GradientConfigType": return LlegoAPI.Objects.GradientConfigType
       case "Mutation": return LlegoAPI.Objects.Mutation
       case "OrderCommentType": return LlegoAPI.Objects.OrderCommentType
       case "OrderDiscountType": return LlegoAPI.Objects.OrderDiscountType

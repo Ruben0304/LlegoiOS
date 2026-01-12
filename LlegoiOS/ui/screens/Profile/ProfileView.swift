@@ -160,6 +160,9 @@ struct ProfileView: View {
 
                                 // Vista previa de pedidos recientes
                                 recentOrdersSection
+                                
+                                // Modelos 3D descargados
+                                DownloadedModelsSection()
 
                                 // Notificaciones
                                 notificationsSection
