@@ -40,7 +40,9 @@ class ProfileRepository {
                         fullName: data.user.name,
                         phone: data.user.phone,
                         role: data.user.role,
-                        appleUserId: nil
+                        appleUserId: nil,
+                        avatar: nil,
+                        avatarUrl: nil
                     )
 
                     let session = AuthSession(
@@ -101,7 +103,9 @@ class ProfileRepository {
                         fullName: data.user.name,
                         phone: data.user.phone,
                         role: data.user.role,
-                        appleUserId: nil
+                        appleUserId: nil,
+                        avatar: nil,
+                        avatarUrl: nil
                     )
 
                     let session = AuthSession(
@@ -161,7 +165,9 @@ class ProfileRepository {
                         fullName: data.user.name,
                         phone: data.user.phone,
                         role: data.user.role,
-                        appleUserId: nil
+                        appleUserId: nil,
+                        avatar: nil,
+                        avatarUrl: nil
                     )
 
                     let session = AuthSession(
@@ -221,7 +227,9 @@ class ProfileRepository {
                         fullName: data.user.name,
                         phone: data.user.phone,
                         role: data.user.role,
-                        appleUserId: nil
+                        appleUserId: nil,
+                        avatar: nil,
+                        avatarUrl: nil
                     )
 
                     let session = AuthSession(
@@ -275,7 +283,9 @@ class ProfileRepository {
                         fullName: data.name,
                         phone: data.phone,
                         role: data.role,
-                        appleUserId: data.providerUserId
+                        appleUserId: data.providerUserId,
+                        avatar: data.avatar,
+                        avatarUrl: data.avatarUrl
                     )
                     continuation.resume(returning: user)
 

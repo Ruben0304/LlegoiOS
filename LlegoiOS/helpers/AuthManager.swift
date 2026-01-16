@@ -9,9 +9,11 @@ struct User: Codable, Sendable {
     let phone: String?
     let role: String
     let appleUserId: String?
+    let avatar: String?
+    let avatarUrl: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, email, fullName, phone, role, appleUserId
+        case id, email, fullName, phone, role, appleUserId, avatar, avatarUrl
     }
 }
 

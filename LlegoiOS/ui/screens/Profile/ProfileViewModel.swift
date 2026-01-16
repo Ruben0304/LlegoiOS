@@ -17,6 +17,7 @@ class ProfileViewModel: ObservableObject {
     @Published var currentUser: User?
     @Published var errorMessage: String?
     @Published var isRefreshingProfile: Bool = false
+    @Published var isUploadingAvatar: Bool = false
     
     // Recent orders
     @Published var recentOrders: [RecentOrder] = []
@@ -319,5 +320,48 @@ class ProfileViewModel: ObservableObject {
             || message.contains("jwt")
             || message.contains("unauthorized")
             || message.contains("no autorizado")
+    }
+    
+    // MARK: - Avatar Upload
+    
+    /// Upload avatar image
+    func uploadAvatar(image: UIImage) async {
+        guard !isUploadingAvatar else { return }
+        
+        isUploadingAvatar = true
+        errorMessage = nil
+        
+        do {
+            let response = try await AvatarService.shared.uploadAvatar(image: image)
+            
+            // Update current user with new avatar
+            if let user = currentUser {
+                let updatedUser = User(
+                    id: user.id,
+                    email: user.email,
+                    fullName: user.fullName,
+                    phone: user.phone,
+                    role: user.role,
+                    appleUserId: user.appleUserId,
+                    avatar: response.avatar,
+                    avatarUrl: response.avatarUrl
+                )
+                
+                currentUser = updatedUser
+                authManager.applyCurrentUser(updatedUser)
+                updateCachedUserInfo(updatedUser)
+                
+                print("✅ Avatar uploaded successfully")
+            }
+            
+            // Refresh profile to get complete data
+            await refreshProfile()
+            
+        } catch {
+            errorMessage = "Error al subir avatar: \(error.localizedDescription)"
+            print("❌ Error uploading avatar: \(error)")
+        }
+        
+        isUploadingAvatar = false
     }
 }

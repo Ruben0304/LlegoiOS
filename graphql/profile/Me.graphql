@@ -7,5 +7,7 @@ query Me($jwt: String!) {
     role
     createdAt
     providerUserId
+    avatar
+    avatarUrl
   }
 }

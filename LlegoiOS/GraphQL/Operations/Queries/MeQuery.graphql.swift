@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "Me"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query Me($jwt: String!) { me(jwt: $jwt) { __typename id name email phone role createdAt providerUserId } }"#
+        #"query Me($jwt: String!) { me(jwt: $jwt) { __typename id name email phone role createdAt providerUserId avatar avatarUrl } }"#
       ))
 
     public var jwt: String
@@ -52,6 +52,8 @@ public extension LlegoAPI {
           .field("role", String.self),
           .field("createdAt", LlegoAPI.DateTime.self),
           .field("providerUserId", String?.self),
+          .field("avatar", String?.self),
+          .field("avatarUrl", String?.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
           MeQuery.Data.Me.self
@@ -64,6 +66,9 @@ public extension LlegoAPI {
         public var role: String { __data["role"] }
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
         public var providerUserId: String? { __data["providerUserId"] }
+        public var avatar: String? { __data["avatar"] }
+        /// URL firmada del avatar del usuario
+        public var avatarUrl: String? { __data["avatarUrl"] }
       }
     }
   }

@@ -5,6 +5,8 @@ import ApolloSQLite
 
 final class ApolloClientManager: @unchecked Sendable {
     nonisolated(unsafe) static let shared = ApolloClientManager()
+    
+    static let baseURL = "https://llegobackend-production.up.railway.app"
 
     private(set) lazy var apollo: ApolloClient = {
         return ApolloClient(networkTransport: networkTransport, store: store)
@@ -15,7 +17,7 @@ final class ApolloClientManager: @unchecked Sendable {
     }()
 
     private lazy var networkTransport: NetworkTransport = {
-        let url = URL(string: "https://llegobackend-production.up.railway.app/graphql")!
+        let url = URL(string: "\(Self.baseURL)/graphql")!
         let interceptorProvider = LlegoInterceptorProvider()
         return RequestChainNetworkTransport(
             urlSession: URLSession.shared,

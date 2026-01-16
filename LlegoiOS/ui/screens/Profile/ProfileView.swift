@@ -19,6 +19,8 @@ struct ProfileView: View {
     @State private var navigateToPlansAndPricing = false
     @State private var cachedProfile: ProfileLocalCache.Snapshot? = ProfileLocalCache.load()
     @State private var didTriggerRefresh = false
+    @State private var showingImagePicker = false
+    @State private var selectedImage: UIImage?
     private let defaultCustomerLevel: CustomerLevel = .gold
     private let defaultCurrentPoints: Int = 847
     private let defaultNextLevelPoints: Int = 1000
@@ -69,6 +71,16 @@ struct ProfileView: View {
                     region.center = location
                 }
             }
+        }
+        .onChange(of: selectedImage) { image in
+            if let image = image {
+                Task {
+                    await viewModel.uploadAvatar(image: image)
+                }
+            }
+        }
+        .sheet(isPresented: $showingImagePicker) {
+            ProfileImagePicker(image: $selectedImage)
         }
     }
 
@@ -375,23 +387,75 @@ struct ProfileView: View {
                         .frame(width: 124, height: 124)
 
                     // Avatar principal
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                gradient: Gradient(colors: [
-                                    Color.llegoAccent.opacity(0.3),
-                                    Color.llegoPrimary.opacity(0.2)
-                                ]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+                    Group {
+                        if let avatarUrl = viewModel.currentUser?.avatarUrl, !avatarUrl.isEmpty {
+                            // Mostrar imagen del avatar
+                            AsyncImage(url: URL(string: avatarUrl)) { phase in
+                                switch phase {
+                                case .empty:
+                                    ProgressView()
+                                        .frame(width: 116, height: 116)
+                                case .success(let image):
+                                    image
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(width: 116, height: 116)
+                                        .clipShape(Circle())
+                                case .failure:
+                                    // Mostrar icono por defecto si falla
+                                    Circle()
+                                        .fill(
+                                            LinearGradient(
+                                                gradient: Gradient(colors: [
+                                                    Color.llegoAccent.opacity(0.3),
+                                                    Color.llegoPrimary.opacity(0.2)
+                                                ]),
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                        .frame(width: 116, height: 116)
+                                        .overlay(
+                                            Image(systemName: "person.fill")
+                                                .font(.system(size: 48, weight: .medium))
+                                                .foregroundColor(.llegoPrimary)
+                                        )
+                                @unknown default:
+                                    EmptyView()
+                                }
+                            }
+                        } else {
+                            // Mostrar icono por defecto
+                            Circle()
+                                .fill(
+                                    LinearGradient(
+                                        gradient: Gradient(colors: [
+                                            Color.llegoAccent.opacity(0.3),
+                                            Color.llegoPrimary.opacity(0.2)
+                                        ]),
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .frame(width: 116, height: 116)
+                                .overlay(
+                                    Image(systemName: "person.fill")
+                                        .font(.system(size: 48, weight: .medium))
+                                        .foregroundColor(.llegoPrimary)
+                                )
+                        }
+                    }
+                    
+                    // Loading overlay
+                    if viewModel.isUploadingAvatar {
+                        Circle()
+                            .fill(Color.black.opacity(0.5))
+                            .frame(width: 116, height: 116)
+                            .overlay(
+                                ProgressView()
+                                    .tint(.white)
                             )
-                        )
-                        .frame(width: 116, height: 116)
-                        .overlay(
-                            Image(systemName: "person.fill")
-                                .font(.system(size: 48, weight: .medium))
-                                .foregroundColor(.llegoPrimary)
-                        )
+                    }
 
                     // Botón de editar superpuesto
                     VStack {
@@ -399,7 +463,7 @@ struct ProfileView: View {
                         HStack {
                             Spacer()
                             Button(action: {
-                                showingEditName = true
+                                showingImagePicker = true
                             }) {
                                 ZStack {
                                     Circle()
@@ -407,11 +471,12 @@ struct ProfileView: View {
                                         .frame(width: 38, height: 38)
                                         .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
 
-                                    Image(systemName: "pencil")
+                                    Image(systemName: viewModel.isUploadingAvatar ? "hourglass" : "camera.fill")
                                         .font(.system(size: 16, weight: .bold))
                                         .foregroundColor(.white)
                                 }
                             }
+                            .disabled(viewModel.isUploadingAvatar)
                             .offset(x: 8, y: 8)
                         }
                     }
@@ -1197,6 +1262,45 @@ struct PaymentCardView: View {
             return "creditcard.fill"
         }
     }
+}
+
+// MARK: - Profile Image Picker
+struct ProfileImagePicker: UIViewControllerRepresentable {
+    @Binding var image: UIImage?
+    @Environment(\.dismiss) private var dismiss
+
+    class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
+        let parent: ProfileImagePicker
+
+        init(_ parent: ProfileImagePicker) {
+            self.parent = parent
+        }
+
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+            if let uiImage = info[.originalImage] as? UIImage {
+                parent.image = uiImage
+            }
+            parent.dismiss()
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.dismiss()
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.delegate = context.coordinator
+        picker.sourceType = .photoLibrary
+        picker.allowsEditing = false
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
 }
 
 
