@@ -8,6 +8,8 @@ struct StoreCard: View {
     let address: String?
     let rating: Double?
     let size: StoreCardSize
+    
+    @State private var isPressed = false
 
     init(storeName: String, etaMinutes: Int, logoUrl: String, bannerUrl: String, address: String? = nil, rating: Double? = nil, size: StoreCardSize = .medium) {
         self.storeName = storeName
@@ -40,72 +42,96 @@ struct StoreCard: View {
         let cornerRadius: CGFloat = 16
         let logoOffset = logoSize / 2
 
-        return ZStack(alignment: .topLeading) {
-            VStack(spacing: 0) {
-                // Banner Image
-                AsyncImage(url: URL(string: bannerUrl)) { image in
+        return ZStack {
+            // HDR Glow cuando está presionado
+            if isPressed {
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(Color.clear)
+                    .overlay(
+                        HDRGlowView(
+                            color: .llegoAccent,
+                            intensity: 1.5,
+                            radius: 0.5
+                        )
+                        .blur(radius: 12)
+                    )
+                    .frame(width: cardWidth, height: cardHeight)
+                    .transition(.opacity)
+            }
+            
+            ZStack(alignment: .topLeading) {
+                VStack(spacing: 0) {
+                    // Banner Image
+                    AsyncImage(url: URL(string: bannerUrl)) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .overlay(
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            )
+                    }
+                    .frame(height: bannerHeight)
+                    .clipped()
+
+                    // Store Info Row - full width below logo
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(storeName)
+                            .font(.system(size: nameFontSize, weight: .semibold, design: .rounded))
+                            .foregroundColor(.black)
+                            .lineLimit(1)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        HStack(spacing: 4) {
+                            Text("⚡")
+                                .font(.system(size: etaFontSize))
+
+                            Text("In \(etaMinutes) minutes")
+                                .font(.system(size: etaFontSize, weight: .regular, design: .rounded))
+                                .foregroundColor(.gray)
+                        }
+                    }
+                    .padding(.horizontal, padding)
+                    .padding(.top, logoOffset + (padding * 0.5))
+                    .padding(.bottom, padding * 1.2)
+                }
+                .background(Color.white)
+                .cornerRadius(cornerRadius)
+                .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
+
+                // Store Logo - overlapping design
+                AsyncImage(url: URL(string: logoUrl)) { image in
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                 } placeholder: {
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.3))
+                    Circle()
+                        .fill(Color.white)
                         .overlay(
                             ProgressView()
-                                .scaleEffect(0.8)
+                                .scaleEffect(0.6)
                         )
                 }
-                .frame(height: bannerHeight)
-                .clipped()
-
-                // Store Info Row - full width below logo
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(storeName)
-                        .font(.system(size: nameFontSize, weight: .semibold, design: .rounded))
-                        .foregroundColor(.black)
-                        .lineLimit(1)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                    HStack(spacing: 4) {
-                        Text("⚡")
-                            .font(.system(size: etaFontSize))
-
-                        Text("In \(etaMinutes) minutes")
-                            .font(.system(size: etaFontSize, weight: .regular, design: .rounded))
-                            .foregroundColor(.gray)
-                    }
-                }
-                .padding(.horizontal, padding)
-                .padding(.top, logoOffset + (padding * 0.5))
-                .padding(.bottom, padding * 1.2)
+                .frame(width: logoSize, height: logoSize)
+                .clipShape(Circle())
+                .overlay(
+                    Circle()
+                        .stroke(Color.white, lineWidth: 3)
+                )
+                .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 2)
+                .offset(x: padding, y: bannerHeight - logoOffset)
             }
-            .background(Color.white)
-            .cornerRadius(cornerRadius)
-            .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
-
-            // Store Logo - overlapping design
-            AsyncImage(url: URL(string: logoUrl)) { image in
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } placeholder: {
-                Circle()
-                    .fill(Color.white)
-                    .overlay(
-                        ProgressView()
-                            .scaleEffect(0.6)
-                    )
-            }
-            .frame(width: logoSize, height: logoSize)
-            .clipShape(Circle())
-            .overlay(
-                Circle()
-                    .stroke(Color.white, lineWidth: 3)
-            )
-            .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 2)
-            .offset(x: padding, y: bannerHeight - logoOffset)
+            .frame(width: cardWidth, height: cardHeight)
         }
-        .frame(width: cardWidth, height: cardHeight)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in isPressed = true }
+                .onEnded { _ in isPressed = false }
+        )
+        .animation(.easeInOut(duration: 0.2), value: isPressed)
     }
 
     // MARK: - Expanded Card (for search full width)

@@ -33,6 +33,7 @@ struct ProductCard: View {
 
     @ObservedObject private var favoritesManager = FavoritesManager.shared
     @State private var favoritePulse = false
+    @State private var isPressed = false
     
     private static let titleUIFont = UIFont.systemFont(ofSize: 17, weight: .semibold)
     private static let titleReservedHeight: CGFloat = ceil(titleUIFont.lineHeight * 2)
@@ -55,11 +56,10 @@ struct ProductCard: View {
             }) {
                 cardContent
             }
-            .buttonStyle(.glassProminent)
+            .buttonStyle(PressableButtonStyle(isPressed: $isPressed))
             .buttonBorderShape(.roundedRectangle(radius: 26))
             .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
             .compositingGroup()
-            .tint(.white)
         } else {
             // Let an outer container (e.g. NavigationLink) handle the tap.
             cardContent
@@ -68,56 +68,76 @@ struct ProductCard: View {
     }
 
     private var cardContent: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            imageSection
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(product.name)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(.primary)
-                    .lineLimit(2)
-                    .truncationMode(.tail)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .frame(height: Self.titleReservedHeight, alignment: .topLeading)
-
-                HStack(spacing: 4) {
-                    // Shop logo circular
-                    if !product.shopLogoUrl.isEmpty {
-                        CachedAsyncImage(
-                            url: URL(string: product.shopLogoUrl),
-                            cacheKey: "shop_logo_\(product.shop)",
-                            content: { image in
-                                image
-                                    .resizable()
-                                    .scaledToFill()
-                            },
-                            placeholder: {
-                                Circle()
-                                    .fill(Color.gray.opacity(0.2))
-                            },
-                            failure: {
-                                Circle()
-                                    .fill(Color.gray.opacity(0.2))
-                            }
+        ZStack {
+            // HDR Glow cuando está presionado
+            if isPressed {
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .fill(Color.clear)
+                    .overlay(
+                        HDRGlowView(
+                            color: .llegoPrimary,
+                            intensity: 1.5,
+                            radius: 0.5
                         )
-                        .frame(width: 14, height: 14)
-                        .clipShape(Circle())
-                    }
-                    
-                    Text(product.shop)
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
+                        .blur(radius: 10)
+                    )
+                    .transition(.opacity)
             }
+            
+            VStack(alignment: .leading, spacing: 12) {
+                imageSection
 
-            Text(product.price)
-                .font(.system(size: 18, weight: .bold))
-                .foregroundColor(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(product.name)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .lineLimit(2)
+                        .truncationMode(.tail)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(height: Self.titleReservedHeight, alignment: .topLeading)
+
+                    HStack(spacing: 4) {
+                        // Shop logo circular
+                        if !product.shopLogoUrl.isEmpty {
+                            CachedAsyncImage(
+                                url: URL(string: product.shopLogoUrl),
+                                cacheKey: "shop_logo_\(product.shop)",
+                                content: { image in
+                                    image
+                                        .resizable()
+                                        .scaledToFill()
+                                },
+                                placeholder: {
+                                    Circle()
+                                        .fill(Color.gray.opacity(0.2))
+                                },
+                                failure: {
+                                    Circle()
+                                        .fill(Color.gray.opacity(0.2))
+                                }
+                            )
+                            .frame(width: 14, height: 14)
+                            .clipShape(Circle())
+                        }
+                        
+                        Text(product.shop)
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+
+                Text(product.price)
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(16)
+            .background(Color.white)
+            .cornerRadius(26)
         }
-        .padding(16)
+        .animation(.easeInOut(duration: 0.2), value: isPressed)
     }
 
     private var imageSection: some View {
@@ -193,5 +213,17 @@ private struct OptionalTapModifier: ViewModifier {
         } else {
             content
         }
+    }
+}
+
+// ButtonStyle personalizado para detectar pressed state
+private struct PressableButtonStyle: ButtonStyle {
+    @Binding var isPressed: Bool
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .onChange(of: configuration.isPressed) { pressed in
+                isPressed = pressed
+            }
     }
 }

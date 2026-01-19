@@ -191,9 +191,6 @@ struct HomeView: View {
                     )
                     .opacity(carouselAppeared ? 1 : 0)
                     .shadow(color: .black.opacity(0.3), radius: 30, x: 10, y: 10)
-                    // Efecto glow sutil basado en la categoría
-                    .shadow(color: glowColorForCategory.opacity(0.4), radius: 50, x: 0, y: 0)
-                    .shadow(color: glowColorForCategory.opacity(0.2), radius: 80, x: 0, y: 0)
 
                     // Contenido principal - layout vertical
                     VStack(alignment: .center, spacing: 0) {
@@ -264,6 +261,7 @@ struct HomeView: View {
                                 Button(action: previousModel) {
                                     Image(systemName: "chevron.left")
                                         .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(.black)
                                         .frame(width: 40, height: 40)
                                 }
                                 .glassEffect(.regular.interactive(), in: .circle)
@@ -272,7 +270,7 @@ struct HomeView: View {
                                 Button(action: previousModel) {
                                     Image(systemName: "chevron.left")
                                         .font(.system(size: 20, weight: .bold))
-                                        
+                                        .foregroundColor(.black)
                                         .frame(width: 40, height: 40)
                                         .background(
                                             Circle()
@@ -301,7 +299,7 @@ struct HomeView: View {
                                 Button(action: nextModel) {
                                     Image(systemName: "chevron.right")
                                         .font(.system(size: 20, weight: .bold))
-                                       
+                                        .foregroundColor(.black)
                                         .frame(width: 40, height: 40)
                                 }
                                 .glassEffect(.regular.interactive(), in: .circle)
@@ -310,7 +308,7 @@ struct HomeView: View {
                                 Button(action: nextModel) {
                                     Image(systemName: "chevron.right")
                                         .font(.system(size: 20, weight: .bold))
-                                        
+                                        .foregroundColor(.black)
                                         .frame(width: 40, height: 40)
                                         .background(
                                             Circle()
@@ -406,6 +404,7 @@ struct HomeView: View {
                             Text("$0.00")
                                 .font(.system(size: 14, weight: .semibold))
                         }
+                        .foregroundColor(.black)
                     }
                     .accessibilityLabel("Wallet")
                 }
@@ -434,6 +433,7 @@ struct HomeView: View {
                         .scaledToFit()
                         .frame(width: 32, height: 32)
                         .clipShape(Circle())
+                        .foregroundColor(.black)
 //                        .foregroundStyle(.secondary)
 //                    AsyncImage(url: URL(string: "https://i.pravatar.cc/100?img=3")) { phase in
 //                        switch phase {

@@ -68,6 +68,7 @@ struct ContentView: View {
 struct MainAppView: View {
     @Binding var selectedTab: Int
     @StateObject private var orderManager = OrderManager.shared
+    @StateObject private var gradientManager = GradientStateManager.shared
     @ObservedObject private var userLocationManager = UserLocationManager.shared
     @ObservedObject private var branchTypeManager = BranchTypeManager.shared
     @State private var searchText = ""
@@ -116,7 +117,7 @@ struct MainAppView: View {
                         }
                         // .searchToolbarBehavior(.minimize)
                         .tabBarMinimizeBehavior(.onScrollDown)
-                        .tint(.primary)
+                        .tint(gradientManager.currentAccentColor)
                       
 
                     // .toolbarBackground(.hidden, for: .tabBar)
@@ -155,7 +156,7 @@ struct MainAppView: View {
                             }
                             .tag(3)
                     }
-                    .tint(.primary)
+                    .tint(gradientManager.currentAccentColor)
                     .toolbarBackground(.hidden, for: .tabBar)
                     .background(.clear)
                 }
