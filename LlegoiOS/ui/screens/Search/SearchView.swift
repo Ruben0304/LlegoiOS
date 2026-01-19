@@ -11,41 +11,48 @@ import SwiftUI
 struct SearchView: View {
     @Binding var searchText: String
     @StateObject private var viewModel = SearchViewModel()
+    @StateObject private var gradientManager = GradientStateManager.shared
     @State private var productCounts: [String: Int] = [:]
     @Environment(\.colorScheme) private var colorScheme
-    
+
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 0) {
-                    // Selector de categoría
-                    categoryPicker
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
-                    
-                    // Contenido según estado y categoría
-                    switch viewModel.state {
-                    case .idle:
-                        // Mostrar datos iniciales
-                        initialContent
-                    case .loading:
-                        loadingContent
-                    case .success:
-                        resultsContent
-                    case .empty:
-                        emptyContent
-                    case .error(let message):
-                        errorContent(message: message)
+            ZStack {
+                // Fondo gradiente sutil sincronizado
+                searchGradientBackground
+                    .ignoresSafeArea()
+                    .animation(.easeInOut(duration: 0.8), value: gradientManager.currentCategoryIndex)
+
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // Selector de categoría
+                        categoryPicker
+                            .padding(.horizontal, 16)
+                            .padding(.top, 8)
+
+                        // Contenido según estado y categoría
+                        switch viewModel.state {
+                        case .idle:
+                            // Mostrar datos iniciales
+                            initialContent
+                        case .loading:
+                            loadingContent
+                        case .success:
+                            resultsContent
+                        case .empty:
+                            emptyContent
+                        case .error(let message):
+                            errorContent(message: message)
+                        }
                     }
+                    .padding(.bottom, 100)
                 }
-                .padding(.bottom, 100)
+                .searchable(
+                    text: $searchText,
+                    prompt: "Buscar productos o negocios..."
+                )
             }
-            .searchable(
-                text: $searchText,
-                prompt: "Buscar productos o negocios..."
-            )
             .navigationTitle("Buscar")
-            .background(Color.feedBackground(colorScheme))
             .onSubmit(of: .search) {
                 // Solo buscar cuando se presiona "Buscar"
                 viewModel.search(query: searchText)
@@ -69,7 +76,30 @@ struct SearchView: View {
             }
             .ignoresSafeArea(.container, edges: .bottom)
         }
-        
+
+    }
+
+    // MARK: - Search Gradient Background
+    private var searchGradientBackground: some View {
+        let palette = gradientManager.getCurrentGradientPalette()
+
+        return ZStack {
+            // Base color - muy suave
+            palette.veryLight
+                .opacity(0.4)
+
+            // Gradiente sutil
+            RadialGradient(
+                gradient: Gradient(stops: [
+                    .init(color: palette.light.opacity(0.15), location: 0.0),
+                    .init(color: palette.veryLight.opacity(0.3), location: 0.4),
+                    .init(color: Color.white.opacity(colorScheme == .dark ? 0.05 : 0.95), location: 1.0)
+                ]),
+                center: UnitPoint(x: 0.85, y: 0.15),
+                startRadius: 10,
+                endRadius: 600
+            )
+        }
     }
     
     // MARK: - Category Picker
@@ -99,14 +129,11 @@ struct SearchView: View {
     
     // MARK: - Loading Content
     private var loadingContent: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .controlSize(.large)
-                .tint(.llegoPrimary)
-            Text("Buscando...")
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(.secondary)
-        }
+        CircularLoadingIndicator(
+            color: gradientManager.currentAccentColor,
+            lineWidth: 6,
+            size: 60
+        )
         .frame(maxWidth: .infinity)
         .padding(.top, 60)
     }
@@ -227,7 +254,7 @@ struct SearchView: View {
                 viewModel.search(query: searchText)
             }
             .font(.system(size: 16, weight: .medium))
-            .foregroundColor(.llegoPrimary)
+            .foregroundColor(gradientManager.currentAccentColor)
         }
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 32)

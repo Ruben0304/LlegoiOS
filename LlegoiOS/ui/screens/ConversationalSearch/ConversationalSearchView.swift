@@ -27,6 +27,7 @@ struct ConversationalSearchView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = ConversationalSearchViewModel()
     @ObservedObject private var gradientManager = GradientStateManager.shared
+    @Environment(\.colorScheme) private var colorScheme
 
     // Índice de categoría desde HomeView para mantener el mismo fondo
     let categoryIndex: Int
@@ -41,9 +42,10 @@ struct ConversationalSearchView: View {
 
     var body: some View {
         ZStack {
-            // Background exactamente igual que HomeView
-            HomeGradientBackground()
+            // Fondo gradiente sutil que se sincroniza con ProductFeedView
+            feedGradientBackground
                 .ignoresSafeArea()
+                .animation(.easeInOut(duration: 0.8), value: gradientManager.currentCategoryIndex)
             
 
             VStack(spacing: 0) {
@@ -94,8 +96,6 @@ struct ConversationalSearchView: View {
             }
             .hidden()
         }
-//        .navigationTitle("Llegó IA")
-//        .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar {
             // Back button con animación de gradiente al regresar
@@ -155,18 +155,14 @@ struct ConversationalSearchView: View {
             
             ToolbarSpacer(.fixed, placement: .bottomBar)
             
-            // Botón de enviar en el toolbar inferior (siempre visible)
+            // Botón de enviar en el toolbar inferior - estilo estándar
             ToolbarItem(placement: .bottomBar) {
                 Button(action: handleSendAction) {
-                    Image(systemName: "paperplane.fill")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.white)
-                        .padding(10)
-                        .background(
-                            Circle()
-                                .fill(Color.llegoPrimary)
-                        )
+                    Image(systemName: "paperplane")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(gradientManager.currentAccentColor)
                 }
+                .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
         .onAppear {
@@ -181,6 +177,29 @@ struct ConversationalSearchView: View {
                     }
                 }
             }
+        }
+    }
+
+    // MARK: - Feed Gradient Background (más notable para conversational search)
+    private var feedGradientBackground: some View {
+        let palette = gradientManager.getCurrentGradientPalette()
+
+        return ZStack {
+            // Base color - más visible
+            palette.veryLight
+                .opacity(0.6)
+
+            // Gradiente más notable
+            RadialGradient(
+                gradient: Gradient(stops: [
+                    .init(color: palette.light.opacity(0.3), location: 0.0),
+                    .init(color: palette.veryLight.opacity(0.5), location: 0.4),
+                    .init(color: Color.white.opacity(colorScheme == .dark ? 0.1 : 0.9), location: 1.0)
+                ]),
+                center: UnitPoint(x: 0.85, y: 0.15),
+                startRadius: 10,
+                endRadius: 600
+            )
         }
     }
 

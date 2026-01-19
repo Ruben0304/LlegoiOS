@@ -30,7 +30,9 @@ enum Currency: String, CaseIterable {
 
 struct CartView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @StateObject private var viewModel = CartViewModel()
+    @StateObject private var gradientManager = GradientStateManager.shared
     @State private var selectedCurrency: Currency = .CUP
     @State private var selectedPaymentMethod: PaymentMethod?
     @State private var showPaymentMethodPicker = false
@@ -114,7 +116,10 @@ struct CartView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .top) {
-//                Color.white.ignoresSafeArea()
+                // Fondo gradiente sutil sincronizado
+                cartGradientBackground
+                    .ignoresSafeArea()
+                    .animation(.easeInOut(duration: 0.8), value: gradientManager.currentCategoryIndex)
 
                 if case .loading = viewModel.state {
                     VStack(spacing: 20) {
@@ -403,8 +408,31 @@ struct CartView: View {
                 )
             }
         }
-        
-        
+
+
+    }
+
+    // MARK: - Cart Gradient Background
+    private var cartGradientBackground: some View {
+        let palette = gradientManager.getCurrentGradientPalette()
+
+        return ZStack {
+            // Base color - muy suave
+            palette.veryLight
+                .opacity(0.4)
+
+            // Gradiente sutil
+            RadialGradient(
+                gradient: Gradient(stops: [
+                    .init(color: palette.light.opacity(0.15), location: 0.0),
+                    .init(color: palette.veryLight.opacity(0.3), location: 0.4),
+                    .init(color: Color.white.opacity(colorScheme == .dark ? 0.05 : 0.95), location: 1.0)
+                ]),
+                center: UnitPoint(x: 0.85, y: 0.15),
+                startRadius: 10,
+                endRadius: 600
+            )
+        }
     }
 
     // MARK: - Payment Method Selector
@@ -837,66 +865,54 @@ struct CartView: View {
     
 
     private var emptyCartView: some View {
-        VStack(spacing: 0) {
-            Spacer(minLength: 24)
+        VStack(spacing: 24) {
+            Spacer()
 
-            VStack(spacing: 18) {
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color.llegoAccent.opacity(0.22),
-                                    Color.llegoPrimary.opacity(0.12)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                gradientManager.currentAccentColor.opacity(0.22),
+                                gradientManager.currentAccentColor.opacity(0.12)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
                         )
-                        .frame(width: 92, height: 92)
+                    )
+                    .frame(width: 92, height: 92)
 
-                    Image(systemName: "cart")
-                        .font(.system(size: 34, weight: .semibold))
-                        .foregroundColor(.llegoPrimary)
-                }
-
-                VStack(spacing: 8) {
-                    Text("Tu carrito está vacío")
-                        .font(.system(size: 22, weight: .semibold, design: .rounded))
-                        .foregroundColor(.primary)
-
-                    Text("Agrega productos para comenzar tu pedido")
-                        .font(.system(size: 15, weight: .regular))
-                        .foregroundColor(.secondary.opacity(0.85))
-                        .multilineTextAlignment(.center)
-                }
-                .padding(.horizontal, 18)
-
-                Button(action: { dismiss() }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "storefront")
-                            .font(.system(size: 14, weight: .semibold))
-                        Text("Explorar tiendas")
-                            .font(.system(size: 15, weight: .bold, design: .rounded))
-                    }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 12)
-                    .background(Color.llegoAccent)
-                    .cornerRadius(14)
-                    .shadow(color: Color.black.opacity(0.10), radius: 10, x: 0, y: 6)
-                }
+                Image(systemName: "cart")
+                    .font(.system(size: 34, weight: .semibold))
+                    .foregroundColor(gradientManager.currentAccentColor)
             }
-            .padding(.vertical, 22)
-            .frame(maxWidth: 520)
-            .background(
-                RoundedRectangle(cornerRadius: 22)
-                    .fill(Color.white.opacity(0.92))
-                    .shadow(color: Color.black.opacity(0.06), radius: 18, x: 0, y: 10)
-            )
-            .padding(.horizontal, 20)
 
-            Spacer(minLength: 140)
+            VStack(spacing: 8) {
+                Text("Tu carrito está vacío")
+                    .font(.system(size: 22, weight: .semibold, design: .rounded))
+                    .foregroundColor(.primary)
+
+                Text("Agrega productos para comenzar tu pedido")
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundColor(.secondary.opacity(0.85))
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, 18)
+
+            Button(action: { dismiss() }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "storefront")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text("Explorar tiendas")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                }
+                .frame(height: 44)
+                .frame(maxWidth: 200)
+            }
+            .buttonStyle(.glassProminent)
+            .tint(gradientManager.currentAccentColor)
+
+            Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

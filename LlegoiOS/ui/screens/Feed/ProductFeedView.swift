@@ -48,7 +48,10 @@ struct ProductFeedView: View {
                         Image(systemName: "heart")
                             .font(.system(size: 16, weight: .semibold))
                     }
-                    .badge(favoritesManager.favoriteItemCount)
+                    .badge(favoritesManager.favoriteItemCount > 0 ? Text("\(favoritesManager.favoriteItemCount)")
+                        .monospacedDigit()
+                        .foregroundColor(gradientManager.currentAccentColor)
+                        .bold() : nil)
                     .accessibilityLabel("Favoritos")
                 }
 
@@ -61,7 +64,10 @@ struct ProductFeedView: View {
                         Image(systemName: "cart")
                             .font(.system(size: 16, weight: .semibold))
                     }
-                    .badge(cartManager.cartItemCount)
+                    .badge(cartManager.cartItemCount > 0 ? Text("\(cartManager.cartItemCount)")
+                        .monospacedDigit()
+                        .foregroundColor(gradientManager.currentAccentColor)
+                        .bold() : nil)
                     .accessibilityLabel("Carrito")
                 }
             }
@@ -341,10 +347,11 @@ struct ProductFeedView: View {
     
     // MARK: - Loading State
     private var loadingState: some View {
-        VStack(spacing: 20) {
-            ProgressView().controlSize(.large).tint(gradientManager.currentAccentColor)
-            Text("Cargando...").font(.system(size: 16, weight: .medium)).foregroundColor(.secondary)
-        }
+        CircularLoadingIndicator(
+            color: gradientManager.currentAccentColor,
+            lineWidth: 6,
+            size: 60
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     

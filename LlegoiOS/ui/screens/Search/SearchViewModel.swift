@@ -25,16 +25,36 @@ class SearchViewModel: ObservableObject {
     @Published var stores: [StoreWithCoordinates] = []
     @Published var storeProducts: [String: [ProductGraphQL]] = [:]
     @Published var selectedCategory: SearchCategory = .products
-    
+
     private let searchRepository = SearchRepository()
     private let productRepository = ProductListRepository()
     private let storeRepository = StoreListRepository()
-    
+    private let branchTypeManager = BranchTypeManager.shared
+
     private var loadingProductsForStores: Set<String> = []
-    
+    private var cancellables = Set<AnyCancellable>()
+
     // Default images
     private let defaultLogoUrl = ""
     private let defaultBannerUrl = ""
+
+    // MARK: - Initialization
+    init() {
+        setupBranchTypeObserver()
+    }
+
+    // MARK: - Branch Type Observer
+
+    private func setupBranchTypeObserver() {
+        branchTypeManager.$selectedType
+            .dropFirst() // Ignore initial value
+            .sink { [weak self] _ in
+                guard let self = self else { return }
+                print("🔄 SearchViewModel - Branch type changed, reloading data")
+                self.loadInitialData()
+            }
+            .store(in: &cancellables)
+    }
     
     // MARK: - Load Initial Data
     func loadInitialData() {

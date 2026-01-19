@@ -15,7 +15,7 @@ class ProductFeedViewModel: ObservableObject {
     @Published var state: ProductFeedViewState = .idle
     @Published var isLoading: Bool = false
     @Published var isLoadingMore: Bool = false
-    
+
     // Data
     @Published var categories: [FeedCategory] = []
     @Published var stores: [FeedStore] = []
@@ -23,17 +23,17 @@ class ProductFeedViewModel: ObservableObject {
     @Published var recentProducts: [FeedProduct] = []
     @Published var popularProducts: [FeedProduct] = []
     @Published var promotions: [Promotion] = []
-    
+
     // Filters
     @Published var selectedCategory: String? = nil
-    
+
     // Pagination
     @Published var hasNextPage: Bool = false
     @Published var currentCursor: String? = nil
-    
+
     // Tutorials visibility
     @Published var showTutorials: Bool = true
-    
+
     // Sample tutorials
     @Published var tutorials: [Tutorial] = [
         Tutorial(
@@ -64,14 +64,30 @@ class ProductFeedViewModel: ObservableObject {
             category: "Entregas"
         )
     ]
-    
+
     // MARK: - Private Properties
     private var hasLoaded: Bool = false
     private let repository = ProductFeedRepository()
+    private let branchTypeManager = BranchTypeManager.shared
+    private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Initialization
     init() {
         showTutorials = TutorialsHelper.areTutorialsVisible
+        setupBranchTypeObserver()
+    }
+
+    // MARK: - Branch Type Observer
+
+    private func setupBranchTypeObserver() {
+        branchTypeManager.$selectedType
+            .dropFirst() // Ignore initial value
+            .sink { [weak self] _ in
+                guard let self = self else { return }
+                print("🔄 ProductFeedViewModel - Branch type changed, reloading feed")
+                self.loadFeed(isRefreshing: true)
+            }
+            .store(in: &cancellables)
     }
     
     // MARK: - Public Methods
