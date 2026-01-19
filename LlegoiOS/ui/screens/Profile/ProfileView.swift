@@ -176,6 +176,9 @@ struct ProfileView: View {
                                 // Modelos 3D descargados
                                 DownloadedModelsSection()
 
+                                // Tutoriales
+                                tutorialsSection
+
                                 // Notificaciones
                                 notificationsSection
 
@@ -942,6 +945,71 @@ struct ProfileView: View {
                 )
             }
             .buttonStyle(PlainButtonStyle())
+        }
+    }
+
+    // MARK: - Tutorials Section
+    private var tutorialsSection: some View {
+        VStack(spacing: 12) {
+            // Enlace a página de tutoriales
+            NavigationLink(destination: TutorialsView()) {
+                HStack(spacing: 12) {
+                    Image(systemName: "play.rectangle")
+                        .font(.system(size: 18, weight: .regular))
+                        .foregroundColor(.gray)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Tutoriales")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.llegoPrimary)
+
+                        Text("Aprende a usar Llego")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.gray)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.gray.opacity(0.6))
+                }
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.white)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+
+            // Botón para mostrar tutoriales en feed
+            if !TutorialsHelper.areTutorialsVisible {
+                Button(action: {
+                    TutorialsHelper.showTutorials()
+                }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "arrow.counterclockwise")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.llegoAccent)
+
+                        Text("Mostrar tutoriales en el feed")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.llegoPrimary)
+
+                        Spacer()
+                    }
+                    .padding(14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(Color.llegoAccent.opacity(0.1))
+                    )
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
         }
     }
 

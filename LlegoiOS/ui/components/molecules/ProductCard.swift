@@ -6,9 +6,21 @@ struct Product: Identifiable, Hashable {
     let id: String // ID real de GraphQL
     let name: String
     let shop: String
+    let shopLogoUrl: String
     let weight: String
     let price: String
     let imageUrl: String
+    
+    // Backward compatibility initializer
+    init(id: String, name: String, shop: String, shopLogoUrl: String = "", weight: String, price: String, imageUrl: String) {
+        self.id = id
+        self.name = name
+        self.shop = shop
+        self.shopLogoUrl = shopLogoUrl
+        self.weight = weight
+        self.price = price
+        self.imageUrl = imageUrl
+    }
 }
 
 struct ProductCard: View {
@@ -69,9 +81,35 @@ struct ProductCard: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .frame(height: Self.titleReservedHeight, alignment: .topLeading)
 
-                Text(product.shop)
-                    .font(.system(size: 13))
-                    .foregroundColor(.secondary)
+                HStack(spacing: 4) {
+                    // Shop logo circular
+                    if !product.shopLogoUrl.isEmpty {
+                        CachedAsyncImage(
+                            url: URL(string: product.shopLogoUrl),
+                            cacheKey: "shop_logo_\(product.shop)",
+                            content: { image in
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                            },
+                            placeholder: {
+                                Circle()
+                                    .fill(Color.gray.opacity(0.2))
+                            },
+                            failure: {
+                                Circle()
+                                    .fill(Color.gray.opacity(0.2))
+                            }
+                        )
+                        .frame(width: 14, height: 14)
+                        .clipShape(Circle())
+                    }
+                    
+                    Text(product.shop)
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
             }
 
             Text(product.price)

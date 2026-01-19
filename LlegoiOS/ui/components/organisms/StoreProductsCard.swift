@@ -227,7 +227,7 @@ private struct StoreProductsCardFront: View {
                 .padding(.bottom, 12)
         } else {
             LazyVGrid(columns: columns, spacing: 8) {
-                ForEach(products) { product in
+                ForEach(products.prefix(4)) { product in
                     ProductFullCoverCard(
                         product: product,
                         isFavorite: favoritesManager.isFavorite(productId: product.id),
@@ -354,7 +354,7 @@ private struct StoreProductsCardFront: View {
     // MARK: - Products Skeleton
     private var productsSkeletonGrid: some View {
         LazyVGrid(columns: columns, spacing: 8) {
-            ForEach(0..<6, id: \.self) { _ in
+            ForEach(0..<4, id: \.self) { _ in
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(Color.gray.opacity(0.15))
                     .frame(height: 140)

@@ -24,6 +24,7 @@ query GetProducts($first: Int! = 20, $after: String, $branchId: String, $categor
         business {
           id
           name
+          avatarUrl
         }
       }
       cursor

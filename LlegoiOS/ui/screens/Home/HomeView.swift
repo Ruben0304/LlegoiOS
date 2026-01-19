@@ -31,7 +31,6 @@ struct HomeView: View {
     @State private var navigateToIntroVideo: Bool = false
     @State private var navigateToLogin: Bool = false
     @State private var navigateToProfile: Bool = false
-    @State private var navigateToCart: Bool = false
     @State private var navigateToConversationalSearch: Bool = false
     @State private var showingWallet: Bool = false
     @State private var navigateToPlansAndPricing: Bool = false
@@ -265,7 +264,6 @@ struct HomeView: View {
                                 Button(action: previousModel) {
                                     Image(systemName: "chevron.left")
                                         .font(.system(size: 20, weight: .bold))
-                                        .foregroundColor(.black)
                                         .frame(width: 40, height: 40)
                                 }
                                 .glassEffect(.regular.interactive(), in: .circle)
@@ -274,7 +272,7 @@ struct HomeView: View {
                                 Button(action: previousModel) {
                                     Image(systemName: "chevron.left")
                                         .font(.system(size: 20, weight: .bold))
-                                        .foregroundColor(.white)
+                                        
                                         .frame(width: 40, height: 40)
                                         .background(
                                             Circle()
@@ -303,7 +301,7 @@ struct HomeView: View {
                                 Button(action: nextModel) {
                                     Image(systemName: "chevron.right")
                                         .font(.system(size: 20, weight: .bold))
-                                        .foregroundColor(.black)
+                                       
                                         .frame(width: 40, height: 40)
                                 }
                                 .glassEffect(.regular.interactive(), in: .circle)
@@ -312,7 +310,7 @@ struct HomeView: View {
                                 Button(action: nextModel) {
                                     Image(systemName: "chevron.right")
                                         .font(.system(size: 20, weight: .bold))
-                                        .foregroundColor(.white)
+                                        
                                         .frame(width: 40, height: 40)
                                         .background(
                                             Circle()
@@ -397,48 +395,23 @@ struct HomeView: View {
             .navigationDestination(isPresented: $navigateToPlansAndPricing) {
                 PlansAndPricingView()
             }
-            .sheet(isPresented: $navigateToCart) {
-                if #available(iOS 16.0, *) {
-                    NavigationView {
-                        CartView()
-                    }
-                    .navigationViewStyle(StackNavigationViewStyle())
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
-                } else {
-                    NavigationView {
-                        CartView()
-                    }
-                    .navigationViewStyle(StackNavigationViewStyle())
-                }
-            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         showingWallet = true
                     }) {
-                        Image(systemName: "creditcard")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.llegoPrimary)
+                        HStack(spacing: 4) {
+                            Image(systemName: "creditcard")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("$0.00")
+                                .font(.system(size: 14, weight: .semibold))
+                        }
                     }
                     .accessibilityLabel("Wallet")
-                   
                 }
-                ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
-                // Cart button con badge
+
+                ToolbarSpacer(.fixed,placement: .navigationBarTrailing)
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        let impact = UIImpactFeedbackGenerator(style: .light)
-                        impact.impactOccurred()
-                        navigateToCart = true
-                    }) {
-                        Image(systemName: "cart")
-                    }
-                    .badge(cartManager.cartItemCount)
-                }
-                   
-            ToolbarSpacer(.fixed,placement: .navigationBarTrailing)
-            ToolbarItem(placement: .navigationBarTrailing) {
                 // Avatar
                 Button(action: {
                     let impact = UIImpactFeedbackGenerator(style: .light)
@@ -694,8 +667,3 @@ struct Feature: Identifiable {
     let subtitle: String
 }
 
-#Preview {
-    NavigationStack {
-        HomeView()
-    }
-}

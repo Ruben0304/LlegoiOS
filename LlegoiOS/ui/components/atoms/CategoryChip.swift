@@ -8,28 +8,20 @@ struct CategoryChip: View {
     let isSelected: Bool
     let isFeatured: Bool
     let onTap: () -> Void
+    var accentColor: Color = Color.llegoPrimary
 
     @State private var gradientAngle: Angle = .degrees(0)
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        let accentColor = Color.llegoPrimary
-        let foregroundColor: Color = isSelected ? accentColor : .onSurfaceColor
-        let deepGold = Color(red: 0.48, green: 0.36, blue: 0.12)
-        let premiumStroke = LinearGradient(
-            colors: [Color.llegoSecondary.opacity(0.9), deepGold],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
         Button(action: onTap) {
             HStack(spacing: 8) {
                 Image(systemName: isSelected ? "checkmark" : icon)
                     .fontWeight(.semibold)
                     .font(.system(size: 14))
-                    .foregroundColor(foregroundColor)
                 Text(title)
                     .fontWeight(.semibold)
                     .font(.system(size: 14))
-                    .foregroundColor(foregroundColor)
             }
             .padding(.horizontal, 3)
             .padding(.vertical, 2)
@@ -38,36 +30,11 @@ struct CategoryChip: View {
         .buttonBorderShape(.capsule)
         .clipShape(Capsule())
         .compositingGroup()
-        .tint(.white)
-        .background {
-            if isFeatured {
-                Capsule()
-                    .fill(
-                        AngularGradient(
-                            gradient: Gradient(colors: [
-                                Color.llegoPrimary,
-                                Color.llegoTertiary,
-                                Color.llegoButton,
-                                deepGold,
-                                Color.llegoPrimary
-                            ]),
-                            center: .center,
-                            angle: gradientAngle
-                        )
-                    )
-                    .overlay(Capsule().fill(Color.black.opacity(0.28)))
-                    .animation(.linear(duration: 8).repeatForever(autoreverses: false), value: gradientAngle)
-            }
-        }
+        .tint(accentColor)
         .overlay {
             if isSelected {
                 Capsule()
-                    .stroke(premiumStroke, lineWidth: 1.2)
-            }
-        }
-        .onAppear {
-            if isFeatured {
-                gradientAngle = .degrees(360)
+                    .stroke(Color.white, lineWidth: 1.2)
             }
         }
     }

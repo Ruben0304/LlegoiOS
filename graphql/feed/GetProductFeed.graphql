@@ -1,0 +1,119 @@
+# Query optimizada para la pantalla de Feed de productos
+# Obtiene todos los datos necesarios en una sola llamada
+
+query GetProductFeed(
+  $branchTipo: BranchTipo
+  $radiusKm: Float
+  $jwt: String
+) {
+  # Categorías de productos para el filtro horizontal
+  productCategories(branchType: $branchTipo) {
+    id
+    name
+    iconIos
+  }
+  
+  # Tiendas cercanas (para el scroll horizontal de logos circulares)
+  branches(first: 15, tipo: $branchTipo, radiusKm: $radiusKm, jwt: $jwt) {
+    edges {
+      node {
+        id
+        businessId
+        name
+        avatarUrl
+        coverUrl
+        address
+        distanceKm
+        status
+      }
+    }
+  }
+  
+  # Productos destacados (cards grandes - primeros 6)
+  featuredProducts: products(
+    first: 6
+    branchTipo: $branchTipo
+    radiusKm: $radiusKm
+    availableOnly: true
+    jwt: $jwt
+  ) {
+    edges {
+      node {
+        id
+        name
+        price
+        currency
+        imageUrl
+        distanceKm
+        branch {
+          id
+          name
+          avatarUrl
+        }
+        business {
+          name
+        }
+      }
+    }
+  }
+  
+  # Productos recientes (cards pequeños)
+  recentProducts: products(
+    first: 10
+    branchTipo: $branchTipo
+    radiusKm: $radiusKm
+    availableOnly: true
+    jwt: $jwt
+  ) {
+    edges {
+      node {
+        id
+        name
+        price
+        currency
+        imageUrl
+        distanceKm
+        branch {
+          id
+          name
+          avatarUrl
+        }
+        business {
+          name
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+  
+  # Productos populares (otra sección)
+  popularProducts: products(
+    first: 8
+    branchTipo: $branchTipo
+    radiusKm: $radiusKm
+    availableOnly: true
+    jwt: $jwt
+  ) {
+    edges {
+      node {
+        id
+        name
+        price
+        currency
+        imageUrl
+        distanceKm
+        branch {
+          id
+          name
+          avatarUrl
+        }
+        business {
+          name
+        }
+      }
+    }
+  }
+}

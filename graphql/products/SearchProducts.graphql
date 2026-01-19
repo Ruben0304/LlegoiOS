@@ -26,6 +26,7 @@ query SearchProducts($query: String!, $first: Int! = 20, $after: String, $useVec
         business {
           id
           name
+          avatarUrl
         }
       }
       cursor

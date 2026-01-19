@@ -185,6 +185,7 @@ class ProductListViewModel: ObservableObject {
                             id: productGraphQL.id,
                             name: productGraphQL.name,
                             shop: productGraphQL.businessName,
+                            shopLogoUrl: productGraphQL.businessLogoUrl,
                             weight: "0",
                             price: self.formatPrice(
                                 price: productGraphQL.price,
@@ -264,6 +265,7 @@ class ProductListViewModel: ObservableObject {
                             id: productGraphQL.id,
                             name: productGraphQL.name,
                             shop: productGraphQL.businessName,
+                            shopLogoUrl: productGraphQL.businessLogoUrl,
                             weight: "0",
                             price: self.formatPrice(
                                 price: productGraphQL.price,
@@ -349,6 +351,7 @@ class ProductListViewModel: ObservableObject {
                             id: productGraphQL.id,
                             name: productGraphQL.name,
                             shop: productGraphQL.businessName,
+                            shopLogoUrl: productGraphQL.businessLogoUrl,
                             weight: "0",
                             price: self.formatPrice(
                                 price: productGraphQL.price,

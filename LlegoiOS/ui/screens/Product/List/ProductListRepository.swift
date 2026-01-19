@@ -393,9 +393,27 @@ struct ProductGraphQL: Identifiable, Sendable {
     let availability: Bool
     let createdAt: String
     let businessName: String
+    let businessLogoUrl: String
     let distanceKm: Double?
     let categoryId: String?
     let categoryName: String?
+    
+    // Inicializador con valor por defecto para businessLogoUrl (retrocompatibilidad)
+    init(id: String, branchId: String, name: String, price: Double, currency: String, imageUrl: String, availability: Bool, createdAt: String, businessName: String, businessLogoUrl: String = "", distanceKm: Double?, categoryId: String?, categoryName: String?) {
+        self.id = id
+        self.branchId = branchId
+        self.name = name
+        self.price = price
+        self.currency = currency
+        self.imageUrl = imageUrl
+        self.availability = availability
+        self.createdAt = createdAt
+        self.businessName = businessName
+        self.businessLogoUrl = businessLogoUrl
+        self.distanceKm = distanceKm
+        self.categoryId = categoryId
+        self.categoryName = categoryName
+    }
 
     var formattedPrice: String {
         let symbol: String
