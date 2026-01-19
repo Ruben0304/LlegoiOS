@@ -14,6 +14,16 @@
 				<string>com.googleusercontent.apps.309268628843-vafbp3o66ul2ea1g2bo6h9bpraqk5sj0</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.llego.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>llego</string>
+			</array>
+		</dict>
 	</array>
 </dict>
 </plist>

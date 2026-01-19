@@ -2,7 +2,7 @@
 # Obtiene todos los datos necesarios en una sola llamada
 
 query GetProductFeed(
-  $branchTipo: BranchTipo
+  $branchTipo: String
   $radiusKm: Float
   $jwt: String
 ) {
@@ -14,7 +14,7 @@ query GetProductFeed(
   }
   
   # Tiendas cercanas (para el scroll horizontal de logos circulares)
-  branches(first: 15, tipo: $branchTipo, radiusKm: $radiusKm, jwt: $jwt) {
+  branches(first: 15, radiusKm: $radiusKm, jwt: $jwt) {
     edges {
       node {
         id
@@ -32,7 +32,6 @@ query GetProductFeed(
   # Productos destacados (cards grandes - primeros 6)
   featuredProducts: products(
     first: 6
-    branchTipo: $branchTipo
     radiusKm: $radiusKm
     availableOnly: true
     jwt: $jwt
@@ -60,7 +59,6 @@ query GetProductFeed(
   # Productos recientes (cards pequeños)
   recentProducts: products(
     first: 10
-    branchTipo: $branchTipo
     radiusKm: $radiusKm
     availableOnly: true
     jwt: $jwt
@@ -92,7 +90,6 @@ query GetProductFeed(
   # Productos populares (otra sección)
   popularProducts: products(
     first: 8
-    branchTipo: $branchTipo
     radiusKm: $radiusKm
     availableOnly: true
     jwt: $jwt

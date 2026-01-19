@@ -1,0 +1,32 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "TEAM_ID.com.llego.app",
+        "paths": [
+          "/product/*",
+          "/p/*",
+          "/store/*",
+          "/s/*",
+          "/order/*",
+          "/o/*",
+          "/search",
+          "/category/*",
+          "/c/*",
+          "/"
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": [
+      "TEAM_ID.com.llego.app"
+    ]
+  },
+  "appclips": {
+    "apps": [
+      "TEAM_ID.com.llego.app.Clip"
+    ]
+  }
+}

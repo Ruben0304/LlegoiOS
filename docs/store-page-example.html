@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{STORE_NAME}} - Llego</title>
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="business.business">
+    <meta property="og:url" content="https://llego.app/store/{{STORE_ID}}">
+    <meta property="og:title" content="{{STORE_NAME}}">
+    <meta property="og:description" content="{{STORE_DESCRIPTION}}">
+    <meta property="og:image" content="{{STORE_BANNER_URL}}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:site_name" content="Llego">
+    
+    <!-- Business specific -->
+    <meta property="business:contact_data:street_address" content="{{STORE_ADDRESS}}">
+    <meta property="business:contact_data:locality" content="{{STORE_CITY}}">
+    <meta property="business:contact_data:country_name" content="{{STORE_COUNTRY}}">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://llego.app/store/{{STORE_ID}}">
+    <meta name="twitter:title" content="{{STORE_NAME}}">
+    <meta name="twitter:description" content="{{STORE_DESCRIPTION}}">
+    <meta name="twitter:image" content="{{STORE_BANNER_URL}}">
+    
+    <!-- Apple Smart App Banner -->
+    <meta name="apple-itunes-app" content="app-id={{APP_ID}}, app-argument=llego://store/{{STORE_ID}}">
+    
+    <!-- iOS Safari -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        .banner {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .content {
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .logo-container {
+            margin-top: -60px;
+            margin-bottom: 20px;
+        }
+        
+        .logo {
+            width: 100px;
+            height: 100px;
+            border-radius: 20px;
+            border: 5px solid white;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            object-fit: cover;
+            background: white;
+        }
+        
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .rating {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .stars {
+            color: #ffc107;
+            font-size: 18px;
+        }
+        
+        .rating-text {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .description {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 25px 0;
+        }
+        
+        .info-card {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 12px;
+        }
+        
+        .info-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        
+        .info-label {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 5px;
+        }
+        
+        .info-value {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .address {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 12px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .address-icon {
+            font-size: 20px;
+            margin-right: 10px;
+        }
+        
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            padding: 15px 30px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: inline-block;
+        }
+        
+        .btn:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+        
+        .loading {
+            display: none;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 600px) {
+            .content {
+                padding: 30px 20px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+    
+    <script>
+        function tryOpenApp() {
+            const appUrl = 'llego://store/{{STORE_ID}}';
+            window.location = appUrl;
+            
+            setTimeout(() => {
+                document.getElementById('content').style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+            }, 2000);
+        }
+        
+        function openApp() {
+            window.location = 'llego://store/{{STORE_ID}}';
+            
+            setTimeout(() => {
+                window.location = 'https://apps.apple.com/app/id{{APP_ID}}';
+            }, 1500);
+        }
+        
+        function isIOS() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        }
+        
+        window.onload = function() {
+            if (isIOS()) {
+                tryOpenApp();
+            } else {
+                document.getElementById('content').style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+            }
+        };
+    </script>
+</head>
+<body>
+    <!-- Loading state -->
+    <div id="loading" class="loading" style="display: block;">
+        <div class="spinner"></div>
+        <p>Abriendo Llego...</p>
+    </div>
+    
+    <!-- Main content -->
+    <div id="content" class="container" style="display: none;">
+        <img src="{{STORE_BANNER_URL}}" alt="{{STORE_NAME}}" class="banner" onerror="this.style.display='none'">
+        
+        <div class="content">
+            <div class="logo-container">
+                <img src="{{STORE_LOGO_URL}}" alt="{{STORE_NAME}}" class="logo" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🏪%3C/text%3E%3C/svg%3E'">
+            </div>
+            
+            <h1>{{STORE_NAME}}</h1>
+            
+            <div class="rating">
+                <span class="stars">⭐⭐⭐⭐⭐</span>
+                <span class="rating-text">{{STORE_RATING}} ({{STORE_REVIEWS}} reseñas)</span>
+            </div>
+            
+            <p class="description">{{STORE_DESCRIPTION}}</p>
+            
+            <div class="info-grid">
+                <div class="info-card">
+                    <div class="info-icon">⏱️</div>
+                    <div class="info-label">Tiempo de entrega</div>
+                    <div class="info-value">{{DELIVERY_TIME}} min</div>
+                </div>
+                
+                <div class="info-card">
+                    <div class="info-icon">🚚</div>
+                    <div class="info-label">Costo de envío</div>
+                    <div class="info-value">{{DELIVERY_COST}}</div>
+                </div>
+                
+                <div class="info-card">
+                    <div class="info-icon">💰</div>
+                    <div class="info-label">Pedido mínimo</div>
+                    <div class="info-value">{{MIN_ORDER}}</div>
+                </div>
+                
+                <div class="info-card">
+                    <div class="info-icon">🕐</div>
+                    <div class="info-label">Horario</div>
+                    <div class="info-value">{{STORE_HOURS}}</div>
+                </div>
+            </div>
+            
+            <div class="address">
+                <span class="address-icon">📍</span>
+                <strong>{{STORE_ADDRESS}}</strong>
+            </div>
+            
+            <div class="buttons">
+                <a href="#" onclick="openApp(); return false;" class="btn btn-primary">
+                    🛍️ Ver menú en Llego
+                </a>
+                <a href="https://apps.apple.com/app/id{{APP_ID}}" class="btn btn-secondary">
+                    ⬇️ Descargar App
+                </a>
+            </div>
+            
+            <p style="margin-top: 30px; color: #999; font-size: 14px;">
+                Comparte este link con tus amigos para que también puedan ordenar
+            </p>
+        </div>
+    </div>
+</body>
+</html>

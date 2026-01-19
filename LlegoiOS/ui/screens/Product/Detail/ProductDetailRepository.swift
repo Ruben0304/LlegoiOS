@@ -40,7 +40,8 @@ class ProductDetailRepository {
                     availability: product.availability,
                     categoryId: product.categoryId,
                     createdAt: product.createdAt,
-                    businessName: product.business?.name ?? "Tienda"
+                    businessName: product.business?.name ?? "Tienda",
+                    businessLogoUrl: product.business?.avatarUrl
                 )
 
                 print("✅ Fetched product detail for ID: \(id)")
@@ -83,4 +84,5 @@ struct ProductDetailGraphQL: Identifiable, Sendable, Equatable {
     let categoryId: String?
     let createdAt: String
     let businessName: String
+    let businessLogoUrl: String?
 }

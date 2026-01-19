@@ -565,8 +565,17 @@ struct StoreDetailView: View {
                 }
             }
             .sheet(isPresented: $showShareSheet) {
-                if let store = store {
-                    ShareSheet(items: [URL(string: "https://llego.app/store/\(store.id)")!])
+                if let detail = viewModel.branchDetail {
+                    EmptyView()
+                        .onAppear {
+//                            ShareHelper.shareStore(
+//                                id: detail.id,
+//                                name: detail.name,
+//                                description: detail.address,
+//                                imageURL: viewModel.getLogoUrl()
+//                            )
+//                            showShareSheet = false
+                        }
                 }
             }
             .onAppear {

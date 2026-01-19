@@ -8,5 +8,10 @@
 	<array>
 		<string>Default</string>
 	</array>
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:llego.app</string>
+		<string>applinks:www.llego.app</string>
+	</array>
 </dict>
 </plist>

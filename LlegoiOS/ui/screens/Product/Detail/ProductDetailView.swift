@@ -6,6 +6,7 @@ struct ProductDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = ProductDetailViewModel()
     @StateObject private var cartManager = CartManager.shared
+    @StateObject private var gradientManager = GradientStateManager.shared
 
     @State private var heroAppeared = false
     @State private var contentAppeared = false
@@ -13,6 +14,7 @@ struct ProductDetailView: View {
     @State private var selectedStyle = "Clásico"
     @State private var selectedDelivery = "Express 25-35m"
     @State private var similarCounts: [String: Int] = [:]
+    @State private var showQuantitySheet = false
 
     // Animation states
     @State private var showGeneralToast = false
@@ -28,6 +30,7 @@ struct ProductDetailView: View {
             id: detail.id,
             name: detail.name,
             shop: detail.businessName,
+            shopLogoUrl: detail.businessLogoUrl ?? "",
             weight: detail.weight,
             price: formattedPrice,
             imageUrl: detail.imageUrl
@@ -105,7 +108,7 @@ struct ProductDetailView: View {
                 BackButton(action: dismiss.callAsFunction)
             }
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: triggerStandardAdd) {
+                Button(action: { showQuantitySheet = true }) {
                     Image(systemName: "cart.badge.plus")
                         .font(.system(size: 18, weight: .semibold))
                 }
@@ -116,6 +119,11 @@ struct ProductDetailView: View {
                     Image(systemName: "square.and.arrow.up")
                 }
             }
+        }
+        .sheet(isPresented: $showQuantitySheet) {
+            quantitySheetView
+                .presentationDetents([.height(280)])
+                .presentationDragIndicator(.visible)
         }
         .navigationBarBackButtonHidden(true)
         .navigationBarTitleDisplayMode(.inline)
@@ -225,18 +233,70 @@ struct ProductDetailView: View {
             )
             .shadow(color: isPNG ? .clear : Color.black.opacity(0.15), radius: isPNG ? 0 : 12, x: 0, y: isPNG ? 0 : 10)
 
-            HStack(spacing: 10) {
-                infoChip(icon: "storefront.fill", text: product.shop)
-                infoChip(icon: "scalemass.fill", text: product.weight)
-                Spacer()
-                HStack(spacing: 4) {
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.yellow)
-                    Text("4.8")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.primary)
+            HStack(spacing: 12) {
+                // Logo de la tienda circular
+                if !product.shopLogoUrl.isEmpty {
+                    CachedAsyncImage(
+                        url: URL(string: product.shopLogoUrl),
+                        cacheKey: "shop_logo_\(product.shop)",
+                        content: { image in
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        },
+                        placeholder: {
+                            Circle()
+                                .fill(Color.gray.opacity(0.2))
+                                .overlay(
+                                    ProgressView()
+                                        .scaleEffect(0.6)
+                                )
+                        },
+                        failure: {
+                            Circle()
+                                .fill(Color.gray.opacity(0.2))
+                                .overlay(
+                                    Image(systemName: "storefront.fill")
+                                        .font(.system(size: 16))
+                                        .foregroundColor(.gray)
+                                )
+                        }
+                    )
+                    .frame(width: 44, height: 44)
+                    .clipShape(Circle())
+                    .overlay(
+                        Circle()
+                            .stroke(Color.white, lineWidth: 2)
+                    )
+                    .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
                 }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(product.shop)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+                    
+                    HStack(spacing: 8) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "scalemass.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                            Text(product.weight)
+                                .font(.system(size: 13, weight: .medium))
+                        }
+                        .foregroundColor(.secondary)
+                        
+                        HStack(spacing: 4) {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(.yellow)
+                            Text("4.8")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.primary)
+                        }
+                    }
+                }
+                
+                Spacer()
             }
         }
         .frame(height: 320)
@@ -244,22 +304,10 @@ struct ProductDetailView: View {
 
     private func infoSection(product: Product) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text(product.name)
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
-                    .lineLimit(2)
-
-                Spacer()
-
-                Button(action: triggerStandardAdd) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 32))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundColor(.llegoPrimary)
-                        .shadow(color: .llegoPrimary.opacity(0.2), radius: 8, x: 0, y: 4)
-                }
-            }
+            Text(product.name)
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .foregroundColor(.primary)
+                .lineLimit(2)
 
             Text("Preparado en \(product.shop) • \(product.weight)")
                 .font(.system(size: 15))
@@ -308,15 +356,6 @@ struct ProductDetailView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-            }
-
-            Divider()
-
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Cantidad")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.secondary)
-                quantitySelector
             }
         }
         .padding(18)
@@ -570,6 +609,74 @@ struct ProductDetailView: View {
     private func shareProduct() {
         // Placeholder para futuras acciones de share
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+
+    // MARK: - Quantity Sheet View
+    
+    private var quantitySheetView: some View {
+        VStack(spacing: 24) {
+            // Handle visual
+            RoundedRectangle(cornerRadius: 3)
+                .fill(Color.gray.opacity(0.3))
+                .frame(width: 40, height: 5)
+                .padding(.top, 16)
+            
+            VStack(spacing: 16) {
+                Text("¿Cuántos deseas agregar?")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.primary)
+                
+                // Selector de cantidad grande y bonito
+                HStack(spacing: 20) {
+                    Button(action: decrementQuantity) {
+                        Image(systemName: "minus")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(quantity > 1 ? gradientManager.currentAccentColor : .gray.opacity(0.3))
+                    }
+                    .disabled(quantity <= 1)
+                    
+                    Text("\(quantity)")
+                        .font(.system(size: 48, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary)
+                        .frame(minWidth: 80)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: quantity)
+                    
+                    Button(action: incrementQuantity) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(gradientManager.currentAccentColor)
+                    }
+                }
+                
+                
+                // Precio total
+                if let product = product {
+                    Text("Total: \(totalPriceText)")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            Spacer()
+            
+            // Botón de agregar
+            Button(action: {
+                showQuantitySheet = false
+                triggerStandardAdd()
+            }) {
+                Text("Agregar al carrito")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+            }
+            .buttonStyle(.glassProminent)
+            .tint(gradientManager.currentAccentColor)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 20)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .presentationBackground(.clear)
     }
 
 private func startEntranceAnimations() {

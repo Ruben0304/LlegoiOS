@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{PRODUCT_NAME}} - Llego</title>
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="product">
+    <meta property="og:url" content="https://llego.app/product/{{PRODUCT_ID}}">
+    <meta property="og:title" content="{{PRODUCT_NAME}}">
+    <meta property="og:description" content="{{PRODUCT_DESCRIPTION}}">
+    <meta property="og:image" content="{{PRODUCT_IMAGE_URL}}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:site_name" content="Llego">
+    
+    <!-- Product specific -->
+    <meta property="product:price:amount" content="{{PRODUCT_PRICE}}">
+    <meta property="product:price:currency" content="{{PRODUCT_CURRENCY}}">
+    <meta property="product:availability" content="in stock">
+    <meta property="product:condition" content="new">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://llego.app/product/{{PRODUCT_ID}}">
+    <meta name="twitter:title" content="{{PRODUCT_NAME}}">
+    <meta name="twitter:description" content="{{PRODUCT_DESCRIPTION}}">
+    <meta name="twitter:image" content="{{PRODUCT_IMAGE_URL}}">
+    
+    <!-- Apple Smart App Banner -->
+    <meta name="apple-itunes-app" content="app-id={{APP_ID}}, app-argument=llego://product/{{PRODUCT_ID}}">
+    
+    <!-- iOS Safari -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+        }
+        
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .product-image {
+            width: 100%;
+            max-width: 300px;
+            height: 300px;
+            object-fit: cover;
+            border-radius: 15px;
+            margin: 20px auto;
+            display: block;
+        }
+        
+        .description {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .price {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 20px 0;
+        }
+        
+        .store-info {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .store-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            padding: 15px 30px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: inline-block;
+        }
+        
+        .btn:active {
+            transform: scale(0.98);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+        
+        .loading {
+            display: none;
+            margin-top: 20px;
+            color: #666;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 30px 20px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            .price {
+                font-size: 28px;
+            }
+        }
+    </style>
+    
+    <script>
+        // Intentar abrir la app automáticamente
+        function tryOpenApp() {
+            const appUrl = 'llego://product/{{PRODUCT_ID}}';
+            const appStoreUrl = 'https://apps.apple.com/app/id{{APP_ID}}';
+            
+            // Intentar abrir la app
+            window.location = appUrl;
+            
+            // Si después de 2 segundos no se abrió, mostrar contenido
+            setTimeout(() => {
+                document.getElementById('content').style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+            }, 2000);
+        }
+        
+        function openApp() {
+            window.location = 'llego://product/{{PRODUCT_ID}}';
+            
+            // Si no se abre en 1.5 segundos, ir al App Store
+            setTimeout(() => {
+                window.location = 'https://apps.apple.com/app/id{{APP_ID}}';
+            }, 1500);
+        }
+        
+        // Detectar si es iOS
+        function isIOS() {
+            return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        }
+        
+        // Auto-abrir solo en iOS
+        window.onload = function() {
+            if (isIOS()) {
+                tryOpenApp();
+            } else {
+                document.getElementById('content').style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+            }
+        };
+    </script>
+</head>
+<body>
+    <!-- Loading state -->
+    <div id="loading" class="loading" style="display: block;">
+        <div class="container">
+            <div class="spinner"></div>
+            <p>Abriendo Llego...</p>
+        </div>
+    </div>
+    
+    <!-- Main content -->
+    <div id="content" class="container" style="display: none;">
+        <div class="logo">🛍️</div>
+        
+        <h1>{{PRODUCT_NAME}}</h1>
+        
+        <img src="{{PRODUCT_IMAGE_URL}}" alt="{{PRODUCT_NAME}}" class="product-image" onerror="this.style.display='none'">
+        
+        <div class="store-info">
+            <div class="store-name">📍 {{STORE_NAME}}</div>
+            <div style="color: #666; font-size: 14px;">{{STORE_ADDRESS}}</div>
+        </div>
+        
+        <p class="description">{{PRODUCT_DESCRIPTION}}</p>
+        
+        <div class="price">{{PRODUCT_CURRENCY}} {{PRODUCT_PRICE}}</div>
+        
+        <div class="buttons">
+            <a href="#" onclick="openApp(); return false;" class="btn btn-primary">
+                📱 Abrir en Llego
+            </a>
+            <a href="https://apps.apple.com/app/id{{APP_ID}}" class="btn btn-secondary">
+                ⬇️ Descargar App
+            </a>
+        </div>
+        
+        <p style="margin-top: 30px; color: #999; font-size: 14px;">
+            Comparte este link con tus amigos para que también puedan ver este producto
+        </p>
+    </div>
+</body>
+</html>
