@@ -110,13 +110,8 @@ struct HomeView: View {
     }
     
     // Models data - Orden: Restaurantes, Supermercado, Dulcería
-    // Ahora usa ConfigManager si hay datos, sino fallback a hardcodeado
+    // Siempre usa modelos hardcodeados con posiciones de cámara fijas
     var models: [CategoryModel3D] {
-        if !configManager.businessTypes.isEmpty {
-            return configManager.businessTypes.map { $0.toCategoryModel3D() }
-        }
-        
-        // Fallback hardcodeado
         return [
             CategoryModel3D(
                 name: "Restaurantes",
@@ -142,14 +137,14 @@ struct HomeView: View {
         ]
     }
     
-    // Verifica si el modelo actual necesita descarga
+    // Verifica si el modelo actual necesita descarga (siempre false para modelos locales)
     var currentModelNeedsDownload: Bool {
-        configManager.needsDownload(at: currentIndex)
+        return false
     }
     
-    // Estado de descarga del modelo actual
+    // Estado de descarga del modelo actual (siempre notNeeded para modelos locales)
     var currentDownloadState: Model3DDownloadState {
-        configManager.getDownloadState(at: currentIndex)
+        return .notNeeded
     }
 
     var body: some View {
@@ -169,19 +164,6 @@ struct HomeView: View {
                             allowsCameraControl: false,
                             isAnimated: true
                         )
-                        
-                        // Overlay de descarga si el modelo actual necesita descargarse
-                        if currentModelNeedsDownload || currentDownloadState != .notNeeded && currentDownloadState != .downloaded {
-                            if let config = configManager.getBusinessType(at: currentIndex) {
-                                Model3DDownloadOverlay(
-                                    state: currentDownloadState,
-                                    config: config,
-                                    onDownload: {
-                                        configManager.downloadModel3D(for: config)
-                                    }
-                                )
-                            }
-                        }
                     }
                     .frame(width: 460, height: 600)
                     .scaleEffect(scaleEffect * 1.05)
@@ -265,7 +247,6 @@ struct HomeView: View {
                                         .frame(width: 40, height: 40)
                                 }
                                 .glassEffect(.regular.interactive(), in: .circle)
-                                .disabled(currentIndex == 0)
                             } else {
                                 Button(action: previousModel) {
                                     Image(systemName: "chevron.left")
@@ -278,8 +259,6 @@ struct HomeView: View {
                                                 .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
                                         )
                                 }
-                                .opacity(currentIndex > 0 ? 1 : 0.3)
-                                .disabled(currentIndex == 0)
                             }
                             
                             // Indicadores de página (puntos)
@@ -303,7 +282,6 @@ struct HomeView: View {
                                         .frame(width: 40, height: 40)
                                 }
                                 .glassEffect(.regular.interactive(), in: .circle)
-                                .disabled(currentIndex == models.count - 1)
                             } else {
                                 Button(action: nextModel) {
                                     Image(systemName: "chevron.right")
@@ -316,8 +294,6 @@ struct HomeView: View {
                                                 .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
                                         )
                                 }
-                                .opacity(currentIndex < models.count - 1 ? 1 : 0.3)
-                                .disabled(currentIndex == models.count - 1)
                             }
                         }
                         .padding(.top, -6) // Espacio entre el modelo y las flechas
@@ -470,11 +446,6 @@ struct HomeView: View {
                 preparePressSound()
                 // Initialize branch type based on current category
                 branchTypeManager.setTypeFromCategoryIndex(currentIndex)
-                
-                // Sincronizar tipos de negocio con el backend
-                Task {
-                    await configManager.syncWithBackend()
-                }
             }
             .onDisappear {
                 pressSoundStopTimer?.invalidate()
@@ -528,28 +499,34 @@ struct HomeView: View {
 
     // MARK: - Navigation Functions
     private func previousModel() {
-        guard currentIndex > 0 else { return }
-
         // Feedback háptico
         let impact = UIImpactFeedbackGenerator(style: .heavy)
         impact.impactOccurred()
 
         animateModelTransition(direction: .left) {
-            currentIndex -= 1
+            // Loop circular: si está en el primero, va al último
+            if currentIndex == 0 {
+                currentIndex = models.count - 1
+            } else {
+                currentIndex -= 1
+            }
             gradientManager.setCategoryIndex(currentIndex)
             branchTypeManager.setTypeFromCategoryIndex(currentIndex)
         }
     }
 
     private func nextModel() {
-        guard currentIndex < models.count - 1 else { return }
-
         // Feedback háptico
         let impact = UIImpactFeedbackGenerator(style: .heavy)
         impact.impactOccurred()
 
         animateModelTransition(direction: .right) {
-            currentIndex += 1
+            // Loop circular: si está en el último, va al primero
+            if currentIndex == models.count - 1 {
+                currentIndex = 0
+            } else {
+                currentIndex += 1
+            }
             gradientManager.setCategoryIndex(currentIndex)
             branchTypeManager.setTypeFromCategoryIndex(currentIndex)
         }
