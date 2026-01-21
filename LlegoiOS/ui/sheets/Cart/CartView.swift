@@ -53,65 +53,21 @@ struct CartView: View {
     // MARK: - Ad Discount States
     @State private var showAdView = false
 
-    let paymentMethods: [PaymentMethod] = [
-        
-        PaymentMethod(
-            id: "cash_cup",
-            name: "Efectivo",
-            description: "Pago al recibir",
-            imageType: .systemIcon("banknote"),
-            color: Color.llegoPrimary,
-            currency: "CUP"
-        ),
-        PaymentMethod(
-            id: "cash_usd",
-            name: "Efectivo",
-            description: "Pago al recibir",
-            imageType: .systemIcon("dollarsign.circle"),
-            color: Color.llegoAccent,
-            currency: "USD"
-        ),
-        PaymentMethod(
-            id: "bank_transfer",
-            name: "Transferencia",
-            description: "Transferencia bancaria",
-            imageType: .systemIcon("building.columns"),
-            color: Color.llegoSecondary,
-            currency: "CUP"
-        ),
-        PaymentMethod(
-            id: "invoice_international",
-            name: "Enviar factura a persona en el extranjero",
-            description: "Enviar link de pago",
-            imageType: .systemIcon("link.circle.fill"),
-            color: Color(red: 0.2, green: 0.5, blue: 0.9),
-            currency: "USD"
-        ),
-        PaymentMethod(
-            id: "credit_card",
-            name: "Tarjeta",
-            description: "Visa/Mastercard",
-            imageType: .systemIcon("creditcard"),
-            color: Color.llegoTertiary,
-            currency: "USD"
-        ),
-        PaymentMethod(
-            id: "qvapay",
-            name: "QvaPay",
-            description: "Pago digital",
-            imageType: .assetImage("qvapay"),
-            color: Color(red: 0.2, green: 0.6, blue: 0.9),
-            currency: "CUP/USD"
-        ),
-        PaymentMethod(
-            id: "tropipay",
-            name: "TropiPay",
-            description: "Cartera digital",
-            imageType: .assetImage("tropipay"),
-            color: Color(red: 0.9, green: 0.4, blue: 0.1),
-            currency: "CUP/USD"
-        )
-    ]
+    // MARK: - Computed Properties
+    
+    /// Métodos de pago disponibles (desde el backend)
+    var availablePaymentMethods: [PaymentMethod] {
+        viewModel.paymentMethods.map { PaymentMethod.from($0) }
+    }
+    
+    /// Métodos de pago filtrados por moneda seleccionada
+    var filteredPaymentMethods: [PaymentMethod] {
+        let currencyCode = selectedCurrency.rawValue
+        return availablePaymentMethods.filter { method in
+            method.currency.uppercased() == currencyCode ||
+            method.currency.contains(currencyCode) // Para casos como "CUP/USD"
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -224,6 +180,9 @@ struct CartView: View {
                                                     .resizable()
                                                     .scaledToFit()
                                                     .frame(width: 18, height: 18)
+                                            case .url:
+                                                Image(systemName: "creditcard")
+                                                    .font(.system(size: 13, weight: .semibold))
                                             }
 
                                             VStack(alignment: .leading, spacing: 1) {
@@ -336,7 +295,7 @@ struct CartView: View {
 //            .modifier(NavigationBarWhiteBackground())
             .sheet(isPresented: $showPaymentMethodPicker) {
                 PaymentMethodPickerView(
-                    paymentMethods: paymentMethods,
+                    paymentMethods: filteredPaymentMethods,
                     selectedMethod: $selectedPaymentMethod
                 )
                 .presentationDetents([.large])
@@ -476,6 +435,10 @@ struct CartView: View {
                                 .resizable()
                                 .scaledToFit()
                                 .frame(width: 30, height: 30)
+                        case .url:
+                            Image(systemName: "creditcard")
+                                .font(.system(size: 22, weight: .semibold))
+                                .foregroundColor(method.color)
                         }
                     }
 
@@ -650,10 +613,19 @@ struct CartView: View {
         }
     }
 
-    // MARK: - Generate Payment Link
+    // MARK: - Generate Payment Link (LEGACY - NEEDS UPDATE)
+    // TODO: Actualizar para usar el nuevo flujo de pagos con initiatePayment
     private func generatePaymentLink() {
         isLoadingPayment = true
-
+        
+        // Este método necesita ser actualizado para usar el nuevo sistema de pagos
+        print("⚠️ generatePaymentLink() necesita ser actualizado al nuevo sistema")
+        
+        isLoadingPayment = false
+        paymentAlertMessage = "Esta funcionalidad está siendo actualizada al nuevo sistema de pagos"
+        showPaymentAlert = true
+        
+        /* CÓDIGO LEGACY - COMENTADO
         // Convertir el total a centavos
         let amountInCents = Int(viewModel.total * 100)
 
@@ -685,12 +657,22 @@ struct CartView: View {
                 }
             }
         }
+        */
     }
 
-    // MARK: - Stripe Payment
+    // MARK: - Stripe Payment (LEGACY - NEEDS UPDATE)
+    // TODO: Actualizar para usar el nuevo flujo de pagos con initiatePayment
     private func initiateStripePayment() {
         isLoadingPayment = true
-
+        
+        // Este método necesita ser actualizado para usar el nuevo sistema de pagos
+        print("⚠️ initiateStripePayment() necesita ser actualizado al nuevo sistema")
+        
+        isLoadingPayment = false
+        paymentAlertMessage = "Esta funcionalidad está siendo actualizada al nuevo sistema de pagos"
+        showPaymentAlert = true
+        
+        /* CÓDIGO LEGACY - COMENTADO
         // Convertir el total a centavos (Stripe maneja montos en centavos)
         let amountInCents = Int(viewModel.total * 100)
 
@@ -751,6 +733,7 @@ struct CartView: View {
                 }
             }
         }
+        */
     }
 
     private func configurePaymentSheet(response: PaymentIntentResponse) {
@@ -1157,28 +1140,48 @@ struct PaymentMethodPickerView: View {
     }
 
     private var paymentList: some View {
-        LazyVStack(spacing: 12) {
-            ForEach(enumeratedPaymentMethods, id: \.element.id) { pair in
-                let index = pair.offset
-                let method = pair.element
-                PaymentMethodRow(
-                    method: method,
-                    isSelected: selectedMethod?.id == method.id,
-                    onTap: {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                            selectedMethod = method
-                        }
-                        // Cerrar después de seleccionar
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            dismiss()
-                        }
-                    },
-                    animationDelay: Double(index) * 0.05
-                )
+        Group {
+            if paymentMethods.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "creditcard.trianglebadge.exclamationmark")
+                        .font(.system(size: 50))
+                        .foregroundColor(.gray)
+                    
+                    Text("No hay métodos de pago disponibles")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+                    
+                    Text("Por favor, intenta de nuevo más tarde")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 100)
+            } else {
+                LazyVStack(spacing: 12) {
+                    ForEach(enumeratedPaymentMethods, id: \.element.id) { pair in
+                        let index = pair.offset
+                        let method = pair.element
+                        PaymentMethodRow(
+                            method: method,
+                            isSelected: selectedMethod?.id == method.id,
+                            onTap: {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                    selectedMethod = method
+                                }
+                                // Cerrar después de seleccionar
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    dismiss()
+                                }
+                            },
+                            animationDelay: Double(index) * 0.05
+                        )
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 40)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 40)
     }
 
     private var enumeratedPaymentMethods: [(offset: Int, element: PaymentMethod)] {

@@ -1,0 +1,40 @@
+mutation InitiatePayment(
+  $orderId: String!
+  $paymentMethodId: String!
+  $jwt: String!
+  $includeDeliveryFee: Boolean!
+) {
+  initiatePayment(
+    orderId: $orderId
+    paymentMethodId: $paymentMethodId
+    jwt: $jwt
+    includeDeliveryFee: $includeDeliveryFee
+  ) {
+    paymentAttempt {
+      id
+      orderId
+      paymentMethodId
+      subtotal
+      deliveryFee
+      includesDeliveryFee
+      taxAmount
+      discountAmount
+      commissionAmount
+      totalAmount
+      currency
+      status
+      stripePaymentIntentId
+      stripeClientSecret
+      proofUrl
+      customerConfirmedAt
+      businessConfirmedAt
+      disputeReason
+      deliveryPersonConfirmedAt
+      deliveryPersonId
+      walletTransactionId
+      businessWalletTransactionId
+      commissionTransactionId
+    }
+    instructions
+  }
+}

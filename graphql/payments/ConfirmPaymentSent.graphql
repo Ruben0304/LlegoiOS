@@ -1,0 +1,27 @@
+mutation ConfirmPaymentSent(
+  $paymentAttemptId: String!
+  $proofUrl: String!
+  $jwt: String!
+) {
+  confirmPaymentSent(
+    paymentAttemptId: $paymentAttemptId
+    proofUrl: $proofUrl
+    jwt: $jwt
+  ) {
+    id
+    orderId
+    paymentMethodId
+    subtotal
+    deliveryFee
+    includesDeliveryFee
+    taxAmount
+    discountAmount
+    commissionAmount
+    totalAmount
+    currency
+    status
+    proofUrl
+    customerConfirmedAt
+    businessConfirmedAt
+  }
+}

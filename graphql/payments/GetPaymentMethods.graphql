@@ -1,0 +1,19 @@
+query GetPaymentMethods($jwt: String) {
+  paymentMethods(jwt: $jwt) {
+    id
+    name
+    code
+    currency
+    method
+    commissionPercent
+    deliveryFeePercent
+    isRefundable
+    requiresProof
+    requiresBusinessConfirmation
+    expirationMinutes
+    isActive
+    displayOrder
+    iconUrl
+    instructions
+  }
+}

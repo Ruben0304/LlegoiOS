@@ -43,7 +43,7 @@ public extension LlegoAPI {
         SearchUsersQuery.Data.self
       ] }
 
-      /// Buscar usuarios (requiere rol admin o manager)
+      /// Buscar usuarios (requiere autenticación)
       public var searchUsers: [SearchUser] { __data["searchUsers"] }
 
       /// SearchUser

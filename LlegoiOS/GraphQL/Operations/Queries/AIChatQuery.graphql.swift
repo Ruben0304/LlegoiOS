@@ -138,7 +138,7 @@ public extension LlegoAPI {
               public var id: String { __data["id"] }
               /// Currency (e.g., CUP, USD)
               public var currency: String { __data["currency"] }
-              /// Payment method (e.g., tarjeta, efectivo, transferencia)
+              /// Payment method type (wallet, transfer, stripe, cash)
               public var method: String { __data["method"] }
             }
 

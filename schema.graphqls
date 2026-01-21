@@ -7,12 +7,14 @@ schema {
 scalar DateTime
 "The `JSON` scalar type represents JSON values as specified by [ECMA-404](https://ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf)."
 scalar JSON
+"Represents a file upload."
+scalar Upload
 type Query {
   "Lista de usuarios (requiere rol admin o manager)"
   users(jwt: String!): [UserType!]!
   "Obtener usuario por ID (requiere rol admin o manager)"
   user(id: String!, jwt: String!): UserType
-  "Buscar usuarios (requiere rol admin o manager)"
+  "Buscar usuarios (requiere autenticación)"
   searchUsers(query: String!, jwt: String!): [UserType!]!
   "Usuario actual desde JWT"
   me(jwt: String!): UserType
@@ -76,6 +78,12 @@ type Query {
   paymentMethodsByCurrency(currency: String!, jwt: String = null): [PaymentMethodType!]!
   "Obtener métodos de pago por tipo"
   paymentMethodsByMethod(method: String!, jwt: String = null): [PaymentMethodType!]!
+  "Obtener intento de pago por ID"
+  paymentAttempt(id: String!, jwt: String!): PaymentAttemptType
+  "Obtener intentos de pago de un pedido"
+  paymentAttemptsByOrder(orderId: String!, jwt: String!): [PaymentAttemptType!]!
+  "Obtener el intento de pago activo de un pedido"
+  activePaymentAttempt(orderId: String!, jwt: String!): PaymentAttemptType
   "Obtener balance de wallet del usuario actual"
   myWallet(jwt: String!): WalletStatusType!
   "Obtener historial de transacciones del usuario actual"
@@ -231,10 +239,34 @@ type BranchType {
 type PaymentMethodType {
   "Payment method ID"
   id: String!
+  "Display name (e.g., Wallet USD, Transfermóvil)"
+  name: String!
+  "Code (e.g., wallet_usd, transfermovil)"
+  code: String!
   "Currency (e.g., CUP, USD)"
   currency: String!
-  "Payment method (e.g., tarjeta, efectivo, transferencia)"
+  "Payment method type (wallet, transfer, stripe, cash)"
   method: String!
+  "Commission percentage charged to customer"
+  commissionPercent: Float!
+  "Extra percentage for cash delivery payments"
+  deliveryFeePercent: Float!
+  "Whether this method supports refunds"
+  isRefundable: Boolean!
+  "Whether proof/receipt is required"
+  requiresProof: Boolean!
+  "Whether business must confirm receipt"
+  requiresBusinessConfirmation: Boolean!
+  "Time limit to complete payment"
+  expirationMinutes: Int
+  "Whether this method is currently active"
+  isActive: Boolean!
+  "Display order in UI"
+  displayOrder: Int!
+  "Icon URL"
+  iconUrl: String
+  "Payment instructions for user"
+  instructions: String
 }
 type PageInfo {
   hasNextPage: Boolean!
@@ -364,6 +396,8 @@ type OrderType {
   deliveryPersonId: String
   estimatedDeliveryTime: DateTime
   paymentId: String
+  currentPaymentAttemptId: String
+  paidAt: DateTime
   rating: Int
   ratingComment: String
   "Order items"
@@ -497,6 +531,76 @@ type FeatureType {
   subtitle: String!
   sortOrder: Int!
 }
+type PaymentAttemptType {
+  "Payment attempt ID"
+  id: String!
+  "Order ID"
+  orderId: String!
+  "Payment method ID"
+  paymentMethodId: String!
+  "Order subtotal"
+  subtotal: Float!
+  "Delivery fee"
+  deliveryFee: Float!
+  "Whether delivery is included"
+  includesDeliveryFee: Boolean!
+  "Tax amount"
+  taxAmount: Float!
+  "Discount amount"
+  discountAmount: Float!
+  "Commission charged"
+  commissionAmount: Float!
+  "Total to pay"
+  totalAmount: Float!
+  "Currency (usd or local)"
+  currency: String!
+  "Current status"
+  status: PaymentAttemptStatusEnum!
+  "Stripe Payment Intent ID"
+  stripePaymentIntentId: String
+  "Stripe client secret for UI"
+  stripeClientSecret: String
+  "Proof/receipt URL"
+  proofUrl: String
+  "When customer confirmed"
+  customerConfirmedAt: DateTime
+  "When business confirmed"
+  businessConfirmedAt: DateTime
+  "Dispute reason if disputed"
+  disputeReason: String
+  "When delivery confirmed cash"
+  deliveryPersonConfirmedAt: DateTime
+  "Delivery person who confirmed"
+  deliveryPersonId: String
+  "User wallet transaction ID"
+  walletTransactionId: String
+  "Business wallet transaction ID"
+  businessWalletTransactionId: String
+  "Commission transaction ID"
+  commissionTransactionId: String
+  "When refund was requested"
+  refundRequestedAt: DateTime
+  "Refund reason"
+  refundReason: String
+  "When refund completed"
+  refundedAt: DateTime
+  "Refund transaction ID"
+  refundTransactionId: String
+  "Refund amount"
+  refundAmount: Float
+  "Expiration time"
+  expiresAt: DateTime
+  "Completion time"
+  completedAt: DateTime
+  "Failure time"
+  failedAt: DateTime
+  "Failure reason"
+  failedReason: String
+  "Creation time"
+  createdAt: DateTime!
+  "Last update time"
+  updatedAt: DateTime!
+}
 type WalletStatusType {
   balance: WalletBalanceType!
   status: String!
@@ -596,6 +700,22 @@ type Mutation {
   deactivateBusinessTypeConfig(id: String!, jwt: String!): BusinessTypeConfigType!
   "Delete business type configuration permanently (Admin only)"
   deleteBusinessTypeConfig(id: String!, jwt: String!): Boolean!
+  "Validar una imagen de transferencia bancaria usando Gemini OCR"
+  validatePaymentImage(file: Upload!, jwt: String = null): PaymentType!
+  "Iniciar un pago para un pedido"
+  initiatePayment(orderId: String!, paymentMethodId: String!, jwt: String!, includeDeliveryFee: Boolean! = true): InitiatePaymentResult!
+  "Confirmar que el cliente envió el pago (para métodos manuales)"
+  confirmPaymentSent(paymentAttemptId: String!, proofUrl: String!, jwt: String!): PaymentAttemptType!
+  "Negocio confirma que recibió el pago"
+  confirmPaymentReceived(paymentAttemptId: String!, jwt: String!): PaymentAttemptType!
+  "Repartidor confirma que recibió el pago en efectivo"
+  confirmCashReceived(paymentAttemptId: String!, jwt: String!): PaymentAttemptType!
+  "Negocio disputa que no recibió el pago"
+  disputePayment(paymentAttemptId: String!, reason: String!, jwt: String!): PaymentAttemptType!
+  "Solicitar reembolso de un pago"
+  requestRefund(paymentAttemptId: String!, reason: String!, jwt: String!): PaymentAttemptType!
+  "Cancelar un intento de pago pendiente"
+  cancelPayment(paymentAttemptId: String!, jwt: String!): PaymentAttemptType!
   "Transferir dinero a otro usuario o sucursal"
   transferMoney(input: TransferInput!, jwt: String!): WalletTransactionType!
   "Depositar dinero en la wallet"
@@ -630,6 +750,24 @@ type DeviceTokenType {
   isActive: Boolean!
   createdAt: DateTime!
   updatedAt: DateTime!
+}
+type PaymentType {
+  id: String!
+  quienEnvio: String!
+  banco: String!
+  fecha: DateTime!
+  esMensajeBanco: Boolean!
+  cantidadTransferida: Float!
+  numeroTransferencia: String!
+  primeros4Tarjeta: String!
+  ultimos4Tarjeta: String!
+  createdAt: DateTime!
+}
+type InitiatePaymentResult {
+  "The created payment attempt"
+  paymentAttempt: PaymentAttemptType!
+  "Instructions for completing payment (for manual methods)"
+  instructions: String
 }
 type Subscription {
   "Escuchar cambios en un pedido específico"
@@ -686,6 +824,21 @@ enum VehicleTypeEnum {
   BICICLETA
   AUTO
   A_PIE
+}
+enum PaymentAttemptStatusEnum {
+  PENDING
+  PROCESSING
+  AWAITING_PROOF
+  AWAITING_BUSINESS
+  AWAITING_DELIVERY
+  COMPLETED
+  FAILED
+  EXPIRED
+  CANCELLED
+  DISPUTED
+  REFUND_REQUESTED
+  REFUND_PROCESSING
+  REFUNDED
 }
 enum DevicePlatformEnum {
   IOS

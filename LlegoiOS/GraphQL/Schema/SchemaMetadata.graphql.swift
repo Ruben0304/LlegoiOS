@@ -44,6 +44,7 @@ public extension LlegoAPI {
       case "DeviceTokenType": return LlegoAPI.Objects.DeviceTokenType
       case "FeatureType": return LlegoAPI.Objects.FeatureType
       case "GradientConfigType": return LlegoAPI.Objects.GradientConfigType
+      case "InitiatePaymentResult": return LlegoAPI.Objects.InitiatePaymentResult
       case "Mutation": return LlegoAPI.Objects.Mutation
       case "OrderCommentType": return LlegoAPI.Objects.OrderCommentType
       case "OrderDiscountType": return LlegoAPI.Objects.OrderDiscountType
@@ -53,6 +54,7 @@ public extension LlegoAPI {
       case "OrderType": return LlegoAPI.Objects.OrderType
       case "OrdersConnectionType": return LlegoAPI.Objects.OrdersConnectionType
       case "PageInfo": return LlegoAPI.Objects.PageInfo
+      case "PaymentAttemptType": return LlegoAPI.Objects.PaymentAttemptType
       case "PaymentMethodType": return LlegoAPI.Objects.PaymentMethodType
       case "ProductCategoryType": return LlegoAPI.Objects.ProductCategoryType
       case "ProductConnection": return LlegoAPI.Objects.ProductConnection

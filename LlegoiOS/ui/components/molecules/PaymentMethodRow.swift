@@ -42,6 +42,11 @@ struct PaymentMethodRow: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 30, height: 30)
+            case .url(_):
+                Image("imageName")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 30, height: 30)
             }
         }
     }

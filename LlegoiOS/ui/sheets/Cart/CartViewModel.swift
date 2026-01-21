@@ -19,10 +19,21 @@ class CartViewModel: ObservableObject {
     @Published var isCreatingOrder: Bool = false
     @Published var createdOrder: CreatedOrder?
     @Published var orderError: String?
+    
+    // Payment Methods
+    @Published var paymentMethods: [PaymentMethodModel] = []
+    @Published var isLoadingPaymentMethods: Bool = false
+    
+    // Payment Attempt
+    @Published var currentPaymentAttempt: PaymentAttemptModel?
+    @Published var isInitiatingPayment: Bool = false
 
     private let repository = CartRepository()
     private let cartManager = CartManager.shared
     private let createOrderRepository = CreateOrderRepository()
+    private let paymentRepository = PaymentRepository()
+    private let paymentMethodManager = PaymentMethodManager.shared
+    private let authManager = AuthManager.shared
     
     // Store branchId from cart products
     private var cartBranchId: String?
@@ -153,6 +164,9 @@ class CartViewModel: ObservableObject {
                         print("📍 Branch ID: \(branchId)")
                     }
                     self.state = .success
+                    
+                    // Load payment methods after cart is loaded
+                    self.loadPaymentMethods()
 
                 case .failure(let error):
                     self.errorMessage = "Error al cargar el carrito: \(error.localizedDescription)"
@@ -163,9 +177,209 @@ class CartViewModel: ObservableObject {
         }
     }
     
-    // MARK: - Create Order
+    // MARK: - Load Payment Methods
     
-    /// Crear pedido real en el backend
+    func loadPaymentMethods() {
+        Task {
+            isLoadingPaymentMethods = true
+            
+            do {
+                let methods = try await paymentMethodManager.fetchPaymentMethods()
+                await MainActor.run {
+                    // Filter active methods and sort by display order
+                    self.paymentMethods = methods
+                        .filter { $0.isActive }
+                        .sorted { $0.displayOrder < $1.displayOrder }
+                    self.isLoadingPaymentMethods = false
+                    print("✅ Loaded \(self.paymentMethods.count) payment methods")
+                }
+            } catch {
+                await MainActor.run {
+                    self.isLoadingPaymentMethods = false
+                    print("❌ Error loading payment methods: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+    
+    // MARK: - Filter Payment Methods
+    
+    func paymentMethodsByCurrency(_ currency: String) -> [PaymentMethodModel] {
+        paymentMethods.filter { $0.currency.uppercased() == currency.uppercased() }
+    }
+    
+    // MARK: - Create Order with New Payment Flow
+    
+    /// Crear pedido y luego iniciar el pago
+    func createOrderAndInitiatePayment(
+        paymentMethodId: String,
+        comments: String? = nil,
+        completion: @escaping @Sendable (Result<(CreatedOrder, InitiatePaymentResultModel), Error>) -> Void
+    ) {
+        guard let branchId = cartBranchId else {
+            let error = NSError(domain: "CartViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "No se pudo determinar la tienda"])
+            completion(.failure(error))
+            return
+        }
+        
+        guard !cartItems.isEmpty else {
+            let error = NSError(domain: "CartViewModel", code: -2, userInfo: [NSLocalizedDescriptionKey: "El carrito está vacío"])
+            completion(.failure(error))
+            return
+        }
+        
+        // Get user location for delivery address
+        let locationManager = UserLocationManager.shared
+        guard let userLocation = locationManager.userLocation else {
+            let error = NSError(domain: "CartViewModel", code: -3, userInfo: [NSLocalizedDescriptionKey: "Por favor selecciona una ubicación de entrega"])
+            completion(.failure(error))
+            return
+        }
+        
+        isCreatingOrder = true
+        orderError = nil
+        
+        // Build items array
+        let items = cartItems.map { item in
+            (productId: item.id, quantity: item.quantity)
+        }
+        
+        // Build delivery address
+        let deliveryAddress = DeliveryAddressInput(
+            street: locationManager.userAddress,
+            city: nil,
+            reference: nil,
+            latitude: userLocation.latitude,
+            longitude: userLocation.longitude
+        )
+        
+        print("🛒 Creating order with new payment flow...")
+        print("   Branch: \(branchId)")
+        print("   Items: \(items.count)")
+        print("   Payment Method: \(paymentMethodId)")
+        print("   Address: \(locationManager.userAddress)")
+        
+        // Step 1: Create Order (without payment)
+        createOrderRepository.createOrder(
+            branchId: branchId,
+            items: items,
+            deliveryAddress: deliveryAddress,
+            paymentMethod: "pending", // Temporary, will be updated by payment
+            paymentIntentId: nil,
+            comments: comments
+        ) { [weak self] result in
+            guard let self = self else { return }
+            
+            Task { @MainActor in
+                switch result {
+                case .success(let order):
+                    print("✅ Order created: \(order.orderNumber)")
+                    self.createdOrder = order
+                    
+                    // Step 2: Initiate Payment
+                    do {
+                        let paymentResult = try await self.initiatePaymentForOrder(
+                            orderId: order.id,
+                            paymentMethodId: paymentMethodId
+                        )
+                        
+                        await MainActor.run {
+                            self.isCreatingOrder = false
+                            print("✅ Payment initiated: \(paymentResult.paymentAttempt.id)")
+                            completion(.success((order, paymentResult)))
+                        }
+                    } catch {
+                        await MainActor.run {
+                            self.isCreatingOrder = false
+                            self.orderError = error.localizedDescription
+                            print("❌ Error initiating payment: \(error.localizedDescription)")
+                            completion(.failure(error))
+                        }
+                    }
+                    
+                case .failure(let error):
+                    print("❌ Error creating order: \(error.localizedDescription)")
+                    await MainActor.run {
+                        self.isCreatingOrder = false
+                        self.orderError = error.localizedDescription
+                        completion(.failure(error))
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Initiate Payment
+    
+    private func initiatePaymentForOrder(
+        orderId: String,
+        paymentMethodId: String
+    ) async throws -> InitiatePaymentResultModel {
+        guard let jwt = await authManager.getAccessToken() else {
+            throw NSError(domain: "CartViewModel", code: -4, userInfo: [NSLocalizedDescriptionKey: "No hay sesión activa"])
+        }
+        
+        await MainActor.run {
+            self.isInitiatingPayment = true
+        }
+        
+        do {
+            let result = try await paymentRepository.initiatePayment(
+                orderId: orderId,
+                paymentMethodId: paymentMethodId,
+                jwt: jwt,
+                includeDeliveryFee: true
+            )
+            
+            await MainActor.run {
+                self.currentPaymentAttempt = result.paymentAttempt
+                self.isInitiatingPayment = false
+            }
+            
+            return result
+        } catch {
+            await MainActor.run {
+                self.isInitiatingPayment = false
+            }
+            throw error
+        }
+    }
+    
+    // MARK: - Confirm Payment Sent (for manual methods)
+    
+    func confirmPaymentSent(
+        paymentAttemptId: String,
+        proofUrl: String,
+        completion: @escaping @Sendable (Result<PaymentAttemptModel, Error>) -> Void
+    ) {
+        Task {
+            guard let jwt = await authManager.getAccessToken() else {
+                let error = NSError(domain: "CartViewModel", code: -5, userInfo: [NSLocalizedDescriptionKey: "No hay sesión activa"])
+                completion(.failure(error))
+                return
+            }
+            
+            do {
+                let paymentAttempt = try await paymentRepository.confirmPaymentSent(
+                    paymentAttemptId: paymentAttemptId,
+                    proofUrl: proofUrl,
+                    jwt: jwt
+                )
+                
+                await MainActor.run {
+                    self.currentPaymentAttempt = paymentAttempt
+                }
+                
+                completion(.success(paymentAttempt))
+            } catch {
+                completion(.failure(error))
+            }
+        }
+    }
+    
+    // MARK: - Legacy Create Order (for backward compatibility)
+    
+    /// Crear pedido real en el backend (método legacy)
     func createOrder(
         paymentMethod: String,
         paymentIntentId: String? = nil,
