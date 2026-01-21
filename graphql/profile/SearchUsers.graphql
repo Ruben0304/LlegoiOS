@@ -1,0 +1,10 @@
+query SearchUsers($query: String!, $jwt: String!) {
+  searchUsers(query: $query, jwt: $jwt) {
+    id
+    name
+    username
+    email
+    avatar
+    avatarUrl
+  }
+}

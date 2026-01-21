@@ -1,13 +1,13 @@
 import SwiftUI
 import PassKit
+import StripePaymentSheet
 
 struct WalletView: View {
-    @StateObject private var viewModel = WalletViewModel()
+    @StateObject private var viewModel = WalletViewModel.shared
     @Environment(\.dismiss) private var dismiss
     @State private var selectedCurrency: WalletCurrency = .usd
     @State private var animateContent: Bool = false
     @State private var showCupTransferSheet: Bool = false
-
     var body: some View {
         NavigationStack{
             ZStack {
@@ -141,9 +141,14 @@ struct WalletView: View {
                                                 .fill(Color.llegoAccent.opacity(0.15))
                                                 .frame(width: 56, height: 56)
                                             
-                                            Image(systemName: "globe.americas.fill")
-                                                .font(.system(size: 28))
-                                                .foregroundColor(.llegoAccent)
+                                            if viewModel.isGeneratingForeignURL {
+                                                ProgressView()
+                                                    .tint(.llegoAccent)
+                                            } else {
+                                                Image(systemName: "globe.americas.fill")
+                                                    .font(.system(size: 28))
+                                                    .foregroundColor(.llegoAccent)
+                                            }
                                         }
                                         
                                         Text("Internacional")
@@ -159,6 +164,7 @@ struct WalletView: View {
                                     )
                                 }
                                 .buttonStyle(ScaleButtonStyle())
+                                .disabled(viewModel.isGeneratingForeignURL)
                             }
                             .padding(.horizontal, 20)
                             
@@ -289,7 +295,33 @@ struct WalletView: View {
                         .opacity(animateContent ? 1 : 0)
                         .offset(y: animateContent ? 0 : 16)
                         .animation(.easeOut(duration: 0.55).delay(0.25), value: animateContent)
-                        
+
+                        // Loading Indicator for Transactions
+                        if viewModel.isLoadingTransactions {
+                            VStack(spacing: 16) {
+                                CircularLoadingIndicator(
+                                    color: .llegoPrimary,
+                                    lineWidth: 4,
+                                    size: 40,
+                                    useHDR: true
+                                )
+
+                                Text("Cargando transacciones...")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.top, 20)
+                        } else {
+                            // Transaction History
+                            TransactionHistoryView(
+                                transactions: viewModel.transactions,
+                                currentUserId: viewModel.currentUserId
+                            )
+                            .opacity(animateContent ? 1 : 0)
+                            .offset(y: animateContent ? 0 : 16)
+                            .animation(.easeOut(duration: 0.55).delay(0.35), value: animateContent)
+                        }
+
                         Spacer(minLength: 40)
                     }
                     .padding(.vertical)
@@ -343,7 +375,8 @@ struct WalletView: View {
                         }
                     }
                 )
-                .presentationDetents([.height(380)])
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $viewModel.showForeignRechargeSheet) {
                 ForeignRechargeSheet(viewModel: viewModel)
@@ -376,12 +409,20 @@ struct WalletView: View {
                 RefundInfoSheet(currency: .cup)
                     .presentationDetents([.height(260)])
             }
+            .background(
+                StripePaymentSheetPresenter(
+                    isPresented: $viewModel.showStripePaymentSheet,
+                    paymentSheet: viewModel.paymentSheet,
+                    onCompletion: viewModel.handleStripePaymentResult
+                )
+            )
             .onAppear {
                 animateContent = false
                 DispatchQueue.main.async {
                     animateContent = true
                 }
-                viewModel.loadBalance()
+                // Cargar balance y transacciones
+                viewModel.loadWalletDetails()
             }
             .onDisappear {
                 animateContent = false
@@ -592,146 +633,250 @@ struct LocalRechargeSheet: View {
     var onCupTransferTap: (String) -> Void
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isAmountFocused: Bool
+    @State private var showDiagnostics = false
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 24) {
-                Spacer()
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 24) {
+                    // Currency Picker
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Moneda")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.secondary)
 
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Moneda")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.secondary)
-
-                    Picker("Moneda", selection: $selectedCurrency) {
-                        ForEach(WalletCurrency.allCases) { currency in
-                            Text(currency.currencyCode)
-                                .tag(currency)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                }
-                .padding(.horizontal)
-
-                // Amount Input
-                VStack(spacing: 8) {
-                    Text("Monto a recargar")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.secondary)
-
-                    HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text(selectedCurrency.symbol)
-                            .font(.system(size: 24, weight: .semibold))
-                            .foregroundColor(.primary)
-
-                        TextField("0.00", text: $viewModel.rechargeAmount)
-                            .keyboardType(.decimalPad)
-                            .font(.system(size: 48, weight: .bold, design: .rounded))
-                            .multilineTextAlignment(.leading)
-                            .focused($isAmountFocused)
-                    }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(.systemGray6))
-                    )
-                }
-                .padding(.horizontal)
-
-                // Quick amount buttons
-                HStack(spacing: 12) {
-                    ForEach([10.0, 25.0, 50.0, 100.0], id: \.self) { amount in
-                        Button(action: {
-                            viewModel.rechargeAmount = String(format: "%.0f", amount)
-                        }) {
-                            Text("\(selectedCurrency.symbol)\(Int(amount))")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(selectedCurrency.activeColor)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 10)
-                                        .fill(selectedCurrency.activeColor.opacity(0.12))
-                                )
-                        }
-                    }
-                }
-                .padding(.horizontal)
-
-                Spacer()
-
-                // Apple Pay Button
-                let sanitizedAmount = viewModel.rechargeAmount.replacingOccurrences(of: ",", with: ".")
-                if let amount = Double(sanitizedAmount), amount > 0 {
-                    if selectedCurrency == .usd {
-                        Button(action: {
-                            viewModel.rechargeAmount = sanitizedAmount
-                            viewModel.processLocalRecharge(for: selectedCurrency)
-                        }) {
-                            HStack {
-                                Image(systemName: "apple.logo")
-                                    .font(.system(size: 20))
-                                Text("Pagar con Apple Pay")
-                                    .font(.system(size: 17, weight: .semibold))
+                        Picker("Moneda", selection: $selectedCurrency) {
+                            ForEach(WalletCurrency.allCases) { currency in
+                                Text(currency.currencyCode)
+                                    .tag(currency)
                             }
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(
-                                RoundedRectangle(cornerRadius: 14)
-                                    .fill(Color.black)
-                            )
                         }
-                        .padding(.horizontal)
-                        .padding(.bottom, 32)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                    } else {
-                        Button(action: {
-                            let amountText = sanitizedAmount
-                            viewModel.rechargeAmount = amountText
-                            dismiss()
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                                onCupTransferTap(amountText)
-                            }
-                        }) {
-                            HStack(spacing: 10) {
-                                Image(systemName: "building.columns.fill")
-                                    .font(.system(size: 18))
-                                Text("Continuar con transferencia CUP")
+                        .pickerStyle(.segmented)
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 20)
+
+                    // Amount Input
+                    VStack(spacing: 8) {
+                        Text("Monto a recargar")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.secondary)
+
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text(selectedCurrency.symbol)
+                                .font(.system(size: 24, weight: .semibold))
+                                .foregroundColor(.primary)
+
+                            TextField("0.00", text: $viewModel.rechargeAmount)
+                                .keyboardType(.decimalPad)
+                                .font(.system(size: 48, weight: .bold, design: .rounded))
+                                .multilineTextAlignment(.leading)
+                                .focused($isAmountFocused)
+                        }
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color(.systemGray6))
+                        )
+                    }
+                    .padding(.horizontal)
+
+                    // Quick amount buttons
+                    HStack(spacing: 12) {
+                        ForEach([10.0, 25.0, 50.0, 100.0], id: \.self) { amount in
+                            Button(action: {
+                                viewModel.rechargeAmount = String(format: "%.0f", amount)
+                            }) {
+                                Text("\(selectedCurrency.symbol)\(Int(amount))")
                                     .font(.system(size: 16, weight: .semibold))
-                                    .lineLimit(1)
-                            }
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(
-                                RoundedRectangle(cornerRadius: 14)
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [
-                                                selectedCurrency.activeColor,
-                                                selectedCurrency.activeColor.opacity(0.8)
-                                            ],
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        )
+                                    .foregroundColor(selectedCurrency.activeColor)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(selectedCurrency.activeColor.opacity(0.12))
                                     )
-                            )
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+
+                    // Payment Buttons
+                    let sanitizedAmount = viewModel.rechargeAmount.replacingOccurrences(of: ",", with: ".")
+                    if let amount = Double(sanitizedAmount), amount > 0 {
+                        VStack(spacing: 12) {
+                            if selectedCurrency == .usd {
+                                // Apple Pay Button
+                                Button(action: {
+                                    viewModel.rechargeAmount = sanitizedAmount
+                                    viewModel.processApplePayRecharge(for: selectedCurrency)
+                                }) {
+                                    HStack {
+                                        Image(systemName: "apple.logo")
+                                            .font(.system(size: 20))
+                                        Text("Pagar con Apple Pay")
+                                            .font(.system(size: 17, weight: .semibold))
+                                    }
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .fill(Color.black)
+                                    )
+                                }
+
+                                // Stripe Button
+                                Button(action: {
+                                    viewModel.rechargeAmount = sanitizedAmount
+                                    viewModel.processStripeRecharge(for: selectedCurrency)
+                                }) {
+                                    HStack {
+                                        Image(systemName: "creditcard.fill")
+                                            .font(.system(size: 18))
+                                        Text("Pagar con Tarjeta (Stripe)")
+                                            .font(.system(size: 17, weight: .semibold))
+                                    }
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .fill(Color.llegoPrimary)
+                                    )
+                                }
+
+                                // Manual Test Button
+                                Button(action: {
+                                    viewModel.rechargeAmount = sanitizedAmount
+                                    viewModel.processManualRecharge(for: selectedCurrency)
+                                }) {
+                                    HStack {
+                                        Image(systemName: "testtube.2")
+                                            .font(.system(size: 18))
+                                        Text("Recarga Manual (Prueba)")
+                                            .font(.system(size: 17, weight: .semibold))
+                                    }
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .fill(Color.llegoAccent)
+                                    )
+                                }
+                            } else {
+                                // Info: Stripe no soporta CUP
+                                HStack(spacing: 12) {
+                                    Image(systemName: "info.circle.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundColor(.blue)
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Solo transferencia bancaria")
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundColor(.primary)
+                                        
+                                        Text("Los pagos con tarjeta solo están disponibles para USD")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.secondary)
+                                    }
+                                    
+                                    Spacer()
+                                }
+                                .padding()
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.blue.opacity(0.1))
+                                )
+                                .padding(.horizontal)
+                                
+                                // CUP Transfer Button
+                                Button(action: {
+                                    let amountText = sanitizedAmount
+                                    viewModel.rechargeAmount = amountText
+                                    dismiss()
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                        onCupTransferTap(amountText)
+                                    }
+                                }) {
+                                    HStack(spacing: 10) {
+                                        Image(systemName: "building.columns.fill")
+                                            .font(.system(size: 18))
+                                        Text("Continuar con transferencia CUP")
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .lineLimit(1)
+                                    }
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: [
+                                                        selectedCurrency.activeColor,
+                                                        selectedCurrency.activeColor.opacity(0.8)
+                                                    ],
+                                                    startPoint: .leading,
+                                                    endPoint: .trailing
+                                                )
+                                            )
+                                    )
+                                }
+                                .padding(.horizontal)
+
+                                // Manual Test Button for CUP
+                                Button(action: {
+                                    viewModel.rechargeAmount = sanitizedAmount
+                                    viewModel.processManualRecharge(for: selectedCurrency)
+                                }) {
+                                    HStack {
+                                        Image(systemName: "testtube.2")
+                                            .font(.system(size: 18))
+                                        Text("Recarga Manual (Prueba)")
+                                            .font(.system(size: 16, weight: .semibold))
+                                    }
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .fill(Color.llegoAccent)
+                                    )
+                                }
+                            }
                         }
                         .padding(.horizontal)
-                        .padding(.bottom, 32)
+                        .padding(.top, 8)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
+
+                    Spacer(minLength: 32)
                 }
+                .padding(.vertical)
             }
             .navigationTitle("Recargar Wallet")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        showDiagnostics = true
+                    }) {
+                        Image(systemName: "info.circle")
+                    }
+                }
+                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Cerrar") {
                         dismiss()
                     }
                 }
+            }
+            .alert("Diagnóstico Apple Pay", isPresented: $showDiagnostics) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(viewModel.getApplePayDiagnostics())
             }
             .onAppear {
                 isAmountFocused = true
@@ -748,70 +893,131 @@ struct ForeignRechargeSheet: View {
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 24) {
-                Spacer()
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 24) {
+                    // Icon
+                    ZStack {
+                        Circle()
+                            .fill(Color.llegoAccent.opacity(0.15))
+                            .frame(width: 100, height: 100)
+                        
+                        Image(systemName: "globe.americas.fill")
+                            .font(.system(size: 48))
+                            .foregroundColor(.llegoAccent)
+                    }
+                    .padding(.top, 20)
 
-                // Icon
-                Image(systemName: "globe.americas.fill")
-                    .font(.system(size: 60))
-                    .foregroundColor(.llegoAccent)
-                    .padding(.bottom, 8)
+                    // Title
+                    Text("Recarga desde el extranjero")
+                        .font(.system(size: 26, weight: .bold))
+                        .foregroundColor(.primary)
 
-                // Title
-                Text("Recarga desde el extranjero")
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.primary)
-
-                // Description
-                Text("Comparte este enlace con alguien en el extranjero para que pueda enviarte dinero a tu Wallet")
-                    .font(.system(size: 15))
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
+                    // Description
+                    VStack(spacing: 12) {
+                        Text("Comparte este enlace con familiares o amigos en el extranjero")
+                            .font(.system(size: 16))
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                        
+                        Text("Ellos podrán enviarte dinero directamente a tu Wallet usando su tarjeta internacional")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
                     .padding(.horizontal, 32)
 
-                // URL Card
-                VStack(spacing: 16) {
-                    Text(viewModel.foreignRechargeURL)
-                        .font(.system(size: 14, weight: .medium, design: .monospaced))
-                        .foregroundColor(.llegoPrimary)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color.llegoPrimary.opacity(0.1))
+                    // URL Card
+                    VStack(spacing: 16) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Tu enlace de recarga")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.secondary)
+                                .padding(.horizontal, 4)
+                            
+                            Text(viewModel.foreignRechargeURL)
+                                .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                .foregroundColor(.llegoPrimary)
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.llegoPrimary.opacity(0.08))
+                                )
+                                .lineLimit(3)
+                        }
+
+                        // Copy button
+                        Button(action: {
+                            viewModel.copyURLToClipboard()
+                            showCopiedConfirmation = true
+
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                showCopiedConfirmation = false
+                            }
+                        }) {
+                            HStack(spacing: 10) {
+                                Image(systemName: showCopiedConfirmation ? "checkmark.circle.fill" : "doc.on.doc.fill")
+                                    .font(.system(size: 18, weight: .semibold))
+                                Text(showCopiedConfirmation ? "¡Copiado!" : "Copiar enlace")
+                                    .font(.system(size: 17, weight: .semibold))
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .fill(showCopiedConfirmation ? Color.green : Color.llegoPrimary)
+                            )
+                        }
+                        .animation(.spring(response: 0.3), value: showCopiedConfirmation)
+                        
+                        // Share button
+                        ShareLink(item: viewModel.foreignRechargeURL) {
+                            HStack(spacing: 10) {
+                                Image(systemName: "square.and.arrow.up")
+                                    .font(.system(size: 18, weight: .semibold))
+                                Text("Compartir enlace")
+                                    .font(.system(size: 17, weight: .semibold))
+                            }
+                            .foregroundColor(.llegoPrimary)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .fill(Color.llegoPrimary.opacity(0.1))
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 8)
+                    
+                    // Info cards
+                    VStack(spacing: 12) {
+                        InfoCard(
+                            icon: "creditcard.fill",
+                            title: "Pago seguro",
+                            description: "Procesado por Stripe con encriptación bancaria"
                         )
-
-                    // Copy button
-                    Button(action: {
-                        viewModel.copyURLToClipboard()
-                        showCopiedConfirmation = true
-
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                            showCopiedConfirmation = false
-                        }
-                    }) {
-                        HStack {
-                            Image(systemName: showCopiedConfirmation ? "checkmark.circle.fill" : "doc.on.doc.fill")
-                                .font(.system(size: 18))
-                            Text(showCopiedConfirmation ? "¡Copiado!" : "Copiar enlace")
-                                .font(.system(size: 17, weight: .semibold))
-                        }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: 14)
-                                .fill(showCopiedConfirmation ? Color.green : Color.llegoPrimary)
+                        
+                        InfoCard(
+                            icon: "dollarsign.circle.fill",
+                            title: "Ellos eligen el monto",
+                            description: "La persona que paga decide cuánto enviarte"
+                        )
+                        
+                        InfoCard(
+                            icon: "clock.fill",
+                            title: "Acreditación inmediata",
+                            description: "El dinero llega a tu Wallet en segundos"
                         )
                     }
-                    .animation(.spring(response: 0.3), value: showCopiedConfirmation)
-                }
-                .padding(.horizontal, 24)
-                .padding(.top, 8)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 8)
 
-                Spacer()
+                    Spacer(minLength: 32)
+                }
+                .padding(.vertical)
             }
-            .padding(.vertical)
             .navigationTitle("Recarga Internacional")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -822,6 +1028,40 @@ struct ForeignRechargeSheet: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Info Card
+private struct InfoCard: View {
+    let icon: String
+    let title: String
+    let description: String
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 22))
+                .foregroundColor(.llegoAccent)
+                .frame(width: 40)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.primary)
+                
+                Text(description)
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemBackground))
+                .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
+        )
     }
 }
 
@@ -841,140 +1081,233 @@ struct WalletTransferSheet: View {
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 24) {
-                Spacer(minLength: 12)
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 24) {
+                    VStack(spacing: 16) {
+                        ZStack {
+                            Circle()
+                                .fill(selectedCurrency.activeColor.opacity(0.15))
+                                .frame(width: 80, height: 80)
 
-                VStack(spacing: 16) {
-                    ZStack {
-                        Circle()
-                            .fill(selectedCurrency.activeColor.opacity(0.15))
-                            .frame(width: 80, height: 80)
+                            Image(systemName: "arrow.left.arrow.right.circle.fill")
+                                .font(.system(size: 36))
+                                .foregroundColor(selectedCurrency.activeColor)
+                        }
 
-                        Image(systemName: "arrow.left.arrow.right.circle.fill")
-                            .font(.system(size: 36))
-                            .foregroundColor(selectedCurrency.activeColor)
-                    }
+                        Text("Transferir saldo")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(.primary)
 
-                    Text("Transferir saldo")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.primary)
-
-                    Text("Envía dinero a otro usuario de Llego de forma segura y rápida.")
-                        .font(.system(size: 15))
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
-                }
-
-                VStack(spacing: 18) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Usuario destino")
-                            .font(.system(size: 14, weight: .medium))
+                        Text("Envía dinero a otro usuario de Llego usando su nombre de usuario o correo electrónico.")
+                            .font(.system(size: 15))
                             .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
+                    }
+                    .padding(.top, 20)
 
-                        TextField("ej. juan.perez", text: $viewModel.transferUsername)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled(true)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 14)
+                    VStack(spacing: 18) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Usuario o correo destino")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.secondary)
+
+                            TextField("ej. juan.perez o correo@ejemplo.com", text: $viewModel.transferUsername)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled(true)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 14)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color(.systemGray6))
+                                )
+                                .focused($focusedField, equals: .username)
+                                .onChange(of: viewModel.transferUsername) { newValue in
+                                    viewModel.searchUsers(query: newValue)
+                                }
+                            
+                            // Search Results
+                            if !viewModel.searchResults.isEmpty {
+                                VStack(spacing: 0) {
+                                    ForEach(viewModel.searchResults, id: \.id) { user in
+                                        Button(action: {
+                                            viewModel.selectUser(user)
+                                            focusedField = .amount
+                                        }) {
+                                            HStack(spacing: 12) {
+                                                // Avatar
+                                                if let avatarUrl = user.avatarUrl, !avatarUrl.isEmpty {
+                                                    AsyncImage(url: URL(string: avatarUrl)) { phase in
+                                                        switch phase {
+                                                        case .success(let image):
+                                                            image
+                                                                .resizable()
+                                                                .aspectRatio(contentMode: .fill)
+                                                                .frame(width: 40, height: 40)
+                                                                .clipShape(Circle())
+                                                        default:
+                                                            Circle()
+                                                                .fill(Color.gray.opacity(0.2))
+                                                                .frame(width: 40, height: 40)
+                                                                .overlay(
+                                                                    Image(systemName: "person.fill")
+                                                                        .font(.system(size: 18))
+                                                                        .foregroundColor(.gray)
+                                                                )
+                                                        }
+                                                    }
+                                                } else {
+                                                    Circle()
+                                                        .fill(Color.gray.opacity(0.2))
+                                                        .frame(width: 40, height: 40)
+                                                        .overlay(
+                                                            Image(systemName: "person.fill")
+                                                                .font(.system(size: 18))
+                                                                .foregroundColor(.gray)
+                                                        )
+                                                }
+                                                
+                                                VStack(alignment: .leading, spacing: 2) {
+                                                    Text(user.name)
+                                                        .font(.system(size: 15, weight: .semibold))
+                                                        .foregroundColor(.primary)
+                                                    
+                                                    Text("@\(user.username)")
+                                                        .font(.system(size: 13))
+                                                        .foregroundColor(.secondary)
+                                                }
+                                                
+                                                Spacer()
+                                                
+                                                Image(systemName: "chevron.right")
+                                                    .font(.system(size: 12, weight: .semibold))
+                                                    .foregroundColor(.gray.opacity(0.5))
+                                            }
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 10)
+                                            .background(Color(.systemBackground))
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
+                                        
+                                        if user.id != viewModel.searchResults.last?.id {
+                                            Divider()
+                                                .padding(.leading, 64)
+                                        }
+                                    }
+                                }
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color(.systemBackground))
+                                        .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 2)
+                                )
+                                .padding(.top, 4)
+                            }
+                            
+                            // Loading indicator
+                            if viewModel.isSearching {
+                                HStack(spacing: 8) {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                    Text("Buscando usuarios...")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding(.top, 4)
+                            }
+                        }
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Monto a transferir")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.secondary)
+
+                            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                Text(selectedCurrency.symbol)
+                                    .font(.system(size: 24, weight: .semibold))
+                                    .foregroundColor(.primary)
+
+                                TextField("0.00", text: $viewModel.transferAmount)
+                                    .keyboardType(.decimalPad)
+                                    .font(.system(size: 42, weight: .bold, design: .rounded))
+                                    .multilineTextAlignment(.leading)
+                                    .focused($focusedField, equals: .amount)
+                            }
+                            .padding()
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
                                     .fill(Color(.systemGray6))
                             )
-                            .focused($focusedField, equals: .username)
-                    }
 
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Monto a transferir")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.secondary)
-
-                        HStack(alignment: .firstTextBaseline, spacing: 6) {
-                            Text(selectedCurrency.symbol)
-                                .font(.system(size: 24, weight: .semibold))
-                                .foregroundColor(.primary)
-
-                            TextField("0.00", text: $viewModel.transferAmount)
-                                .keyboardType(.decimalPad)
-                                .font(.system(size: 42, weight: .bold, design: .rounded))
-                                .multilineTextAlignment(.leading)
-                                .focused($focusedField, equals: .amount)
+                            Text("Saldo disponible: \(selectedCurrency.symbol)\(String(format: "%.2f", viewModel.balance(for: selectedCurrency))) \(selectedCurrency.currencyCode)")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(selectedCurrency.activeColor)
                         }
+
+                        HStack(spacing: 12) {
+                            ForEach(quickAmounts, id: \.self) { amount in
+                                Button(action: {
+                                    viewModel.transferAmount = String(format: "%.0f", amount)
+                                    viewModel.sanitizeTransferAmount()
+                                    focusedField = .amount
+                                }) {
+                                    Text("\(selectedCurrency.symbol)\(Int(amount))")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(selectedCurrency.activeColor)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 12)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .fill(selectedCurrency.activeColor.opacity(0.12))
+                                        )
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+
+                    Button(action: {
+                        viewModel.performTransfer(for: selectedCurrency)
+                    }) {
+                        ZStack {
+                            if viewModel.isLoading {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            } else {
+                                HStack(spacing: 10) {
+                                    Image(systemName: "paperplane.fill")
+                                        .font(.system(size: 18, weight: .semibold))
+                                    Text("Transferir ahora")
+                                        .font(.system(size: 16, weight: .semibold))
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
                         .padding()
+                        .foregroundColor(.white)
                         .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(Color(.systemGray6))
-                        )
-
-                        Text("Saldo en \(selectedCurrency.currencyCode)")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(selectedCurrency.activeColor)
-                    }
-
-                    HStack(spacing: 12) {
-                        ForEach(quickAmounts, id: \.self) { amount in
-                            Button(action: {
-                                viewModel.transferAmount = String(format: "%.0f", amount)
-                                viewModel.sanitizeTransferAmount()
-                                focusedField = .amount
-                            }) {
-                                Text("\(selectedCurrency.symbol)\(Int(amount))")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(selectedCurrency.activeColor)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 12)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 10)
-                                            .fill(selectedCurrency.activeColor.opacity(0.12))
+                            RoundedRectangle(cornerRadius: 14)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            selectedCurrency.activeColor,
+                                            selectedCurrency.activeColor.opacity(0.85)
+                                        ],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
                                     )
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal)
-
-                Spacer()
-
-                Button(action: {
-                    viewModel.performTransfer(for: selectedCurrency)
-                }) {
-                    ZStack {
-                        if viewModel.isLoading {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                        } else {
-                            HStack(spacing: 10) {
-                                Image(systemName: "paperplane.fill")
-                                    .font(.system(size: 18, weight: .semibold))
-                                Text("Transferir ahora")
-                                    .font(.system(size: 16, weight: .semibold))
-                            }
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .foregroundColor(.white)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        selectedCurrency.activeColor,
-                                        selectedCurrency.activeColor.opacity(0.85)
-                                    ],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
                                 )
-                            )
-                    )
+                        )
+                    }
+                    .padding(.horizontal)
+                    .padding(.top, 8)
+                    .disabled(!viewModel.isTransferFormValid || viewModel.isLoading)
+                    .opacity(viewModel.isTransferFormValid ? 1 : 0.6)
+                    .animation(.easeInOut(duration: 0.2), value: viewModel.isLoading)
+
+                    Spacer(minLength: 32)
                 }
-                .padding(.horizontal)
-                .padding(.bottom, 32)
-                .disabled(!viewModel.isTransferFormValid || viewModel.isLoading)
-                .opacity(viewModel.isTransferFormValid ? 1 : 0.6)
-                .animation(.easeInOut(duration: 0.2), value: viewModel.isLoading)
+                .padding(.vertical)
             }
-            .padding(.vertical)
             .navigationTitle("Transferir")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1048,6 +1381,36 @@ struct RefundInfoSheet: View {
             }
         }
     }
+}
+
+// MARK: - Stripe Payment Sheet Presenter
+struct StripePaymentSheetPresenter: UIViewControllerRepresentable {
+    @Binding var isPresented: Bool
+    let paymentSheet: PaymentSheet?
+    let onCompletion: (PaymentSheetResult) -> Void
+    
+    func makeUIViewController(context: Context) -> StripePaymentSheetViewController {
+        StripePaymentSheetViewController()
+    }
+    
+    func updateUIViewController(_ uiViewController: StripePaymentSheetViewController, context: Context) {
+        if isPresented, let paymentSheet = paymentSheet, !uiViewController.isPresenting {
+            uiViewController.isPresenting = true
+            
+            // Esperar un momento para que el sheet de recarga se cierre
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                paymentSheet.present(from: uiViewController) { result in
+                    onCompletion(result)
+                    isPresented = false
+                    uiViewController.isPresenting = false
+                }
+            }
+        }
+    }
+}
+
+class StripePaymentSheetViewController: UIViewController {
+    var isPresenting = false
 }
 
 #Preview {

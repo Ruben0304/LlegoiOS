@@ -1,0 +1,10 @@
+query MyWalletBalance($jwt: String!) {
+  me(jwt: $jwt) {
+    id
+    wallet {
+      local
+      usd
+    }
+    walletStatus
+  }
+}

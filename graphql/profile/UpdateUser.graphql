@@ -1,0 +1,11 @@
+mutation UpdateUser($input: UpdateUserInput!, $jwt: String!) {
+  updateUser(input: $input, jwt: $jwt) {
+    id
+    name
+    username
+    email
+    phone
+    avatar
+    avatarUrl
+  }
+}

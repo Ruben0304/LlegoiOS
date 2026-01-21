@@ -333,7 +333,7 @@ public extension LlegoAPI {
           public var name: String { __data["name"] }
           public var address: String? { __data["address"] }
           public var phone: String { __data["phone"] }
-          /// Presigned URL for the branch avatar
+          /// Presigned URL for the branch avatar (inherits from business if not set)
           public var avatarUrl: String? { __data["avatarUrl"] }
           public var coordinates: Coordinates { __data["coordinates"] }
 

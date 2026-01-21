@@ -1,0 +1,24 @@
+query MyWalletDetails($jwt: String!, $limit: Int, $skip: Int, $currency: String) {
+  me(jwt: $jwt) {
+    id
+    wallet {
+      local
+      usd
+    }
+    walletStatus
+  }
+  myWalletTransactions(jwt: $jwt, limit: $limit, skip: $skip, currency: $currency) {
+    id
+    fromOwnerId
+    fromOwnerType
+    toOwnerId
+    toOwnerType
+    amount
+    currency
+    type
+    status
+    description
+    createdAt
+    completedAt
+  }
+}

@@ -4,6 +4,5 @@ query GetBusinessDetail($id: String!) {
     name
     socialMedia
     avatarUrl
-    coverUrl
   }
 }

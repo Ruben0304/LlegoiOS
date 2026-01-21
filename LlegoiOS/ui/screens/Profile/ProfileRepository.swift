@@ -38,6 +38,7 @@ class ProfileRepository {
                         id: data.user.id,
                         email: data.user.email,
                         fullName: data.user.name,
+                        username: "", // El backend genera username automáticamente
                         phone: data.user.phone,
                         role: data.user.role,
                         appleUserId: nil,
@@ -101,6 +102,7 @@ class ProfileRepository {
                         id: data.user.id,
                         email: data.user.email,
                         fullName: data.user.name,
+                        username: "", // El backend genera username automáticamente
                         phone: data.user.phone,
                         role: data.user.role,
                         appleUserId: nil,
@@ -163,6 +165,7 @@ class ProfileRepository {
                         id: data.user.id,
                         email: data.user.email,
                         fullName: data.user.name,
+                        username: "", // El backend genera username automáticamente
                         phone: data.user.phone,
                         role: data.user.role,
                         appleUserId: nil,
@@ -225,6 +228,7 @@ class ProfileRepository {
                         id: data.user.id,
                         email: data.user.email,
                         fullName: data.user.name,
+                        username: "", // El backend genera username automáticamente
                         phone: data.user.phone,
                         role: data.user.role,
                         appleUserId: nil,
@@ -281,6 +285,7 @@ class ProfileRepository {
                         id: data.id,
                         email: data.email,
                         fullName: data.name,
+                        username: data.username,
                         phone: data.phone,
                         role: data.role,
                         appleUserId: data.providerUserId,
@@ -296,4 +301,117 @@ class ProfileRepository {
             }
         }
     }
+    
+    // MARK: - Update User
+    func updateUser(jwt: String, name: String?, username: String?, phone: String?) async throws -> User {
+        return try await withCheckedThrowingContinuation { continuation in
+            let input = LlegoAPI.UpdateUserInput(
+                name: name.map { .some($0) } ?? .none,
+                username: username.map { .some($0) } ?? .none,
+                phone: phone.map { .some($0) } ?? .none,
+                avatar: .none
+            )
+            let mutation = LlegoAPI.UpdateUserMutation(input: input, jwt: jwt)
+
+            apolloClient.perform(mutation: mutation) { result in
+                switch result {
+                case .success(let graphQLResult):
+                    if let errors = graphQLResult.errors {
+                        print("❌ GraphQL Errors (update user):")
+                        errors.forEach { print("  - \($0.localizedDescription)") }
+                        continuation.resume(throwing: NSError(
+                            domain: "GraphQL",
+                            code: -1,
+                            userInfo: [NSLocalizedDescriptionKey: errors.first?.localizedDescription ?? "Error al actualizar usuario"]
+                        ))
+                        return
+                    }
+
+                    guard let data = graphQLResult.data?.updateUser else {
+                        print("⚠️ updateUser devolvió nil")
+                        continuation.resume(throwing: NSError(
+                            domain: "GraphQL",
+                            code: -2,
+                            userInfo: [NSLocalizedDescriptionKey: "No se recibió respuesta del servidor"]
+                        ))
+                        return
+                    }
+
+                    let user = User(
+                        id: data.id,
+                        email: data.email,
+                        fullName: data.name,
+                        username: data.username,
+                        phone: data.phone,
+                        role: "user", // El mutation no devuelve role, usar default
+                        appleUserId: nil,
+                        avatar: data.avatar,
+                        avatarUrl: data.avatarUrl
+                    )
+
+                    print("✅ Usuario actualizado: \(user.username)")
+                    continuation.resume(returning: user)
+
+                case .failure(let error):
+                    print("❌ Error en update user: \(error.localizedDescription)")
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Search Users
+    func searchUsers(jwt: String, query: String) async throws -> [SearchUserResult] {
+        return try await withCheckedThrowingContinuation { continuation in
+            let searchQuery = LlegoAPI.SearchUsersQuery(query: query, jwt: jwt)
+            
+            apolloClient.fetch(query: searchQuery, cachePolicy: .fetchIgnoringCacheData) { result in
+                switch result {
+                case .success(let graphQLResult):
+                    if let errors = graphQLResult.errors {
+                        print("❌ GraphQL Errors (search users):")
+                        errors.forEach { print("  - \($0.localizedDescription)") }
+                        continuation.resume(throwing: NSError(
+                            domain: "GraphQL",
+                            code: -1,
+                            userInfo: [NSLocalizedDescriptionKey: errors.first?.localizedDescription ?? "Error al buscar usuarios"]
+                        ))
+                        return
+                    }
+
+                    guard let data = graphQLResult.data?.searchUsers else {
+                        print("⚠️ searchUsers devolvió nil")
+                        continuation.resume(returning: [])
+                        return
+                    }
+
+                    let users = data.map { user in
+                        SearchUserResult(
+                            id: user.id,
+                            name: user.name,
+                            username: user.username,
+                            email: user.email,
+                            avatarUrl: user.avatarUrl
+                        )
+                    }
+
+                    print("✅ Usuarios encontrados: \(users.count)")
+                    continuation.resume(returning: users)
+
+                case .failure(let error):
+                    print("❌ Error en search users: \(error.localizedDescription)")
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Search User Result Model
+struct SearchUserResult {
+    let id: String
+    let name: String
+    let username: String
+    let email: String
+    let avatarUrl: String?
 }

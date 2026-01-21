@@ -3,11 +3,15 @@ import Foundation
 /// Configuración de Stripe con las API Keys
 struct StripeConfig {
     /// Publishable Key de Stripe (visible en el cliente)
-    static let publishableKey = "pk_test_51SMry82V350jFWI4oFI9WqATNGUFm9HtLhO76ZCye3KNZPZ54CjFoM1qJeOVAi02CF2xdEJuvhDC9lMuGyn4NNUz00ilGKdmzP"
+    /// Obtenida desde el archivo Secrets.swift (no commitado a Git)
+    static let publishableKey = StripeSecrets.publishableKey
 
-    /// IMPORTANTE: Secret Key NUNCA debe estar en el cliente
-    /// Esta key debe usarse SOLO en el backend
-    /// Secret Key: sk_test_51SMry82V350jFWI4tw7N8hCDElVwHyZWJL2XQjj7Z14kyMCQxQyu3M8a8GdDKLbYXX3TPWO3o0j5sOjGnClhugba00opIlTxPk
+    /// ⚠️ Secret Key NO debe estar en el cliente
+    /// La Secret Key debe estar SOLO en el backend
+    /// El backend debe crear los Payment Intents y devolver el client_secret
+    ///
+    /// Para testing local, puedes descomentar la siguiente línea:
+    /// static let secretKey = StripeSecrets.secretKey
 
     /// URL del backend que crea el PaymentIntent
     /// NOTA: Este endpoint debe crearse en el backend de Railway

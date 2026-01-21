@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "Me"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query Me($jwt: String!) { me(jwt: $jwt) { __typename id name email phone role createdAt providerUserId avatar avatarUrl } }"#
+        #"query Me($jwt: String!) { me(jwt: $jwt) { __typename id name email username phone role createdAt providerUserId avatar avatarUrl } }"#
       ))
 
     public var jwt: String
@@ -48,6 +48,7 @@ public extension LlegoAPI {
           .field("id", String.self),
           .field("name", String.self),
           .field("email", String.self),
+          .field("username", String.self),
           .field("phone", String?.self),
           .field("role", String.self),
           .field("createdAt", LlegoAPI.DateTime.self),
@@ -62,6 +63,7 @@ public extension LlegoAPI {
         public var id: String { __data["id"] }
         public var name: String { __data["name"] }
         public var email: String { __data["email"] }
+        public var username: String { __data["username"] }
         public var phone: String? { __data["phone"] }
         public var role: String { __data["role"] }
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }

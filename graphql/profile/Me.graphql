@@ -3,6 +3,7 @@ query Me($jwt: String!) {
     id
     name
     email
+    username
     phone
     role
     createdAt

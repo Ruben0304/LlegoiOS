@@ -198,12 +198,50 @@ func fetchData(completion: @escaping @Sendable (Result<Data, Error>) -> Void) {
 
 Ver [CONCURRENCY_PATTERNS.md](docs/CONCURRENCY_PATTERNS.md) para detalles completos.
 
-### 3. Una Repository por Pantalla
+### 4. PKPaymentAuthorizationControllerDelegate y Concurrencia
+⚠️ **IMPORTANTE**: Implementar delegate methods sin `nonisolated` en `@MainActor` ViewModels
+
+```swift
+// ✅ Correcto - En @MainActor ViewModel
+extension WalletViewModel: PKPaymentAuthorizationControllerDelegate {
+
+    func paymentAuthorizationController(
+        _ controller: PKPaymentAuthorizationController,
+        didAuthorizePayment payment: PKPayment,
+        handler completion: @escaping (PKPaymentAuthorizationResult) -> Void
+    ) {
+        Task {
+            // Procesamiento async
+            guard let jwt = await authManager.getAccessToken() else {
+                completion(PKPaymentAuthorizationResult(status: .failure, errors: nil))
+                return
+            }
+
+            do {
+                // Llamadas async...
+                completion(PKPaymentAuthorizationResult(status: .success, errors: nil))
+            } catch {
+                completion(PKPaymentAuthorizationResult(status: .failure, errors: nil))
+            }
+        }
+    }
+}
+```
+
+**Errores comunes a evitar**:
+- ❌ NO usar `nonisolated` en delegate methods
+- ❌ NO usar `Task.detached` con `@MainActor` dentro
+- ❌ NO usar `nonisolated(unsafe)` para el completion handler
+- ✅ Usar `Task {}` simple que hereda el MainActor del ViewModel
+
+Ver `PaymentManager.swift` como referencia.
+
+### 5. Una Repository por Pantalla
 - Cada pantalla tiene su propio Repository
 - Repository contiene SOLO las queries/mutations de esa pantalla
 - Ejemplo: `HomeRepository` solo para `HomeView`
 
-### 4. GraphQL Models vs UI Models
+### 6. GraphQL Models vs UI Models
 - **GraphQL Models**: Definidos en Repository (`*GraphQL` structs)
 - **UI Models**: Definidos en `models/Models.swift` (`Product`, `Store`)
 - ViewModel mapea GraphQL → UI Models

@@ -9,13 +9,19 @@ struct HomeView: View {
 
     // Global branch type manager
     @StateObject private var branchTypeManager = BranchTypeManager.shared
-    
+
     // Business type config manager (dynamic types)
     @StateObject private var configManager = BusinessTypeConfigManager.shared
 
     // Cart manager
     @StateObject private var cartManager = CartManager.shared
     @ObservedObject private var authManager = AuthManager.shared
+
+    // Wallet manager (shared)
+    @StateObject private var walletManager = WalletViewModel.shared
+
+    // Home ViewModel
+    @StateObject private var viewModel = HomeViewModel()
 
     // Animation states
     @State private var carouselAppeared = false
@@ -374,13 +380,18 @@ struct HomeView: View {
                     Button(action: {
                         showingWallet = true
                     }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "creditcard")
-                                .font(.system(size: 16, weight: .semibold))
-                            Text("$0.00")
-                                .font(.system(size: 14, weight: .semibold))
+                        if walletManager.isLoading {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle())
+                        } else {
+                            HStack(spacing: 4) {
+                                Image(systemName: "creditcard")
+                                    .font(.system(size: 16, weight: .semibold))
+                                Text(String(format: "$%.2f", walletManager.balance))
+                                    .font(.system(size: 14, weight: .semibold))
+                            }
+                            .foregroundColor(.black)
                         }
-                        .foregroundColor(.black)
                     }
                     .accessibilityLabel("Wallet")
                 }
@@ -446,6 +457,8 @@ struct HomeView: View {
                 preparePressSound()
                 // Initialize branch type based on current category
                 branchTypeManager.setTypeFromCategoryIndex(currentIndex)
+                // Load wallet balance
+                walletManager.loadBalance()
             }
             .onDisappear {
                 pressSoundStopTimer?.invalidate()

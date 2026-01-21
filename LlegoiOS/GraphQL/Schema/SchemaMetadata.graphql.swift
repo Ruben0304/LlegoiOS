@@ -63,6 +63,8 @@ public extension LlegoAPI {
       case "ScoredProductType": return LlegoAPI.Objects.ScoredProductType
       case "UserData": return LlegoAPI.Objects.UserData
       case "UserType": return LlegoAPI.Objects.UserType
+      case "WalletBalanceType": return LlegoAPI.Objects.WalletBalanceType
+      case "WalletTransactionType": return LlegoAPI.Objects.WalletTransactionType
       default: return nil
       }
     }

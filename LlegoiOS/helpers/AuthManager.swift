@@ -6,6 +6,7 @@ struct User: Codable, Sendable {
     let id: String
     let email: String
     let fullName: String
+    let username: String
     let phone: String?
     let role: String
     let appleUserId: String?
@@ -13,7 +14,7 @@ struct User: Codable, Sendable {
     let avatarUrl: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, email, fullName, phone, role, appleUserId, avatar, avatarUrl
+        case id, email, fullName, username, phone, role, appleUserId, avatar, avatarUrl
     }
 }
 

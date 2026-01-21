@@ -18,6 +18,9 @@ class ProfileViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var isRefreshingProfile: Bool = false
     @Published var isUploadingAvatar: Bool = false
+    @Published var isUpdatingUsername: Bool = false
+    @Published var showEditUsernameSheet: Bool = false
+    @Published var editingUsername: String = ""
     
     // Recent orders
     @Published var recentOrders: [RecentOrder] = []
@@ -340,6 +343,7 @@ class ProfileViewModel: ObservableObject {
                     id: user.id,
                     email: user.email,
                     fullName: user.fullName,
+                    username: user.username,
                     phone: user.phone,
                     role: user.role,
                     appleUserId: user.appleUserId,
@@ -363,5 +367,64 @@ class ProfileViewModel: ObservableObject {
         }
         
         isUploadingAvatar = false
+    }
+    
+    // MARK: - Update Username
+    
+    /// Update username
+    func updateUsername(newUsername: String) async {
+        guard !isUpdatingUsername else { return }
+        guard !newUsername.isEmpty else {
+            errorMessage = "El username no puede estar vacío"
+            return
+        }
+        
+        isUpdatingUsername = true
+        errorMessage = nil
+        
+        do {
+            guard let jwt = authManager.getAccessToken() else {
+                errorMessage = "No hay sesión activa"
+                isUpdatingUsername = false
+                return
+            }
+            
+            let updatedUser = try await repository.updateUser(
+                jwt: jwt,
+                name: nil,
+                username: newUsername,
+                phone: nil
+            )
+            
+            // Update current user with new username
+            if let user = currentUser {
+                let newUser = User(
+                    id: user.id,
+                    email: user.email,
+                    fullName: user.fullName,
+                    username: updatedUser.username,
+                    phone: user.phone,
+                    role: user.role,
+                    appleUserId: user.appleUserId,
+                    avatar: user.avatar,
+                    avatarUrl: user.avatarUrl
+                )
+                
+                currentUser = newUser
+                authManager.applyCurrentUser(newUser)
+                updateCachedUserInfo(newUser)
+                
+                print("✅ Username actualizado a: \(updatedUser.username)")
+            }
+            
+            showEditUsernameSheet = false
+            editingUsername = ""
+            
+        } catch {
+            errorMessage = "Error al actualizar username: \(error.localizedDescription)"
+            print("❌ Error updating username: \(error)")
+        }
+        
+        isUpdatingUsername = false
     }
 }

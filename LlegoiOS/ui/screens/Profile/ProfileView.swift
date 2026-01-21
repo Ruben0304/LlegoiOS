@@ -236,6 +236,9 @@ struct ProfileView: View {
         .sheet(isPresented: $showingPaymentMethods) {
             PaymentMethodsSheet()
         }
+        .sheet(isPresented: $viewModel.showEditUsernameSheet) {
+            EditUsernameSheet(viewModel: viewModel)
+        }
     }
 
     // MARK: - Loading View
@@ -510,6 +513,34 @@ struct ProfileView: View {
                             .fill(Color.white.opacity(0.9))
                             .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
                     )
+                    
+                    // Username section
+                    Button(action: {
+                        viewModel.editingUsername = viewModel.currentUser?.username ?? ""
+                        viewModel.showEditUsernameSheet = true
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "at")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.llegoPrimary)
+
+                            Text(viewModel.currentUser?.username ?? "")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.gray)
+                            
+                            Image(systemName: "pencil")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(.gray.opacity(0.6))
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 8)
+                        .background(
+                            Capsule()
+                                .fill(Color.white.opacity(0.9))
+                                .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
                 .padding(.bottom, 30)
             }
@@ -1375,4 +1406,130 @@ struct ProfileImagePicker: UIViewControllerRepresentable {
 
 #Preview {
     ProfileView()
+}
+
+
+// MARK: - Edit Username Sheet
+struct EditUsernameSheet: View {
+    @ObservedObject var viewModel: ProfileViewModel
+    @Environment(\.dismiss) private var dismiss
+    @FocusState private var isUsernameFocused: Bool
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                VStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.llegoPrimary.opacity(0.15))
+                            .frame(width: 80, height: 80)
+                        
+                        Image(systemName: "at.circle.fill")
+                            .font(.system(size: 40))
+                            .foregroundColor(.llegoPrimary)
+                    }
+                    
+                    Text("Editar nombre de usuario")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.primary)
+                    
+                    Text("Tu nombre de usuario es único y otros usuarios pueden usarlo para enviarte dinero.")
+                        .font(.system(size: 15))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
+                .padding(.top, 20)
+                
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Nombre de usuario")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                    
+                    HStack(spacing: 8) {
+                        Text("@")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.gray)
+                        
+                        TextField("usuario", text: $viewModel.editingUsername)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled(true)
+                            .font(.system(size: 18, weight: .medium))
+                            .focused($isUsernameFocused)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(.systemGray6))
+                    )
+                    
+                    Text("Solo letras, números, puntos y guiones bajos")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                        .padding(.leading, 4)
+                }
+                .padding(.horizontal)
+                
+                if let errorMessage = viewModel.errorMessage {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(.red)
+                        
+                        Text(errorMessage)
+                            .font(.system(size: 13))
+                            .foregroundColor(.red)
+                    }
+                    .padding(.horizontal)
+                }
+                
+                Button(action: {
+                    Task {
+                        await viewModel.updateUsername(newUsername: viewModel.editingUsername)
+                    }
+                }) {
+                    ZStack {
+                        if viewModel.isUpdatingUsername {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        } else {
+                            HStack(spacing: 10) {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 16, weight: .semibold))
+                                Text("Guardar cambios")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .foregroundColor(.white)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(Color.llegoPrimary)
+                    )
+                }
+                .padding(.horizontal)
+                .padding(.top, 8)
+                .disabled(viewModel.editingUsername.isEmpty || viewModel.isUpdatingUsername)
+                .opacity(viewModel.editingUsername.isEmpty ? 0.6 : 1)
+                
+                Spacer()
+            }
+            .padding(.vertical)
+            .navigationTitle("Editar username")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cerrar") {
+                        dismiss()
+                    }
+                }
+            }
+            .onAppear {
+                isUsernameFocused = true
+            }
+        }
+    }
 }

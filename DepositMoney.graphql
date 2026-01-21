@@ -1,0 +1,16 @@
+mutation DepositMoney($jwt: String!, $input: DepositInput!) {
+  depositMoney(jwt: $jwt, input: $input) {
+    id
+    fromOwnerId
+    fromOwnerType
+    toOwnerId
+    toOwnerType
+    amount
+    currency
+    type
+    status
+    description
+    createdAt
+    completedAt
+  }
+}

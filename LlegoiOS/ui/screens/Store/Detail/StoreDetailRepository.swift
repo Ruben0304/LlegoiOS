@@ -85,7 +85,7 @@ class StoreDetailRepository {
                     name: business.name,
                     socialMedia: Self.parseSocialMedia(business.socialMedia),
                     avatarUrl: business.avatarUrl,
-                    coverUrl: business.coverUrl
+                    coverUrl: business.avatarUrl
                 )
 
                 print("✅ Fetched business detail for ID: \(id)")

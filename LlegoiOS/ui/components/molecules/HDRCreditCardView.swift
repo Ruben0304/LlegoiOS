@@ -136,7 +136,7 @@ struct HDRCreditCardView: View {
                         .foregroundColor(.white.opacity(0.96))
                         .shadow(color: .black.opacity(0.35), radius: 3, x: 0, y: 2)
 
-                    Text(currency.cardSubtitle.uppercased())
+                    Text("")
                         .font(.system(size: subtitleSize, weight: .semibold))
                         .tracking(0.6)
                         .foregroundColor(.white.opacity(0.7))
