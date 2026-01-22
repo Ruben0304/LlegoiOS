@@ -37,10 +37,12 @@ struct HomeView: View {
     @State private var navigateToIntroVideo: Bool = false
     @State private var navigateToLogin: Bool = false
     @State private var navigateToProfile: Bool = false
+    @State private var navigateToOrders: Bool = false
     @State private var navigateToConversationalSearch: Bool = false
     @State private var showingWallet: Bool = false
     @State private var navigateToPlansAndPricing: Bool = false
     @State private var isCheckingAccount: Bool = false
+    @State private var redirectToOrdersAfterLogin: Bool = false
 
     // Carousel state
     @State private var currentIndex: Int = 0
@@ -184,11 +186,11 @@ struct HomeView: View {
                     VStack(alignment: .center, spacing: 0) {
                         Spacer()
                             .frame(height: 60)
-                        
+
                         // Título pequeño a la derecha arriba + Info minimalista
                         HStack(spacing: 0) {
                             Spacer() // Spacer flexible para empujar todo a la derecha
-                            
+
                             VStack(alignment: .trailing, spacing: 16) {
                                 // Título pequeño de la categoría - arriba a la derecha
                                 VStack(alignment: .center, spacing: 2) {
@@ -241,7 +243,7 @@ struct HomeView: View {
                         // Espaciador para empujar el contenido hacia arriba
                         Spacer()
                             .frame(height: 200) // Espacio reducido para subir las flechas
-                        
+
                         // Selector de categorías - justo debajo del modelo 3D
                         HStack(spacing: 10) {
                             // Flecha izquierda
@@ -305,9 +307,9 @@ struct HomeView: View {
                         .padding(.top, -6) // Espacio entre el modelo y las flechas
                         .padding(.bottom, 28) // Más separación con el texto inferior
                         .zIndex(200) // Asegura que las flechas estén sobre el modelo 3D
-                        
+
                         Spacer()
-                        
+
                         // Texto "Manten presionado..."
                         Text("Manten presionado\npara encontrar lo que buscas...")
                             .font(.system(size: 20, weight: .light, design: .rounded))
@@ -365,12 +367,20 @@ struct HomeView: View {
                 LoginView(viewModel: ProfileViewModel()) {
                     navigateToLogin = false
                     DispatchQueue.main.async {
-                        navigateToProfile = true
+                        if redirectToOrdersAfterLogin {
+                            navigateToOrders = true
+                        } else {
+                            navigateToProfile = true
+                        }
+                        redirectToOrdersAfterLogin = false
                     }
                 }
             }
             .navigationDestination(isPresented: $navigateToProfile) {
                 ProfileView()
+            }
+            .navigationDestination(isPresented: $navigateToOrders) {
+                OrderListView()
             }
             .navigationDestination(isPresented: $navigateToPlansAndPricing) {
                 PlansAndPricingView()
@@ -398,12 +408,31 @@ struct HomeView: View {
 
                 ToolbarSpacer(.fixed,placement: .navigationBarTrailing)
                 ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        guard authManager.getAccessToken() != nil else {
+                            redirectToOrdersAfterLogin = true
+                            authManager.signOut()
+                            navigateToLogin = true
+                            return
+                        }
+                        navigateToOrders = true
+                    }) {
+                        Image(systemName: "bag")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.black)
+                    }
+                    .accessibilityLabel("Pedidos")
+                }
+
+                ToolbarSpacer(.fixed,placement: .navigationBarTrailing)
+                ToolbarItem(placement: .navigationBarTrailing) {
                 // Avatar
                 Button(action: {
                     let impact = UIImpactFeedbackGenerator(style: .light)
                     impact.impactOccurred()
                     guard !isCheckingAccount else { return }
                     guard authManager.getAccessToken() != nil else {
+                        redirectToOrdersAfterLogin = false
                         authManager.signOut()
                         navigateToLogin = true
                         return
@@ -656,4 +685,3 @@ struct Feature: Identifiable {
     let title: String
     let subtitle: String
 }
-

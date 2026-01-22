@@ -2,34 +2,44 @@ import SwiftUI
 
 struct OrderDetailView: View {
     @StateObject private var viewModel: OrderDetailViewModel
+    @StateObject private var gradientManager = GradientStateManager.shared
     @State private var showCancelAlert = false
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dismiss) private var dismiss
+    var onDismiss: (() -> Void)?
 
-    init(orderId: String) {
+    init(orderId: String, onDismiss: (() -> Void)? = nil) {
         _viewModel = StateObject(wrappedValue: OrderDetailViewModel(orderId: orderId))
+        self.onDismiss = onDismiss
     }
 
     var body: some View {
         ZStack {
-            Color.llegoBackground.ignoresSafeArea()
+            // Fondo gradiente sutil similar a ProductFeedView
+            orderGradientBackground
+                .ignoresSafeArea()
+                .animation(.easeInOut(duration: 0.8), value: gradientManager.currentCategoryIndex)
 
             ScrollView {
                 if viewModel.isLoading {
                     ProgressView()
-                        .padding(.top, 40)
+                        .tint(gradientManager.currentAccentColor)
+                        .scaleEffect(1.2)
+                        .padding(.top, 100)
                 } else if let order = viewModel.order {
-                    VStack(spacing: 18) {
+                    VStack(spacing: 16) {
                         headerSection(order)
                         itemsSection(order)
                         if !order.comments.isEmpty {
                             commentsSection(order)
                         }
                         pricingSection(order)
-                        deliverySection(order)
+                        paymentSection(order)
                         if !order.timeline.isEmpty {
                             timelineSection(order)
                         }
                     }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, 16)
                     .padding(.top, 12)
                     .padding(.bottom, 100)
                 } else if let errorMessage = viewModel.errorMessage {
@@ -39,14 +49,19 @@ struct OrderDetailView: View {
                             .foregroundColor(.orange)
                         Text(errorMessage)
                             .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 32)
                         Button("Reintentar") { viewModel.load() }
-                            .buttonStyle(.bordered)
+                            .frame(height: 48)
+                            .frame(maxWidth: 200)
+                            .buttonStyle(.glassProminent)
+                            .tint(gradientManager.currentAccentColor)
                     }
-                    .padding(.top, 40)
+                    .padding(.top, 100)
                 }
             }
             .refreshable { viewModel.refresh() }
-            
+
             // Bottom action buttons
             if let order = viewModel.order {
                 VStack {
@@ -59,35 +74,78 @@ struct OrderDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .alert("Cancelar Pedido", isPresented: $showCancelAlert) {
             Button("No", role: .cancel) { }
-            Button("Sí, cancelar", role: .destructive) { viewModel.cancelOrder() }
+            Button("Sí, cancelar", role: .destructive) { 
+                viewModel.cancelOrder {
+                    onDismiss?()
+                    dismiss()
+                }
+            }
         } message: {
             Text("¿Estás seguro de que deseas cancelar este pedido?")
         }
+        .alert("Pago", isPresented: $viewModel.showPaymentAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(viewModel.paymentAlertMessage ?? "Error al procesar el pago.")
+        }
+        .background(
+            StripePaymentSheetPresenter(
+                isPresented: $viewModel.showStripePaymentSheet,
+                paymentSheet: viewModel.paymentSheet,
+                onCompletion: viewModel.handleStripePaymentResult
+            )
+        )
     }
 
+    // MARK: - Order Gradient Background
+    private var orderGradientBackground: some View {
+        let palette = gradientManager.getCurrentGradientPalette()
+
+        return ZStack {
+            // Base color - muy suave
+            palette.veryLight
+                .opacity(0.3)
+
+            // Gradiente sutil
+            RadialGradient(
+                gradient: Gradient(stops: [
+                    .init(color: palette.light.opacity(0.12), location: 0.0),
+                    .init(color: palette.veryLight.opacity(0.25), location: 0.4),
+                    .init(color: Color.feedBackground(colorScheme).opacity(0.98), location: 1.0)
+                ]),
+                center: UnitPoint(x: 0.85, y: 0.15),
+                startRadius: 10,
+                endRadius: 600
+            )
+        }
+    }
 
     // MARK: - Header Section
-    
+
     private func headerSection(_ order: OrderDetail) -> some View {
         card {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top, spacing: 12) {
                     // Store image
                     AsyncImage(url: URL(string: order.branchImageUrl ?? "")) { image in
                         image.resizable().aspectRatio(contentMode: .fill)
                     } placeholder: {
-                        Image(systemName: "storefront")
-                            .foregroundColor(.gray)
+                        ZStack {
+                            gradientManager.currentAccentColor.opacity(0.1)
+                            Image(systemName: "storefront")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundColor(gradientManager.currentAccentColor)
+                        }
                     }
-                    .frame(width: 48, height: 48)
-                    .background(Color.gray.opacity(0.1))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .frame(width: 56, height: 56)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(order.branchName)
-                            .font(.headline)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                         Text(order.orderNumber)
-                            .font(.caption)
+                            .font(.system(size: 13))
                             .foregroundColor(.secondary)
                     }
 
@@ -97,26 +155,30 @@ struct OrderDetailView: View {
 
                 Divider()
 
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 16) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text("Total")
-                            .font(.caption)
+                            .font(.system(size: 13))
                             .foregroundColor(.secondary)
                         Text(order.formattedTotal)
-                            .font(.title2)
-                            .fontWeight(.bold)
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                     }
-                    
+
                     Spacer()
-                    
+
                     if let eta = order.estimatedMinutesRemaining {
-                        VStack(alignment: .trailing, spacing: 2) {
+                        VStack(alignment: .trailing, spacing: 4) {
                             Text("Tiempo estimado")
-                                .font(.caption)
+                                .font(.system(size: 13))
                                 .foregroundColor(.secondary)
-                            Text("\(eta) min")
-                                .font(.headline)
-                                .foregroundColor(.llegoPrimary)
+                            HStack(spacing: 4) {
+                                Image(systemName: "clock.fill")
+                                    .font(.system(size: 14))
+                                Text("\(eta) min")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                            .foregroundColor(gradientManager.currentAccentColor)
                         }
                     }
                 }
@@ -125,26 +187,29 @@ struct OrderDetailView: View {
     }
 
     // MARK: - Items Section
-    
+
     private func itemsSection(_ order: OrderDetail) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
                 Text("Items")
-                    .font(.headline)
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 if order.isEditable {
                     Text("• Editable")
-                        .font(.caption)
-                        .foregroundColor(.blue)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(gradientManager.currentAccentColor)
                 }
                 Spacer()
             }
+            .padding(.horizontal, 2)
 
             card {
                 VStack(spacing: 0) {
                     ForEach(Array(order.items.enumerated()), id: \.element.id) { index, item in
                         itemRow(item)
                         if index != order.items.count - 1 {
-                            Divider().padding(.leading, 52)
+                            Divider()
+                                .padding(.leading, 56)
                         }
                     }
                 }
@@ -157,55 +222,62 @@ struct OrderDetailView: View {
             AsyncImage(url: URL(string: item.imageUrl ?? "")) { image in
                 image.resizable().aspectRatio(contentMode: .fill)
             } placeholder: {
-                Color.gray.opacity(0.2)
+                ZStack {
+                    Color.gray.opacity(0.1)
+                    Image(systemName: "photo")
+                        .font(.system(size: 16))
+                        .foregroundColor(.gray)
+                }
             }
-            .frame(width: 40, height: 40)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .frame(width: 48, height: 48)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Text(item.name)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                     if item.wasModifiedByStore {
                         Text("Modificado")
-                            .font(.caption2)
+                            .font(.system(size: 10, weight: .semibold))
                             .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.blue.opacity(0.15))
-                            .foregroundColor(.blue)
-                            .cornerRadius(4)
+                            .padding(.vertical, 3)
+                            .background(gradientManager.currentAccentColor.opacity(0.15))
+                            .foregroundColor(gradientManager.currentAccentColor)
+                            .clipShape(Capsule())
                     }
                 }
                 Text("x\(item.quantity)")
-                    .font(.caption)
+                    .font(.system(size: 13))
                     .foregroundColor(.secondary)
             }
 
             Spacer()
 
             Text(item.formattedLineTotal)
-                .font(.subheadline)
-                .fontWeight(.semibold)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(Color.adaptiveOnSurface(colorScheme))
         }
-        .padding(.vertical, 10)
+        .padding(.vertical, 12)
     }
 
 
     // MARK: - Pricing Section
-    
+
     private func pricingSection(_ order: OrderDetail) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Resumen")
-                .font(.headline)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                .padding(.horizontal, 2)
 
             card {
-                VStack(spacing: 10) {
+                VStack(spacing: 12) {
                     priceRow(title: "Subtotal", value: order.formattedSubtotal)
                     priceRow(title: "Envío", value: order.formattedDeliveryFee)
 
                     ForEach(order.discounts) { discount in
-                        priceRow(title: discount.title, value: discount.formattedAmount, valueColor: .green)
+                        priceRow(title: discount.title, value: discount.formattedAmount, valueColor: gradientManager.currentAccentColor)
                     }
 
                     Divider()
@@ -215,124 +287,115 @@ struct OrderDetailView: View {
         }
     }
 
-    private func priceRow(title: String, value: String, valueColor: Color = .primary, isEmphasis: Bool = false) -> some View {
-        HStack {
-            Text(title)
-                .font(isEmphasis ? .subheadline : .caption)
-                .fontWeight(isEmphasis ? .semibold : .regular)
-                .foregroundColor(.secondary)
-            Spacer()
-            Text(value)
-                .font(isEmphasis ? .headline : .subheadline)
-                .fontWeight(isEmphasis ? .bold : .medium)
-                .foregroundColor(valueColor)
-        }
-    }
+    // MARK: - Payment Section
 
-    // MARK: - Delivery Section
-    
-    private func deliverySection(_ order: OrderDetail) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Entrega")
-                .font(.headline)
+    private func paymentSection(_ order: OrderDetail) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Pago")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                .padding(.horizontal, 2)
 
             card {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(spacing: 12) {
                     HStack(spacing: 12) {
-                        Image(systemName: "mappin.circle.fill")
-                            .foregroundColor(.llegoPrimary)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(order.deliveryAddress.street)
-                                .font(.subheadline)
-                            if let city = order.deliveryAddress.city {
-                                Text(city)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-
-                    if let deliveryPerson = order.deliveryPerson {
-                        Divider()
-                        HStack(spacing: 12) {
-                            AsyncImage(url: URL(string: deliveryPerson.profileImageUrl ?? "")) { image in
-                                image.resizable().aspectRatio(contentMode: .fill)
-                            } placeholder: {
-                                Image(systemName: "person.circle.fill")
-                                    .foregroundColor(.gray)
-                            }
+                        Image(systemName: paymentIconName(for: viewModel.paymentMethod, fallback: order.paymentMethod))
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(gradientManager.currentAccentColor)
                             .frame(width: 44, height: 44)
+                            .background(gradientManager.currentAccentColor.opacity(0.12))
                             .clipShape(Circle())
 
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(deliveryPerson.name)
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                HStack(spacing: 4) {
-                                    Image(systemName: "star.fill")
-                                        .font(.caption2)
-                                        .foregroundColor(.yellow)
-                                    Text(deliveryPerson.formattedRating)
-                                        .font(.caption)
-                                    Text("• \(deliveryPerson.vehicleType)")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-
-                            Spacer()
-
-                            Button {
-                                if let url = URL(string: "tel:\(deliveryPerson.phone)") {
-                                    UIApplication.shared.open(url)
-                                }
-                            } label: {
-                                Image(systemName: "phone.fill")
-                                    .foregroundColor(.white)
-                                    .padding(10)
-                                    .background(Color.llegoPrimary)
-                                    .clipShape(Circle())
-                            }
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(paymentMethodLabel(order))
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                            Text(paymentStatusText(order.paymentStatus))
+                                .font(.system(size: 13))
+                                .foregroundColor(.secondary)
                         }
+
+                        Spacer()
+                        paymentStatusBadge(order.paymentStatus)
+                    }
+
+                    if viewModel.isLoadingPaymentMethod {
+                        ProgressView()
+                            .tint(gradientManager.currentAccentColor)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else if viewModel.paymentMethod == nil {
+                        Text("Método de pago no disponible.")
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+
+                    if viewModel.canInitiatePayment(for: order) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "info.circle.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(gradientManager.currentAccentColor)
+                            Text("Debes completar el pago para que el negocio continúe con tu pedido.")
+                                .font(.system(size: 13))
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(gradientManager.currentAccentColor.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
                 }
             }
         }
     }
 
+    private func priceRow(title: String, value: String, valueColor: Color? = nil, isEmphasis: Bool = false) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: isEmphasis ? 15 : 14, weight: isEmphasis ? .semibold : .regular))
+                .foregroundColor(isEmphasis ? Color.adaptiveOnSurface(colorScheme) : .secondary)
+            Spacer()
+            Text(value)
+                .font(.system(size: isEmphasis ? 18 : 15, weight: isEmphasis ? .bold : .semibold))
+                .foregroundColor(valueColor ?? Color.adaptiveOnSurface(colorScheme))
+        }
+    }
 
     // MARK: - Timeline Section
-    
+
     private func timelineSection(_ order: OrderDetail) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Timeline")
-                .font(.headline)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                .padding(.horizontal, 2)
 
             card {
                 VStack(spacing: 0) {
                     ForEach(Array(order.timeline.enumerated()), id: \.element.id) { index, event in
-                        HStack(alignment: .top, spacing: 12) {
+                        HStack(alignment: .top, spacing: 14) {
                             VStack(spacing: 0) {
                                 Circle()
                                     .fill(event.status.color)
-                                    .frame(width: 12, height: 12)
+                                    .frame(width: 14, height: 14)
                                 if index < order.timeline.count - 1 {
                                     Rectangle()
-                                        .fill(Color.gray.opacity(0.3))
+                                        .fill(Color.gray.opacity(0.25))
                                         .frame(width: 2)
                                         .frame(maxHeight: .infinity)
                                 }
                             }
-                            .frame(width: 12)
+                            .frame(width: 14)
 
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(event.message)
-                                    .font(.subheadline)
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                                 Text(event.formattedDate)
-                                    .font(.caption)
+                                    .font(.system(size: 13))
                                     .foregroundColor(.secondary)
                             }
-                            .padding(.bottom, index < order.timeline.count - 1 ? 16 : 0)
+                            .padding(.bottom, index < order.timeline.count - 1 ? 18 : 0)
 
                             Spacer()
                         }
@@ -343,14 +406,16 @@ struct OrderDetailView: View {
     }
 
     // MARK: - Comments Section
-    
+
     private func commentsSection(_ order: OrderDetail) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Comentarios")
-                .font(.headline)
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                .padding(.horizontal, 2)
 
             card {
-                VStack(spacing: 10) {
+                VStack(spacing: 12) {
                     ForEach(order.comments) { comment in
                         commentBubble(comment)
                     }
@@ -365,15 +430,18 @@ struct OrderDetailView: View {
 
             VStack(alignment: comment.author == .customer ? .leading : .trailing, spacing: 4) {
                 Text(comment.message)
-                    .font(.subheadline)
+                    .font(.system(size: 14))
+                    .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 Text(comment.formattedTime)
-                    .font(.caption2)
+                    .font(.system(size: 12))
                     .foregroundColor(.secondary)
             }
             .padding(12)
             .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(comment.author == .customer ? Color.gray.opacity(0.1) : Color.blue.opacity(0.1))
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(comment.author == .customer
+                          ? Color.gray.opacity(colorScheme == .dark ? 0.2 : 0.1)
+                          : gradientManager.currentAccentColor.opacity(0.15))
             )
 
             if comment.author == .customer { Spacer(minLength: 40) }
@@ -381,80 +449,176 @@ struct OrderDetailView: View {
     }
 
     // MARK: - Bottom Actions
-    
+
     private func bottomActions(_ order: OrderDetail) -> some View {
         VStack(spacing: 0) {
             Divider()
-            HStack(spacing: 12) {
-                if order.canCancel {
+                .background(Color.gray.opacity(0.2))
+            HStack(spacing: 10) {
+                let shouldShowPay = viewModel.canInitiatePayment(for: order)
+                let shouldShowAccept = order.status == .modifiedByStore
+
+                if order.canCancel && !shouldShowPay {
                     Button {
                         showCancelAlert = true
                     } label: {
                         Text("Cancelar")
-                            .fontWeight(.semibold)
+                            .font(.system(size: 16, weight: .semibold))
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(Color.red.opacity(0.1))
-                            .foregroundColor(.red)
-                            .cornerRadius(12)
+                            .frame(height: 52)
                     }
+                    .buttonStyle(.glassProminent)
+                    .tint(.red)
                 }
 
-                if order.status == .modifiedByStore {
+                if shouldShowAccept && !shouldShowPay {
                     Button {
-                        viewModel.acceptModifications()
+                        viewModel.acceptModifications {
+                            onDismiss?()
+                            dismiss()
+                        }
                     } label: {
                         Text("Aceptar cambios")
-                            .fontWeight(.semibold)
+                            .font(.system(size: 16, weight: .semibold))
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(Color.llegoPrimary)
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
+                            .frame(height: 52)
                     }
+                    .buttonStyle(.glassProminent)
+                    .tint(gradientManager.currentAccentColor)
+                }
+
+                if shouldShowPay {
+                    Button {
+                        viewModel.initiatePayment()
+                    } label: {
+                        HStack(spacing: 10) {
+                            if viewModel.isInitiatingPayment {
+                                ProgressView()
+                                    .tint(.white)
+                            } else {
+                                Image(systemName: paymentIconName(for: viewModel.paymentMethod, fallback: order.paymentMethod))
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                            Text("Pagar \(order.formattedTotal)")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                    }
+                    .buttonStyle(.glassProminent)
+                    .tint(gradientManager.currentAccentColor)
+                    .disabled(viewModel.isInitiatingPayment || viewModel.isProcessing)
                 }
 
                 if order.status == .onTheWay || order.status == .preparing {
                     NavigationLink(destination: OrderTrackingView(orderId: order.id)) {
                         Text("Ver tracking")
-                            .fontWeight(.semibold)
+                            .font(.system(size: 16, weight: .semibold))
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(Color.llegoPrimary)
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
+                            .frame(height: 52)
                     }
+                    .buttonStyle(.glassProminent)
+                    .tint(gradientManager.currentAccentColor)
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
-            .background(Color.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(.ultraThinMaterial)
         }
     }
 
     // MARK: - Helpers
+
+    private func paymentMethodLabel(_ order: OrderDetail) -> String {
+        if let method = viewModel.paymentMethod {
+            return method.name
+        }
+        return order.paymentMethod.uppercased()
+    }
+
+    private func paymentStatusText(_ status: PaymentStatusEnum) -> String {
+        switch status {
+        case .pending:
+            return "Pago pendiente"
+        case .validated:
+            return "Pago validado"
+        case .completed:
+            return "Pagado"
+        case .failed:
+            return "Pago fallido"
+        }
+    }
+
+    private func paymentStatusBadge(_ status: PaymentStatusEnum) -> some View {
+        let (text, color): (String, Color) = {
+            switch status {
+            case .pending:
+                return ("Pendiente", .orange)
+            case .validated:
+                return ("Validado", gradientManager.currentAccentColor)
+            case .completed:
+                return ("Pagado", .green)
+            case .failed:
+                return ("Fallido", .red)
+            }
+        }()
+
+        return Text(text)
+            .font(.system(size: 11, weight: .bold))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(color.opacity(0.15))
+            .foregroundColor(color)
+            .clipShape(Capsule())
+    }
+
+    private func paymentIconName(for method: PaymentMethodModel?, fallback: String) -> String {
+        if let method = method {
+            switch method.method.lowercased() {
+            case "wallet":
+                return "wallet.pass.fill"
+            case "stripe", "card":
+                return "creditcard.fill"
+            case "cash":
+                return "banknote.fill"
+            default:
+                break
+            }
+        }
+
+        let normalized = fallback.lowercased()
+        if normalized.contains("wallet") {
+            return "wallet.pass.fill"
+        }
+        if normalized.contains("stripe") {
+            return "creditcard.fill"
+        }
+
+        return "creditcard.fill"
+    }
     
     private func statusBadge(_ status: OrderStatusEnum) -> some View {
         HStack(spacing: 4) {
             Image(systemName: status.icon)
-                .font(.caption2)
+                .font(.system(size: 11, weight: .bold))
             Text(status.displayName)
-                .font(.caption)
-                .fontWeight(.medium)
+                .font(.system(size: 12, weight: .bold))
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(status.color.opacity(0.15))
         .foregroundColor(status.color)
-        .cornerRadius(12)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         content()
             .padding(16)
-            .background(Color.white)
-            .cornerRadius(16)
-            .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.cardBackground(colorScheme))
+                    .shadow(color: .black.opacity(colorScheme == .dark ? 0.3 : 0.08), radius: 10, x: 0, y: 4)
+            )
     }
 }
 

@@ -21,6 +21,7 @@ struct ProfileView: View {
     @State private var didTriggerRefresh = false
     @State private var showingImagePicker = false
     @State private var selectedImage: UIImage?
+    @State private var selectedOrderId: String = ""
     private let defaultCustomerLevel: CustomerLevel = .gold
     private let defaultCurrentPoints: Int = 847
     private let defaultNextLevelPoints: Int = 1000
@@ -81,6 +82,26 @@ struct ProfileView: View {
         }
         .sheet(isPresented: $showingImagePicker) {
             ProfileImagePicker(image: $selectedImage)
+        }
+        .fullScreenCover(isPresented: Binding(
+            get: { !selectedOrderId.isEmpty },
+            set: { if !$0 { selectedOrderId = "" } }
+        )) {
+            NavigationStack {
+                OrderDetailView(orderId: selectedOrderId) {
+                    // Recargar los pedidos recientes cuando se cierra el detalle
+                    Task {
+                        await viewModel.loadRecentOrders()
+                    }
+                }
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        CloseButton {
+                            selectedOrderId = ""
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -839,7 +860,9 @@ struct ProfileView: View {
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(orders.enumerated()), id: \.element.id) { index, order in
-                        NavigationLink(destination: OrderDetailView(orderId: order.id)) {
+                        Button {
+                            selectedOrderId = order.id
+                        } label: {
                             minimalOrderRow(order, isLast: index == orders.count - 1)
                         }
                         .buttonStyle(.plain)

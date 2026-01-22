@@ -1,16 +1,28 @@
 import Foundation
 import Combine
+import PassKit
+import StripePaymentSheet
 
 @MainActor
 final class OrderDetailViewModel: ObservableObject {
     @Published var order: OrderDetail?
     @Published var isLoading = false
     @Published var isProcessing = false
+    @Published var isInitiatingPayment = false
     @Published var errorMessage: String?
     @Published var successMessage: String?
+    @Published var paymentAlertMessage: String?
+    @Published var showPaymentAlert = false
     @Published var newComment: String = ""
+    @Published var paymentMethod: PaymentMethodModel?
+    @Published var isLoadingPaymentMethod = false
+    @Published var paymentSheet: PaymentSheet?
+    @Published var showStripePaymentSheet = false
 
     private let repository = OrderDetailRepository()
+    private let paymentRepository = PaymentRepository()
+    private let paymentMethodManager = PaymentMethodManager.shared
+    private let authManager = AuthManager.shared
     private let orderId: String
 
     init(orderId: String) {
@@ -32,6 +44,7 @@ final class OrderDetailViewModel: ObservableObject {
                 switch result {
                 case .success(let detail):
                     self.order = detail
+                    self.loadPaymentMethodIfNeeded(for: detail)
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                 }
@@ -47,7 +60,7 @@ final class OrderDetailViewModel: ObservableObject {
 
     // MARK: - Accept Modifications
     
-    func acceptModifications() {
+    func acceptModifications(onSuccess: @escaping @Sendable () -> Void = {}) {
         guard let order = order, order.status == .modifiedByStore else { return }
         
         isProcessing = true
@@ -62,6 +75,7 @@ final class OrderDetailViewModel: ObservableObject {
                 case .success(let updatedOrder):
                     self.order = updatedOrder
                     self.successMessage = "Modificaciones aceptadas"
+                    onSuccess()
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                 }
@@ -71,7 +85,7 @@ final class OrderDetailViewModel: ObservableObject {
 
     // MARK: - Cancel Order
     
-    func cancelOrder(reason: String? = nil) {
+    func cancelOrder(reason: String? = nil, onSuccess: @escaping @Sendable () -> Void = {}) {
         guard let order = order, order.canCancel else { return }
         
         isProcessing = true
@@ -86,6 +100,7 @@ final class OrderDetailViewModel: ObservableObject {
                 case .success(let updatedOrder):
                     self.order = updatedOrder
                     self.successMessage = "Pedido cancelado"
+                    onSuccess()
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                 }
@@ -115,6 +130,177 @@ final class OrderDetailViewModel: ObservableObject {
                 }
             }
         }
+    }
+
+    // MARK: - Payment Flow
+
+    func initiatePayment() {
+        guard let order = order else { return }
+        guard let method = paymentMethod else {
+            showPaymentAlertMessage("Método de pago no disponible.")
+            return
+        }
+
+        let methodType = method.method.lowercased()
+        guard ["wallet", "stripe"].contains(methodType) else {
+            showPaymentAlertMessage("Este método de pago aún no está disponible.")
+            return
+        }
+
+        guard let jwt = authManager.getAccessToken() else {
+            showPaymentAlertMessage("No hay sesión activa.")
+            return
+        }
+
+        isInitiatingPayment = true
+
+        Task {
+            do {
+                let result = try await paymentRepository.initiatePayment(
+                    orderId: order.id,
+                    paymentMethodId: method.id,
+                    jwt: jwt,
+                    includeDeliveryFee: true
+                )
+
+                await MainActor.run {
+                    self.isInitiatingPayment = false
+                }
+
+                if methodType == "wallet" {
+                    handleWalletPaymentResult(result.paymentAttempt)
+                } else {
+                    try await presentStripePaymentSheet(using: result.paymentAttempt)
+                }
+            } catch {
+                await MainActor.run {
+                    self.isInitiatingPayment = false
+                }
+                showPaymentAlertMessage(error.localizedDescription)
+            }
+        }
+    }
+
+    func handleStripePaymentResult(_ result: PaymentSheetResult) {
+        switch result {
+        case .completed:
+            showPaymentAlertMessage("Pago completado. Estamos confirmando la transacción.")
+            refreshAfterPayment()
+        case .canceled:
+            showPaymentAlertMessage("Pago cancelado.")
+        case .failed(let error):
+            showPaymentAlertMessage("Error en el pago: \(error.localizedDescription)")
+        }
+
+        paymentSheet = nil
+    }
+
+    func canInitiatePayment(for order: OrderDetail) -> Bool {
+        guard let method = paymentMethod else { return false }
+        let statusAllowsPayment = order.status == .accepted || order.status == .modifiedByStore
+        let needsPayment = order.paymentStatus != .completed
+        let methodType = method.method.lowercased()
+        return statusAllowsPayment && needsPayment && ["wallet", "stripe"].contains(methodType)
+    }
+
+    private func handleWalletPaymentResult(_ attempt: PaymentAttemptModel) {
+        switch attempt.status.lowercased() {
+        case "completed":
+            showPaymentAlertMessage("Pago confirmado con Wallet.")
+            refreshAfterPayment()
+        case "failed":
+            showPaymentAlertMessage("Pago rechazado. Intenta nuevamente.")
+        default:
+            showPaymentAlertMessage("Pago en proceso. Te avisaremos cuando se confirme.")
+            refreshAfterPayment()
+        }
+    }
+
+    private func presentStripePaymentSheet(using attempt: PaymentAttemptModel) async throws {
+        guard let clientSecret = attempt.stripeClientSecret else {
+            throw NSError(
+                domain: "OrderDetailViewModel",
+                code: -6,
+                userInfo: [NSLocalizedDescriptionKey: "No se recibió el client secret de Stripe."]
+            )
+        }
+
+        var configuration = PaymentSheet.Configuration()
+        configuration.merchantDisplayName = "Llego"
+        configuration.allowsDelayedPaymentMethods = true
+        configuration.returnURL = StripeConfig.returnURL
+
+        if StripeConfig.enableApplePay, PKPaymentAuthorizationController.canMakePayments() {
+            configuration.applePay = .init(
+                merchantId: StripeConfig.applePayMerchantId,
+                merchantCountryCode: StripeConfig.merchantCountryCode
+            )
+        }
+
+        self.paymentSheet = PaymentSheet(
+            paymentIntentClientSecret: clientSecret,
+            configuration: configuration
+        )
+        self.showStripePaymentSheet = true
+    }
+
+    private func refreshAfterPayment() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 700_000_000)
+            self.refresh()
+        }
+    }
+
+    private func showPaymentAlertMessage(_ message: String) {
+        Task { @MainActor in
+            self.paymentAlertMessage = message
+            self.showPaymentAlert = true
+        }
+    }
+
+    private func loadPaymentMethodIfNeeded(for order: OrderDetail) {
+        guard paymentMethod?.code.lowercased() != order.paymentMethod.lowercased() else { return }
+
+        isLoadingPaymentMethod = true
+
+        Task {
+            do {
+                let methods = try await paymentMethodManager.fetchPaymentMethods()
+                let resolved = resolvePaymentMethod(from: methods, code: order.paymentMethod)
+
+                await MainActor.run {
+                    self.paymentMethod = resolved
+                    self.isLoadingPaymentMethod = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.isLoadingPaymentMethod = false
+                    self.paymentMethod = nil
+                }
+            }
+        }
+    }
+
+    private func resolvePaymentMethod(from methods: [PaymentMethodModel], code: String) -> PaymentMethodModel? {
+        let normalized = code.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        if let exact = methods.first(where: { $0.code.lowercased() == normalized }) {
+            return exact
+        }
+
+        if let byMethod = methods.first(where: { $0.method.lowercased() == normalized }) {
+            return byMethod
+        }
+
+        if normalized.contains("wallet") {
+            return methods.first(where: { $0.method.lowercased() == "wallet" })
+        }
+
+        if normalized.contains("stripe") {
+            return methods.first(where: { $0.method.lowercased() == "stripe" })
+        }
+
+        return nil
     }
 
     // MARK: - Formatting Helpers

@@ -2,12 +2,16 @@ import SwiftUI
 
 struct OrderListView: View {
     @StateObject private var viewModel = OrderListViewModel()
+    @StateObject private var gradientManager = GradientStateManager.shared
     @Environment(\.colorScheme) private var colorScheme
+    @State private var selectedOrderId: String = ""
 
     var body: some View {
         ZStack {
-            // Background
-            Color.llegoBackground.ignoresSafeArea()
+            // Fondo gradiente sutil
+            orderGradientBackground
+                .ignoresSafeArea()
+                .animation(.easeInOut(duration: 0.8), value: gradientManager.currentCategoryIndex)
 
             if viewModel.isLoading && viewModel.orders.isEmpty {
                 loadingView
@@ -26,6 +30,47 @@ struct OrderListView: View {
                 viewModel.loadOrders()
             }
         }
+        .fullScreenCover(isPresented: Binding(
+            get: { !selectedOrderId.isEmpty },
+            set: { if !$0 { selectedOrderId = "" } }
+        )) {
+            NavigationStack {
+                OrderDetailView(orderId: selectedOrderId) {
+                    // Recargar la lista cuando se cierra el detalle
+                    viewModel.refresh()
+                }
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        CloseButton {
+                            selectedOrderId = ""
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Order Gradient Background
+    private var orderGradientBackground: some View {
+        let palette = gradientManager.getCurrentGradientPalette()
+
+        return ZStack {
+            // Base color - muy suave
+            palette.veryLight
+                .opacity(0.3)
+
+            // Gradiente sutil
+            RadialGradient(
+                gradient: Gradient(stops: [
+                    .init(color: palette.light.opacity(0.12), location: 0.0),
+                    .init(color: palette.veryLight.opacity(0.25), location: 0.4),
+                    .init(color: Color.feedBackground(colorScheme).opacity(0.98), location: 1.0)
+                ]),
+                center: UnitPoint(x: 0.85, y: 0.15),
+                startRadius: 10,
+                endRadius: 600
+            )
+        }
     }
 
     // MARK: - Loading View
@@ -34,7 +79,7 @@ struct OrderListView: View {
         VStack(spacing: 20) {
             ProgressView()
                 .scaleEffect(1.2)
-                .tint(.llegoPrimary)
+                .tint(gradientManager.currentAccentColor)
 
             Text("Cargando pedidos...")
                 .font(.system(size: 15, weight: .medium))
@@ -59,7 +104,7 @@ struct OrderListView: View {
             VStack(spacing: 8) {
                 Text("Algo salió mal")
                     .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
+                    .foregroundColor(Color.adaptiveOnSurface(colorScheme))
 
                 Text(message)
                     .font(.system(size: 15, weight: .medium))
@@ -77,12 +122,11 @@ struct OrderListView: View {
                     Text("Reintentar")
                         .font(.system(size: 15, weight: .bold, design: .rounded))
                 }
-                .foregroundColor(.white)
                 .frame(height: 48)
                 .frame(maxWidth: 200)
             }
             .buttonStyle(.glassProminent)
-            .tint(.llegoPrimary)
+            .tint(gradientManager.currentAccentColor)
         }
         .padding()
     }
@@ -93,30 +137,18 @@ struct OrderListView: View {
         VStack(spacing: 24) {
             ZStack {
                 Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.llegoPrimary.opacity(0.15), Color.llegoAccent.opacity(0.1)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .fill(gradientManager.currentAccentColor.opacity(0.12))
                     .frame(width: 120, height: 120)
 
                 Image(systemName: "bag.fill")
                     .font(.system(size: 50, weight: .medium))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [Color.llegoPrimary, Color.llegoAccent],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .foregroundColor(gradientManager.currentAccentColor)
             }
 
             VStack(spacing: 8) {
                 Text("Sin pedidos aún")
                     .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
+                    .foregroundColor(Color.adaptiveOnSurface(colorScheme))
 
                 Text("Tus pedidos aparecerán aquí una vez que realices tu primera compra")
                     .font(.system(size: 15, weight: .medium))
@@ -134,12 +166,11 @@ struct OrderListView: View {
                     Text("Explorar tiendas")
                         .font(.system(size: 15, weight: .bold, design: .rounded))
                 }
-                .foregroundColor(.white)
                 .frame(height: 48)
                 .frame(maxWidth: 220)
             }
             .buttonStyle(.glassProminent)
-            .tint(.llegoPrimary)
+            .tint(gradientManager.currentAccentColor)
         }
         .padding()
     }
@@ -158,7 +189,9 @@ struct OrderListView: View {
                 // Orders list
                 VStack(spacing: 14) {
                     ForEach(viewModel.orders) { order in
-                        NavigationLink(destination: OrderDetailView(orderId: order.id)) {
+                        Button {
+                            selectedOrderId = order.id
+                        } label: {
                             RecentOrderCard(order: order)
                         }
                         .buttonStyle(.plain)
@@ -173,7 +206,7 @@ struct OrderListView: View {
                     HStack(spacing: 12) {
                         ProgressView()
                             .scaleEffect(0.9)
-                            .tint(.llegoPrimary)
+                            .tint(gradientManager.currentAccentColor)
 
                         Text("Cargando más...")
                             .font(.system(size: 14, weight: .medium))
@@ -196,6 +229,7 @@ struct OrderListView: View {
 struct OrderStatusFilterView: View {
     @Binding var selectedStatus: OrderStatusEnum?
     let onSelect: (OrderStatusEnum?) -> Void
+    @StateObject private var gradientManager = GradientStateManager.shared
     @Environment(\.colorScheme) private var colorScheme
 
     private let statuses: [(OrderStatusEnum?, String, String)] = [
@@ -208,50 +242,44 @@ struct OrderStatusFilterView: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
+            HStack(spacing: 12) {
                 ForEach(statuses, id: \.1) { status, label, icon in
                     filterChip(status: status, label: label, icon: icon)
                 }
             }
             .padding(.horizontal, 20)
+            .padding(.vertical, 4)
         }
     }
 
     private func filterChip(status: OrderStatusEnum?, label: String, icon: String) -> some View {
         Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 onSelect(status)
             }
         } label: {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 12, weight: .semibold))
-
+            HStack(spacing: 8) {
+                Image(systemName: selectedStatus == status ? "checkmark" : icon)
+                    .fontWeight(.semibold)
+                    .font(.system(size: 14))
                 Text(label)
-                    .font(.system(size: 14, weight: selectedStatus == status ? .bold : .semibold, design: .rounded))
+                    .fontWeight(.semibold)
+                    .font(.system(size: 14))
             }
-            .foregroundColor(selectedStatus == status ? .white : .primary)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(
-                Group {
-                    if selectedStatus == status {
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color.llegoPrimary, Color.llegoPrimary.opacity(0.85)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .shadow(color: Color.llegoPrimary.opacity(0.4), radius: 8, x: 0, y: 4)
-                    } else {
-                        RoundedRectangle(cornerRadius: 20)
-                            .fill(colorScheme == .dark ? Color.white.opacity(0.1) : Color.white)
-                            .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 2)
-                    }
-                }
-            )
+            .padding(.horizontal, 3)
+            .padding(.vertical, 2)
+        }
+        .buttonStyle(.glassProminent)
+        .buttonBorderShape(.capsule)
+        .clipShape(Capsule())
+        .compositingGroup()
+        .tint(selectedStatus == status ? gradientManager.currentAccentColor : Color.gray)
+        .overlay {
+            if selectedStatus == status {
+                Capsule()
+                    .stroke(Color.white.opacity(0.3), lineWidth: 1.2)
+            }
         }
     }
 }

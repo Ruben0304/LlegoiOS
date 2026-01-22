@@ -55,23 +55,30 @@ struct SearchView: View {
             .navigationTitle("Buscar")
             .onSubmit(of: .search) {
                 // Solo buscar cuando se presiona "Buscar"
+                print("🔍 SearchView - onSubmit triggered with query: '\(searchText)'")
                 viewModel.search(query: searchText)
             }
             .onChange(of: searchText) { newValue in
+                print("🔍 SearchView - searchText changed to: '\(newValue)'")
                 // Limpiar resultados si se borra el texto
                 if newValue.isEmpty {
+                    print("🔍 SearchView - searchText is empty, clearing search")
                     viewModel.clearSearch()
                 }
             }
-            .onChange(of: viewModel.selectedCategory) { _ in
+            .onChange(of: viewModel.selectedCategory) { newCategory in
+                print("🔍 SearchView - selectedCategory changed to: \(newCategory)")
                 // Recargar datos iniciales al cambiar categoría
                 if searchText.isEmpty {
+                    print("🔍 SearchView - searchText is empty, loading initial data")
                     viewModel.loadInitialData()
                 } else {
+                    print("🔍 SearchView - searchText is not empty, searching with: '\(searchText)'")
                     viewModel.search(query: searchText)
                 }
             }
             .onAppear {
+                print("🔍 SearchView - onAppear, loading initial data")
                 viewModel.loadInitialData()
             }
             .ignoresSafeArea(.container, edges: .bottom)

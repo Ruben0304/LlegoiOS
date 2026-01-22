@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RecentOrderCard: View {
     let order: RecentOrder
+    @StateObject private var gradientManager = GradientStateManager.shared
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -20,13 +21,9 @@ struct RecentOrderCard: View {
             footerSection
         }
         .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(colorScheme == .dark ? Color.white.opacity(0.08) : Color.white)
-                .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 4)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 20)
-                .stroke(Color.gray.opacity(colorScheme == .dark ? 0.2 : 0.1), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18)
+                .fill(Color.cardBackground(colorScheme))
+                .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.1), radius: 10, x: 0, y: 5)
         )
     }
 
@@ -43,15 +40,11 @@ struct RecentOrderCard: View {
                         .aspectRatio(contentMode: .fill)
                 case .failure, .empty:
                     ZStack {
-                        LinearGradient(
-                            colors: [Color.llegoPrimary.opacity(0.3), Color.llegoAccent.opacity(0.2)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+                        gradientManager.currentAccentColor.opacity(0.1)
 
                         Image(systemName: "storefront")
                             .font(.system(size: 20, weight: .medium))
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(gradientManager.currentAccentColor)
                     }
                 @unknown default:
                     Color.gray.opacity(0.2)
@@ -68,7 +61,7 @@ struct RecentOrderCard: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(order.storeName)
                     .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
+                    .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                     .lineLimit(1)
 
                 Text(order.orderNumber)
@@ -145,17 +138,11 @@ struct RecentOrderCard: View {
             if order.itemCount > 3 {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.llegoPrimary.opacity(0.15), Color.llegoAccent.opacity(0.1)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                        .fill(gradientManager.currentAccentColor.opacity(0.12))
 
                     Text("+\(order.itemCount - 3)")
                         .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(gradientManager.currentAccentColor)
                 }
                 .frame(width: 48, height: 48)
             }
@@ -190,17 +177,17 @@ struct RecentOrderCard: View {
             HStack(spacing: 6) {
                 Image(systemName: "dollarsign.circle.fill")
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.llegoAccent)
+                    .foregroundColor(gradientManager.currentAccentColor)
 
                 Text(order.currency)
                     .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
+                    .foregroundColor(Color.adaptiveOnSurface(colorScheme))
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .background(
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.llegoAccent.opacity(0.12))
+                    .fill(gradientManager.currentAccentColor.opacity(0.12))
             )
 
             Spacer()
@@ -213,13 +200,13 @@ struct RecentOrderCard: View {
 
                 Text(order.formattedTotal)
                     .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundColor(.llegoPrimary)
+                    .foregroundColor(gradientManager.currentAccentColor)
             }
         }
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 20)
-                .fill(Color.llegoBackground.opacity(0.5))
+                .fill(gradientManager.currentAccentColor.opacity(0.05))
         )
     }
 }

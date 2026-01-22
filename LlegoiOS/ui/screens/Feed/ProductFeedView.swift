@@ -195,13 +195,13 @@ struct ProductFeedView: View {
                 HStack(spacing: 14) {
                     ForEach(viewModel.promotions) { promotion in
                         PromotionCard(promotion: promotion, accentColor: gradientManager.currentAccentColor)
-                            .padding(.vertical, 20)
+                            .padding(.vertical, 12)
                     }
                 }
                 .padding(.horizontal, 20)
             }
         }
-        .padding(.vertical, 16)
+        .padding(.vertical, 10)
     }
     
     // MARK: - Tutorials Section
@@ -223,17 +223,17 @@ struct ProductFeedView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
                     ForEach(viewModel.tutorials) { tutorial in
-                        TutorialFeedCard(tutorial: tutorial) {
+                        TutorialFeedCard(tutorial: tutorial, accentColor: gradientManager.currentAccentColor) {
                             selectedTutorial = tutorial
                             showVideoPlayer = true
                         }
-                        .padding(.vertical, 20)
+                        .padding(.vertical, 12)
                     }
                 }
                 .padding(.horizontal, 20)
             }
         }
-        .padding(.vertical, 16)
+        .padding(.vertical, 10)
     }
     
     // MARK: - Stores Section
@@ -259,13 +259,13 @@ struct ProductFeedView: View {
                             StoreCircleCard(store: store, accentColor: gradientManager.currentAccentColor)
                         }
                         .buttonStyle(.plain)
-                        .padding(.vertical, 20)
+                        .padding(.vertical, 12)
                     }
                 }
                 .padding(.horizontal, 20)
             }
         }
-        .padding(.vertical, 16)
+        .padding(.vertical, 10)
     }
     
     // MARK: - Featured Products Section
@@ -278,14 +278,14 @@ struct ProductFeedView: View {
                             FeaturedProductCard(product: product)
                         }
                         .buttonStyle(.plain)
-                        .padding(.vertical, 20)
+                        .padding(.vertical, 12)
                     }
                 }
                 .padding(.horizontal, 20)
             }
         }
-        .padding(.top, 8)
-        .padding(.bottom, 16)
+        .padding(.top, 6)
+        .padding(.bottom, 10)
     }
     
     // MARK: - Popular Products Section
@@ -303,13 +303,13 @@ struct ProductFeedView: View {
                             SmallProductCard(product: product, accentColor: gradientManager.currentAccentColor)
                         }
                         .buttonStyle(.plain)
-                        .padding(.vertical, 20)
+                        .padding(.vertical, 12)
                     }
                 }
                 .padding(.horizontal, 20)
             }
         }
-        .padding(.vertical, 16)
+        .padding(.vertical, 10)
     }
     
     // MARK: - Recent Products Section
@@ -319,10 +319,10 @@ struct ProductFeedView: View {
                 .font(.system(size: 20, weight: .bold, design: .rounded))
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 .padding(.horizontal, 20)
-            
+
             LazyVGrid(
                 columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)],
-                spacing: 16
+                spacing: 14
             ) {
                 ForEach(viewModel.filteredRecentProducts) { product in
                     NavigationLink(destination: ProductDetailView(productId: product.id)) {
@@ -334,7 +334,7 @@ struct ProductFeedView: View {
             }
             .padding(.horizontal, 20)
         }
-        .padding(.vertical, 16)
+        .padding(.vertical, 10)
     }
     
     // MARK: - Refresh
@@ -680,67 +680,102 @@ struct CompactProductCard: View {
 // MARK: - Tutorial Feed Card
 struct TutorialFeedCard: View {
     let tutorial: Tutorial
+    let accentColor: Color
     let onTap: () -> Void
     @Environment(\.colorScheme) private var colorScheme
+    private let cardWidth: CGFloat = 240
+    private let cardHeight: CGFloat = 135
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            ZStack {
+        Button(action: onTap) {
+            ZStack(alignment: .bottomLeading) {
+                // Background image
                 CachedAsyncImage(
                     url: URL(string: tutorial.thumbnailUrl),
                     cacheKey: "tutorial_\(tutorial.id)",
-                    content: { image in image.resizable().scaledToFill() },
-                    placeholder: { Rectangle().fill(Color.gray.opacity(0.2)) }
+                    content: { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    },
+                    placeholder: {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.2))
+                    }
                 )
-                .frame(height: 110)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .frame(width: cardWidth, height: cardHeight)
+                .clipped()
 
-                Circle()
-                    .fill(Color.black.opacity(0.5))
-                    .frame(width: 44, height: 44)
-                    .overlay(
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 18))
-                            .foregroundColor(.white)
-                            .offset(x: 2)
-                    )
+                // Gradient overlay - darker for better text readability
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.black.opacity(0.75),
+                        Color.clear
+                    ]),
+                    startPoint: .bottom,
+                    endPoint: .center
+                )
 
+                // Play button - center
+                
+                ZStack {
+                    Circle()
+                        .glassEffect(.regular.interactive())
+                        .frame(width: 48, height: 48)
+                    
+
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(accentColor)
+                        .offset(x: 2)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                // Duration badge - top right
                 VStack {
-                    Spacer()
                     HStack {
                         Spacer()
                         Text(tutorial.duration)
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.black.opacity(0.7))
+                            )
+                            .padding([.trailing, .top], 10)
+                    }
+                    Spacer()
+                }
+
+                // Info overlay - bottom with text
+                VStack(alignment: .leading, spacing: 4) {
+                    if let category = tutorial.category {
+                        Text(category)
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(.llegoSecondary)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 3)
-                            .background(Capsule().fill(Color.black.opacity(0.7)))
-                            .padding(8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 5)
+                                    .fill(Color.white.opacity(0.9))
+                            )
                     }
+
+                    Text(tutorial.title)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(.white)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
                 }
+                .padding(12)
             }
-            .frame(height: 110)
-
-            Text(tutorial.title)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(Color.adaptiveOnSurface(colorScheme))
-                .lineLimit(2)
-                .frame(height: 36, alignment: .top)
-
-            if let category = tutorial.category {
-                Text(category)
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
-            }
+            .frame(width: cardWidth, height: cardHeight)
+            .cornerRadius(16)
+            .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
         }
-        .frame(width: 180)
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.cardBackground(colorScheme))
-                .shadow(color: .black.opacity(colorScheme == .dark ? 0.3 : 0.1), radius: 10, x: 0, y: 5)
-        )
-        .onTapGesture { onTap() }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 

@@ -30,6 +30,18 @@ struct WalletDetails {
     let transactions: [WalletTransaction]
 }
 
+// MARK: - Stripe Recharge Link Models
+struct StripeRechargeLinkResponse: Decodable {
+    let paymentLink: String
+    let linkId: String?
+    let userId: String?
+    let expiresAt: String?
+}
+
+private struct StripeRechargeLinkErrorResponse: Decodable {
+    let detail: String
+}
+
 class WalletRepository {
     private let apolloClient = ApolloClientManager.shared.apollo
 
@@ -285,5 +297,62 @@ class WalletRepository {
                 }
             }
         }
+    }
+
+    // MARK: - Create Stripe Recharge Link
+    func createStripeRechargeLink(
+        jwt: String,
+        currency: String,
+        description: String
+    ) async throws -> StripeRechargeLinkResponse {
+        guard let url = URL(string: "\(ApolloClientManager.baseURL)/stripe/create-recharge-link") else {
+            throw NSError(
+                domain: "WalletRepository",
+                code: -10,
+                userInfo: [NSLocalizedDescriptionKey: "URL inválida para crear el link de recarga"]
+            )
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(jwt)", forHTTPHeaderField: "Authorization")
+
+        let body: [String: Any] = [
+            "currency": currency,
+            "description": description
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NSError(
+                domain: "WalletRepository",
+                code: -11,
+                userInfo: [NSLocalizedDescriptionKey: "Respuesta inválida del servidor"]
+            )
+        }
+
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+
+        if (200...299).contains(httpResponse.statusCode) {
+            return try decoder.decode(StripeRechargeLinkResponse.self, from: data)
+        }
+
+        if let errorResponse = try? decoder.decode(StripeRechargeLinkErrorResponse.self, from: data) {
+            throw NSError(
+                domain: "WalletRepository",
+                code: httpResponse.statusCode,
+                userInfo: [NSLocalizedDescriptionKey: errorResponse.detail]
+            )
+        }
+
+        throw NSError(
+            domain: "WalletRepository",
+            code: httpResponse.statusCode,
+            userInfo: [NSLocalizedDescriptionKey: "Error al generar el link de recarga"]
+        )
     }
 }

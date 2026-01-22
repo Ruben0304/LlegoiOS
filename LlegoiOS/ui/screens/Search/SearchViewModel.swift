@@ -58,12 +58,15 @@ class SearchViewModel: ObservableObject {
     
     // MARK: - Load Initial Data
     func loadInitialData() {
+        print("🔍 SearchViewModel - loadInitialData() called, selectedCategory: \(selectedCategory)")
         state = .idle
-        
+
         switch selectedCategory {
         case .products:
+            print("🔍 SearchViewModel - Loading initial products...")
             loadInitialProducts()
         case .stores:
+            print("🔍 SearchViewModel - Loading initial stores...")
             loadInitialStores()
         }
     }
@@ -152,32 +155,44 @@ class SearchViewModel: ObservableObject {
     
     // MARK: - Search (solo cuando se presiona buscar)
     func search(query: String) {
+        print("🔍 SearchViewModel - search() called with query: '\(query)'")
+        print("🔍 SearchViewModel - selectedCategory: \(selectedCategory)")
+
         guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            print("⚠️ SearchViewModel - Query is empty after trimming, clearing search")
             clearSearch()
             return
         }
-        
+
+        print("✅ SearchViewModel - Query valid, setting state to loading")
         state = .loading
-        
+
         switch selectedCategory {
         case .products:
+            print("🔍 SearchViewModel - Searching products...")
             searchProducts(query: query)
         case .stores:
+            print("🔍 SearchViewModel - Searching stores...")
             searchStores(query: query)
         }
     }
     
     private func searchProducts(query: String) {
+        print("🔍 SearchViewModel - searchProducts() calling repository with query: '\(query)'")
         searchRepository.searchProducts(query: query) { [weak self] result in
             Task { @MainActor in
                 guard let self = self else { return }
-                
+
                 switch result {
                 case .success(let products):
+                    print("✅ SearchViewModel - Products search SUCCESS, found \(products.count) products")
+                    print("📦 SearchViewModel - Products: \(products.map { $0.name }.joined(separator: ", "))")
                     self.products = products
                     self.state = products.isEmpty ? .empty : .success
-                    
+                    print("🔍 SearchViewModel - State set to: \(products.isEmpty ? "empty" : "success")")
+
                 case .failure(let error):
+                    print("❌ SearchViewModel - Products search FAILED: \(error.localizedDescription)")
                     self.state = .error(error.localizedDescription)
                 }
             }
@@ -185,12 +200,15 @@ class SearchViewModel: ObservableObject {
     }
     
     private func searchStores(query: String) {
+        print("🔍 SearchViewModel - searchStores() calling repository with query: '\(query)'")
         storeRepository.searchBranches(query: query, limit: 20) { [weak self] result in
             Task { @MainActor in
                 guard let self = self else { return }
-                
+
                 switch result {
                 case .success(let branchesGraphQL):
+                    print("✅ SearchViewModel - Stores search SUCCESS, found \(branchesGraphQL.count) stores")
+                    print("🏪 SearchViewModel - Stores: \(branchesGraphQL.map { $0.name }.joined(separator: ", "))")
                     self.stores = branchesGraphQL.map { branch in
                         StoreWithCoordinates(
                             id: branch.id,
@@ -206,15 +224,17 @@ class SearchViewModel: ObservableObject {
                             )
                         )
                     }
-                    
+
                     self.state = self.stores.isEmpty ? .empty : .success
-                    
+                    print("🔍 SearchViewModel - State set to: \(self.stores.isEmpty ? "empty" : "success")")
+
                     // Cargar productos para cada tienda encontrada
                     for store in self.stores {
                         self.loadProductsForStore(storeId: store.id)
                     }
-                    
+
                 case .failure(let error):
+                    print("❌ SearchViewModel - Stores search FAILED: \(error.localizedDescription)")
                     self.state = .error(error.localizedDescription)
                 }
             }
@@ -223,6 +243,7 @@ class SearchViewModel: ObservableObject {
     
     // MARK: - Clear Search
     func clearSearch() {
+        print("🔍 SearchViewModel - clearSearch() called, reloading initial data")
         loadInitialData()
     }
     

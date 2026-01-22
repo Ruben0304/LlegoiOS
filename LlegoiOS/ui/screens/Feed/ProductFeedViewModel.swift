@@ -202,14 +202,44 @@ class ProductFeedViewModel: ObservableObject {
     // MARK: - Filtered Data
     
     var filteredFeaturedProducts: [FeedProduct] {
-        return featuredProducts
+        guard let category = selectedCategory else {
+            return featuredProducts
+        }
+        // Filtrar por categoría de producto
+        return featuredProducts.filter { $0.categoryId == category || $0.categoryName == category }
     }
     
     var filteredRecentProducts: [FeedProduct] {
-        return recentProducts
+        guard let category = selectedCategory else {
+            return recentProducts
+        }
+        // Filtrar por categoría de producto
+        return recentProducts.filter { $0.categoryId == category || $0.categoryName == category }
     }
     
     var filteredPopularProducts: [FeedProduct] {
-        return popularProducts
+        let maxDistanceKm = 3.0 // 2-3km máximo
+        
+        var filtered = popularProducts
+        
+        // Primero filtrar por distancia
+        filtered = filtered.filter { product in
+            guard let distance = product.distanceKm else { return false }
+            return distance <= maxDistanceKm
+        }
+        
+        // Luego filtrar por categoría si hay una seleccionada
+        if let category = selectedCategory {
+            filtered = filtered.filter { $0.categoryId == category || $0.categoryName == category }
+        }
+        
+        return filtered
+    }
+    
+    var filteredStores: [FeedStore] {
+        // Si hay una categoría seleccionada, el backend debe filtrar
+        // los negocios que tienen productos con esa categoría
+        // Por ahora retornamos todos, pero el repository debe enviar el parámetro
+        return stores
     }
 }

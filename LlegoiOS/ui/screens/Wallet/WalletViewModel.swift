@@ -732,41 +732,20 @@ class WalletViewModel: NSObject, ObservableObject {
             }
             
             isGeneratingForeignURL = true
+            foreignRechargeURL = ""
             
             do {
-                // Llamar al backend para generar el link de Stripe
-                let url = URL(string: "https://llegobackend-production.up.railway.app/stripe/create-recharge-link")!
-                
-                var request = URLRequest(url: url)
-                request.httpMethod = "POST"
-                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                request.setValue("Bearer \(jwt)", forHTTPHeaderField: "Authorization")
-                
-                let body: [String: Any] = [
-                    "currency": "usd",
-                    "description": "Recarga internacional para Llego Wallet"
-                ]
-                
-                request.httpBody = try JSONSerialization.data(withJSONObject: body)
-                
-                let (data, response) = try await URLSession.shared.data(for: request)
-                
-                guard let httpResponse = response as? HTTPURLResponse,
-                      (200...299).contains(httpResponse.statusCode) else {
-                    throw NSError(domain: "WalletViewModel", code: 500, userInfo: [NSLocalizedDescriptionKey: "Error del servidor"])
-                }
-                
-                let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-                
-                guard let paymentLink = json?["payment_link"] as? String else {
-                    throw NSError(domain: "WalletViewModel", code: 500, userInfo: [NSLocalizedDescriptionKey: "No se recibió el link de pago"])
-                }
+                let response = try await repository.createStripeRechargeLink(
+                    jwt: jwt,
+                    currency: "usd",
+                    description: "Recarga internacional para Llego Wallet"
+                )
                 
                 await MainActor.run {
-                    self.foreignRechargeURL = paymentLink
+                    self.foreignRechargeURL = response.paymentLink
                     self.isGeneratingForeignURL = false
                     self.showForeignRechargeSheet = true
-                    print("✅ Link de recarga generado: \(paymentLink)")
+                    print("✅ Link de recarga generado: \(response.paymentLink)")
                 }
                 
             } catch {
