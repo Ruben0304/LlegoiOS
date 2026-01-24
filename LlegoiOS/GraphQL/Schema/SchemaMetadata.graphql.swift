@@ -31,6 +31,7 @@ public extension LlegoAPI {
       switch typename {
       case "AiAssistantOutputType": return LlegoAPI.Objects.AiAssistantOutputType
       case "AiAssistantResponseType": return LlegoAPI.Objects.AiAssistantResponseType
+      case "AppConfigType": return LlegoAPI.Objects.AppConfigType
       case "AuthResponse": return LlegoAPI.Objects.AuthResponse
       case "BranchConnection": return LlegoAPI.Objects.BranchConnection
       case "BranchEdge": return LlegoAPI.Objects.BranchEdge
@@ -45,6 +46,8 @@ public extension LlegoAPI {
       case "FeatureType": return LlegoAPI.Objects.FeatureType
       case "GradientConfigType": return LlegoAPI.Objects.GradientConfigType
       case "InitiatePaymentResult": return LlegoAPI.Objects.InitiatePaymentResult
+      case "IosConfigType": return LlegoAPI.Objects.IosConfigType
+      case "MaintenanceConfigType": return LlegoAPI.Objects.MaintenanceConfigType
       case "Mutation": return LlegoAPI.Objects.Mutation
       case "OrderCommentType": return LlegoAPI.Objects.OrderCommentType
       case "OrderDiscountType": return LlegoAPI.Objects.OrderDiscountType

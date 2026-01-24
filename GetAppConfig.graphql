@@ -1,0 +1,17 @@
+query GetAppConfig {
+  appConfig {
+    id
+    ios {
+      minVersion
+      currentVersion
+      storeUrl
+    }
+    maintenance {
+      enabled
+      message
+    }
+    updateMessage
+    changelog
+    releaseDate
+  }
+}

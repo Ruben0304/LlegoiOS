@@ -71,6 +71,7 @@ struct MainAppView: View {
     @StateObject private var gradientManager = GradientStateManager.shared
     @ObservedObject private var userLocationManager = UserLocationManager.shared
     @ObservedObject private var branchTypeManager = BranchTypeManager.shared
+    @ObservedObject private var appUpdateViewModel = AppUpdateViewModel.shared
     @State private var searchText = ""
     @State private var showTrackingView = false
     @State private var showTrackingFullScreen = false
@@ -168,8 +169,24 @@ struct MainAppView: View {
                     .transition(.opacity)
                     .zIndex(100)
             }
+
+            // Overlay de actualización de app
+            if appUpdateViewModel.showUpdateAlert {
+                AppUpdateModal(viewModel: appUpdateViewModel)
+                    .transition(.opacity)
+                    .zIndex(200) // Mayor que el overlay de ubicación
+            }
         }
         .animation(.easeInOut(duration: 0.3), value: userLocationManager.hasLocation)
+        .animation(.easeInOut(duration: 0.3), value: appUpdateViewModel.showUpdateAlert)
+        .onAppear {
+            // Iniciar verificación periódica de actualizaciones
+            appUpdateViewModel.startPeriodicCheck()
+        }
+        .onDisappear {
+            // Detener verificación cuando la vista desaparece
+            appUpdateViewModel.stopPeriodicCheck()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .navigateToHome)) { _ in
             selectedTab = 0
         }
