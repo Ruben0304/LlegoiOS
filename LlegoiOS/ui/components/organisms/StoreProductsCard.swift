@@ -8,7 +8,9 @@ struct StoreProductsCard: View {
     let isLoadingProducts: Bool
     let onStoreTap: (ExtractedGradient?) -> Void
     let onProductTap: (ProductGraphQL, ExtractedGradient?) -> Void
+
     let onFavoriteTap: (ProductGraphQL) -> Void
+    var onBodyTap: (() -> Void)? = nil
     var onGradientExtracted: ((ExtractedGradient) -> Void)? = nil
 
     @State private var isFlipped = false
@@ -42,6 +44,7 @@ struct StoreProductsCard: View {
                 onStoreTap: onStoreTap,
                 onProductTap: onProductTap,
                 onFavoriteTap: onFavoriteTap,
+                onBodyTap: onBodyTap,
                 onFlip: { performFlip() },
                 onGradientExtracted: onGradientExtracted
             )
@@ -116,7 +119,9 @@ private struct StoreProductsCardFront: View {
     let isLoadingProducts: Bool
     let onStoreTap: (ExtractedGradient?) -> Void
     let onProductTap: (ProductGraphQL, ExtractedGradient?) -> Void
+
     let onFavoriteTap: (ProductGraphQL) -> Void
+    var onBodyTap: (() -> Void)? = nil
     let onFlip: () -> Void
     var onGradientExtracted: ((ExtractedGradient) -> Void)? = nil
 
@@ -147,10 +152,10 @@ private struct StoreProductsCardFront: View {
                 // Smooth dark overlay for header legibility
                 LinearGradient(
                     stops: [
-                        .init(color: Color.black.opacity(0.55), location: 0),
-                        .init(color: Color.black.opacity(0.4), location: 0.15),
-                        .init(color: Color.black.opacity(0.2), location: 0.25),
-                        .init(color: Color.black.opacity(0.05), location: 0.35),
+                        .init(color: Color.black.opacity(0.7), location: 0),
+                        .init(color: Color.black.opacity(0.5), location: 0.15),
+                        .init(color: Color.black.opacity(0.3), location: 0.25),
+                        .init(color: Color.black.opacity(0.1), location: 0.35),
                         .init(color: Color.clear, location: 0.45)
                     ],
                     startPoint: .top,
@@ -205,6 +210,7 @@ private struct StoreProductsCardFront: View {
                         )
                 )
         )
+
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 if storeGradient == .placeholder {
@@ -231,7 +237,7 @@ private struct StoreProductsCardFront: View {
                     ProductFullCoverCard(
                         product: product,
                         isFavorite: favoritesManager.isFavorite(productId: product.id),
-                        onTap: { onProductTap(product, storeGradient) },
+                        onTap: { },
                         onFavoriteTap: { onFavoriteTap(product) }
                     )
                 }
@@ -273,10 +279,15 @@ private struct StoreProductsCardFront: View {
                     .onAppear {
                          if storeGradient != .placeholder {
                              onGradientExtracted?(storeGradient)
+                         } else {
+                             // Retry extraction if needed
+                             // Trigger a state change to force re-evaluation if view recycles
                          }
                     }
                     .onChange(of: extractedGradient) { newGradient in
-                        onGradientExtracted?(newGradient)
+                        withAnimation(.easeOut(duration: 0.5)) {
+                            onGradientExtracted?(newGradient)
+                        }
                     }
             } placeholder: {
                 Image("generic_logo")
@@ -300,8 +311,8 @@ private struct StoreProductsCardFront: View {
                     .stroke(
                         LinearGradient(
                             colors: [
-                                storeGradient.primaryColor.opacity(0.6),
-                                storeGradient.secondaryColor.opacity(0.4)
+                                storeGradient.primaryColor.opacity(0.8), // Increased opacity for "HDR" feel
+                                storeGradient.secondaryColor.opacity(0.6)
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -309,7 +320,8 @@ private struct StoreProductsCardFront: View {
                         lineWidth: 2
                     )
             )
-            .shadow(color: storeGradient.primaryColor.opacity(0.2), radius: 4, x: 0, y: 2)
+            .shadow(color: storeGradient.primaryColor.opacity(0.4), radius: 8, x: 0, y: 4) // Stronger shadow
+            .id("logo_\(store.id)") // Force refresh when store changes
 
             // Info
             VStack(alignment: .leading, spacing: 2) {
@@ -331,23 +343,27 @@ private struct StoreProductsCardFront: View {
 
             Spacer()
 
-            // Flip Button
-            Button(action: onFlip) {
-                Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
-                    .font(.system(size: 14, weight: .bold))
-                    .frame(width: 36, height: 36)
-                    .foregroundColor(.white)
-            }
-            .glassEffect(.clear)
+            // Flip Button (Custom Tap Gesture)
+            Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
+                .font(.system(size: 14, weight: .bold))
+                .frame(width: 36, height: 36)
+                .foregroundColor(.white)
+                .glassEffect(.clear)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    onFlip()
+                }
 
-            // Options Button
-            Button(action: { onStoreTap(storeGradient) }) {
-                Image(systemName: "ellipsis")
-                    .font(.system(size: 16, weight: .bold))
-                    .frame(width: 36, height: 36)
-                    .foregroundColor(.white)
-            }
-            .glassEffect(.clear)
+            // Options Button (Custom Tap Gesture)
+            Image(systemName: "ellipsis")
+                .font(.system(size: 16, weight: .bold))
+                .frame(width: 36, height: 36)
+                .foregroundColor(.white)
+                .glassEffect(.clear)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    onStoreTap(storeGradient)
+                }
         }
     }
 
@@ -492,6 +508,7 @@ private struct StoreProductsCardBack: View {
                     }
                     .glassEffect(.regular.interactive())
                     .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
+                    .buttonStyle(.borderless)
                 }
                 .padding(12)
 
@@ -707,7 +724,7 @@ struct ProductFullCoverCard: View {
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
         }
-        .buttonStyle(ScaleButtonStyle())
+        .buttonStyle(.plain)
     }
 }
 

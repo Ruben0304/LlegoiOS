@@ -181,6 +181,7 @@ struct ProductListView: View {
                             Image(systemName: "cart")
                                 .font(.system(size: 16, weight: .semibold))
                                 .frame(width: 30, height: 30)
+                                .foregroundColor(.black)
                         }
                         .badge(favoritesManager.favoriteItemCount)
                     }
@@ -193,6 +194,7 @@ struct ProductListView: View {
                         Image(systemName: "heart")
                             .font(.system(size: 16, weight: .semibold))
                             .frame(width: 30, height: 30)
+                            .foregroundColor(initialBranchId != nil ? .black : .llegoPrimary)
                     }
                     .badge(favoritesManager.favoriteItemCount)
                 }

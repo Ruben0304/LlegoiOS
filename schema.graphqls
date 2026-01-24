@@ -25,7 +25,7 @@ type Query {
   "Buscar negocios"
   searchBusinesses(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true, jwt: String = null): [BusinessType!]!
   "Lista de sucursales con scoring por cercanía (paginado)"
-  branches(first: Int = null, after: String = null, businessId: String = null, tipo: BranchTipo = null, radiusKm: Float = null, jwt: String = null): BranchConnection!
+  branches(first: Int = null, after: String = null, businessId: String = null, tipo: BranchTipo = null, radiusKm: Float = null, productCategoryId: String = null, jwt: String = null): BranchConnection!
   "Obtener sucursal por ID"
   branch(id: String!, jwt: String = null): BranchType
   "Buscar sucursales con scoring por cercanía (paginado)"
@@ -92,6 +92,16 @@ type Query {
   branchWallet(branchId: String!, jwt: String!): WalletStatusType!
   "Obtener historial de transacciones de una sucursal"
   branchWalletTransactions(branchId: String!, jwt: String!, limit: Int! = 50, skip: Int! = 0, currency: String = null): [WalletTransactionType!]!
+  "Vista previa de una invitacion por codigo"
+  invitationByCode(code: String!, jwt: String = null): BranchInvitationType
+  "Todas las invitaciones de un negocio (dueno)"
+  invitationsByBusiness(businessId: String!, jwt: String!): [BranchInvitationType!]!
+  "Invitaciones activas de un negocio (dueno)"
+  activeInvitationsByBusiness(businessId: String!, jwt: String!): [BranchInvitationType!]!
+  "Accesos a negocio por negocio (dueno)"
+  businessAccessByBusiness(businessId: String!, jwt: String!): [BusinessAccessType!]!
+  "Mis accesos a negocios"
+  myBusinessAccess(jwt: String!): [BusinessAccessType!]!
   "Saludo de ejemplo"
   hello(jwt: String = null): String!
   "Saluda por nombre"
@@ -192,6 +202,8 @@ type ProductType {
   createdAt: DateTime!
   "Presigned URL for the product image"
   imageUrl: String!
+  "Product category name"
+  categoryName: String
   "Product category"
   category: ProductCategoryType
   "Branch associated with this product"
@@ -267,6 +279,10 @@ type PaymentMethodType {
   iconUrl: String
   "Payment instructions for user"
   instructions: String
+  "Creation timestamp"
+  createdAt: DateTime
+  "Last update timestamp"
+  updatedAt: DateTime
 }
 type PageInfo {
   hasNextPage: Boolean!
@@ -340,6 +356,8 @@ type ScoredProductType {
   imageUrl: String!
   "Distance in kilometers from user"
   distanceKm: Float
+  "Product category name"
+  categoryName: String
   "Product category"
   category: ProductCategoryType
   "Branch associated with this product"
@@ -619,6 +637,53 @@ type WalletTransactionType {
   createdAt: DateTime!
   completedAt: DateTime
 }
+type BranchInvitationType {
+  id: String!
+  code: String!
+  invitationType: InvitationType!
+  branchId: String
+  businessId: String!
+  accessDurationDays: Int
+  createdBy: String!
+  createdAt: DateTime!
+  status: InvitationStatus!
+  usedBy: String
+  usedAt: DateTime
+  accessExpiresAt: DateTime
+  "Sucursal asociada a la invitacion"
+  branch: BranchType
+  "Negocio asociado a la invitacion"
+  business: BusinessType
+  "Creador de la invitacion"
+  creator: UserType
+  "Usuario que canjeo la invitacion"
+  redeemer: UserType
+  "Si el codigo esta disponible para usar"
+  isUsable: Boolean!
+  "Estado del acceso otorgado por la invitacion"
+  accessStatus: String!
+}
+type BusinessAccessType {
+  id: String!
+  userId: String!
+  businessId: String!
+  invitationId: String!
+  grantedAt: DateTime!
+  expiresAt: DateTime
+  isActive: Boolean!
+  revokedAt: DateTime
+  revokedBy: String
+  "Usuario con acceso al negocio"
+  user: UserType
+  "Negocio asociado"
+  business: BusinessType
+  "Invitacion que otorgo el acceso"
+  invitation: BranchInvitationType
+  "Si el acceso ya expiro"
+  isExpired: Boolean!
+  "Dias restantes para expiracion (si aplica)"
+  daysUntilExpiration: Int
+}
 type Mutation {
   "Register a new user"
   register(input: RegisterInput!, jwt: String = null): AuthResponse!
@@ -726,6 +791,12 @@ type Mutation {
   branchTransferMoney(branchId: String!, input: TransferInput!, jwt: String!): WalletTransactionType!
   "Retirar dinero de wallet de sucursal"
   branchWithdrawMoney(branchId: String!, input: WithdrawInput!, jwt: String!): WalletTransactionType!
+  "Generar codigo de invitacion"
+  generateInvitationCode(input: GenerateInvitationInput!, jwt: String = null): BranchInvitationType!
+  "Canjear codigo de invitacion"
+  acceptInvitationCode(input: AcceptInvitationInput!, jwt: String = null): BranchInvitationType!
+  "Revocar codigo de invitacion"
+  revokeInvitationCode(invitationId: String!, jwt: String = null): Boolean!
 }
 type AuthResponse {
   accessToken: String!
@@ -839,6 +910,15 @@ enum PaymentAttemptStatusEnum {
   REFUND_REQUESTED
   REFUND_PROCESSING
   REFUNDED
+}
+enum InvitationType {
+  BRANCH
+  BUSINESS
+}
+enum InvitationStatus {
+  PENDING
+  USED
+  REVOKED
 }
 enum DevicePlatformEnum {
   IOS
@@ -1091,6 +1171,15 @@ input WithdrawInput {
   currency: String!
   destination: String!
   description: String = null
+}
+input GenerateInvitationInput {
+  invitationType: InvitationType!
+  branchId: String = null
+  businessId: String!
+  accessDurationDays: Int = null
+}
+input AcceptInvitationInput {
+  code: String!
 }
 "Exposes a URL that specifies the behavior of this scalar."
 directive @specifiedBy(

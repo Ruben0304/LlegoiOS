@@ -13,6 +13,10 @@ struct SearchView: View {
     @StateObject private var viewModel = SearchViewModel()
     @StateObject private var gradientManager = GradientStateManager.shared
     @State private var productCounts: [String: Int] = [:]
+    @State private var selectedStore: StoreWithCoordinates? = nil
+    @State private var selectedStoreGradient: ExtractedGradient? = nil
+    @State private var navigationDestination: NavigationDestination? = nil
+    @State private var pendingDestination: NavigationDestination? = nil
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -82,6 +86,43 @@ struct SearchView: View {
                 viewModel.loadInitialData()
             }
             .ignoresSafeArea(.container, edges: .bottom)
+            .navigationDestination(item: $navigationDestination) { destination in
+                switch destination {
+                case .detail(let store):
+                    StoreDetailView(store: store.toStore())
+                case .shop(let branchId, let branchName, let storeGradient):
+                    ProductListView(branchId: branchId, branchName: branchName, storeGradient: storeGradient)
+                case .home:
+                    HomeView()
+                }
+            }
+            .sheet(item: $selectedStore, onDismiss: {
+                if let destination = pendingDestination {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                         navigationDestination = destination
+                         pendingDestination = nil
+                    }
+                }
+            }) { store in
+                StoreOptionsModal(
+                    store: store,
+                    onViewProfile: {
+                        pendingDestination = .detail(store)
+                        selectedStore = nil
+                    },
+                    onViewProducts: {
+                        pendingDestination = .shop(
+                            branchId: store.id,
+                            branchName: store.name,
+                            storeGradient: selectedStoreGradient
+                        )
+                        selectedStore = nil
+                    }
+                )
+                .presentationDetents([.height(520)])
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(28)
+            }
         }
 
     }
@@ -210,10 +251,22 @@ struct SearchView: View {
                     store: store,
                     products: viewModel.storeProducts[store.id] ?? [],
                     isLoadingProducts: viewModel.isLoadingProductsFor(storeId: store.id),
-                    onStoreTap: { _ in },
-                    onProductTap: { _, _ in },
+                    onStoreTap: { gradient in
+                        selectedStore = store
+                        selectedStoreGradient = gradient
+                    },
+                    onProductTap: { product, gradient in
+                        navigationDestination = .shop(
+                            branchId: store.id,
+                            branchName: store.name,
+                            storeGradient: gradient
+                        )
+                    },
                     onFavoriteTap: { product in
                         FavoritesManager.shared.toggleFavorite(productId: product.id)
+                    },
+                    onBodyTap: {
+                        navigationDestination = .detail(store)
                     }
                 )
             }

@@ -13,6 +13,7 @@ query GetProducts($first: Int! = 20, $after: String, $branchId: String, $categor
         distanceKm
         score
         categoryId
+        categoryName
         category {
           id
           branchType

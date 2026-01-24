@@ -21,7 +21,9 @@ class StoreListRepository {
                 businessId: businessId.map { .some($0) } ?? .none,
                 tipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) } ?? .none,
                 radiusKm: radiusKm.map { .some($0) } ?? .none,
-                jwt: jwt.map { .some($0) } ?? .none
+                productCategoryId: .none,
+                jwt: jwt.map { .some($0) } ?? .none,
+                productsLimit: .some(4)
             )
 
             client.fetch(query: query, cachePolicy: .returnCacheDataAndFetch) { result in

@@ -1,5 +1,5 @@
-query GetBranches($first: Int! = 20, $after: String, $businessId: String, $tipo: BranchTipo, $radiusKm: Float, $jwt: String, $productsLimit: Int = 2) {
-  branches(first: $first, after: $after, businessId: $businessId, tipo: $tipo, radiusKm: $radiusKm, jwt: $jwt) {
+query GetBranches($first: Int! = 20, $after: String, $businessId: String, $tipo: BranchTipo, $radiusKm: Float, $productCategoryId: String, $jwt: String, $productsLimit: Int = 2) {
+  branches(first: $first, after: $after, businessId: $businessId, tipo: $tipo, radiusKm: $radiusKm, productCategoryId: $productCategoryId, jwt: $jwt) {
     edges {
       node {
         id

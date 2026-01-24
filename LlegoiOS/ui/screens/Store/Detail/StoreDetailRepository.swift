@@ -111,8 +111,9 @@ class StoreDetailRepository {
                     first: 100,
                     after: .none,
                     businessId: .some(businessId),
-                    tipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) } ?? .none,
+                    tipo: .none, // Fetch all branches for this business, ignoring user's current category filter
                     radiusKm: .none,
+                    productCategoryId: .none,
                     jwt: jwt.map { .some($0) } ?? .none
                 ),
                 cachePolicy: .returnCacheDataAndFetch

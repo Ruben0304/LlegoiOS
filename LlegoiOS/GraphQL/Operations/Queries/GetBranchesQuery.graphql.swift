@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetBranches"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetBranches($first: Int! = 20, $after: String, $businessId: String, $tipo: BranchTipo, $radiusKm: Float, $jwt: String, $productsLimit: Int = 2) { branches( first: $first after: $after businessId: $businessId tipo: $tipo radiusKm: $radiusKm jwt: $jwt ) { __typename edges { __typename node { __typename id businessId name address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius createdAt score distanceKm products(limit: $productsLimit, availableOnly: true) { __typename id name price currency imageUrl } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
+        #"query GetBranches($first: Int! = 20, $after: String, $businessId: String, $tipo: BranchTipo, $radiusKm: Float, $productCategoryId: String, $jwt: String, $productsLimit: Int = 2) { branches( first: $first after: $after businessId: $businessId tipo: $tipo radiusKm: $radiusKm productCategoryId: $productCategoryId jwt: $jwt ) { __typename edges { __typename node { __typename id businessId name address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius createdAt score distanceKm products(limit: $productsLimit, availableOnly: true) { __typename id name price currency imageUrl } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
       ))
 
     public var first: Int32
@@ -17,6 +17,7 @@ public extension LlegoAPI {
     public var businessId: GraphQLNullable<String>
     public var tipo: GraphQLNullable<GraphQLEnum<BranchTipo>>
     public var radiusKm: GraphQLNullable<Double>
+    public var productCategoryId: GraphQLNullable<String>
     public var jwt: GraphQLNullable<String>
     public var productsLimit: GraphQLNullable<Int32>
 
@@ -26,6 +27,7 @@ public extension LlegoAPI {
       businessId: GraphQLNullable<String>,
       tipo: GraphQLNullable<GraphQLEnum<BranchTipo>>,
       radiusKm: GraphQLNullable<Double>,
+      productCategoryId: GraphQLNullable<String>,
       jwt: GraphQLNullable<String>,
       productsLimit: GraphQLNullable<Int32> = 2
     ) {
@@ -34,6 +36,7 @@ public extension LlegoAPI {
       self.businessId = businessId
       self.tipo = tipo
       self.radiusKm = radiusKm
+      self.productCategoryId = productCategoryId
       self.jwt = jwt
       self.productsLimit = productsLimit
     }
@@ -44,6 +47,7 @@ public extension LlegoAPI {
       "businessId": businessId,
       "tipo": tipo,
       "radiusKm": radiusKm,
+      "productCategoryId": productCategoryId,
       "jwt": jwt,
       "productsLimit": productsLimit
     ] }
@@ -60,6 +64,7 @@ public extension LlegoAPI {
           "businessId": .variable("businessId"),
           "tipo": .variable("tipo"),
           "radiusKm": .variable("radiusKm"),
+          "productCategoryId": .variable("productCategoryId"),
           "jwt": .variable("jwt")
         ]),
       ] }

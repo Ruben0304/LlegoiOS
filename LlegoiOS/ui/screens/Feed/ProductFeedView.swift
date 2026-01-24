@@ -123,7 +123,7 @@ struct ProductFeedView: View {
 
                 if !viewModel.filteredFeaturedProducts.isEmpty { featuredProductsSection }
                 if !viewModel.filteredPopularProducts.isEmpty { popularProductsSection }
-                if !viewModel.stores.isEmpty { storesSection }
+                if !viewModel.filteredStores.isEmpty { storesSection }
 
                 if viewModel.showTutorials && !viewModel.tutorials.isEmpty {
                     tutorialsSection
@@ -254,7 +254,7 @@ struct ProductFeedView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 20) {
-                    ForEach(viewModel.stores) { store in
+                    ForEach(viewModel.filteredStores) { store in
                         NavigationLink(destination: StoreDetailView(storeId: store.id)) {
                             StoreCircleCard(store: store, accentColor: gradientManager.currentAccentColor)
                         }
@@ -357,25 +357,30 @@ struct ProductFeedView: View {
     
     // MARK: - Empty State
     private var emptyState: some View {
-        VStack(spacing: 20) {
-            Spacer()
-            Image(systemName: "flame")
-                .font(.system(size: 48, weight: .regular))
-                .foregroundColor(.orange)
-                .padding(.bottom, 8)
-            VStack(spacing: 8) {
-                Text("No hay productos destacados")
-                    .font(.system(size: 22, weight: .semibold, design: .rounded))
-                    .foregroundColor(.primary)
-                Text("Vuelve más tarde para ver las mejores ofertas")
-                    .font(.system(size: 15, weight: .regular))
-                    .foregroundColor(.secondary.opacity(0.8))
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(spacing: 20) {
+                    Spacer()
+                    Image(systemName: "flame")
+                        .font(.system(size: 48, weight: .regular))
+                        .foregroundColor(.orange)
+                        .padding(.bottom, 8)
+                    VStack(spacing: 8) {
+                        Text("No hay productos destacados")
+                            .font(.system(size: 22, weight: .semibold, design: .rounded))
+                            .foregroundColor(.primary)
+                        Text("Vuelve más tarde para ver las mejores ofertas")
+                            .font(.system(size: 15, weight: .regular))
+                            .foregroundColor(.secondary.opacity(0.8))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 40)
+                    }
+                    Spacer()
+                }
+                .frame(minWidth: geometry.size.width, minHeight: geometry.size.height)
             }
-            Spacer()
+            .refreshable { await refreshFeed() }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
     // MARK: - Error State

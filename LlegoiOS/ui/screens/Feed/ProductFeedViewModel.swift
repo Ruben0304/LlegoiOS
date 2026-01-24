@@ -109,7 +109,8 @@ class ProductFeedViewModel: ObservableObject {
         }
         
         Task {
-            let result = await repository.fetchFeedData(radiusKm: nil)
+            // Pasar selectedCategory al repository para que el backend filtre si es posible
+            let result = await repository.fetchFeedData(radiusKm: nil, categoryId: selectedCategory)
             
             switch result {
             case .success(let feedData):
@@ -143,7 +144,7 @@ class ProductFeedViewModel: ObservableObject {
         isLoadingMore = true
         
         Task {
-            let result = await repository.fetchMoreProducts(after: cursor, radiusKm: nil)
+            let result = await repository.fetchMoreProducts(after: cursor, radiusKm: nil, categoryId: selectedCategory)
             
             self.isLoadingMore = false
             
@@ -192,10 +193,18 @@ class ProductFeedViewModel: ObservableObject {
     }
     
     func selectCategory(_ category: FeedCategory?) {
+        let previousCategory = selectedCategory
+        
         if let category = category {
             selectedCategory = category.isAll ? nil : category.name
         } else {
             selectedCategory = nil
+        }
+        
+        // Recargar el feed solo si la categoría cambió
+        if previousCategory != selectedCategory {
+            hasLoaded = false
+            loadFeed(isRefreshing: false)
         }
     }
     

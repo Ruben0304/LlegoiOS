@@ -207,7 +207,7 @@ class StoreListViewModel: ObservableObject {
         isLoadingProducts[storeId] = true
         print("🛒 Cargando productos para tienda: \(storeId)")
 
-        repository.fetchBranchProducts(branchId: storeId, limit: 2) { [weak self] result in
+        repository.fetchBranchProducts(branchId: storeId, limit: 4) { [weak self] result in
             guard let self = self else { return }
 
             Task { @MainActor in

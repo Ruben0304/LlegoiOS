@@ -40,6 +40,8 @@ struct FeedProduct: Identifiable, Hashable, Sendable {
     let branchName: String
     let branchAvatarUrl: String?
     let businessName: String
+    let categoryId: String?
+    let categoryName: String?
     
     var formattedPrice: String {
         let symbol: String
@@ -76,16 +78,20 @@ struct FeedData: Sendable {
 @MainActor
 class ProductFeedRepository {
     
-    func fetchFeedData(radiusKm: Double? = nil) async -> Result<FeedData, Error> {
+    func fetchFeedData(radiusKm: Double? = nil, categoryId: String? = nil) async -> Result<FeedData, Error> {
         let jwt = AuthManager.shared.getAccessToken()
         let branchType = BranchTypeManager.shared.selectedType.rawValue
         
         // Fetch sequentially to avoid concurrency issues
         let categories = await fetchCategories(branchType: branchType)
-        let stores = await fetchStores(branchType: branchType, radiusKm: radiusKm, jwt: jwt)
-        let (featuredProducts, _) = await fetchProducts(first: 6, branchType: branchType, radiusKm: radiusKm, jwt: jwt)
-        let (recentProducts, recentPageInfo) = await fetchProducts(first: 10, branchType: branchType, radiusKm: radiusKm, jwt: jwt)
-        let (popularProducts, _) = await fetchProducts(first: 8, branchType: branchType, radiusKm: radiusKm, jwt: jwt)
+        // Para stores: filtrar por categoryId si existe (backend debe soportar esto)
+        let stores = await fetchStores(branchType: branchType, radiusKm: radiusKm, categoryId: categoryId, jwt: jwt)
+        // Featured products: no requiere distancia específica
+        let (featuredProducts, _) = await fetchProducts(first: 6, branchType: branchType, categoryId: categoryId, radiusKm: radiusKm, jwt: jwt)
+        // Recent products: sin límite de distancia
+        let (recentProducts, recentPageInfo) = await fetchProducts(first: 10, branchType: branchType, categoryId: categoryId, radiusKm: radiusKm, jwt: jwt)
+        // Popular products: máximo 3km de distancia
+        let (popularProducts, _) = await fetchProducts(first: 8, branchType: branchType, categoryId: categoryId, radiusKm: 3.0, jwt: jwt)
         
         let feedData = FeedData(
             categories: categories,
@@ -100,11 +106,11 @@ class ProductFeedRepository {
         return .success(feedData)
     }
     
-    func fetchMoreProducts(after cursor: String, radiusKm: Double? = nil) async -> Result<([FeedProduct], PageInfo), Error> {
+    func fetchMoreProducts(after cursor: String, radiusKm: Double? = nil, categoryId: String? = nil) async -> Result<([FeedProduct], PageInfo), Error> {
         let jwt = AuthManager.shared.getAccessToken()
         let branchType = BranchTypeManager.shared.selectedType.rawValue
         
-        let (products, pageInfo) = await fetchProducts(first: 10, after: cursor, branchType: branchType, radiusKm: radiusKm, jwt: jwt)
+        let (products, pageInfo) = await fetchProducts(first: 10, after: cursor, branchType: branchType, categoryId: categoryId, radiusKm: radiusKm, jwt: jwt)
         return .success((products, pageInfo))
     }
     
@@ -128,13 +134,14 @@ class ProductFeedRepository {
         }
     }
     
-    private func fetchStores(branchType: String, radiusKm: Double?, jwt: String?) async -> [FeedStore] {
+    private func fetchStores(branchType: String, radiusKm: Double?, categoryId: String?, jwt: String?) async -> [FeedStore] {
         let query = LlegoAPI.GetBranchesQuery(
             first: 15,
             after: .none,
             businessId: .none,
             tipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) } ?? .none,
             radiusKm: radiusKm.map { .some($0) } ?? .none,
+            productCategoryId: categoryId.map { .some($0) } ?? .none,
             jwt: jwt.map { .some($0) } ?? .none
         )
         
@@ -160,12 +167,12 @@ class ProductFeedRepository {
         }
     }
     
-    private func fetchProducts(first: Int, after: String? = nil, branchType: String, radiusKm: Double?, jwt: String?) async -> ([FeedProduct], PageInfo) {
+    private func fetchProducts(first: Int, after: String? = nil, branchType: String, categoryId: String?, radiusKm: Double?, jwt: String?) async -> ([FeedProduct], PageInfo) {
         let query = LlegoAPI.GetProductsQuery(
             first: Int32(first),
             after: after.map { .some($0) } ?? .none,
             branchId: .none,
-            categoryId: .none,
+            categoryId: categoryId.map { .some($0) } ?? .none,
             availableOnly: .some(true),
             branchTipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) } ?? .none,
             radiusKm: radiusKm.map { .some($0) } ?? .none,
@@ -189,7 +196,9 @@ class ProductFeedRepository {
                             branchId: edge.node.branchId,
                             branchName: edge.node.business?.name ?? "",
                             branchAvatarUrl: edge.node.business?.avatarUrl,
-                            businessName: edge.node.business?.name ?? "Tienda"
+                            businessName: edge.node.business?.name ?? "Tienda",
+                            categoryId: edge.node.categoryId,
+                            categoryName: edge.node.categoryName
                         ))
                     }
                     pageInfo = PageInfo(

@@ -131,11 +131,11 @@ struct StoreDetailView: View {
                                 AsyncImage(url: URL(string: store.bannerUrl)) { phase in
                                     switch phase {
                                     case .empty:
-                                        Image("generic_cover")
-                                            .resizable()
-                                            .aspectRatio(contentMode: .fill)
-                                            .frame(width: geometry.size.width, height: 280)
-                                            .clipped()
+                                        ZStack {
+                                            Color.gray.opacity(0.1)
+                                            CircularLoadingIndicator(color: .llegoPrimary, lineWidth: 5, size: 50, useHDR: true)
+                                        }
+                                        .frame(width: geometry.size.width, height: 280)
                                     case .success(let image):
                                         image
                                             .resizable()
@@ -171,16 +171,17 @@ struct StoreDetailView: View {
                                     AsyncImage(url: URL(string: store.logoUrl)) { phase in
                                         switch phase {
                                         case .empty:
-                                            Image("generic_logo")
-                                                .resizable()
-                                                .aspectRatio(contentMode: .fill)
-                                                .frame(width: 110, height: 110)
-                                                .clipShape(Circle())
-                                                .overlay(
-                                                    Circle()
-                                                        .stroke(Color.white, lineWidth: 5)
-                                                )
-                                                .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
+                                            ZStack {
+                                                Circle()
+                                                    .fill(Color.white)
+                                                CircularLoadingIndicator(color: .llegoPrimary, lineWidth: 4, size: 30, useHDR: true)
+                                            }
+                                            .frame(width: 110, height: 110)
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(Color.white, lineWidth: 5)
+                                            )
+                                            .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
                                         case .success(let image):
                                             image
                                                 .resizable()
@@ -412,38 +413,13 @@ struct StoreDetailView: View {
                                 
 
                                 
-                                // Branches Section - Show sibling branches
+                                // Branches Section - Redesigned
                                 if !viewModel.siblingBranches.isEmpty {
                                     VStack(alignment: .leading, spacing: 16) {
-                                        HStack {
-                                            VStack(alignment: .leading, spacing: 4) {
-                                                Text("Nuestras Sedes")
-                                                    .font(.system(size: 22, weight: .bold))
-                                                    .foregroundColor(.black)
-
-                                                Text("\(viewModel.siblingBranches.count) ubicaciones disponibles")
-                                                    .font(.system(size: 13, weight: .regular))
-                                                    .foregroundColor(.secondary)
-                                            }
-
-                                            Spacer()
-
-                                            if viewModel.siblingBranches.count > 3 {
-                                                Button(action: {
-                                                    // TODO: Navigate to all branches view
-                                                }) {
-                                                    HStack(spacing: 4) {
-                                                        Text("Ver más")
-                                                            .font(.system(size: 14, weight: .semibold))
-
-                                                        Image(systemName: "chevron.right")
-                                                            .font(.system(size: 12, weight: .semibold))
-                                                    }
-                                                    .foregroundColor(.llegoPrimary)
-                                                }
-                                            }
-                                        }
-                                        .padding(.horizontal, 20)
+                                        Text("Otras Sedes")
+                                            .font(.system(size: 20, weight: .bold))
+                                            .foregroundColor(.black)
+                                            .padding(.horizontal, 20)
 
                                         if viewModel.isLoadingSiblings {
                                             HStack {
@@ -454,24 +430,22 @@ struct StoreDetailView: View {
                                             }
                                         } else {
                                             ScrollView(.horizontal, showsIndicators: false) {
-                                                HStack(spacing: 16) {
+                                                HStack(spacing: 12) {
                                                     ForEach(viewModel.siblingBranches, id: \.id) { branch in
-                                                        StoreCard(
-                                                            storeName: branch.name,
-                                                            etaMinutes: calculateETA(deliveryRadius: branch.deliveryRadius),
-                                                            logoUrl: branch.avatarUrl ?? defaultLogoUrl,
-                                                            bannerUrl: branch.coverUrl ?? defaultBannerUrl,
-                                                            address: branch.address,
-                                                            rating: nil,
-                                                            size: .medium
-                                                        )
+                                                        NavigationLink(destination: StoreDetailView(storeId: branch.id)) {
+                                                            SiblingBranchCard(
+                                                                branch: branch,
+                                                                eta: calculateETA(deliveryRadius: branch.deliveryRadius)
+                                                            )
+                                                        }
+                                                        .buttonStyle(PlainButtonStyle())
                                                     }
                                                 }
                                                 .padding(.horizontal, 20)
+                                                .padding(.bottom, 20) // Space for shadow
                                             }
                                         }
                                     }
-                                    .padding(.bottom, 24)
                                 }
 
                                 // Products Section - Show branch products
@@ -636,6 +610,87 @@ struct SocialButton: View {
 struct MapLocation: Identifiable {
     let id = UUID()
     let coordinate: CLLocationCoordinate2D
+}
+
+// New Card Design for Sibling Branches
+struct SiblingBranchCard: View {
+    let branch: BranchGraphQL
+    let eta: Int
+    
+    var body: some View {
+        HStack(spacing: 0) {
+            // Image
+            AsyncImage(url: URL(string: branch.avatarUrl ?? "")) { phase in
+                switch phase {
+                case .empty:
+                    ZStack {
+                        Color.gray.opacity(0.1)
+                        ProgressView()
+                            .scaleEffect(0.8)
+                    }
+                case .success(let image):
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                case .failure:
+                    Image("generic_logo")
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                @unknown default:
+                    Color.gray.opacity(0.1)
+                }
+            }
+            .frame(width: 80, height: 80)
+            .clipped()
+            
+            // Info Content
+            VStack(alignment: .leading, spacing: 6) {
+                Text(branch.name)
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(.black)
+                    .lineLimit(1)
+                
+                if !branch.address.isEmpty {
+                    HStack(spacing: 4) {
+                        Image(systemName: "mappin.and.ellipse")
+                            .font(.system(size: 10))
+                            .foregroundColor(.gray)
+                        Text(branch.address)
+                            .font(.system(size: 12))
+                            .foregroundColor(.gray)
+                            .lineLimit(1)
+                    }
+                }
+                
+                HStack(spacing: 4) {
+                    Image(systemName: "bolt.fill")
+                        .font(.system(size: 10))
+                        .foregroundColor(.llegoPrimary)
+                    Text("\(eta) min")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.llegoPrimary)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.llegoPrimary.opacity(0.1))
+                .cornerRadius(6)
+            }
+            .padding(12)
+            .frame(height: 80)
+            
+            Spacer()
+            
+            // Chevron
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.gray.opacity(0.5))
+                .padding(.trailing, 12)
+        }
+        .frame(width: 300, height: 80)
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 3)
+    }
 }
 
 // ShareSheet for native sharing
