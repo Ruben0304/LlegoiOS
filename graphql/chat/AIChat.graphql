@@ -1,39 +1,40 @@
-query AIChat($message: String!, $sessionId: String!) {
-  aiChat(input: {
-    message: $message
-    sessionId: $sessionId
-  }) {
-    output {
-      type
-      AItext
-      ids
-      entities {
-        ... on PaymentMethodType {
-          id
-          currency
-          method
-        }
-        ... on ProductType {
-          id
-          name
-          description
-          price
-          currency
-          image
-          availability
-        }
-        ... on BranchType {
-          id
-          name
-          address
-          phone
-          status
-          coordinates {
-            type
-            coordinates
-          }
+query AIChat($message: String!, $jwt: String) {
+  aiChat(input: { message: $message }, jwt: $jwt) {
+    responseType
+    aiText
+    suggestedProducts {
+      product {
+        id
+        name
+        description
+        price
+        currency
+        imageUrl
+        availability
+      }
+      reason
+      # Nuevos campos de branch (info directa del producto)
+      branchName
+      branchAvatarUrl
+      branchAddress
+      branchPhone
+    }
+    suggestedBranches {
+      branch {
+        id
+        name
+        address
+        phone
+        status
+        tipos
+        avatarUrl
+        coordinates {
+          type
+          coordinates
         }
       }
+      reason
     }
+    confidence
   }
 }

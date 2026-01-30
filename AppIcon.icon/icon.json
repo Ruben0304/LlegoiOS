@@ -1,19 +1,17 @@
 {
-  "fill" : "system-dark",
+  "fill" : "system-light",
   "groups" : [
     {
       "layers" : [
         {
-          "blend-mode" : "normal",
-          "fill" : "automatic",
-          "glass" : true,
-          "image-name" : "0CE50A9A-9FCF-4688-8297-C67D847EAC3E.png",
-          "name" : "0CE50A9A-9FCF-4688-8297-C67D847EAC3E",
+          "glass" : false,
+          "image-name" : "llegoicon2small.png",
+          "name" : "llegoicon2small",
           "position" : {
-            "scale" : 1.1,
+            "scale" : 1.3,
             "translation-in-points" : [
-              0,
-              0
+              -35.260641495536674,
+              6.086416828918914
             ]
           }
         }

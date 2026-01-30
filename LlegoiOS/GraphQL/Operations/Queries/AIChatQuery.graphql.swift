@@ -9,23 +9,23 @@ public extension LlegoAPI {
     public static let operationName: String = "AIChat"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query AIChat($message: String!, $sessionId: String!) { aiChat(input: { message: $message, sessionId: $sessionId }) { __typename output { __typename type AItext ids entities { __typename ... on PaymentMethodType { id currency method } ... on ProductType { id name description price currency image availability } ... on BranchType { id name address phone status coordinates { __typename type coordinates } } } } } }"#
+        #"query AIChat($message: String!, $jwt: String) { aiChat(input: { message: $message }, jwt: $jwt) { __typename responseType aiText suggestedProducts { __typename product { __typename id name description price currency imageUrl availability } reason branchName branchAvatarUrl branchAddress branchPhone } suggestedBranches { __typename branch { __typename id name address phone status tipos avatarUrl coordinates { __typename type coordinates } } reason } confidence } }"#
       ))
 
     public var message: String
-    public var sessionId: String
+    public var jwt: GraphQLNullable<String>
 
     public init(
       message: String,
-      sessionId: String
+      jwt: GraphQLNullable<String>
     ) {
       self.message = message
-      self.sessionId = sessionId
+      self.jwt = jwt
     }
 
     @_spi(Unsafe) public var __variables: Variables? { [
       "message": message,
-      "sessionId": sessionId
+      "jwt": jwt
     ] }
 
     public struct Data: LlegoAPI.SelectionSet {
@@ -34,16 +34,16 @@ public extension LlegoAPI {
 
       @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.Query }
       @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
-        .field("aiChat", AiChat?.self, arguments: ["input": [
-          "message": .variable("message"),
-          "sessionId": .variable("sessionId")
-        ]]),
+        .field("aiChat", AiChat?.self, arguments: [
+          "input": ["message": .variable("message")],
+          "jwt": .variable("jwt")
+        ]),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
         AIChatQuery.Data.self
       ] }
 
-      /// Send a message to the AI assistant and get a response
+      /// Send a message to the AI assistant and get a response with RAG
       public var aiChat: AiChat? { __data["aiChat"] }
 
       /// AiChat
@@ -56,173 +56,168 @@ public extension LlegoAPI {
         @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.AiAssistantResponseType }
         @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
           .field("__typename", String.self),
-          .field("output", Output.self),
+          .field("responseType", String.self),
+          .field("aiText", String.self),
+          .field("suggestedProducts", [SuggestedProduct].self),
+          .field("suggestedBranches", [SuggestedBranch].self),
+          .field("confidence", Double.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
           AIChatQuery.Data.AiChat.self
         ] }
 
-        /// Response output from AI assistant
-        public var output: Output { __data["output"] }
+        /// Type of response: search_products, search_branches, create_draft_order, request_details, general_response
+        public var responseType: String { __data["responseType"] }
+        /// Natural language response from AI
+        public var aiText: String { __data["aiText"] }
+        /// Products suggested by AI
+        public var suggestedProducts: [SuggestedProduct] { __data["suggestedProducts"] }
+        /// Branches suggested by AI
+        public var suggestedBranches: [SuggestedBranch] { __data["suggestedBranches"] }
+        /// AI confidence score (0.0 to 1.0)
+        public var confidence: Double { __data["confidence"] }
 
-        /// AiChat.Output
+        /// AiChat.SuggestedProduct
         ///
-        /// Parent Type: `AiAssistantOutputType`
-        public struct Output: LlegoAPI.SelectionSet {
+        /// Parent Type: `ProductSuggestionType`
+        public struct SuggestedProduct: LlegoAPI.SelectionSet {
           @_spi(Unsafe) public let __data: DataDict
           @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
 
-          @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.AiAssistantOutputType }
+          @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.ProductSuggestionType }
           @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
             .field("__typename", String.self),
-            .field("type", String.self),
-            .field("AItext", String.self),
-            .field("ids", [String].self),
-            .field("entities", [Entity]?.self),
+            .field("product", Product.self),
+            .field("reason", String.self),
+            .field("branchName", String?.self),
+            .field("branchAvatarUrl", String?.self),
+            .field("branchAddress", String?.self),
+            .field("branchPhone", String?.self),
           ] }
           @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
-            AIChatQuery.Data.AiChat.Output.self
+            AIChatQuery.Data.AiChat.SuggestedProduct.self
           ] }
 
-          /// Type of response (e.g., 'payment_method', 'products', 'branches')
-          public var type: String { __data["type"] }
-          /// AI-generated response text
-          public var aItext: String { __data["AItext"] }
-          /// List of relevant IDs (for debugging)
-          public var ids: [String] { __data["ids"] }
-          /// List of resolved entities (products, branches, or payment methods)
-          public var entities: [Entity]? { __data["entities"] }
+          /// The suggested product
+          public var product: Product { __data["product"] }
+          /// Why this product was suggested
+          public var reason: String { __data["reason"] }
+          /// Branch name where product is sold
+          public var branchName: String? { __data["branchName"] }
+          /// Presigned URL for the branch avatar
+          public var branchAvatarUrl: String? { __data["branchAvatarUrl"] }
+          /// Branch address
+          public var branchAddress: String? { __data["branchAddress"] }
+          /// Branch phone number
+          public var branchPhone: String? { __data["branchPhone"] }
 
-          /// AiChat.Output.Entity
+          /// AiChat.SuggestedProduct.Product
           ///
-          /// Parent Type: `EntityType`
-          public struct Entity: LlegoAPI.SelectionSet {
+          /// Parent Type: `ProductType`
+          public struct Product: LlegoAPI.SelectionSet {
             @_spi(Unsafe) public let __data: DataDict
             @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
 
-            @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Unions.EntityType }
+            @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.ProductType }
             @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
               .field("__typename", String.self),
-              .inlineFragment(AsPaymentMethodType.self),
-              .inlineFragment(AsProductType.self),
-              .inlineFragment(AsBranchType.self),
+              .field("id", String.self),
+              .field("name", String.self),
+              .field("description", String.self),
+              .field("price", Double.self),
+              .field("currency", String.self),
+              .field("imageUrl", String.self),
+              .field("availability", Bool.self),
             ] }
             @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
-              AIChatQuery.Data.AiChat.Output.Entity.self
+              AIChatQuery.Data.AiChat.SuggestedProduct.Product.self
             ] }
 
-            public var asPaymentMethodType: AsPaymentMethodType? { _asInlineFragment() }
-            public var asProductType: AsProductType? { _asInlineFragment() }
-            public var asBranchType: AsBranchType? { _asInlineFragment() }
+            public var id: String { __data["id"] }
+            public var name: String { __data["name"] }
+            public var description: String { __data["description"] }
+            public var price: Double { __data["price"] }
+            public var currency: String { __data["currency"] }
+            /// Presigned URL for the product image
+            public var imageUrl: String { __data["imageUrl"] }
+            public var availability: Bool { __data["availability"] }
+          }
+        }
 
-            /// AiChat.Output.Entity.AsPaymentMethodType
+        /// AiChat.SuggestedBranch
+        ///
+        /// Parent Type: `BranchSuggestionType`
+        public struct SuggestedBranch: LlegoAPI.SelectionSet {
+          @_spi(Unsafe) public let __data: DataDict
+          @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+          @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.BranchSuggestionType }
+          @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+            .field("__typename", String.self),
+            .field("branch", Branch.self),
+            .field("reason", String.self),
+          ] }
+          @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+            AIChatQuery.Data.AiChat.SuggestedBranch.self
+          ] }
+
+          /// The suggested branch
+          public var branch: Branch { __data["branch"] }
+          /// Why this branch was suggested
+          public var reason: String { __data["reason"] }
+
+          /// AiChat.SuggestedBranch.Branch
+          ///
+          /// Parent Type: `BranchType`
+          public struct Branch: LlegoAPI.SelectionSet {
+            @_spi(Unsafe) public let __data: DataDict
+            @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+            @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.BranchType }
+            @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+              .field("__typename", String.self),
+              .field("id", String.self),
+              .field("name", String.self),
+              .field("address", String?.self),
+              .field("phone", String.self),
+              .field("status", String.self),
+              .field("tipos", [GraphQLEnum<LlegoAPI.BranchTipo>].self),
+              .field("avatarUrl", String?.self),
+              .field("coordinates", Coordinates.self),
+            ] }
+            @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+              AIChatQuery.Data.AiChat.SuggestedBranch.Branch.self
+            ] }
+
+            public var id: String { __data["id"] }
+            public var name: String { __data["name"] }
+            public var address: String? { __data["address"] }
+            public var phone: String { __data["phone"] }
+            public var status: String { __data["status"] }
+            public var tipos: [GraphQLEnum<LlegoAPI.BranchTipo>] { __data["tipos"] }
+            /// Presigned URL for the branch avatar (inherits from business if not set)
+            public var avatarUrl: String? { __data["avatarUrl"] }
+            public var coordinates: Coordinates { __data["coordinates"] }
+
+            /// AiChat.SuggestedBranch.Branch.Coordinates
             ///
-            /// Parent Type: `PaymentMethodType`
-            public struct AsPaymentMethodType: LlegoAPI.InlineFragment {
+            /// Parent Type: `CoordinatesType`
+            public struct Coordinates: LlegoAPI.SelectionSet {
               @_spi(Unsafe) public let __data: DataDict
               @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
 
-              public typealias RootEntityType = AIChatQuery.Data.AiChat.Output.Entity
-              @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.PaymentMethodType }
+              @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.CoordinatesType }
               @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
-                .field("id", String.self),
-                .field("currency", String.self),
-                .field("method", String.self),
+                .field("__typename", String.self),
+                .field("type", String.self),
+                .field("coordinates", [Double].self),
               ] }
               @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
-                AIChatQuery.Data.AiChat.Output.Entity.self,
-                AIChatQuery.Data.AiChat.Output.Entity.AsPaymentMethodType.self
+                AIChatQuery.Data.AiChat.SuggestedBranch.Branch.Coordinates.self
               ] }
 
-              /// Payment method ID
-              public var id: String { __data["id"] }
-              /// Currency (e.g., CUP, USD)
-              public var currency: String { __data["currency"] }
-              /// Payment method type (wallet, transfer, stripe, cash)
-              public var method: String { __data["method"] }
-            }
-
-            /// AiChat.Output.Entity.AsProductType
-            ///
-            /// Parent Type: `ProductType`
-            public struct AsProductType: LlegoAPI.InlineFragment {
-              @_spi(Unsafe) public let __data: DataDict
-              @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
-
-              public typealias RootEntityType = AIChatQuery.Data.AiChat.Output.Entity
-              @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.ProductType }
-              @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
-                .field("id", String.self),
-                .field("name", String.self),
-                .field("description", String.self),
-                .field("price", Double.self),
-                .field("currency", String.self),
-                .field("image", String.self),
-                .field("availability", Bool.self),
-              ] }
-              @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
-                AIChatQuery.Data.AiChat.Output.Entity.self,
-                AIChatQuery.Data.AiChat.Output.Entity.AsProductType.self
-              ] }
-
-              public var id: String { __data["id"] }
-              public var name: String { __data["name"] }
-              public var description: String { __data["description"] }
-              public var price: Double { __data["price"] }
-              public var currency: String { __data["currency"] }
-              public var image: String { __data["image"] }
-              public var availability: Bool { __data["availability"] }
-            }
-
-            /// AiChat.Output.Entity.AsBranchType
-            ///
-            /// Parent Type: `BranchType`
-            public struct AsBranchType: LlegoAPI.InlineFragment {
-              @_spi(Unsafe) public let __data: DataDict
-              @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
-
-              public typealias RootEntityType = AIChatQuery.Data.AiChat.Output.Entity
-              @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.BranchType }
-              @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
-                .field("id", String.self),
-                .field("name", String.self),
-                .field("address", String?.self),
-                .field("phone", String.self),
-                .field("status", String.self),
-                .field("coordinates", Coordinates.self),
-              ] }
-              @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
-                AIChatQuery.Data.AiChat.Output.Entity.self,
-                AIChatQuery.Data.AiChat.Output.Entity.AsBranchType.self
-              ] }
-
-              public var id: String { __data["id"] }
-              public var name: String { __data["name"] }
-              public var address: String? { __data["address"] }
-              public var phone: String { __data["phone"] }
-              public var status: String { __data["status"] }
-              public var coordinates: Coordinates { __data["coordinates"] }
-
-              /// AiChat.Output.Entity.AsBranchType.Coordinates
-              ///
-              /// Parent Type: `CoordinatesType`
-              public struct Coordinates: LlegoAPI.SelectionSet {
-                @_spi(Unsafe) public let __data: DataDict
-                @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
-
-                @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.CoordinatesType }
-                @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
-                  .field("__typename", String.self),
-                  .field("type", String.self),
-                  .field("coordinates", [Double].self),
-                ] }
-                @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
-                  AIChatQuery.Data.AiChat.Output.Entity.AsBranchType.Coordinates.self
-                ] }
-
-                public var type: String { __data["type"] }
-                public var coordinates: [Double] { __data["coordinates"] }
-              }
+              public var type: String { __data["type"] }
+              public var coordinates: [Double] { __data["coordinates"] }
             }
           }
         }

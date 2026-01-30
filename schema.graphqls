@@ -24,6 +24,10 @@ type Query {
   business(id: String!, jwt: String = null): BusinessType
   "Buscar negocios"
   searchBusinesses(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true, jwt: String = null): [BusinessType!]!
+  "Obtener negocios con sus sucursales anidadas (optimizado)"
+  getBusinessesWithBranches(jwt: String = null): [BusinessWithBranchesType!]!
+  "Obtener todos mis negocios (propios + con acceso compartido)"
+  getMyBusinesses(jwt: String!): [BusinessType!]!
   "Lista de sucursales con scoring por cercanía (paginado)"
   branches(first: Int = null, after: String = null, businessId: String = null, tipo: BranchTipo = null, radiusKm: Float = null, productCategoryId: String = null, jwt: String = null): BranchConnection!
   "Obtener sucursal por ID"
@@ -34,6 +38,8 @@ type Query {
   nearbyBranches(longitude: Float!, latitude: Float!, first: Int = null, after: String = null, radiusKm: Float! = 5, onlyActive: Boolean! = true, tipo: BranchTipo = null, jwt: String = null): NearbyBranchConnection!
   "Obtener ubicación de una sucursal desde MongoDB"
   branchLocation(branchId: String!, jwt: String = null): CoordinatesType
+  "Obtener todas las sucursales a las que tengo acceso (propias + compartidas)"
+  getMyBranches(jwt: String!): [BranchType!]!
   "Lista de productos con scoring por cercanía (paginado)"
   products(first: Int = null, after: String = null, ids: [String!] = null, branchId: String = null, categoryId: String = null, availableOnly: Boolean! = false, branchTipo: BranchTipo = null, radiusKm: Float = null, jwt: String = null): ProductConnection!
   "Obtener producto por ID"
@@ -48,7 +54,7 @@ type Query {
   productCategories(branchType: String = null): [ProductCategoryType!]!
   "Get product category by ID"
   productCategory(id: String!): ProductCategoryType
-  "Send a message to the AI assistant and get a response"
+  "Send a message to the AI assistant and get a response with RAG"
   aiChat(input: AiAssistantChatInput!, jwt: String = null): AiAssistantResponseType
   "Obtener mis pedidos con paginación"
   myOrders(jwt: String!, status: OrderStatusEnum = null, limit: Int! = 20, offset: Int! = 0): OrdersConnectionType!
@@ -102,8 +108,32 @@ type Query {
   businessAccessByBusiness(businessId: String!, jwt: String!): [BusinessAccessType!]!
   "Mis accesos a negocios"
   myBusinessAccess(jwt: String!): [BusinessAccessType!]!
-  "Obtener configuración de la aplicación"
+  "Obtener configuración de la aplicación de clientes"
   appConfig: AppConfigType
+  "Obtener configuración de la aplicación de negocios"
+  businessAppConfig: BusinessAppConfigType
+  "Obtener todos los feedbacks (requiere rol admin)"
+  feedbacks(jwt: String!): [FeedbackType!]!
+  "Obtener feedback por ID"
+  feedback(id: String!, jwt: String!): FeedbackType
+  "Obtener mis feedbacks"
+  myFeedbacks(jwt: String!): [FeedbackType!]!
+  "Obtener feedbacks por tipo (requiere rol admin)"
+  feedbacksByType(type: FeedbackTypeEnum!, jwt: String!): [FeedbackType!]!
+  "Obtener feedbacks por estado (requiere rol admin)"
+  feedbacksByStatus(status: FeedbackStatusEnum!, jwt: String!): [FeedbackType!]!
+  "Obtener todas las encuestas activas"
+  activeSurveys(jwt: String!): [SurveyType!]!
+  "Obtener todas las encuestas (requiere rol admin)"
+  allSurveys(jwt: String!): [SurveyType!]!
+  "Obtener encuesta por ID"
+  survey(id: String!, jwt: String!): SurveyType
+  "Obtener respuestas por encuesta (requiere rol admin)"
+  surveyResponses(surveyId: String!, jwt: String!): [SurveyResponseType!]!
+  "Obtener mis respuestas a encuestas"
+  mySurveyResponses(jwt: String!): [SurveyResponseType!]!
+  "Verificar si el usuario ya respondió una encuesta"
+  hasRespondedToSurvey(surveyId: String!, jwt: String!): Boolean!
   "Saludo de ejemplo"
   hello(jwt: String = null): String!
   "Saluda por nombre"
@@ -119,6 +149,7 @@ type UserType {
   avatar: String
   businessIds: [String!]!
   branchIds: [String!]!
+  businessAccessIds: [String!]!
   createdAt: DateTime!
   authProvider: String!
   providerUserId: String
@@ -146,15 +177,22 @@ type BusinessType {
   "Presigned URL for the business avatar"
   avatarUrl: String
 }
-type BranchConnection {
-  edges: [BranchEdge!]!
-  pageInfo: PageInfo!
+type BusinessWithBranchesType {
+  id: String!
+  name: String!
+  ownerId: String!
+  globalRating: Float!
+  avatar: String
+  description: String
+  socialMedia: JSON
+  tags: [String!]!
+  isActive: Boolean!
+  createdAt: DateTime!
+  branches: [BranchType!]!
+  "Presigned URL for the business avatar"
+  avatarUrl: String
 }
-type BranchEdge {
-  node: ScoredBranchType!
-  cursor: String!
-}
-type ScoredBranchType {
+type BranchType {
   id: String!
   businessId: String!
   name: String!
@@ -171,16 +209,12 @@ type ScoredBranchType {
   tipos: [BranchTipo!]!
   paymentMethodIds: [String!]!
   createdAt: DateTime!
-  score: Float!
-  distanceM: Float
   wallet: WalletBalanceType!
   walletStatus: String!
   "Presigned URL for the branch avatar (inherits from business if not set)"
   avatarUrl: String
   "Presigned URL for the branch cover image"
   coverUrl: String
-  "Distance in kilometers from user"
-  distanceKm: Float
   "Products from this branch"
   products(limit: Int! = 6, availableOnly: Boolean! = true): [ProductType!]!
   "Payment methods accepted by this branch"
@@ -222,7 +256,51 @@ type ProductCategoryType {
   iconAndroid: String!
   createdAt: DateTime!
 }
-type BranchType {
+type PaymentMethodType {
+  "Payment method ID"
+  id: String!
+  "Display name"
+  name: String!
+  "Internal code"
+  code: String!
+  "Currency code"
+  currency: String!
+  "Method type"
+  method: String!
+  "Commission percentage charged"
+  commissionPercent: Float!
+  "Delivery fee percentage"
+  deliveryFeePercent: Float!
+  "Whether refunds are allowed"
+  isRefundable: Boolean!
+  "Whether proof is required"
+  requiresProof: Boolean!
+  "Whether business confirmation is required"
+  requiresBusinessConfirmation: Boolean!
+  "Expiration in minutes"
+  expirationMinutes: Int
+  "Whether method is active"
+  isActive: Boolean!
+  "Display order"
+  displayOrder: Int!
+  "Icon URL"
+  iconUrl: String
+  "Payment instructions"
+  instructions: String
+  "Creation time"
+  createdAt: DateTime!
+  "Last update time"
+  updatedAt: DateTime!
+}
+type BranchConnection {
+  edges: [BranchEdge!]!
+  pageInfo: PageInfo!
+}
+type BranchEdge {
+  node: ScoredBranchType!
+  cursor: String!
+}
+type ScoredBranchType {
   id: String!
   businessId: String!
   name: String!
@@ -239,52 +317,20 @@ type BranchType {
   tipos: [BranchTipo!]!
   paymentMethodIds: [String!]!
   createdAt: DateTime!
+  score: Float!
+  distanceM: Float
   wallet: WalletBalanceType!
   walletStatus: String!
   "Presigned URL for the branch avatar (inherits from business if not set)"
   avatarUrl: String
   "Presigned URL for the branch cover image"
   coverUrl: String
+  "Distance in kilometers from user"
+  distanceKm: Float
   "Products from this branch"
   products(limit: Int! = 6, availableOnly: Boolean! = true): [ProductType!]!
   "Payment methods accepted by this branch"
   paymentMethods: [PaymentMethodType!]!
-}
-type PaymentMethodType {
-  "Payment method ID"
-  id: String!
-  "Display name (e.g., Wallet USD, Transfermóvil)"
-  name: String!
-  "Code (e.g., wallet_usd, transfermovil)"
-  code: String!
-  "Currency (e.g., CUP, USD)"
-  currency: String!
-  "Payment method type (wallet, transfer, stripe, cash)"
-  method: String!
-  "Commission percentage charged to customer"
-  commissionPercent: Float!
-  "Extra percentage for cash delivery payments"
-  deliveryFeePercent: Float!
-  "Whether this method supports refunds"
-  isRefundable: Boolean!
-  "Whether proof/receipt is required"
-  requiresProof: Boolean!
-  "Whether business must confirm receipt"
-  requiresBusinessConfirmation: Boolean!
-  "Time limit to complete payment"
-  expirationMinutes: Int
-  "Whether this method is currently active"
-  isActive: Boolean!
-  "Display order in UI"
-  displayOrder: Int!
-  "Icon URL"
-  iconUrl: String
-  "Payment instructions for user"
-  instructions: String
-  "Creation timestamp"
-  createdAt: DateTime
-  "Last update timestamp"
-  updatedAt: DateTime
 }
 type PageInfo {
   hasNextPage: Boolean!
@@ -379,18 +425,88 @@ type SubcategoryType {
   imageUrl: String!
 }
 type AiAssistantResponseType {
-  "Response output from AI assistant"
-  output: AiAssistantOutputType!
+  "Type of response: search_products, search_branches, create_draft_order, request_details, general_response"
+  responseType: String!
+  "Natural language response from AI"
+  aiText: String!
+  "Products suggested by AI"
+  suggestedProducts: [ProductSuggestionType!]!
+  "Branches suggested by AI"
+  suggestedBranches: [BranchSuggestionType!]!
+  "Draft order created by AI (if applicable)"
+  draftOrder: DraftOrderType
+  "Fields that AI needs from user"
+  missingFields: [String!]!
+  "AI confidence score (0.0 to 1.0)"
+  confidence: Float!
 }
-type AiAssistantOutputType {
-  "Type of response (e.g., 'payment_method', 'products', 'branches')"
-  type: String!
-  "AI-generated response text"
-  AItext: String!
-  "List of relevant IDs (for debugging)"
-  ids: [String!]!
-  "List of resolved entities (products, branches, or payment methods)"
-  entities: [EntityType!]
+type ProductSuggestionType {
+  "The suggested product"
+  product: ProductType!
+  "Why this product was suggested"
+  reason: String!
+  "Branch name where product is sold"
+  branchName: String
+  "Branch avatar S3 key"
+  branchAvatar: String
+  "Branch address"
+  branchAddress: String
+  "Branch phone number"
+  branchPhone: String
+  "Presigned URL for the branch avatar"
+  branchAvatarUrl: String
+}
+type BranchSuggestionType {
+  "The suggested branch"
+  branch: BranchType!
+  "Why this branch was suggested"
+  reason: String!
+}
+type DraftOrderType {
+  "Draft order ID"
+  id: String!
+  "Session ID (user ID)"
+  sessionId: String!
+  "Customer ID"
+  customerId: String!
+  "Branch ID"
+  branchId: String!
+  "Business ID"
+  businessId: String!
+  "Branch avatar URL"
+  branchAvatar: String
+  "Order items"
+  items: [DraftOrderItemType!]!
+  "Subtotal amount"
+  subtotal: Float!
+  "Delivery fee"
+  deliveryFee: Float!
+  "Total amount"
+  total: Float!
+  "Currency code"
+  currency: String!
+  "Delivery address"
+  deliveryAddress: String
+  "Payment method ID"
+  paymentMethodId: String
+  "Draft status"
+  status: String!
+  "Creation timestamp"
+  createdAt: DateTime!
+  "Expiration timestamp"
+  expiresAt: DateTime!
+}
+type DraftOrderItemType {
+  "Product ID"
+  productId: String!
+  "Product name"
+  name: String!
+  "Product price"
+  price: Float!
+  "Quantity"
+  quantity: Int!
+  "Product image URL"
+  imageUrl: String!
 }
 type OrdersConnectionType {
   orders: [OrderType!]!
@@ -724,6 +840,56 @@ type MaintenanceConfigType {
   "Message to display during maintenance"
   message: String
 }
+type BusinessAppConfigType {
+  id: String!
+  android: AndroidConfigType!
+  ios: IosConfigType!
+  maintenance: MaintenanceConfigType!
+  "Message to show when update is available"
+  updateMessage: String
+  "Release notes"
+  changelog: String
+  "Date of the latest release"
+  releaseDate: DateTime!
+}
+type FeedbackType {
+  id: String!
+  userId: String!
+  type: FeedbackTypeEnum!
+  description: String!
+  "Rating from 1-5 stars"
+  rating: Int!
+  status: FeedbackStatusEnum!
+  createdAt: DateTime!
+  updatedAt: DateTime
+}
+type SurveyType {
+  id: String!
+  title: String!
+  description: String
+  questions: [SurveyQuestionType!]!
+  isActive: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime
+}
+type SurveyQuestionType {
+  questionId: String!
+  text: String!
+  type: QuestionTypeEnum!
+  options: [String!]
+  required: Boolean!
+}
+type SurveyResponseType {
+  id: String!
+  surveyId: String!
+  userId: String!
+  responses: [QuestionResponseType!]!
+  createdAt: DateTime!
+}
+type QuestionResponseType {
+  questionId: String!
+  answer: String!
+}
 type Mutation {
   "Register a new user"
   register(input: RegisterInput!, jwt: String = null): AuthResponse!
@@ -747,6 +913,8 @@ type Mutation {
   registerBusiness(businessInput: CreateBusinessInput!, branchesInput: [RegisterBranchInput!]!, jwt: String = null): BusinessType!
   "Actualizar un negocio"
   updateBusiness(businessId: String!, input: UpdateBusinessInput!, jwt: String = null): BusinessType!
+  "Registrar múltiples negocios con sus sucursales en una sola operación"
+  registerMultipleBusinesses(businessesInput: [RegisterBusinessWithBranchesInput!]!, jwt: String = null): [BusinessType!]!
   "Crear una nueva sucursal"
   createBranch(input: CreateBranchInput!, jwt: String = null): BranchType!
   "Actualizar una sucursal"
@@ -839,6 +1007,34 @@ type Mutation {
   revokeInvitationCode(invitationId: String!, jwt: String = null): Boolean!
   "Actualizar configuración de la aplicación (requiere rol admin)"
   updateAppConfig(input: UpdateAppConfigInput!, jwt: String!): AppConfigType
+  "Actualizar configuración de la aplicación de negocios (requiere rol admin)"
+  updateBusinessAppConfig(input: UpdateAppConfigInput!, jwt: String!): BusinessAppConfigType
+  "Crear un nuevo feedback"
+  createFeedback(input: CreateFeedbackInput!, jwt: String!): FeedbackType!
+  "Actualizar estado de feedback (requiere rol admin)"
+  updateFeedbackStatus(feedbackId: String!, input: UpdateFeedbackStatusInput!, jwt: String!): FeedbackType!
+  "Eliminar un feedback"
+  deleteFeedback(feedbackId: String!, jwt: String!): Boolean!
+  "Crear una nueva encuesta (requiere rol admin)"
+  createSurvey(input: CreateSurveyInput!, jwt: String!): SurveyType!
+  "Actualizar una encuesta (requiere rol admin)"
+  updateSurvey(surveyId: String!, input: UpdateSurveyInput!, jwt: String!): SurveyType!
+  "Desactivar una encuesta (requiere rol admin)"
+  deactivateSurvey(surveyId: String!, jwt: String!): SurveyType!
+  "Enviar respuesta a una encuesta"
+  submitSurveyResponse(input: SubmitSurveyResponseInput!, jwt: String!): SurveyResponseType!
+  "Eliminar una encuesta (requiere rol admin)"
+  deleteSurvey(surveyId: String!, jwt: String!): Boolean!
+  "Agregar producto a favoritos"
+  addFavorite(productId: String!, jwt: String = null): FavoriteCartType
+  "Agregar producto al carrito"
+  addToCart(productId: String!, jwt: String = null): FavoriteCartType
+  "Remover producto de favoritos"
+  removeFavorite(productId: String!, jwt: String = null): Boolean!
+  "Remover producto del carrito"
+  removeFromCart(productId: String!, jwt: String = null): Boolean!
+  "Registrar clic en resultado de búsqueda"
+  trackSearchClick(searchQuery: String!, itemId: String!, itemType: String!, jwt: String = null): SearchType!
 }
 type AuthResponse {
   accessToken: String!
@@ -882,6 +1078,25 @@ type InitiatePaymentResult {
   "Instructions for completing payment (for manual methods)"
   instructions: String
 }
+type FavoriteCartType {
+  id: String!
+  userId: String!
+  productId: String!
+  type: String!
+  createdAt: DateTime!
+}
+type SearchType {
+  id: String!
+  userId: String!
+  query: String!
+  clickedItems: [ClickedItemType!]!
+  createdAt: DateTime!
+}
+type ClickedItemType {
+  itemId: String!
+  itemType: String!
+  clicks: [DateTime!]!
+}
 type Subscription {
   "Escuchar cambios en un pedido específico"
   orderUpdated(orderId: String!): OrderType!
@@ -899,7 +1114,6 @@ type DeliveryLocationUpdateType {
   estimatedMinutesRemaining: Int
   distanceRemainingKm: Float
 }
-union EntityType = ProductType | BranchType | PaymentMethodType
 enum BranchTipo {
   RESTAURANTE
   DULCERIA
@@ -962,6 +1176,21 @@ enum InvitationStatus {
   USED
   REVOKED
 }
+enum FeedbackTypeEnum {
+  BUG
+  FEATURE_REQUEST
+  IMPROVEMENT
+}
+enum FeedbackStatusEnum {
+  PENDING
+  IN_REVIEW
+  RESOLVED
+  DISMISSED
+}
+enum QuestionTypeEnum {
+  MULTIPLE_CHOICE
+  TEXT
+}
 enum DevicePlatformEnum {
   IOS
   ANDROID
@@ -969,8 +1198,6 @@ enum DevicePlatformEnum {
 input AiAssistantChatInput {
   "The user message/query to send"
   message: String!
-  "Session ID for conversation context"
-  sessionId: String!
 }
 input RegisterInput {
   name: String!
@@ -1037,6 +1264,10 @@ input UpdateBusinessInput {
   tags: [String!] = null
   isActive: Boolean = null
   avatar: String = null
+}
+input RegisterBusinessWithBranchesInput {
+  business: CreateBusinessInput!
+  branches: [RegisterBranchInput!]!
 }
 input CreateBranchInput {
   businessId: String!
@@ -1246,6 +1477,42 @@ input UpdateIosConfigInput {
 input UpdateMaintenanceConfigInput {
   enabled: Boolean = null
   message: String = null
+}
+input CreateFeedbackInput {
+  type: FeedbackTypeEnum!
+  description: String!
+  "Rating from 1-5 stars"
+  rating: Int!
+}
+input UpdateFeedbackStatusInput {
+  status: FeedbackStatusEnum!
+}
+input CreateSurveyInput {
+  title: String!
+  description: String = null
+  questions: [SurveyQuestionInput!]!
+}
+input SurveyQuestionInput {
+  "Unique ID for this question (e.g., UUID)"
+  questionId: String!
+  text: String!
+  type: QuestionTypeEnum!
+  options: [String!] = null
+  required: Boolean! = true
+}
+input UpdateSurveyInput {
+  title: String = null
+  description: String = null
+  questions: [SurveyQuestionInput!] = null
+  isActive: Boolean = null
+}
+input SubmitSurveyResponseInput {
+  surveyId: String!
+  responses: [QuestionResponseInput!]!
+}
+input QuestionResponseInput {
+  questionId: String!
+  answer: String!
 }
 "Exposes a URL that specifies the behavior of this scalar."
 directive @specifiedBy(

@@ -67,33 +67,33 @@ public extension LlegoAPI {
 
         /// Payment method ID
         public var id: String { __data["id"] }
-        /// Display name (e.g., Wallet USD, Transfermóvil)
+        /// Display name
         public var name: String { __data["name"] }
-        /// Code (e.g., wallet_usd, transfermovil)
+        /// Internal code
         public var code: String { __data["code"] }
-        /// Currency (e.g., CUP, USD)
+        /// Currency code
         public var currency: String { __data["currency"] }
-        /// Payment method type (wallet, transfer, stripe, cash)
+        /// Method type
         public var method: String { __data["method"] }
-        /// Commission percentage charged to customer
+        /// Commission percentage charged
         public var commissionPercent: Double { __data["commissionPercent"] }
-        /// Extra percentage for cash delivery payments
+        /// Delivery fee percentage
         public var deliveryFeePercent: Double { __data["deliveryFeePercent"] }
-        /// Whether this method supports refunds
+        /// Whether refunds are allowed
         public var isRefundable: Bool { __data["isRefundable"] }
-        /// Whether proof/receipt is required
+        /// Whether proof is required
         public var requiresProof: Bool { __data["requiresProof"] }
-        /// Whether business must confirm receipt
+        /// Whether business confirmation is required
         public var requiresBusinessConfirmation: Bool { __data["requiresBusinessConfirmation"] }
-        /// Time limit to complete payment
+        /// Expiration in minutes
         public var expirationMinutes: Int? { __data["expirationMinutes"] }
-        /// Whether this method is currently active
+        /// Whether method is active
         public var isActive: Bool { __data["isActive"] }
-        /// Display order in UI
+        /// Display order
         public var displayOrder: Int { __data["displayOrder"] }
         /// Icon URL
         public var iconUrl: String? { __data["iconUrl"] }
-        /// Payment instructions for user
+        /// Payment instructions
         public var instructions: String? { __data["instructions"] }
       }
     }

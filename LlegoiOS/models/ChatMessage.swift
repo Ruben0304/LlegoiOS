@@ -15,7 +15,7 @@ struct ConversationalChatMessage: Identifiable, Equatable {
     var responseType: String?
     var productEntities: [AIChatProductEntity]?
     var branchEntities: [AIChatBranchEntity]?
-    var paymentEntities: [AIChatPaymentEntity]?
+    var confidence: Double?
     
     init(
         text: String,
@@ -24,7 +24,7 @@ struct ConversationalChatMessage: Identifiable, Equatable {
         responseType: String? = nil,
         productEntities: [AIChatProductEntity]? = nil,
         branchEntities: [AIChatBranchEntity]? = nil,
-        paymentEntities: [AIChatPaymentEntity]? = nil
+        confidence: Double? = nil
     ) {
         self.text = text
         self.isFromUser = isFromUser
@@ -32,7 +32,7 @@ struct ConversationalChatMessage: Identifiable, Equatable {
         self.responseType = responseType
         self.productEntities = productEntities
         self.branchEntities = branchEntities
-        self.paymentEntities = paymentEntities
+        self.confidence = confidence
     }
     
     static func == (lhs: ConversationalChatMessage, rhs: ConversationalChatMessage) -> Bool {

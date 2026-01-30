@@ -8,6 +8,7 @@
 
 import SwiftUI
 import Combine
+import MapKit
 
 enum SearchMode: CaseIterable {
     case search
@@ -116,38 +117,6 @@ struct ConversationalSearchView: View {
                 }
             }
 
-            ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
-            // Mode selector - menu nativo
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Menu {
-                    Button(action: {
-                        searchMode = .search
-                    }) {
-                        HStack(spacing: 8) {
-                            if searchMode == .search {
-                                Image(systemName: "checkmark")
-                            }
-                            Text(SearchMode.search.title)
-                        }
-                    }
-
-                    Button(action: {
-                        searchMode = .purchase
-                        showLlegoPlus = true
-                    }) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "star.fill")
-                                .foregroundColor(.yellow)
-                            Text(SearchMode.purchase.title)
-                        }
-                    }
-                } label: {
-                    Text(searchMode.title)
-                        .font(.system(size: 15, weight: .medium))
-                }
-            }
-            
-
             // Input en el toolbar inferior
             ToolbarItem(placement: .bottomBar) {
                 messageInputToolbar
@@ -166,16 +135,27 @@ struct ConversationalSearchView: View {
             }
         }
         .onAppear {
+            print("\n╔═══════════════════════════════════════════════════╗")
+            print("║  [VIEW] onAppear - ConversationalSearchView       ║")
+            print("╚═══════════════════════════════════════════════════╝")
+            print("🎨 [VIEW] categoryIndex: \(categoryIndex)")
+            print("📊 [VIEW] Mensajes actuales: \(viewModel.messages.count)")
+            print("🔍 [VIEW] Search Mode: \(searchMode.title)")
+
             // Establecer el índice de categoría para mantener el mismo fondo de HomeView
             gradientManager.setCategoryIndex(categoryIndex)
-            
+            print("✅ [VIEW] Gradient actualizado\n")
+
             // Mensaje inicial del asistente
             if $viewModel.messages.isEmpty {
+                print("📭 [VIEW] Lista de mensajes vacía - enviando mensaje de bienvenida en 0.4s\n")
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                     withAnimation {
                         viewModel.sendWelcomeMessage(mode: searchMode)
                     }
                 }
+            } else {
+                print("📬 [VIEW] Ya hay mensajes - omitiendo mensaje de bienvenida\n")
             }
         }
     }
@@ -218,24 +198,40 @@ struct ConversationalSearchView: View {
     
     // MARK: - Send Action Handler
     private func handleSendAction() {
+        print("\n╔═══════════════════════════════════════════════════╗")
+        print("║  [VIEW] handleSendAction                          ║")
+        print("╚═══════════════════════════════════════════════════╝")
+        print("📝 [VIEW] Texto del mensaje: \"\(messageText)\"")
+
         if messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            print("⚠️ [VIEW] Mensaje vacío - mostrando feedback de error")
+
             // Mostrar feedback de error
             let generator = UINotificationFeedbackGenerator()
             generator.notificationOccurred(.error)
-            
-            // TODO: Mostrar alerta o toast con mensaje "Escribe un mensaje"
-            print("⚠️ Error: Escribe un mensaje")
+
+            print("❌ [VIEW] Error: Escribe un mensaje\n")
         } else {
+            print("✅ [VIEW] Mensaje válido - llamando sendMessage()\n")
             sendMessage()
         }
     }
 
     // MARK: - Actions
     private func sendMessage() {
-        guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            print("⚠️ [VIEW] sendMessage() llamado con mensaje vacío - abortando\n")
+            return
+        }
 
         let textToSend = messageText
         messageText = ""
+
+        print("╔═══════════════════════════════════════════════════╗")
+        print("║  [VIEW] sendMessage                               ║")
+        print("╚═══════════════════════════════════════════════════╝")
+        print("📤 [VIEW] Enviando al ViewModel: \"\(textToSend)\"")
+        print("🧹 [VIEW] TextField limpiado\n")
 
         // Enviar al ViewModel
         viewModel.sendMessage(textToSend)
@@ -626,6 +622,44 @@ struct LlegoPlusComparisonRowView: View {
 struct MessageBubble: View {
     let message: ConversationalChatMessage
 
+    // MARK: - Debug Logging
+    private static func logMessageRender(message: ConversationalChatMessage, responseType: String) {
+        print("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        print("🎨 [UI RENDER] MessageBubble - Mensaje del Asistente")
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        print("📋 [UI] Response Type: \"\(responseType)\"")
+        print("💬 [UI] Texto: \"\(message.text)\"")
+        print("📦 [UI] Products count: \(message.productEntities?.count ?? 0)")
+        print("🏪 [UI] Branches count: \(message.branchEntities?.count ?? 0)")
+        if let confidence = message.confidence {
+            print("🧠 [UI] Confidence: \(confidence)")
+        }
+
+        // Log de productos si existen
+        if let productEntities = message.productEntities, !productEntities.isEmpty {
+            print("\n✅ [UI RENDER] Renderizando \(productEntities.count) productos:")
+            for (index, product) in productEntities.enumerated() {
+                print("  ├─ Producto \(index + 1): \(product.name) - $\(product.price)")
+            }
+        }
+
+        // Log de branches si existen
+        if let branchEntities = message.branchEntities, !branchEntities.isEmpty {
+            print("\n✅ [UI RENDER] Renderizando \(branchEntities.count) tiendas:")
+            for (index, branch) in branchEntities.enumerated() {
+                print("  ├─ Tienda \(index + 1): \(branch.name) - \(branch.address)")
+            }
+        }
+
+        // Si no hay entidades
+        if (message.productEntities?.isEmpty ?? true) &&
+           (message.branchEntities?.isEmpty ?? true) {
+            print("\nℹ️ [UI RENDER] Tipo: \(responseType) - Solo texto, sin entidades a renderizar")
+        }
+
+        print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+    }
+
     var body: some View {
         VStack(alignment: message.isFromUser ? .trailing : .leading, spacing: 8) {
             // Mensaje con avatar
@@ -646,16 +680,19 @@ struct MessageBubble: View {
                         Spacer()
                     }
 
-                    Text(message.text)
-                        .font(.system(size: 16))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                        .background {
-                            // Burbuja con backdrop blur para todos (usuario y sistema)
-                            RoundedRectangle(cornerRadius: 18)
-                                .fill(.regularMaterial)
-                        }
-                        .foregroundColor(.primary)
+                    StreamingMarkdownText(
+                        text: message.text,
+                        isFromUser: message.isFromUser
+                    )
+                    .font(.system(size: 16))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background {
+                        // Burbuja con backdrop blur para todos (usuario y sistema)
+                        RoundedRectangle(cornerRadius: 18)
+                            .fill(.regularMaterial)
+                    }
+                    .foregroundColor(.primary)
 
                     if !message.isFromUser {
                         Spacer()
@@ -690,34 +727,29 @@ struct MessageBubble: View {
             
             // Mostrar entidades según el tipo de respuesta
             if !message.isFromUser, let responseType = message.responseType {
-
-                // LOGS DE DEBUG
-                let _ = print("🔍 [DEBUG] Response Type: \(responseType)")
-                let _ = print("🔍 [DEBUG] Products count: \(message.productEntities?.count ?? 0)")
-                let _ = print("🔍 [DEBUG] Branches count: \(message.branchEntities?.count ?? 0)")
-                let _ = print("🔍 [DEBUG] Payments count: \(message.paymentEntities?.count ?? 0)")
+                let _ = Self.logMessageRender(message: message, responseType: responseType)
+                let responseTypeLower = responseType.lowercased()
 
                 // PRODUCTOS
-                if responseType.lowercased() == "products",
+                if responseTypeLower == "search_products",
                    let productEntities = message.productEntities,
                    !productEntities.isEmpty {
 
-                    let _ = print("✅ [RENDER] Renderizando \(productEntities.count) productos")
-
                     VStack(spacing: 10) {
                         ForEach(productEntities) { product in
-                            AIProductCard(product: product)
+                            NavigationLink(destination: ProductDetailView(productId: product.id)) {
+                                AIProductCard(product: product)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                     .padding(.top, 4)
                 }
 
                 // TIENDAS / SUCURSALES
-                else if responseType.lowercased() == "businesses" || responseType.lowercased() == "branches",
+                else if responseTypeLower == "search_branches",
                         let branchEntities = message.branchEntities,
                         !branchEntities.isEmpty {
-
-                    let _ = print("✅ [RENDER] Renderizando \(branchEntities.count) tiendas")
 
                     VStack(spacing: 10) {
                         ForEach(branchEntities) { branch in
@@ -730,32 +762,47 @@ struct MessageBubble: View {
                     .padding(.top, 4)
                 }
 
-                // MÉTODOS DE PAGO
-                else if responseType.lowercased() == "payment_method" || responseType.lowercased() == "payment_methods",
-                        let paymentEntities = message.paymentEntities,
-                        !paymentEntities.isEmpty {
-
-                    let _ = print("✅ [RENDER] Renderizando \(paymentEntities.count) métodos de pago")
-
-                    VStack(spacing: 10) {
-                        ForEach(paymentEntities) { payment in
-                            AIPaymentMethodCard(paymentMethod: payment)
-                        }
-                    }
-                    .padding(.top, 4)
-                }
-
-                // MENSAJE (sin entidades - solo texto)
-                else {
-                    let _ = print("ℹ️ [RENDER] Tipo: \(responseType) - Solo texto, sin entidades")
+                if let confidence = message.confidence {
+                    ConfidenceBadge(confidence: confidence)
+                        .padding(.top, 6)
                 }
             }
         }
     }
 }
 
+struct ConfidenceBadge: View {
+    let confidence: Double
+
+    private var percentageText: String {
+        "\(Int(confidence * 100))%"
+    }
+
+    private var badgeColor: Color {
+        if confidence < 0.5 {
+            return .red
+        }
+        if confidence < 0.7 {
+            return .orange
+        }
+        return .green
+    }
+
+    var body: some View {
+        Text("Confianza (\(percentageText))")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundColor(badgeColor)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill(badgeColor.opacity(0.12))
+            )
+    }
+}
+
 struct TypingIndicator: View {
-    @State private var animationPhase: Int = 0
+    @State private var shimmerOffset: CGFloat = -1.0
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 8) {
@@ -766,33 +813,134 @@ struct TypingIndicator: View {
                 .frame(width: 32, height: 32)
                 .clipShape(Circle())
                 .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
-            
-            // Indicador de escritura
-            HStack(spacing: 4) {
-                ForEach(0..<3) { index in
-                    Circle()
-                        .fill(Color.secondary.opacity(0.5))
-                        .frame(width: 8, height: 8)
-                        .scaleEffect(animationPhase == index ? 1.2 : 1.0)
-                        .animation(
-                            .easeInOut(duration: 0.6)
-                            .repeatForever(autoreverses: true)
-                            .delay(Double(index) * 0.2),
-                            value: animationPhase
-                        )
-                }
+
+            // AI Skeleton con gradiente rosa/morado
+            VStack(alignment: .leading, spacing: 8) {
+                // Línea 1 - larga
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(aiGradient)
+                    .frame(width: 220, height: 12)
+
+                // Línea 2 - media
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(aiGradient)
+                    .frame(width: 180, height: 12)
+
+                // Línea 3 - corta
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(aiGradient)
+                    .frame(width: 140, height: 12)
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+            .padding(.vertical, 12)
             .background(
                 RoundedRectangle(cornerRadius: 18)
                     .fill(.regularMaterial)
             )
-            
+            .overlay(
+                // Shimmer effect
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.white.opacity(0.0),
+                        Color.white.opacity(0.6),
+                        Color.white.opacity(0.0)
+                    ]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .frame(width: 100)
+                .offset(x: shimmerOffset * 300)
+            )
+            .mask(
+                RoundedRectangle(cornerRadius: 18)
+            )
+
             Spacer()
         }
         .onAppear {
-            animationPhase = 1
+            withAnimation(
+                .linear(duration: 1.5)
+                .repeatForever(autoreverses: false)
+            ) {
+                shimmerOffset = 2.0
+            }
+        }
+    }
+
+    // Gradiente AI con colores rosa/morado
+    private var aiGradient: LinearGradient {
+        LinearGradient(
+            gradient: Gradient(colors: [
+                Color(red: 0.9, green: 0.4, blue: 0.9).opacity(0.3), // Rosa
+                Color(red: 0.6, green: 0.4, blue: 0.9).opacity(0.3), // Morado
+                Color(red: 0.8, green: 0.5, blue: 1.0).opacity(0.3)  // Lila
+            ]),
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+    }
+}
+
+// MARK: - StreamingMarkdownText
+struct StreamingMarkdownText: View {
+    let text: String
+    let isFromUser: Bool
+
+    @State private var displayedText: String = ""
+    @State private var currentIndex: Int = 0
+    @State private var opacity: Double = 0
+    @State private var timer: Timer?
+
+    var body: some View {
+        Text(attributedText)
+            .opacity(opacity)
+            .onAppear {
+                startStreaming()
+            }
+            .onDisappear {
+                timer?.invalidate()
+            }
+    }
+
+    private var attributedText: AttributedString {
+        // Intentar parsear como Markdown
+        if let attributed = try? AttributedString(markdown: displayedText, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)) {
+            return attributed
+        }
+        // Si falla, devolver texto plano
+        return AttributedString(displayedText)
+    }
+
+    private func startStreaming() {
+        // Si es del usuario, mostrar todo de inmediato
+        if isFromUser {
+            displayedText = text
+            withAnimation(.easeIn(duration: 0.2)) {
+                opacity = 1.0
+            }
+            return
+        }
+
+        // Para mensajes del asistente, hacer streaming
+        displayedText = ""
+        currentIndex = 0
+
+        // Fade in inicial
+        withAnimation(.easeIn(duration: 0.3)) {
+            opacity = 1.0
+        }
+
+        // Streaming character por character
+        let characters = Array(text)
+        let baseDelay = 0.02 // 20ms por caracter
+
+        timer = Timer.scheduledTimer(withTimeInterval: baseDelay, repeats: true) { t in
+            if currentIndex < characters.count {
+                displayedText.append(characters[currentIndex])
+                currentIndex += 1
+            } else {
+                t.invalidate()
+            }
         }
     }
 }

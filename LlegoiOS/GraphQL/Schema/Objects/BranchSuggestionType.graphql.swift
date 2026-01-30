@@ -4,8 +4,8 @@
 import ApolloAPI
 
 public extension LlegoAPI.Objects {
-  static let AiAssistantOutputType = ApolloAPI.Object(
-    typename: "AiAssistantOutputType",
+  static let BranchSuggestionType = ApolloAPI.Object(
+    typename: "BranchSuggestionType",
     implementedInterfaces: [],
     keyFields: nil
   )

@@ -26,7 +26,7 @@ public extension LlegoAPI {
         GetAppConfigQuery.Data.self
       ] }
 
-      /// Obtener configuración de la aplicación
+      /// Obtener configuración de la aplicación de clientes
       public var appConfig: AppConfig? { __data["appConfig"] }
 
       /// AppConfig

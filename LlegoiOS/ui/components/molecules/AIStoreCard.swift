@@ -16,9 +16,9 @@ struct AIStoreCard: View {
         return Int.random(in: 15...45)
     }
 
-    // URLs de placeholder para logo y banner
+    // URL del avatar de la tienda desde el backend
     private var logoUrl: String {
-        "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&h=200&fit=crop&crop=center"
+        branch.avatarUrl ?? "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&h=200&fit=crop&crop=center"
     }
 
     private var bannerUrl: String {
@@ -50,6 +50,7 @@ struct AIStoreCard: View {
                         )
                 }
                 .frame(height: bannerHeight)
+                .frame(maxWidth: .infinity)
                 .clipped()
 
                 // Store Info
@@ -60,6 +61,13 @@ struct AIStoreCard: View {
                         .foregroundColor(.primary)
                         .lineLimit(1)
                         .frame(maxWidth: .infinity, alignment: .leading)
+
+                    if let reason = branch.reason, !reason.isEmpty {
+                        Text(reason)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.llegoPrimary)
+                            .lineLimit(2)
+                    }
 
                     // Dirección
                     HStack(spacing: 4) {
@@ -112,23 +120,38 @@ struct AIStoreCard: View {
                 .padding(.top, logoOffset + (padding * 0.5))
                 .padding(.bottom, padding)
             }
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .background(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .fill(.regularMaterial)
+                    .shadow(color: .black.opacity(0.1), radius: 12, x: 0, y: 4)
             )
 
-            // Store Logo - overlapping design
-            AsyncImage(url: URL(string: logoUrl)) { image in
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } placeholder: {
-                Circle()
-                    .fill(Color.white)
-                    .overlay(
+            // Store Logo - overlapping design con ProgressView accent
+            AsyncImage(url: URL(string: logoUrl)) { phase in
+                switch phase {
+                case .empty:
+                    ZStack {
+                        Circle()
+                            .fill(Color.llegoBackground)
                         ProgressView()
-                            .tint(.llegoPrimary)
-                    )
+                            .tint(.llegoAccent)
+                    }
+                case .success(let image):
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                case .failure:
+                    ZStack {
+                        Circle()
+                            .fill(Color.llegoBackground)
+                        Image(systemName: "storefront")
+                            .font(.system(size: 24))
+                            .foregroundColor(.llegoPrimary)
+                    }
+                @unknown default:
+                    EmptyView()
+                }
             }
             .frame(width: logoSize, height: logoSize)
             .clipShape(Circle())

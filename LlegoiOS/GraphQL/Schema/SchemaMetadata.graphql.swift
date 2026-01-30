@@ -29,12 +29,12 @@ public extension LlegoAPI {
 
     @_spi(Execution) public static func objectType(forTypename typename: String) -> ApolloAPI.Object? {
       switch typename {
-      case "AiAssistantOutputType": return LlegoAPI.Objects.AiAssistantOutputType
       case "AiAssistantResponseType": return LlegoAPI.Objects.AiAssistantResponseType
       case "AppConfigType": return LlegoAPI.Objects.AppConfigType
       case "AuthResponse": return LlegoAPI.Objects.AuthResponse
       case "BranchConnection": return LlegoAPI.Objects.BranchConnection
       case "BranchEdge": return LlegoAPI.Objects.BranchEdge
+      case "BranchSuggestionType": return LlegoAPI.Objects.BranchSuggestionType
       case "BranchType": return LlegoAPI.Objects.BranchType
       case "BusinessType": return LlegoAPI.Objects.BusinessType
       case "BusinessTypeConfigType": return LlegoAPI.Objects.BusinessTypeConfigType
@@ -62,6 +62,7 @@ public extension LlegoAPI {
       case "ProductCategoryType": return LlegoAPI.Objects.ProductCategoryType
       case "ProductConnection": return LlegoAPI.Objects.ProductConnection
       case "ProductEdge": return LlegoAPI.Objects.ProductEdge
+      case "ProductSuggestionType": return LlegoAPI.Objects.ProductSuggestionType
       case "ProductType": return LlegoAPI.Objects.ProductType
       case "Query": return LlegoAPI.Objects.Query
       case "ScoredBranchType": return LlegoAPI.Objects.ScoredBranchType
