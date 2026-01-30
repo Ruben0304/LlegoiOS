@@ -40,8 +40,8 @@ class ProductDetailRepository {
                     availability: product.availability,
                     categoryId: product.categoryId,
                     createdAt: product.createdAt,
-                    businessName: product.business?.name ?? "Tienda",
-                    businessLogoUrl: product.business?.avatarUrl
+                    businessName: product.branch?.name ?? product.business?.name ?? "Tienda",
+                    businessLogoUrl: product.branch?.avatarUrl ?? product.business?.avatarUrl
                 )
 
                 print("✅ Fetched product detail for ID: \(id)")

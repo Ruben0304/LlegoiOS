@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetProductDetail"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetProductDetail($id: String!) { product(id: $id) { __typename id branchId name description weight price currency imageUrl availability categoryId createdAt business { __typename id name avatarUrl } } }"#
+        #"query GetProductDetail($id: String!) { product(id: $id) { __typename id branchId name description weight price currency imageUrl availability categoryId createdAt branch { __typename id name avatarUrl } business { __typename id name avatarUrl } } }"#
       ))
 
     public var id: String
@@ -56,6 +56,7 @@ public extension LlegoAPI {
           .field("availability", Bool.self),
           .field("categoryId", String?.self),
           .field("createdAt", LlegoAPI.DateTime.self),
+          .field("branch", Branch?.self),
           .field("business", Business?.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
@@ -74,8 +75,34 @@ public extension LlegoAPI {
         public var availability: Bool { __data["availability"] }
         public var categoryId: String? { __data["categoryId"] }
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
+        /// Branch associated with this product
+        public var branch: Branch? { __data["branch"] }
         /// Business associated with this product (through branch)
         public var business: Business? { __data["business"] }
+
+        /// Product.Branch
+        ///
+        /// Parent Type: `BranchType`
+        public struct Branch: LlegoAPI.SelectionSet {
+          @_spi(Unsafe) public let __data: DataDict
+          @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+          @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.BranchType }
+          @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+            .field("__typename", String.self),
+            .field("id", String.self),
+            .field("name", String.self),
+            .field("avatarUrl", String?.self),
+          ] }
+          @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+            GetProductDetailQuery.Data.Product.Branch.self
+          ] }
+
+          public var id: String { __data["id"] }
+          public var name: String { __data["name"] }
+          /// Presigned URL for the branch avatar (inherits from business if not set)
+          public var avatarUrl: String? { __data["avatarUrl"] }
+        }
 
         /// Product.Business
         ///

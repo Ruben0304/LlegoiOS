@@ -11,6 +11,11 @@ query GetProductDetail($id: String!) {
     availability
     categoryId
     createdAt
+    branch {
+      id
+      name
+      avatarUrl
+    }
     business {
       id
       name
