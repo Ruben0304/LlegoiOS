@@ -17,6 +17,7 @@ struct SearchView: View {
     @State private var selectedStoreGradient: ExtractedGradient? = nil
     @State private var navigationDestination: NavigationDestination? = nil
     @State private var pendingDestination: NavigationDestination? = nil
+    @State private var selectedProductId: String?
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -123,6 +124,9 @@ struct SearchView: View {
                 .presentationDragIndicator(.visible)
                 .presentationCornerRadius(28)
             }
+            .fullScreenCover(item: $selectedProductId) { productId in
+                ProductDetailView(productId: productId)
+            }
         }
 
     }
@@ -209,34 +213,36 @@ struct SearchView: View {
             spacing: 20
         ) {
             ForEach(viewModel.products) { product in
-                NavigationLink(destination: ProductDetailView(productId: product.id)) {
-                    ProductCard(
-                        product: product,
-                        count: Binding(
-                            get: { productCounts[product.id] ?? 0 },
-                            set: { newValue in
-                                if newValue > 0 {
-                                    productCounts[product.id] = newValue
-                                } else {
-                                    productCounts.removeValue(forKey: product.id)
-                                }
+                ProductCard(
+                    product: product,
+                    count: Binding(
+                        get: { productCounts[product.id] ?? 0 },
+                        set: { newValue in
+                            if newValue > 0 {
+                                productCounts[product.id] = newValue
+                            } else {
+                                productCounts.removeValue(forKey: product.id)
                             }
-                        ),
-                        onIncrement: {
-                            productCounts[product.id] = (productCounts[product.id] ?? 0) + 1
-                        },
-                        onDecrement: {
-                            let current = productCounts[product.id] ?? 0
-                            if current > 0 {
-                                productCounts[product.id] = current - 1
-                            }
-                        },
-                        onProductTap: nil
-                    )
+                        }
+                    ),
+                    onIncrement: {
+                        productCounts[product.id] = (productCounts[product.id] ?? 0) + 1
+                    },
+                    onDecrement: {
+                        let current = productCounts[product.id] ?? 0
+                        if current > 0 {
+                            productCounts[product.id] = current - 1
+                        }
+                    },
+                    onProductTap: {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        selectedProductId = product.id
+                    }
+                )
+                .onTapGesture {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    selectedProductId = product.id
                 }
-                .buttonStyle(.glassProminent)
-                .buttonBorderShape(.roundedRectangle(radius: 26))
-                .tint(.white)
             }
         }
         .padding(.horizontal, 20)

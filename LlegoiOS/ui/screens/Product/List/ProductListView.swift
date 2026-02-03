@@ -1,5 +1,9 @@
 import SwiftUI
 
+extension String: @retroactive Identifiable {
+    public var id: String { self }
+}
+
 struct ProductListView: View {
     @ObservedObject var viewModel: ProductListViewModel
     @StateObject private var favoritesManager = FavoritesManager.shared
@@ -9,6 +13,7 @@ struct ProductListView: View {
     @State private var animationDelay: Double = 0
     @FocusState private var isSearchFocused: Bool
     @State private var isSearchPresented: Bool = false
+    @State private var selectedProductId: String?
 
     // Parámetros opcionales para filtrado inicial
     let initialCategory: String?
@@ -199,10 +204,13 @@ struct ProductListView: View {
                     .badge(favoritesManager.favoriteItemCount)
                 }
             }
+            .fullScreenCover(item: $selectedProductId) { productId in
+                ProductDetailView(productId: productId)
+            }
         }
     }
 
- 
+
     // MARK: - Results Counter
     
 
@@ -224,53 +232,48 @@ struct ProductListView: View {
                 spacing: 20
             ) {
                 ForEach(Array(activeViewModel.filteredProducts.enumerated()), id: \.element.id) { index, product in
-                    NavigationLink(
-                        destination: ProductDetailView(productId: product.id)
-                    ) {
-                        ProductCard(
-                            product: product,
-                            count: Binding(
-                                get: { productCounts[product.id] ?? 0 },
-                                set: { newValue in
-                                    if newValue > 0 {
-                                        productCounts[product.id] = newValue
-                                    } else {
+                    ProductCard(
+                        product: product,
+                        count: Binding(
+                            get: { productCounts[product.id] ?? 0 },
+                            set: { newValue in
+                                if newValue > 0 {
+                                    productCounts[product.id] = newValue
+                                } else {
+                                    productCounts.removeValue(forKey: product.id)
+                                }
+                            }
+                        ),
+                        onIncrement: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                productCounts[product.id] = (productCounts[product.id] ?? 0) + 1
+                            }
+                        },
+                        onDecrement: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                let currentCount = productCounts[product.id] ?? 0
+                                if currentCount > 0 {
+                                    if currentCount == 1 {
                                         productCounts.removeValue(forKey: product.id)
+                                    } else {
+                                        productCounts[product.id] = currentCount - 1
                                     }
                                 }
-                            ),
-                            onIncrement: {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                    productCounts[product.id] = (productCounts[product.id] ?? 0) + 1
-                                }
-                            },
-                            onDecrement: {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                    let currentCount = productCounts[product.id] ?? 0
-                                    if currentCount > 0 {
-                                        if currentCount == 1 {
-                                            productCounts.removeValue(forKey: product.id)
-                                        } else {
-                                            productCounts[product.id] = currentCount - 1
-                                        }
-                                    }
-                                }
-                            },
-                            onProductTap: nil
-                        )
-                        .onAppear {
-                            activeViewModel.loadMoreIfNeeded(currentItem: product)
-                        }
-                    }
-                    .buttonStyle(.glassProminent)
-                    .buttonBorderShape(.roundedRectangle(radius: 26))
-                    .tint(.white)
-                    .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-                    .simultaneousGesture(
-                        TapGesture().onEnded {
+                            }
+                        },
+                        onProductTap: {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            selectedProductId = product.id
                         }
                     )
+                    .onAppear {
+                        activeViewModel.loadMoreIfNeeded(currentItem: product)
+                    }
+                    .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+                    .onTapGesture {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        selectedProductId = product.id
+                    }
                     .opacity(animationDelay > Double(index) * 0.1 ? 1 : 0)
                     .scaleEffect(animationDelay > Double(index) * 0.1 ? 1 : 0.95)
                     .offset(y: animationDelay > Double(index) * 0.1 ? 0 : 10)

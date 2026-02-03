@@ -10,6 +10,7 @@ struct ProductFeedView: View {
     @State private var showCartSheet = false
     @State private var selectedTutorial: Tutorial? = nil
     @State private var showVideoPlayer = false
+    @State private var selectedProductId: String?
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -87,6 +88,9 @@ struct ProductFeedView: View {
                 if let tutorial = selectedTutorial {
                     TutorialVideoPlayerView(tutorial: tutorial, accentColor: gradientManager.currentAccentColor)
                 }
+            }
+            .fullScreenCover(item: $selectedProductId) { productId in
+                ProductDetailView(productId: productId)
             }
             .onAppear { viewModel.loadFeed() }
         }
@@ -274,11 +278,12 @@ struct ProductFeedView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 16) {
                     ForEach(viewModel.filteredFeaturedProducts) { product in
-                        NavigationLink(destination: ProductDetailView(productId: product.id)) {
-                            FeaturedProductCard(product: product)
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.vertical, 12)
+                        FeaturedProductCard(product: product)
+                            .onTapGesture {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                selectedProductId = product.id
+                            }
+                            .padding(.vertical, 12)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -299,11 +304,12 @@ struct ProductFeedView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 14) {
                     ForEach(viewModel.filteredPopularProducts) { product in
-                        NavigationLink(destination: ProductDetailView(productId: product.id)) {
-                            SmallProductCard(product: product, accentColor: gradientManager.currentAccentColor)
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.vertical, 12)
+                        SmallProductCard(product: product, accentColor: gradientManager.currentAccentColor)
+                            .onTapGesture {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                selectedProductId = product.id
+                            }
+                            .padding(.vertical, 12)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -325,11 +331,12 @@ struct ProductFeedView: View {
                 spacing: 14
             ) {
                 ForEach(viewModel.filteredRecentProducts) { product in
-                    NavigationLink(destination: ProductDetailView(productId: product.id)) {
-                        CompactProductCard(product: product, accentColor: gradientManager.currentAccentColor)
-                            .onAppear { viewModel.loadMoreIfNeeded(currentItem: product) }
-                    }
-                    .buttonStyle(.plain)
+                    CompactProductCard(product: product, accentColor: gradientManager.currentAccentColor)
+                        .onAppear { viewModel.loadMoreIfNeeded(currentItem: product) }
+                        .onTapGesture {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            selectedProductId = product.id
+                        }
                 }
             }
             .padding(.horizontal, 20)

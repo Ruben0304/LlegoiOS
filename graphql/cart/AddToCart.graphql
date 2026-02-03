@@ -1,0 +1,9 @@
+mutation AddToCart($productId: String!, $jwt: String) {
+  addToCart(productId: $productId, jwt: $jwt) {
+    id
+    userId
+    productId
+    type
+    createdAt
+  }
+}

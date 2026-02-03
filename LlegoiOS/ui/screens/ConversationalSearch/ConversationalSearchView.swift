@@ -39,6 +39,7 @@ struct ConversationalSearchView: View {
 
     // Message input
     @State private var messageText: String = ""
+    @State private var selectedProductId: String?
     @FocusState private var isMessageFocused: Bool
 
     var body: some View {
@@ -69,7 +70,7 @@ struct ConversationalSearchView: View {
                                 .padding(.top, 120)
                             } else {
                                 ForEach(viewModel.messages) { message in
-                                    MessageBubble(message: message)
+                                    MessageBubble(message: message, selectedProductId: $selectedProductId)
                                         .id(message.id)
                                 }
 
@@ -157,6 +158,9 @@ struct ConversationalSearchView: View {
             } else {
                 print("📬 [VIEW] Ya hay mensajes - omitiendo mensaje de bienvenida\n")
             }
+        }
+        .fullScreenCover(item: $selectedProductId) { productId in
+            ProductDetailView(productId: productId)
         }
     }
 
@@ -621,6 +625,7 @@ struct LlegoPlusComparisonRowView: View {
 
 struct MessageBubble: View {
     let message: ConversationalChatMessage
+    @Binding var selectedProductId: String?
 
     // MARK: - Debug Logging
     private static func logMessageRender(message: ConversationalChatMessage, responseType: String) {
@@ -737,10 +742,11 @@ struct MessageBubble: View {
 
                     VStack(spacing: 10) {
                         ForEach(productEntities) { product in
-                            NavigationLink(destination: ProductDetailView(productId: product.id)) {
-                                AIProductCard(product: product)
-                            }
-                            .buttonStyle(.plain)
+                            AIProductCard(product: product)
+                                .onTapGesture {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    selectedProductId = product.id
+                                }
                         }
                     }
                     .padding(.top, 4)

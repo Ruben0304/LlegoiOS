@@ -1,0 +1,9 @@
+mutation AddFavorite($productId: String!, $jwt: String) {
+  addFavorite(productId: $productId, jwt: $jwt) {
+    id
+    userId
+    productId
+    type
+    createdAt
+  }
+}

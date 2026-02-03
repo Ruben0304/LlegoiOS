@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct ProductDetailView: View {
     let productId: String
@@ -6,18 +7,25 @@ struct ProductDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = ProductDetailViewModel()
     @StateObject private var cartManager = CartManager.shared
+    @StateObject private var favoritesManager = FavoritesManager.shared
     @StateObject private var gradientManager = GradientStateManager.shared
 
     @State private var heroAppeared = false
     @State private var contentAppeared = false
     @State private var quantity: Int = 1
-    @State private var selectedStyle = "Clásico"
-    @State private var selectedDelivery = "Express 25-35m"
-    @State private var similarCounts: [String: Int] = [:]
-    @State private var showQuantitySheet = false
+    @State private var selectedVariantIndex: Int = 0
 
-    // Animation states
-    @State private var showGeneralToast = false
+    // Variantes calculadas dinámicamente usando el precio real del producto
+    private var variants: [ProductVariant] {
+        guard let detail = viewModel.productDetail else {
+            return []
+        }
+        return [
+            ProductVariant(name: "Clásico", price: detail.price, isDefault: true),
+            ProductVariant(name: "Con extras", price: 2.50, isDefault: false),
+            ProductVariant(name: "Premium", price: 5.00, isDefault: false)
+        ]
+    }
 
     // Computed property to get current product from ViewModel
     private var product: Product? {
@@ -37,103 +45,96 @@ struct ProductDetailView: View {
         )
     }
 
-    private let styleOptions = ["Clásico", "Ligero", "Extra queso"]
-    private let deliveryOptions = ["Express 25-35m", "Programar hoy", "Recoger en tienda"]
-    // TODO: Reemplazar con productos similares reales del backend
-    private let similarProducts: [Product] = []
+    private var totalPrice: Double {
+        guard let detail = viewModel.productDetail else { return 0 }
+        let basePrice = detail.price
+        let variantPrice = selectedVariantIndex == 0 ? variants[0].price : variants[selectedVariantIndex].price
+        let additionalPrice = selectedVariantIndex == 0 ? 0 : variantPrice
+        return (basePrice + additionalPrice) * Double(quantity)
+    }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            Color.llegoBackground.ignoresSafeArea()
+        NavigationStack {
+            ZStack(alignment: .bottom) {
+                Color.white.ignoresSafeArea()
 
-            // LOADING STATE
-            if viewModel.isLoading {
-                loadingView
-                    .transition(.opacity)
-            }
-            // ERROR STATE
-            else if let errorMessage = viewModel.errorMessage {
-                errorView(message: errorMessage)
-                    .transition(.opacity)
-            }
-            // SUCCESS STATE
-            else if let product = product {
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 18) {
-                        heroSection(product: product)
-                            .padding(.horizontal, 20)
-                            .padding(.top, 12)
-                            .opacity(heroAppeared ? 1 : 0)
-                            .offset(y: heroAppeared ? 0 : 20)
+                // LOADING STATE
+                if viewModel.isLoading {
+                    loadingView
+                        .transition(.opacity)
+                }
+                // ERROR STATE
+                else if let errorMessage = viewModel.errorMessage {
+                    errorView(message: errorMessage)
+                        .transition(.opacity)
+                }
+                // SUCCESS STATE
+                else if let product = product {
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 0) {
+                            heroSection(product: product)
+                                .opacity(heroAppeared ? 1 : 0)
+                                .offset(y: heroAppeared ? 0 : 20)
 
-                        VStack(spacing: 16) {
-                            infoSection(product: product)
-                            optionsSection
-                            if !similarProducts.isEmpty {
-                                similarProductsSection
-                            }
+                            contentArea(product: product)
+                                .opacity(contentAppeared ? 1 : 0)
+                                .offset(y: contentAppeared ? 0 : 14)
                         }
-                        .padding(.horizontal, 20)
-                        .opacity(contentAppeared ? 1 : 0)
-                        .offset(y: contentAppeared ? 0 : 14)
+                        .padding(.bottom, 80)
                     }
-                    .padding(.bottom, 140)
+                    .ignoresSafeArea(edges: .top)
+                    .transition(.opacity)
                 }
-                .transition(.opacity)
             }
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 18, weight: .semibold))
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { toggleFavorite() }) {
+                        Image(systemName: favoritesManager.isFavorite(productId: productId) ? "heart.fill" : "heart")
+                            .foregroundColor(favoritesManager.isFavorite(productId: productId) ? .red : .primary)
+                    }
+                }
 
-        }
-        .overlay(alignment: .top) {
-            if showGeneralToast {
-                HStack(spacing: 12) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.title3)
-                        .foregroundColor(.green)
-                    Text("Producto agregado")
-                        .font(.system(size: 15, weight: .semibold))
-//                        .foregroundColor(.primary)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-//                .background(.thinMaterial)
-                .clipShape(Capsule())
-                .glassEffect(.regular)
-//                .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
-                .padding(.top, 60)
-                .transition(.move(edge: .top).combined(with: .opacity))
-                .zIndex(100)
-            }
-        }
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                BackButton(action: dismiss.callAsFunction)
-            }
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: { showQuantitySheet = true }) {
-                    Image(systemName: "cart.badge.plus")
-                        .font(.system(size: 18, weight: .semibold))
-                }
-            }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                 
+                      
 
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(action: shareProduct) {
-                    Image(systemName: "square.and.arrow.up")
+                        Button(action: { shareProduct() }) {
+                            Image(systemName: "square.and.arrow.up")
+                              
+                        }
+                
                 }
+
+                // Bottom bar flotante - Quantity control
+                ToolbarItem(placement: .bottomBar) {
+                    quantityControlView
+                }
+
+                ToolbarSpacer(.fixed, placement: .bottomBar)
+
+                // Bottom bar flotante - Add to cart button
+                ToolbarItem(placement: .bottomBar) {
+                    addToCartButton
+                }
+                
             }
-        }
-        .sheet(isPresented: $showQuantitySheet) {
-            quantitySheetView
-                .presentationDetents([.height(280)])
-                .presentationDragIndicator(.visible)
-        }
-        .navigationBarBackButtonHidden(true)
-        .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            viewModel.loadProductDetail(id: productId)
-        }
-        .onChange(of: viewModel.productDetail) { detail in
-            if detail != nil {
-                startEntranceAnimations()
+            .onAppear {
+                viewModel.loadProductDetail(id: productId)
+            }
+            .onChange(of: viewModel.productDetail) { detail in
+                if detail != nil {
+                    startEntranceAnimations()
+                }
             }
         }
     }
@@ -144,7 +145,7 @@ struct ProductDetailView: View {
         VStack(spacing: 20) {
             ProgressView()
                 .scaleEffect(1.5)
-                .tint(.llegoPrimary)
+                .tint(gradientManager.currentAccentColor)
 
             Text("Cargando producto...")
                 .font(.system(size: 16, weight: .medium))
@@ -159,7 +160,7 @@ struct ProductDetailView: View {
         VStack(spacing: 20) {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 60))
-                .foregroundColor(.orange)
+                .foregroundColor(gradientManager.currentAccentColor)
 
             Text("Error")
                 .font(.system(size: 22, weight: .bold))
@@ -183,7 +184,7 @@ struct ProductDetailView: View {
                 .foregroundColor(.white)
                 .padding(.horizontal, 32)
                 .padding(.vertical, 14)
-                .background(Color.llegoPrimary)
+                .background(gradientManager.currentAccentColor)
                 .cornerRadius(12)
             }
         }
@@ -193,14 +194,7 @@ struct ProductDetailView: View {
     // MARK: - Sections
 
     private func heroSection(product: Product) -> some View {
-        let isPNG = {
-            if let ext = URL(string: product.imageUrl)?.pathExtension.lowercased(), ext == "png" {
-                return true
-            }
-            return product.imageUrl.lowercased().contains(".png")
-        }()
-
-        return VStack(alignment: .leading, spacing: 12) {
+        GeometryReader { geometry in
             CachedAsyncImage(
                 url: URL(string: product.imageUrl),
                 cacheKey: "product_\(product.id)",
@@ -208,8 +202,8 @@ struct ProductDetailView: View {
                     image
                         .resizable()
                         .scaledToFill()
-                        .frame(height: 260)
-                        .clipped()
+                        .frame(width: geometry.size.width)
+                        .frame(height: 420 + geometry.safeAreaInsets.top)
                 },
                 placeholder: {
                     ZStack {
@@ -218,352 +212,288 @@ struct ProductDetailView: View {
                     }
                 }
             )
-            .frame(maxWidth: .infinity)
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay(
-                Group {
-                    if !isPNG {
-                        LinearGradient(
-                            colors: [.black.opacity(0.25), .clear],
-                            startPoint: .bottom,
-                            endPoint: .top
+            .frame(width: geometry.size.width)
+            .frame(height: 420 + geometry.safeAreaInsets.top)
+            .clipped()
+            .offset(y: -geometry.safeAreaInsets.top)
+        }
+        .frame(height: 420)
+        .ignoresSafeArea(edges: .top)
+    }
+
+    private func contentArea(product: Product) -> some View {
+        VStack(alignment: .leading, spacing: 18) {
+            // Store Info
+            storeInfoRow(product: product)
+
+            // Product Header (Title + Price)
+            productHeaderSection(product: product)
+
+            // Variants Section
+            if !variants.isEmpty {
+                variantsSection
+            }
+
+            // Description
+            descriptionSection
+        }
+        .padding(20)
+        .padding(.bottom, 100)
+        .background(
+            UnevenRoundedRectangle(
+                topLeadingRadius: 24,
+                bottomLeadingRadius: 0,
+                bottomTrailingRadius: 0,
+                topTrailingRadius: 24,
+                style: .continuous
+            )
+            .fill(Color.white)
+        )
+        .offset(y: -24)
+    }
+
+    @ViewBuilder
+    private func storeInfoRow(product: Product) -> some View {
+        if let branchId = viewModel.productDetail?.branchId {
+            NavigationLink(destination: StoreDetailView(storeId: branchId)) {
+                storeInfoContent(product: product)
+            }
+            .buttonStyle(.plain)
+        } else {
+            storeInfoContent(product: product)
+        }
+    }
+
+    private func storeInfoContent(product: Product) -> some View {
+        HStack(spacing: 10) {
+            // Store Avatar Circle
+            CachedAsyncImage(
+                url: URL(string: product.shopLogoUrl),
+                cacheKey: "shop_logo_\(product.shop)",
+                content: { image in
+                    image
+                        .resizable()
+                        .scaledToFill()
+                },
+                placeholder: {
+                    Circle()
+                        .fill(Color(.systemGray5))
+                        .overlay(
+                            ProgressView()
+                                .scaleEffect(0.6)
                         )
-                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    }
                 }
             )
-            .shadow(color: isPNG ? .clear : Color.black.opacity(0.15), radius: isPNG ? 0 : 12, x: 0, y: isPNG ? 0 : 10)
+            .frame(width: 36, height: 36)
+            .clipShape(Circle())
 
-            HStack(spacing: 12) {
-                // Logo de la tienda circular
-                if !product.shopLogoUrl.isEmpty {
-                    CachedAsyncImage(
-                        url: URL(string: product.shopLogoUrl),
-                        cacheKey: "shop_logo_\(product.shop)",
-                        content: { image in
-                            image
-                                .resizable()
-                                .scaledToFill()
-                        },
-                        placeholder: {
-                            Circle()
-                                .fill(Color.gray.opacity(0.2))
-                                .overlay(
-                                    ProgressView()
-                                        .scaleEffect(0.6)
-                                )
-                        },
-                        failure: {
-                            Circle()
-                                .fill(Color.gray.opacity(0.2))
-                                .overlay(
-                                    Image(systemName: "storefront.fill")
-                                        .font(.system(size: 16))
-                                        .foregroundColor(.gray)
-                                )
-                        }
-                    )
-                    .frame(width: 44, height: 44)
-                    .clipShape(Circle())
-                    .overlay(
-                        Circle()
-                            .stroke(Color.white, lineWidth: 2)
-                    )
-                    .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
-                }
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(product.shop)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.primary)
-                    
-                    HStack(spacing: 8) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "scalemass.fill")
-                                .font(.system(size: 11, weight: .semibold))
-                            Text(product.weight)
-                                .font(.system(size: 13, weight: .medium))
-                        }
-                        .foregroundColor(.secondary)
-                        
-                        HStack(spacing: 4) {
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(.yellow)
-                            Text("4.8")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(.primary)
-                        }
-                    }
-                }
-                
-                Spacer()
+            // Store Details
+            HStack(spacing: 6) {
+                Text(product.shop)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.secondary)
+
+                Text("•")
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundColor(.secondary)
+
+                Text("4.8 ★")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.secondary)
             }
-        }
-        .frame(height: 320)
-    }
 
-    private func infoSection(product: Product) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(product.name)
-                .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundColor(.primary)
-                .lineLimit(2)
+            Spacer()
 
-            Text("Preparado en \(product.shop) • \(product.weight)")
-                .font(.system(size: 15))
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .regular))
                 .foregroundColor(.secondary)
-
-            Text("Disfruta de un clásico con ingredientes frescos, porciones generosas y un empaque pensado para llegar caliente.")
-                .font(.system(size: 15))
-                .foregroundColor(.primary)
-                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.white)
-                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 6)
-        )
     }
 
-    private var optionsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Personaliza")
-                .font(.system(size: 17, weight: .semibold))
+    private func productHeaderSection(product: Product) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(product.name)
+                .font(.system(size: 26, weight: .semibold))
                 .foregroundColor(.primary)
+                .tracking(-0.5)
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Estilo")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.secondary)
-
-                Picker("Estilo", selection: $selectedStyle) {
-                    ForEach(styleOptions, id: \.self) { option in
-                        Text(option).tag(option)
-                    }
-                }
-                .pickerStyle(.segmented)
-            }
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Entrega")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.secondary)
-
-                Picker("Entrega", selection: $selectedDelivery) {
-                    ForEach(deliveryOptions, id: \.self) { option in
-                        Text(option).tag(option)
-                    }
-                }
-                .pickerStyle(.segmented)
+            HStack(spacing: 10) {
+                Text(product.price)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundColor(.primary)
             }
         }
-        .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.white)
-                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 6)
-        )
     }
 
-    private var similarProductsSection: some View {
+    private var variantsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Productos similares")
-                .font(.system(size: 17, weight: .semibold))
+            // Header
+            HStack {
+                Text("Elige tu opción")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.primary)
+
+                Spacer()
+
+                // Required badge
+                Text("Requerido")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(gradientManager.currentAccentColor)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(gradientManager.currentAccentColor.opacity(0.15))
+                    .cornerRadius(6)
+            }
+
+            // Variants Container
+            VStack(spacing: 4) {
+                ForEach(Array(variants.enumerated()), id: \.offset) { index, variant in
+                    variantOptionRow(variant: variant, index: index)
+                }
+            }
+            .padding(4)
+            .background(Color(.systemGray6))
+            .cornerRadius(14)
+        }
+    }
+
+    private func variantOptionRow(variant: ProductVariant, index: Int) -> some View {
+        Button(action: {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                selectedVariantIndex = index
+            }
+        }) {
+            HStack {
+                // Left side (radio + name)
+                HStack(spacing: 12) {
+                    // Radio button
+                    ZStack {
+                        Circle()
+                            .strokeBorder(
+                                selectedVariantIndex == index
+                                    ? Color.clear
+                                    : Color(.systemGray4),
+                                lineWidth: 2
+                            )
+                            .frame(width: 22, height: 22)
+
+                        if selectedVariantIndex == index {
+                            Circle()
+                                .fill(gradientManager.currentAccentColor)
+                                .frame(width: 22, height: 22)
+                                .overlay(
+                                    Circle()
+                                        .fill(Color.white)
+                                        .frame(width: 8, height: 8)
+                                )
+                        }
+                    }
+
+                    Text(variant.name)
+                        .font(.system(size: 15, weight: selectedVariantIndex == index ? .medium : .regular))
+                        .foregroundColor(.primary)
+                }
+
+                Spacer()
+
+                // Right side (price)
+                if variant.isDefault {
+                    Text(String(format: "$%.2f", variant.price))
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.primary)
+                } else {
+                    Text(String(format: "+$%.2f", variant.price))
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(Color.white)
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(
+                        selectedVariantIndex == index
+                            ? gradientManager.currentAccentColor
+                            : Color.clear,
+                        lineWidth: 2
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var descriptionSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Descripción")
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(.primary)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 14) {
-                    ForEach(similarProducts, id: \.id) { item in
-                        ProductCard(
-                            product: item,
-                            count: Binding(
-                                get: { similarCounts[item.id] ?? 0 },
-                                set: { newValue in
-                                    if newValue > 0 {
-                                        similarCounts[item.id] = newValue
-                                    } else {
-                                        similarCounts.removeValue(forKey: item.id)
-                                    }
-                                }
-                            ),
-                            onIncrement: {
-                                let current = similarCounts[item.id] ?? 0
-                                similarCounts[item.id] = current + 1
-                            },
-                            onDecrement: {
-                                let current = similarCounts[item.id] ?? 0
-                                if current > 1 {
-                                    similarCounts[item.id] = current - 1
-                                } else {
-                                    similarCounts.removeValue(forKey: item.id)
-                                }
-                            }
-                        )
-                        .frame(width: 220)
-                    }
-                }
-                .padding(.vertical, 4)
+            // Usar descripción del backend si está disponible
+            if let detail = viewModel.productDetail, !detail.description.isEmpty {
+                Text(detail.description)
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundColor(.secondary)
+                    .lineSpacing(1.5)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("Disfruta de un producto de calidad preparado con ingredientes frescos y el mejor servicio.")
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundColor(.secondary)
+                    .lineSpacing(1.5)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
 
-    private var quantitySelector: some View {
-        HStack(spacing: 12) {
+    // MARK: - Bottom Toolbar Views
+
+    private var quantityControlView: some View {
+        HStack(spacing: 0) {
             Button(action: decrementQuantity) {
-                Image(systemName: "minus.circle.fill")
-                    .font(.system(size: 26, weight: .bold))
-                    .foregroundColor(.secondary)
+                Image(systemName: "minus")
+                    .font(.system(size: 16, weight: .medium))
+                   
+                    .frame(width: 36, height: 36)
             }
 
             Text("\(quantity)")
-                .font(.system(size: 18, weight: .bold, design: .rounded))
-                .frame(minWidth: 36)
-                .foregroundColor(.primary)
+                .font(.system(size: 17, weight: .semibold))
+                
+                .frame(minWidth: 28)
 
             Button(action: incrementQuantity) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 26, weight: .bold))
-                    .foregroundColor(.llegoPrimary)
+                Image(systemName: "plus")
+                    .font(.system(size: 16, weight: .medium))
+                   
+                    .frame(width: 36, height: 36)
             }
         }
+        .padding(.horizontal, 4)
+        .tint(gradientManager.currentAccentColor)
+    }
+
+    private var addToCartButton: some View {
+        Button(action: addToCart) {
+            HStack(spacing: 8) {
+                Image(systemName: "cart")
+                Text("Añadir al carrito")
+                   
+            }
+                .font(.system(size: 16, weight: .semibold))
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+        }
+        .buttonStyle(.glassProminent)
+        .tint(gradientManager.currentAccentColor)
     }
 
     // MARK: - Helpers
 
-    private var totalPriceText: String {
-        guard let product = product else { return "$0.00" }
-
-        let cleaned = product.price
-            .replacingOccurrences(of: "[^0-9.,]", with: "", options: .regularExpression)
-            .replacingOccurrences(of: ",", with: ".")
-            .trimmingCharacters(in: .whitespaces)
-
-        guard let unit = Double(cleaned) else { return product.price }
-        let total = unit * Double(quantity)
-
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencySymbol = currencySymbol(from: product.price)
-        formatter.maximumFractionDigits = 2
-
-        return formatter.string(from: NSNumber(value: total)) ?? product.price
-    }
-
-    private func currencySymbol(from priceString: String) -> String {
-        if priceString.contains("€") { return "€" }
-        if priceString.contains("USD") { return "$" }
-        if priceString.contains("CUP") { return "$" }
-        if priceString.contains("$") { return "$" }
-        return "$"
-    }
-
-    private func infoChip(icon: String, text: String) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 12, weight: .semibold))
-            Text(text)
-                .font(.system(size: 13, weight: .medium))
-        }
-        .foregroundColor(.primary)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 2)
-    }
-
-    private func pill(text: String, icon: String) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 13, weight: .semibold))
-            Text(text)
-                .font(.system(size: 13, weight: .medium))
-        }
-        .foregroundColor(.white)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color.white.opacity(0.18))
-        .clipShape(Capsule())
-    }
-
-    private func statChip(icon: String, title: String, subtitle: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 12, weight: .semibold))
-                Text(title)
-                    .font(.system(size: 13, weight: .semibold))
-            }
-            Text(subtitle)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.white.opacity(0.8))
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(Color.white.opacity(0.16))
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-    }
-
-    private func gradientTag(text: String, icon: String) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 12, weight: .semibold))
-            Text(text)
-                .font(.system(size: 13, weight: .semibold))
-        }
-        .foregroundColor(.primary)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(
-            LinearGradient(
-                colors: [
-                    Color.white.opacity(0.85),
-                    Color.white.opacity(0.6)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-        .clipShape(Capsule())
-    }
-
-    private func selectionChip(text: String, isSelected: Bool, icon: String? = nil, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                if let icon = icon {
-                    Image(systemName: icon)
-                        .font(.system(size: 13, weight: .semibold))
-                }
-                Text(text)
-                    .font(.system(size: 14, weight: .semibold))
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .frame(minWidth: 0, alignment: .leading)
-            .background(
-                Group {
-                    if isSelected {
-                        LinearGradient(
-                            colors: [Color.llegoPrimary.opacity(0.85), Color.llegoAccent.opacity(0.85)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    } else {
-                        Color.white.opacity(0.7)
-                    }
-                }
-            )
-            .foregroundColor(isSelected ? .white : .primary)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .shadow(color: isSelected ? Color.llegoPrimary.opacity(0.25) : .clear, radius: 10, x: 0, y: 6)
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Color.white.opacity(isSelected ? 0.1 : 0.4), lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
+    private func formatTotalPrice() -> String {
+        String(format: "$%.2f", totalPrice)
     }
 
     private func incrementQuantity() {
@@ -581,106 +511,26 @@ struct ProductDetailView: View {
         }
     }
 
-    private func triggerStandardAdd() {
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.prepare()
-        generator.impactOccurred()
-        
-        performAdd {
-            withAnimation(.spring) {
-                showGeneralToast = true
-            }
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                withAnimation {
-                    showGeneralToast = false
-                }
-            }
+    private func toggleFavorite() {
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            favoritesManager.toggleFavorite(productId: productId)
         }
     }
-    
-    private func performAdd(completion: @escaping () -> Void) {
-        // Simulate network/processing delay if needed, or just immediate
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            cartManager.addToCart(productId: productId, quantity: quantity)
-            completion()
-        }
+
+    private func addToCart() {
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.prepare()
+        generator.impactOccurred()
+
+        cartManager.addToCart(productId: productId, quantity: quantity)
     }
 
     private func shareProduct() {
-        // Placeholder para futuras acciones de share
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
-    // MARK: - Quantity Sheet View
-    
-    private var quantitySheetView: some View {
-        VStack(spacing: 24) {
-            // Handle visual
-            RoundedRectangle(cornerRadius: 3)
-                .fill(Color.gray.opacity(0.3))
-                .frame(width: 40, height: 5)
-                .padding(.top, 16)
-            
-            VStack(spacing: 16) {
-                Text("¿Cuántos deseas agregar?")
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.primary)
-                
-                // Selector de cantidad grande y bonito
-                HStack(spacing: 20) {
-                    Button(action: decrementQuantity) {
-                        Image(systemName: "minus")
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(quantity > 1 ? gradientManager.currentAccentColor : .gray.opacity(0.3))
-                    }
-                    .disabled(quantity <= 1)
-                    
-                    Text("\(quantity)")
-                        .font(.system(size: 48, weight: .bold, design: .rounded))
-                        .foregroundColor(.primary)
-                        .frame(minWidth: 80)
-                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: quantity)
-                    
-                    Button(action: incrementQuantity) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(gradientManager.currentAccentColor)
-                    }
-                }
-                
-                
-                // Precio total
-                if let product = product {
-                    Text("Total: \(totalPriceText)")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.secondary)
-                }
-            }
-            
-            Spacer()
-            
-            // Botón de agregar
-            Button(action: {
-                showQuantitySheet = false
-                triggerStandardAdd()
-            }) {
-                Text("Agregar al carrito")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-            }
-            .buttonStyle(.glassProminent)
-            .tint(gradientManager.currentAccentColor)
-            .padding(.horizontal, 20)
-            .padding(.bottom, 20)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .presentationBackground(.clear)
-    }
-
-private func startEntranceAnimations() {
+    private func startEntranceAnimations() {
         withAnimation(.spring(response: 0.8, dampingFraction: 0.86)) {
             heroAppeared = true
         }
@@ -691,9 +541,14 @@ private func startEntranceAnimations() {
     }
 }
 
+// MARK: - Supporting Types
+
+struct ProductVariant {
+    let name: String
+    let price: Double
+    let isDefault: Bool
+}
 
 #Preview {
-    NavigationStack {
-        ProductDetailView(productId: "6777f74afe6bab27db6c4aa0")
-    }
+    ProductDetailView(productId: "6777f74afe6bab27db6c4aa0")
 }

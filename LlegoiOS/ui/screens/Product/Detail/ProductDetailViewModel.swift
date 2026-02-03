@@ -82,6 +82,6 @@ class ProductDetailViewModel: ObservableObject {
             symbol = currency
         }
 
-        return String(format: "\(symbol)%.2f", price)
+        return String(format: "\(symbol) %.2f", price)
     }
 }

@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import Apollo
 
 /// Singleton para gestionar el carrito globalmente desde cualquier parte de la app
 @MainActor
@@ -11,6 +12,7 @@ class CartManager: ObservableObject {
 
     private let userDefaults = UserDefaults.standard
     private let cartKey = "llego_cart_items"
+    private let apolloClient = ApolloClientManager.shared.apollo
 
     private init() {
         loadCartItems()
@@ -35,6 +37,9 @@ class CartManager: ObservableObject {
 
         saveCartItems(items)
         print("📦 Cart now has \(items.count) unique products, total items: \(cartItemCount)")
+
+        // Llamar a la mutation en segundo plano para estadísticas
+        sendAddToCartMutation(productId: productId)
     }
 
     /// Actualizar cantidad de un producto
@@ -105,5 +110,26 @@ class CartManager: ObservableObject {
 
     private func updateItemCount() {
         cartItemCount = localItems.reduce(0) { $0 + $1.quantity }
+    }
+
+    /// Enviar mutation al backend para estadísticas (sin bloquear la UI)
+    private func sendAddToCartMutation(productId: String) {
+        Task {
+            do {
+                // Obtener JWT si está disponible
+                let jwt = await AuthManager.shared.getAccessToken()
+
+                // Llamar a la mutation de manera asíncrona
+                _ = try await apolloClient.perform(mutation: LlegoAPI.AddToCartMutation(
+                    productId: productId,
+                    jwt: jwt.map { .some($0) } ?? .none
+                ))
+
+                print("📊 Cart analytics sent for product: \(productId)")
+            } catch {
+                // Silenciosamente fallar - esto es solo para estadísticas
+                print("⚠️ Failed to send cart analytics: \(error.localizedDescription)")
+            }
+        }
     }
 }
