@@ -49,11 +49,11 @@ struct StoreListView: View {
 
     // Selección de vendedor
     @State private var selectedStore: StoreWithCoordinates? = nil
-    
+
     // Navegación
     @State private var navigationDestination: NavigationDestination? = nil
     @State private var pendingDestination: NavigationDestination? = nil
-    
+
     // Gradiente seleccionado temporalmente (para pasar al modal)
     @State private var selectedStoreGradient: ExtractedGradient? = nil
 
@@ -62,7 +62,7 @@ struct StoreListView: View {
         center: CLLocationCoordinate2D(latitude: 23.1345, longitude: -82.3589),
         span: MKCoordinateSpan(latitudeDelta: 0.005, longitudeDelta: 0.005)
     )
-    
+
     init(viewModel: StoreListViewModel? = nil) {
         // Si no se pasa viewModel, crear uno nuevo (para uso desde navegación interna)
         self._viewModel = ObservedObject(wrappedValue: viewModel ?? StoreListViewModel())

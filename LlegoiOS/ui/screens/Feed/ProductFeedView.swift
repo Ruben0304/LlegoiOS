@@ -26,7 +26,7 @@ struct ProductFeedView: View {
                         loadingState
                     } else if case .error(let message) = viewModel.state {
                         errorState(message: message)
-                    } else if viewModel.featuredProducts.isEmpty && viewModel.recentProducts.isEmpty {
+                    } else if viewModel.feedSections.isEmpty && viewModel.featuredProducts.isEmpty {
                         emptyState
                     } else {
                         feedContent
@@ -42,7 +42,7 @@ struct ProductFeedView: View {
                         .fixedSize()
                 }
                 .sharedBackgroundVisibility(.hidden)
-                
+
                 // Botón de favoritos
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showFavoritesSheet = true }) {
@@ -123,12 +123,27 @@ struct ProductFeedView: View {
     private var feedContent: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
+                // Categories filter chips
                 categoriesSection.padding(.top, 8)
 
-                if !viewModel.filteredFeaturedProducts.isEmpty { featuredProductsSection }
-                if !viewModel.filteredPopularProducts.isEmpty { popularProductsSection }
-                if !viewModel.filteredStores.isEmpty { storesSection }
+                // "Para ti" section - Featured products with large cards
+                if let paraTiSection = viewModel.paraTiSection, !paraTiSection.products.isEmpty {
+                    featuredProductsSection(section: paraTiSection)
+                }
 
+                // Dynamic sections from backend (except para_ti)
+                ForEach(viewModel.horizontalSections) { section in
+                    if !viewModel.filteredProducts(for: section).isEmpty {
+                        dynamicSection(section)
+                    }
+                }
+
+                // Stores section (loaded separately)
+                if !viewModel.filteredStores.isEmpty {
+                    storesSection
+                }
+
+                // Tutorials section
                 if viewModel.showTutorials && !viewModel.tutorials.isEmpty {
                     tutorialsSection
                         .transition(.asymmetric(
@@ -137,10 +152,12 @@ struct ProductFeedView: View {
                         ))
                 }
 
-                if !viewModel.promotions.isEmpty { promotionsSection }
+                // Promotions section
+                if !viewModel.promotions.isEmpty {
+                    promotionsSection
+                }
 
-                if !viewModel.filteredRecentProducts.isEmpty { recentProductsSection }
-
+                // Loading more indicator
                 if viewModel.isLoadingMore {
                     ProgressView().tint(gradientManager.currentAccentColor).padding(.vertical, 20)
                 }
@@ -148,7 +165,7 @@ struct ProductFeedView: View {
         }
         .refreshable { await refreshFeed() }
     }
-    
+
     // MARK: - Categories Section
     private var categoriesSection: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -175,7 +192,103 @@ struct ProductFeedView: View {
             .padding(.vertical, 4)
         }
     }
-    
+
+    // MARK: - Featured Products Section ("Para ti" with large cards)
+    private func featuredProductsSection(section: FeedSection) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 16) {
+                    ForEach(viewModel.filteredProducts(for: section)) { product in
+                        FeaturedProductCard(product: product)
+                            .onTapGesture {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                selectedProductId = product.id
+                            }
+                            .padding(.vertical, 12)
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+        }
+        .padding(.top, 6)
+        .padding(.bottom, 10)
+    }
+
+    // MARK: - Dynamic Section (renders based on sectionId)
+    private func dynamicSection(_ section: FeedSection) -> some View {
+        let sectionType = FeedSectionType(rawValue: section.sectionId)
+        let products = viewModel.filteredProducts(for: section)
+
+        return VStack(alignment: .leading, spacing: 12) {
+            // Section header with optional badge
+            HStack {
+                HStack(spacing: 8) {
+                    Text(section.title)
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+
+                    // Badge based on section type
+                    sectionBadge(for: sectionType)
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+
+            // Horizontal scroll of products
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 14) {
+                    ForEach(products) { product in
+                        SmallProductCard(
+                            product: product,
+                            accentColor: gradientManager.currentAccentColor,
+                            badge: productBadge(for: sectionType, product: product)
+                        )
+                        .onTapGesture {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            selectedProductId = product.id
+                        }
+                        .padding(.vertical, 12)
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+        }
+        .padding(.vertical, 10)
+    }
+
+    // MARK: - Section Badge Helper
+    @ViewBuilder
+    private func sectionBadge(for sectionType: FeedSectionType) -> some View {
+        switch sectionType {
+        case .trending:
+            Text("🔥")
+                .font(.system(size: 14))
+        case .nuevosLugaresFavoritos:
+            Text("Nuevo")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundColor(.white)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Capsule().fill(Color.green))
+        default:
+            EmptyView()
+        }
+    }
+
+    // MARK: - Product Badge Helper
+    private func productBadge(for sectionType: FeedSectionType, product: FeedProduct) -> String? {
+        switch sectionType {
+        case .cercaTi:
+            return product.formattedDistance
+        case .trending:
+            return "Trending"
+        case .nuevosLugaresFavoritos:
+            return "Nuevo"
+        default:
+            return nil
+        }
+    }
+
     // MARK: - Promotions Section
     private var promotionsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -207,7 +320,7 @@ struct ProductFeedView: View {
         }
         .padding(.vertical, 10)
     }
-    
+
     // MARK: - Tutorials Section
     private var tutorialsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -239,7 +352,7 @@ struct ProductFeedView: View {
         }
         .padding(.vertical, 10)
     }
-    
+
     // MARK: - Stores Section
     private var storesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -271,79 +384,7 @@ struct ProductFeedView: View {
         }
         .padding(.vertical, 10)
     }
-    
-    // MARK: - Featured Products Section
-    private var featuredProductsSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
-                    ForEach(viewModel.filteredFeaturedProducts) { product in
-                        FeaturedProductCard(product: product)
-                            .onTapGesture {
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                selectedProductId = product.id
-                            }
-                            .padding(.vertical, 12)
-                    }
-                }
-                .padding(.horizontal, 20)
-            }
-        }
-        .padding(.top, 6)
-        .padding(.bottom, 10)
-    }
-    
-    // MARK: - Popular Products Section
-    private var popularProductsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Populares cerca de ti")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundColor(Color.adaptiveOnSurface(colorScheme))
-                .padding(.horizontal, 20)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 14) {
-                    ForEach(viewModel.filteredPopularProducts) { product in
-                        SmallProductCard(product: product, accentColor: gradientManager.currentAccentColor)
-                            .onTapGesture {
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                selectedProductId = product.id
-                            }
-                            .padding(.vertical, 12)
-                    }
-                }
-                .padding(.horizontal, 20)
-            }
-        }
-        .padding(.vertical, 10)
-    }
-    
-    // MARK: - Recent Products Section
-    private var recentProductsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Recomendaciones para ti")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
-                .foregroundColor(Color.adaptiveOnSurface(colorScheme))
-                .padding(.horizontal, 20)
-
-            LazyVGrid(
-                columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)],
-                spacing: 14
-            ) {
-                ForEach(viewModel.filteredRecentProducts) { product in
-                    CompactProductCard(product: product, accentColor: gradientManager.currentAccentColor)
-                        .onAppear { viewModel.loadMoreIfNeeded(currentItem: product) }
-                        .onTapGesture {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            selectedProductId = product.id
-                        }
-                }
-            }
-            .padding(.horizontal, 20)
-        }
-        .padding(.vertical, 10)
-    }
-    
     // MARK: - Refresh
     private func refreshFeed() async {
         await withCheckedContinuation { continuation in
@@ -351,7 +392,7 @@ struct ProductFeedView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { continuation.resume() }
         }
     }
-    
+
     // MARK: - Loading State
     private var loadingState: some View {
         CircularLoadingIndicator(
@@ -361,7 +402,7 @@ struct ProductFeedView: View {
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
+
     // MARK: - Empty State
     private var emptyState: some View {
         GeometryReader { geometry in
@@ -389,7 +430,7 @@ struct ProductFeedView: View {
             .refreshable { await refreshFeed() }
         }
     }
-    
+
     // MARK: - Error State
     private func errorState(message: String) -> some View {
         VStack(spacing: 16) {
@@ -462,7 +503,7 @@ struct StoreCircleCard: View {
 // MARK: - Featured Product Card
 struct FeaturedProductCard: View {
     let product: FeedProduct
-    
+
     var body: some View {
         ZStack(alignment: .bottomLeading) {
             CachedAsyncImage(
@@ -488,7 +529,7 @@ struct FeaturedProductCard: View {
             )
             .frame(width: 280, height: 350)
             .clipped()
-            
+
             LinearGradient(
                 colors: [.clear, .black.opacity(0.7)],
                 startPoint: .top,
@@ -496,18 +537,20 @@ struct FeaturedProductCard: View {
             )
             .frame(height: 150)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-            
+
             VStack(alignment: .leading, spacing: 6) {
-                if let avatarUrl = product.branchAvatarUrl, !avatarUrl.isEmpty {
+                if !product.branchName.isEmpty {
                     HStack(spacing: 6) {
-                        CachedAsyncImage(
-                            url: URL(string: avatarUrl),
-                            cacheKey: "branch_\(product.branchId)",
-                            content: { image in image.resizable().scaledToFill() },
-                            placeholder: { Circle().fill(Color.white.opacity(0.3)) }
-                        )
-                        .frame(width: 20, height: 20)
-                        .clipShape(Circle())
+                        if let avatarUrl = product.branchAvatarUrl, !avatarUrl.isEmpty {
+                            CachedAsyncImage(
+                                url: URL(string: avatarUrl),
+                                cacheKey: "branch_\(product.branchId)",
+                                content: { image in image.resizable().scaledToFill() },
+                                placeholder: { Circle().fill(Color.white.opacity(0.3)) }
+                            )
+                            .frame(width: 20, height: 20)
+                            .clipShape(Circle())
+                        }
 
                         Text(product.branchName)
                             .font(.system(size: 12, weight: .medium))
@@ -546,27 +589,41 @@ struct FeaturedProductCard: View {
 struct SmallProductCard: View {
     let product: FeedProduct
     let accentColor: Color
+    var badge: String? = nil
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            CachedAsyncImage(
-                url: URL(string: product.imageUrl),
-                cacheKey: "small_\(product.id)",
-                content: { image in image.resizable().scaledToFill() },
-                placeholder: {
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.2))
-                        .overlay(ProgressView().scaleEffect(0.7))
-                },
-                failure: {
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.2))
-                        .overlay(Image(systemName: "photo").foregroundColor(.gray))
+            ZStack(alignment: .topTrailing) {
+                CachedAsyncImage(
+                    url: URL(string: product.imageUrl),
+                    cacheKey: "small_\(product.id)",
+                    content: { image in image.resizable().scaledToFill() },
+                    placeholder: {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.2))
+                            .overlay(ProgressView().scaleEffect(0.7))
+                    },
+                    failure: {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.2))
+                            .overlay(Image(systemName: "photo").foregroundColor(.gray))
+                    }
+                )
+                .frame(width: 140, height: 100)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                // Badge overlay
+                if let badge = badge {
+                    Text(badge)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(badgeColor))
+                        .padding(6)
                 }
-            )
-            .frame(width: 140, height: 100)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(product.name)
@@ -588,6 +645,12 @@ struct SmallProductCard: View {
                 .fill(Color.cardBackground(colorScheme))
                 .shadow(color: .black.opacity(colorScheme == .dark ? 0.3 : 0.08), radius: 8, x: 0, y: 4)
         )
+    }
+
+    private var badgeColor: Color {
+        if badge == "Trending" { return .orange }
+        if badge == "Nuevo" { return .green }
+        return accentColor
     }
 }
 
@@ -623,7 +686,7 @@ struct CompactProductCard: View {
                 )
                 .frame(height: 130)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
-                
+
                 Button {
                     favoritesManager.toggleFavorite(productId: product.id)
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -648,7 +711,7 @@ struct CompactProductCard: View {
                 .scaleEffect(favoritePulse ? 1.15 : 1.0)
                 .padding(8)
             }
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(product.name)
                     .font(.system(size: 15, weight: .semibold))
@@ -729,12 +792,12 @@ struct TutorialFeedCard: View {
                 )
 
                 // Play button - center
-                
+
                 ZStack {
                     Circle()
                         .glassEffect(.regular.interactive())
                         .frame(width: 48, height: 48)
-                    
+
 
                     Image(systemName: "play.fill")
                         .font(.system(size: 20, weight: .bold))
@@ -814,7 +877,7 @@ struct TutorialVideoPlayerView: View {
                     }
                 }
                 .aspectRatio(16/9, contentMode: .fit)
-                
+
                 VStack(alignment: .leading, spacing: 12) {
                     Text(tutorial.title)
                         .font(.system(size: 20, weight: .bold))
@@ -830,7 +893,7 @@ struct TutorialVideoPlayerView: View {
                 }
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
-                
+
                 Spacer()
             }
             .navigationTitle("Tutorial")
@@ -853,7 +916,7 @@ struct PromotionCard: View {
     private var typeColor: Color {
         Color(hex: promotion.type.color) ?? .orange
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Image with overlay
@@ -881,7 +944,7 @@ struct PromotionCard: View {
                 )
                 .frame(width: 200, height: 120)
                 .clipped()
-                
+
                 // Type badge
                 HStack(spacing: 4) {
                     Image(systemName: promotion.type.icon)
@@ -896,7 +959,7 @@ struct PromotionCard: View {
                     Capsule().fill(typeColor)
                 )
                 .padding(8)
-                
+
                 // Discount badge
                 if let discount = promotion.formattedDiscount {
                     VStack {
@@ -918,20 +981,20 @@ struct PromotionCard: View {
                 }
             }
             .frame(width: 200, height: 120)
-            
+
             // Content
             VStack(alignment: .leading, spacing: 6) {
                 Text(promotion.title)
                     .font(.system(size: 15, weight: .bold))
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                     .lineLimit(1)
-                
+
                 Text(promotion.description)
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
                     .lineLimit(2)
                     .frame(height: 32, alignment: .top)
-                
+
                 HStack {
                     // Price info
                     if let discounted = promotion.formattedDiscountedPrice {
@@ -947,9 +1010,9 @@ struct PromotionCard: View {
                                 .foregroundColor(accentColor)
                         }
                     }
-                    
+
                     Spacer()
-                    
+
                     // Time remaining
                     if let time = promotion.timeRemaining {
                         HStack(spacing: 3) {
@@ -961,7 +1024,7 @@ struct PromotionCard: View {
                         .foregroundColor(promotion.type == .flash ? .red : .secondary)
                     }
                 }
-                
+
                 // Store name
                 if let storeName = promotion.storeName {
                     Text(storeName)

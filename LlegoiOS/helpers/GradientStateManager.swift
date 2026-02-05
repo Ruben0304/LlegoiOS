@@ -24,10 +24,10 @@ class GradientStateManager: ObservableObject {
 
     /// Update the accent color based on category
     private func updateAccentColor(for index: Int) {
-        // Check if using BusinessTypeConfigManager
+        // Check if using BusinessTypeConfigManager and index exists
         let configManager = BusinessTypeConfigManager.shared
 
-        if !configManager.businessTypes.isEmpty {
+        if !configManager.businessTypes.isEmpty && index < configManager.businessTypes.count {
             currentAccentColor = configManager.getGlowColor(at: index)
         } else {
             // Fallback to hardcoded colors
@@ -38,6 +38,8 @@ class GradientStateManager: ObservableObject {
                 currentAccentColor = Color(red: 0.2, green: 0.7, blue: 0.5)
             case 2: // Dulcería - Marrón-Dorado
                 currentAccentColor = Color(red: 0.737, green: 0.514, blue: 0.345)
+            case 3: // Perfume - Azul morado/Lavanda (estilo Sauvage)
+                currentAccentColor = Color(red: 0.50, green: 0.45, blue: 0.70)
             default:
                 currentAccentColor = Color(red: 0.9, green: 0.3, blue: 0.2)
             }
@@ -48,7 +50,7 @@ class GradientStateManager: ObservableObject {
     func getCurrentGradientPalette() -> (dark: Color, medium: Color, light: Color, veryLight: Color) {
         let configManager = BusinessTypeConfigManager.shared
 
-        if !configManager.businessTypes.isEmpty {
+        if !configManager.businessTypes.isEmpty && currentCategoryIndex < configManager.businessTypes.count {
             let palette = configManager.getGradientPalette(at: currentCategoryIndex)
             return (dark: palette.dark, medium: palette.medium, light: palette.light, veryLight: palette.veryLight)
         }
@@ -75,6 +77,13 @@ class GradientStateManager: ObservableObject {
                 medium: Color(red: 0.910, green: 0.796, blue: 0.702),
                 light: Color(red: 0.85, green: 0.7, blue: 0.6),
                 veryLight: Color(red: 0.96, green: 0.92, blue: 0.88)
+            )
+        case 3: // Perfume - Azul morado/Lavanda (estilo Sauvage)
+            return (
+                dark: Color(red: 0.30, green: 0.28, blue: 0.55),
+                medium: Color(red: 0.48, green: 0.45, blue: 0.68),
+                light: Color(red: 0.65, green: 0.62, blue: 0.78),
+                veryLight: Color(red: 0.90, green: 0.88, blue: 0.94)
             )
         default:
             return (

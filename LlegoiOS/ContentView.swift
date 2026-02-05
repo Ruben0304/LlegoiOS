@@ -102,16 +102,11 @@ struct MainAppView: View {
                                 StoreMapView()
                                     .ignoresSafeArea(.container, edges: .bottom)
                             }
-                            
+
                             // Tab de búsqueda con role: .search
                             // Cuando se selecciona, el campo de búsqueda reemplaza la barra de pestañas
                             Tab(role: .search) {
-                              
-                                    SearchView(searchText: $searchText)
-                                    
-                                       
-                           
-                               
+                                SearchView(searchText: $searchText)
                             }
                             
                         

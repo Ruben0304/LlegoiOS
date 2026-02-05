@@ -339,6 +339,7 @@ struct CategoryModel3D: Identifiable {
     let cameraPosition: SCNVector3?
     let cameraEulerAngles: SCNVector3?
     let customScale: Float?
+    let initialRotationY: Float?
 
     init(
         name: String,
@@ -347,7 +348,8 @@ struct CategoryModel3D: Identifiable {
         icon: String,
         cameraPosition: SCNVector3? = nil,
         cameraEulerAngles: SCNVector3? = nil,
-        customScale: Float? = nil
+        customScale: Float? = nil,
+        initialRotationY: Float? = nil
     ) {
         self.name = name
         self.fileName = fileName
@@ -356,5 +358,6 @@ struct CategoryModel3D: Identifiable {
         self.cameraPosition = cameraPosition
         self.cameraEulerAngles = cameraEulerAngles
         self.customScale = customScale
+        self.initialRotationY = initialRotationY
     }
 }

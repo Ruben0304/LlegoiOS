@@ -45,6 +45,9 @@ public extension LlegoAPI {
       case "DeviceTokenType": return LlegoAPI.Objects.DeviceTokenType
       case "FavoriteCartType": return LlegoAPI.Objects.FavoriteCartType
       case "FeatureType": return LlegoAPI.Objects.FeatureType
+      case "FeedProductType": return LlegoAPI.Objects.FeedProductType
+      case "FeedResponse": return LlegoAPI.Objects.FeedResponse
+      case "FeedSection": return LlegoAPI.Objects.FeedSection
       case "GradientConfigType": return LlegoAPI.Objects.GradientConfigType
       case "InitiatePaymentResult": return LlegoAPI.Objects.InitiatePaymentResult
       case "IosConfigType": return LlegoAPI.Objects.IosConfigType

@@ -7,6 +7,7 @@
 
 import Foundation
 import Apollo
+import MapKit
 
 class SearchRepository {
     private let apolloClient = ApolloClientManager.shared.apollo
@@ -88,12 +89,12 @@ class SearchRepository {
         }
     }
     
-    // MARK: - Search Branches/Stores
+    // MARK: - Search Branches/Stores (con productos anidados)
     @MainActor
     func searchBranches(
         query: String,
         first: Int32 = 20,
-        completion: @escaping @Sendable (Result<[Store], Error>) -> Void
+        completion: @escaping @Sendable (Result<([StoreWithCoordinates], [String: [ProductGraphQL]]), Error>) -> Void
     ) {
         print("🌐 SearchRepository - searchBranches() called with query: '\(query)'")
 
@@ -130,28 +131,57 @@ class SearchRepository {
 
                 guard let data = graphQLResult.data else {
                     print("⚠️ SearchRepository - No data in GraphQL result, returning empty array")
-                    completion(.success([]))
+                    completion(.success(([], [:])))
                     return
                 }
 
                 print("🏪 SearchRepository - Received \(data.searchBranches.edges.count) branch edges")
 
-                let stores = data.searchBranches.edges.map { edge -> Store in
+                var storeProducts: [String: [ProductGraphQL]] = [:]
+
+                let stores = data.searchBranches.edges.map { edge -> StoreWithCoordinates in
                     let node = edge.node
 
-                    return Store(
+                    // Mapear productos anidados
+                    let products = node.products.map { product in
+                        ProductGraphQL(
+                            id: product.id,
+                            branchId: node.id,
+                            name: product.name,
+                            price: product.price,
+                            currency: product.currency,
+                            imageUrl: product.imageUrl,
+                            availability: product.availability,
+                            createdAt: "",
+                            businessName: node.name,
+                            distanceKm: nil,
+                            categoryId: nil,
+                            categoryName: nil
+                        )
+                    }
+                    storeProducts[node.id] = products
+                    print("  ├─ Branch '\(node.name)' con \(products.count) productos anidados")
+
+                    // Calcular ETA basado en deliveryRadius
+                    let etaMinutes = node.deliveryRadius.map { Int($0 * 5 + 10) } ?? 30
+
+                    return StoreWithCoordinates(
                         id: node.id,
                         name: node.name,
-                        address: node.address ?? "",
-                        etaMinutes: 30,
+                        etaMinutes: etaMinutes,
                         logoUrl: node.avatarUrl ?? "",
                         bannerUrl: node.coverUrl ?? "",
-                        rating: nil
+                        address: node.address ?? "",
+                        rating: nil,
+                        coordinate: CLLocationCoordinate2D(
+                            latitude: node.coordinates.coordinates[1],
+                            longitude: node.coordinates.coordinates[0]
+                        )
                     )
                 }
 
-                print("✅ SearchRepository - Mapped to \(stores.count) Store objects")
-                completion(.success(stores))
+                print("✅ SearchRepository - Mapped to \(stores.count) Store objects con productos anidados")
+                completion(.success((stores, storeProducts)))
 
             case .failure(let error):
                 print("❌ SearchRepository - Apollo fetch FAILED: \(error.localizedDescription)")

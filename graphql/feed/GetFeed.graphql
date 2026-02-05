@@ -1,0 +1,36 @@
+# =============================================================
+# FEED PRINCIPAL
+# Usar esta query como entry point del feed.
+# Sin JWT retorna solo secciones globales (trending, populares, favoriteados).
+# Con JWT retorna todas las secciones personalizadas disponibles.
+# `first` controla cuántos productos por sección (max 50).
+# =============================================================
+query GetFeed($jwt: String, $first: Int = 10) {
+  getFeed(first: $first, jwt: $jwt) {
+    sections {
+      sectionId
+      title
+      description
+      totalCount
+      products {
+        id
+        branchId
+        name
+        description
+        price
+        currency
+        availability
+        score
+        imageUrl
+        categoryName
+        branch {
+          id
+          name
+          address
+          tipos
+        }
+      }
+    }
+    timestamp
+  }
+}

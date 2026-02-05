@@ -79,6 +79,11 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
                         z: -center.z * finalScale
                     )
 
+                    // Aplicar rotación inicial si está configurada
+                    if let initialRotation = model.initialRotationY {
+                        modelNode.eulerAngles.y = initialRotation
+                    }
+
                     // Configurar opacidad inicial: visible sólo si es el modelo actual
                     modelNode.opacity = (index == currentIndex) ? 1.0 : 0.0
 

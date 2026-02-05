@@ -24,8 +24,8 @@ struct HomeGradientBackground: View {
             )
         }
         
-        // Intentar obtener del ConfigManager primero
-        if !configManager.businessTypes.isEmpty {
+        // Intentar obtener del ConfigManager primero (solo si el índice existe)
+        if !configManager.businessTypes.isEmpty && gradientManager.currentCategoryIndex < configManager.businessTypes.count {
             return configManager.getGradientPalette(at: gradientManager.currentCategoryIndex)
         }
 
@@ -54,6 +54,14 @@ struct HomeGradientBackground: View {
                 light: Color(red: 0.85, green: 0.7, blue: 0.6),
                 veryLight: Color(red: 0.96, green: 0.92, blue: 0.88),
                 overlay: Color(red: 0.65, green: 0.45, blue: 0.3)
+            )
+        case 3: // Perfume - Azul morado/Lavanda (estilo Sauvage)
+            return (
+                dark: Color(red: 0.30, green: 0.28, blue: 0.55),
+                medium: Color(red: 0.48, green: 0.45, blue: 0.68),
+                light: Color(red: 0.65, green: 0.62, blue: 0.78),
+                veryLight: Color(red: 0.90, green: 0.88, blue: 0.94),
+                overlay: Color(red: 0.25, green: 0.22, blue: 0.48)
             )
         default:
             return (

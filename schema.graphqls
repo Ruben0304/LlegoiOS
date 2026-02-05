@@ -18,16 +18,14 @@ type Query {
   searchUsers(query: String!, jwt: String!): [UserType!]!
   "Usuario actual desde JWT"
   me(jwt: String!): UserType
-  "Lista de negocios"
+  "Lista de negocios (query pública/admin)"
   businesses(ownerId: String = null, jwt: String = null): [BusinessType!]!
   "Obtener negocio por ID"
   business(id: String!, jwt: String = null): BusinessType
   "Buscar negocios"
   searchBusinesses(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true, jwt: String = null): [BusinessType!]!
-  "Obtener negocios con sus sucursales anidadas (optimizado)"
-  getBusinessesWithBranches(jwt: String = null): [BusinessWithBranchesType!]!
-  "Obtener todos mis negocios (propios + con acceso compartido)"
-  getMyBusinesses(jwt: String!): [BusinessType!]!
+  "Obtener todos mis negocios con sucursales (propios + compartidos)"
+  getMyBusinessesWithBranches(jwt: String!): [BusinessWithBranchesType!]!
   "Lista de sucursales con scoring por cercanía (paginado)"
   branches(first: Int = null, after: String = null, businessId: String = null, tipo: BranchTipo = null, radiusKm: Float = null, productCategoryId: String = null, jwt: String = null): BranchConnection!
   "Obtener sucursal por ID"
@@ -134,6 +132,8 @@ type Query {
   mySurveyResponses(jwt: String!): [SurveyResponseType!]!
   "Verificar si el usuario ya respondió una encuesta"
   hasRespondedToSurvey(surveyId: String!, jwt: String!): Boolean!
+  "Get personalized feed with multiple sections"
+  getFeed(first: Int! = 10, radiusKm: Float = null, sections: [String!] = null, jwt: String = null): FeedResponse!
   "Saludo de ejemplo"
   hello(jwt: String = null): String!
   "Saluda por nombre"
@@ -189,6 +189,8 @@ type BusinessWithBranchesType {
   isActive: Boolean!
   createdAt: DateTime!
   branches: [BranchType!]!
+  isOwner: Boolean!
+  role: String!
   "Presigned URL for the business avatar"
   avatarUrl: String
 }
@@ -890,6 +892,38 @@ type QuestionResponseType {
   questionId: String!
   answer: String!
 }
+type FeedResponse {
+  sections: [FeedSection!]!
+  timestamp: DateTime!
+}
+type FeedSection {
+  title: String!
+  sectionId: String!
+  description: String
+  products: [FeedProductType!]!
+  totalCount: Int!
+}
+type FeedProductType {
+  id: String!
+  branchId: String!
+  name: String!
+  description: String!
+  weight: String!
+  price: Float!
+  currency: String!
+  image: String!
+  availability: Boolean!
+  categoryId: String
+  createdAt: DateTime!
+  score: Float!
+  distanceM: Float
+  "Presigned URL for the product image"
+  imageUrl: String!
+  "Product category name"
+  categoryName: String
+  "Branch associated with this product"
+  branch: BranchType
+}
 type Mutation {
   "Register a new user"
   register(input: RegisterInput!, jwt: String = null): AuthResponse!
@@ -1035,6 +1069,10 @@ type Mutation {
   removeFromCart(productId: String!, jwt: String = null): Boolean!
   "Registrar clic en resultado de búsqueda"
   trackSearchClick(searchQuery: String!, itemId: String!, itemType: String!, jwt: String = null): SearchType!
+  "Agregar like a un branch"
+  likeBranch(branchId: String!, jwt: String = null): BranchLikeType!
+  "Remover like de un branch"
+  unlikeBranch(branchId: String!, jwt: String = null): Boolean!
 }
 type AuthResponse {
   accessToken: String!
@@ -1096,6 +1134,12 @@ type ClickedItemType {
   itemId: String!
   itemType: String!
   clicks: [DateTime!]!
+}
+type BranchLikeType {
+  id: String!
+  userId: String!
+  branchId: String!
+  createdAt: DateTime!
 }
 type Subscription {
   "Escuchar cambios en un pedido específico"

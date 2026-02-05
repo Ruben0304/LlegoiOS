@@ -61,11 +61,11 @@ struct HomeView: View {
     
     // Color de glow dinámico basado en la categoría
     var glowColorForCategory: Color {
-        // Usar ConfigManager si hay datos
-        if !configManager.businessTypes.isEmpty {
+        // Usar ConfigManager si hay datos y el índice existe
+        if !configManager.businessTypes.isEmpty && currentIndex < configManager.businessTypes.count {
             return configManager.getGlowColor(at: currentIndex)
         }
-        
+
         // Fallback
         switch currentIndex {
         case 0: // Restaurantes - Rojo-naranja terracota
@@ -74,6 +74,8 @@ struct HomeView: View {
             return Color(red: 0.2, green: 0.7, blue: 0.5)
         case 2: // Dulcería - Marrón-Dorado
             return Color(red: 0.737, green: 0.514, blue: 0.345)
+        case 3: // Perfume - Azul morado/Lavanda (estilo Sauvage)
+            return Color(red: 0.50, green: 0.45, blue: 0.70)
         default:
             return Color(red: 0.9, green: 0.3, blue: 0.2)
         }
@@ -81,11 +83,11 @@ struct HomeView: View {
     
     // Características dinámicas según la categoría (desde ConfigManager o fallback)
     var categoryFeatures: [Feature] {
-        // Usar ConfigManager si hay datos
-        if !configManager.businessTypes.isEmpty {
+        // Usar ConfigManager si hay datos y el índice existe
+        if !configManager.businessTypes.isEmpty && currentIndex < configManager.businessTypes.count {
             return configManager.getFeatures(at: currentIndex)
         }
-        
+
         // Fallback hardcodeado
         switch currentIndex {
         case 0: // Restaurantes
@@ -112,12 +114,20 @@ struct HomeView: View {
                 Feature(icon: "sparkles", title: "Galletas", subtitle: "Artesanales"),
                 Feature(icon: "star.fill", title: "Especiales", subtitle: "Del día")
             ]
+        case 3: // Perfume
+            return [
+                Feature(icon: "drop.fill", title: "Eau de Parfum", subtitle: "Larga duración"),
+                Feature(icon: "sparkles", title: "Eau de Toilette", subtitle: "Frescura diaria"),
+                Feature(icon: "gift.fill", title: "Sets Regalo", subtitle: "Colecciones"),
+                Feature(icon: "star.fill", title: "Exclusivos", subtitle: "Edición limitada"),
+                Feature(icon: "heart.fill", title: "Bestsellers", subtitle: "Los más vendidos")
+            ]
         default:
             return []
         }
     }
     
-    // Models data - Orden: Restaurantes, Supermercado, Dulcería
+    // Models data - Orden: Restaurantes, Supermercado, Dulcería, Perfume
     // Siempre usa modelos hardcodeados con posiciones de cámara fijas
     var models: [CategoryModel3D] {
         return [
@@ -141,6 +151,15 @@ struct HomeView: View {
                 description: "Pan y Repostería",
                 icon: "birthday.cake.fill",
                 customScale: 0.8
+            ),
+            CategoryModel3D(
+                name: "Perfumes",
+                fileName: "perfume.usdz",
+                description: "Fragancias Exclusivas",
+                icon: "drop.fill",
+                cameraPosition: SCNVector3(x: -0.3, y: 1.2, z: 3.5),
+                customScale: 0.9,
+                initialRotationY: Float.pi
             )
         ]
     }

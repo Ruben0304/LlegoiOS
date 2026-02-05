@@ -9,7 +9,7 @@ struct FeedCategory: Identifiable, Hashable, Sendable {
     let icon: String
     let isAll: Bool
     let isFeatured: Bool
-    
+
     init(id: String, name: String, icon: String, isAll: Bool = false, isFeatured: Bool = false) {
         self.id = id
         self.name = name
@@ -39,10 +39,15 @@ struct FeedProduct: Identifiable, Hashable, Sendable {
     let branchId: String
     let branchName: String
     let branchAvatarUrl: String?
+    let branchAddress: String?
+    let branchTipos: [String]
     let businessName: String
     let categoryId: String?
     let categoryName: String?
-    
+    let availability: Bool
+    let score: Double
+    let productDescription: String
+
     var formattedPrice: String {
         let symbol: String
         switch currency.uppercased() {
@@ -53,7 +58,7 @@ struct FeedProduct: Identifiable, Hashable, Sendable {
         }
         return String(format: "\(symbol)%.2f", price)
     }
-    
+
     var formattedDistance: String? {
         guard let distance = distanceKm else { return nil }
         if distance < 1 {
@@ -61,7 +66,108 @@ struct FeedProduct: Identifiable, Hashable, Sendable {
         }
         return String(format: "%.1f km", distance)
     }
+
+    // Convenience init for backward compatibility (old code paths)
+    init(id: String, name: String, price: Double, currency: String, imageUrl: String, distanceKm: Double?, branchId: String, branchName: String, branchAvatarUrl: String?, businessName: String, categoryId: String?, categoryName: String?) {
+        self.id = id
+        self.name = name
+        self.price = price
+        self.currency = currency
+        self.imageUrl = imageUrl
+        self.distanceKm = distanceKm
+        self.branchId = branchId
+        self.branchName = branchName
+        self.branchAvatarUrl = branchAvatarUrl
+        self.branchAddress = nil
+        self.branchTipos = []
+        self.businessName = businessName
+        self.categoryId = categoryId
+        self.categoryName = categoryName
+        self.availability = true
+        self.score = 0
+        self.productDescription = ""
+    }
+
+    // Full init with all new fields
+    init(id: String, name: String, price: Double, currency: String, imageUrl: String, distanceKm: Double?, branchId: String, branchName: String, branchAvatarUrl: String?, branchAddress: String?, branchTipos: [String], businessName: String, categoryId: String?, categoryName: String?, availability: Bool, score: Double, productDescription: String) {
+        self.id = id
+        self.name = name
+        self.price = price
+        self.currency = currency
+        self.imageUrl = imageUrl
+        self.distanceKm = distanceKm
+        self.branchId = branchId
+        self.branchName = branchName
+        self.branchAvatarUrl = branchAvatarUrl
+        self.branchAddress = branchAddress
+        self.branchTipos = branchTipos
+        self.businessName = businessName
+        self.categoryId = categoryId
+        self.categoryName = categoryName
+        self.availability = availability
+        self.score = score
+        self.productDescription = productDescription
+    }
 }
+
+// MARK: - Feed Section Model
+
+/// Represents a section in the feed with its products
+struct FeedSection: Identifiable, Hashable, Sendable {
+    let id: String // sectionId
+    let sectionId: String
+    let title: String
+    let description: String?
+    let products: [FeedProduct]
+    let totalCount: Int
+
+    init(sectionId: String, title: String, description: String?, products: [FeedProduct], totalCount: Int) {
+        self.id = sectionId
+        self.sectionId = sectionId
+        self.title = title
+        self.description = description
+        self.products = products
+        self.totalCount = totalCount
+    }
+}
+
+// MARK: - Section Type Enum
+
+/// Known section types from the backend
+enum FeedSectionType: String {
+    case paraTi = "para_ti"
+    case popularesCerca = "populares_cerca"
+    case trending = "trending"
+    case basadoBusquedas = "basado_busquedas"
+    case nuevosLugaresFavoritos = "nuevos_lugares_favoritos"
+    case masFavoriteados = "mas_favoriteados"
+    case cercaTi = "cerca_ti"
+    case tePodriagustar = "te_podria_gustar"
+    case unknown
+
+    init(rawValue: String) {
+        switch rawValue {
+        case "para_ti": self = .paraTi
+        case "populares_cerca": self = .popularesCerca
+        case "trending": self = .trending
+        case "basado_busquedas": self = .basadoBusquedas
+        case "nuevos_lugares_favoritos": self = .nuevosLugaresFavoritos
+        case "mas_favoriteados": self = .masFavoriteados
+        case "cerca_ti": self = .cercaTi
+        case "te_podria_gustar": self = .tePodriagustar
+        default: self = .unknown
+        }
+    }
+}
+
+// MARK: - Feed Response
+
+struct FeedResponse: Sendable {
+    let sections: [FeedSection]
+    let timestamp: String
+}
+
+// MARK: - Legacy Feed Data (for backward compatibility with categories/stores)
 
 struct FeedData: Sendable {
     let categories: [FeedCategory]
@@ -77,22 +183,215 @@ struct FeedData: Sendable {
 
 @MainActor
 class ProductFeedRepository {
-    
+
+    // MARK: - Complete Feed API (Single Query Optimization)
+
+    /// Fetch complete feed data (feed sections, categories, stores) in a single GraphQL query
+    func fetchCompleteFeed(first: Int = 10, radiusKm: Double? = nil, categoryId: String? = nil) async -> Result<(FeedResponse, [FeedCategory], [FeedStore]), Error> {
+        let jwt = AuthManager.shared.getAccessToken()
+        let branchTypeRaw = BranchTypeManager.shared.selectedType.rawValue
+        let branchTipo = LlegoAPI.BranchTipo(rawValue: branchTypeRaw)
+
+        // Log JWT status
+        if let token = jwt {
+            print("🔐 Complete feed request with JWT: \(String(token.prefix(20)))...")
+        } else {
+            print("🔓 Complete feed request without JWT (user not authenticated)")
+        }
+
+        return await withCheckedContinuation { continuation in
+            let query = LlegoAPI.GetCompleteFeedQuery(
+                jwt: jwt.map { .some($0) } ?? .none,
+                first: .some(Int32(first)),
+                branchType: .some(branchTypeRaw),
+                branchTipo: branchTipo.map { .some(GraphQLEnum($0)) } ?? .none,
+                radiusKm: radiusKm.map { .some($0) } ?? .none,
+                categoryId: categoryId.map { .some($0) } ?? .none
+            )
+
+            ApolloClientManager.shared.apollo.fetch(query: query, cachePolicy: .fetchIgnoringCacheCompletely) { result in
+                switch result {
+                case .success(let graphQLResult):
+                    if let data = graphQLResult.data {
+                        // Parse feed sections
+                        let sections = data.getFeed.sections.map { section -> FeedSection in
+                            let products = section.products.map { product -> FeedProduct in
+                                FeedProduct(
+                                    id: product.id,
+                                    name: product.name,
+                                    price: product.price,
+                                    currency: product.currency,
+                                    imageUrl: product.imageUrl,
+                                    distanceKm: nil,
+                                    branchId: product.branchId,
+                                    branchName: product.branch?.name ?? "",
+                                    branchAvatarUrl: nil,
+                                    branchAddress: product.branch?.address,
+                                    branchTipos: product.branch?.tipos.compactMap { $0.rawValue } ?? [],
+                                    businessName: product.branch?.name ?? "",
+                                    categoryId: nil,
+                                    categoryName: product.categoryName,
+                                    availability: product.availability,
+                                    score: product.score,
+                                    productDescription: product.description
+                                )
+                            }
+
+                            return FeedSection(
+                                sectionId: section.sectionId,
+                                title: section.title,
+                                description: section.description,
+                                products: products,
+                                totalCount: section.totalCount
+                            )
+                        }
+
+                        let feedResponse = FeedResponse(
+                            sections: sections,
+                            timestamp: String(describing: data.getFeed.timestamp)
+                        )
+
+                        // Parse categories
+                        var categories: [FeedCategory] = []
+                        categories.append(FeedCategory(id: "all", name: "Todos", icon: "square.grid.2x2", isAll: true, isFeatured: false))
+                        for cat in data.productCategories {
+                            categories.append(FeedCategory(id: cat.id, name: cat.name, icon: cat.iconIos, isAll: false, isFeatured: false))
+                        }
+
+                        // Parse stores
+                        let stores = data.branches.edges.map { edge -> FeedStore in
+                            FeedStore(
+                                id: edge.node.id,
+                                businessId: edge.node.businessId,
+                                name: edge.node.name,
+                                avatarUrl: edge.node.avatarUrl,
+                                coverUrl: edge.node.coverUrl,
+                                address: edge.node.address,
+                                distanceKm: edge.node.distanceKm
+                            )
+                        }
+
+                        continuation.resume(returning: .success((feedResponse, categories, stores)))
+                    } else if let errors = graphQLResult.errors, !errors.isEmpty {
+                        continuation.resume(returning: .failure(NSError(
+                            domain: "GraphQL",
+                            code: -1,
+                            userInfo: [NSLocalizedDescriptionKey: errors.map { $0.localizedDescription }.joined(separator: ", ")]
+                        )))
+                    } else {
+                        continuation.resume(returning: .failure(NSError(
+                            domain: "GraphQL",
+                            code: -1,
+                            userInfo: [NSLocalizedDescriptionKey: "No data returned"]
+                        )))
+                    }
+
+                case .failure(let error):
+                    continuation.resume(returning: .failure(error))
+                }
+            }
+        }
+    }
+
+    // MARK: - Legacy Feed API (Deprecated - Use fetchCompleteFeed instead)
+
+    /// Fetch the personalized feed using the new GetFeed query
+    /// @deprecated Use fetchCompleteFeed() instead for better performance
+    func fetchFeed(first: Int = 10) async -> Result<FeedResponse, Error> {
+        let jwt = AuthManager.shared.getAccessToken()
+
+        // Log JWT status
+        if let token = jwt {
+            print("🔐 Feed request with JWT: \(String(token.prefix(20)))...")
+        } else {
+            print("🔓 Feed request without JWT (user not authenticated)")
+        }
+
+        return await withCheckedContinuation { continuation in
+            let query = LlegoAPI.GetFeedQuery(
+                jwt: jwt.map { .some($0) } ?? .none,
+                first: .some(Int32(first))
+            )
+
+            ApolloClientManager.shared.apollo.fetch(query: query, cachePolicy: .fetchIgnoringCacheCompletely) { result in
+                switch result {
+                case .success(let graphQLResult):
+                    if let data = graphQLResult.data {
+                        let sections = data.getFeed.sections.map { section -> FeedSection in
+                            let products = section.products.map { product -> FeedProduct in
+                                FeedProduct(
+                                    id: product.id,
+                                    name: product.name,
+                                    price: product.price,
+                                    currency: product.currency,
+                                    imageUrl: product.imageUrl,
+                                    distanceKm: nil, // Not provided in new API
+                                    branchId: product.branchId,
+                                    branchName: product.branch?.name ?? "",
+                                    branchAvatarUrl: nil, // Not provided in new API
+                                    branchAddress: product.branch?.address,
+                                    branchTipos: product.branch?.tipos.compactMap { $0.rawValue } ?? [],
+                                    businessName: product.branch?.name ?? "",
+                                    categoryId: nil,
+                                    categoryName: product.categoryName,
+                                    availability: product.availability,
+                                    score: product.score,
+                                    productDescription: product.description
+                                )
+                            }
+
+                            return FeedSection(
+                                sectionId: section.sectionId,
+                                title: section.title,
+                                description: section.description,
+                                products: products,
+                                totalCount: section.totalCount
+                            )
+                        }
+
+                        let feedResponse = FeedResponse(
+                            sections: sections,
+                            timestamp: String(describing: data.getFeed.timestamp)
+                        )
+                        continuation.resume(returning: .success(feedResponse))
+                    } else if let errors = graphQLResult.errors, !errors.isEmpty {
+                        continuation.resume(returning: .failure(NSError(
+                            domain: "GraphQL",
+                            code: -1,
+                            userInfo: [NSLocalizedDescriptionKey: errors.map { $0.localizedDescription }.joined(separator: ", ")]
+                        )))
+                    } else {
+                        continuation.resume(returning: .failure(NSError(
+                            domain: "GraphQL",
+                            code: -1,
+                            userInfo: [NSLocalizedDescriptionKey: "No data returned"]
+                        )))
+                    }
+
+                case .failure(let error):
+                    continuation.resume(returning: .failure(error))
+                }
+            }
+        }
+    }
+
+    // MARK: - Legacy Methods (for categories, stores, and pagination)
+
     func fetchFeedData(radiusKm: Double? = nil, categoryId: String? = nil) async -> Result<FeedData, Error> {
         let jwt = AuthManager.shared.getAccessToken()
         let branchType = BranchTypeManager.shared.selectedType.rawValue
-        
+
         // Fetch sequentially to avoid concurrency issues
         let categories = await fetchCategories(branchType: branchType)
         // Para stores: filtrar por categoryId si existe (backend debe soportar esto)
         let stores = await fetchStores(branchType: branchType, radiusKm: radiusKm, categoryId: categoryId, jwt: jwt)
-        // Featured products: no requiere distancia específica
+        // Featured products: no requiere distancia especifica
         let (featuredProducts, _) = await fetchProducts(first: 6, branchType: branchType, categoryId: categoryId, radiusKm: radiusKm, jwt: jwt)
-        // Recent products: sin límite de distancia
+        // Recent products: sin limite de distancia
         let (recentProducts, recentPageInfo) = await fetchProducts(first: 10, branchType: branchType, categoryId: categoryId, radiusKm: radiusKm, jwt: jwt)
-        // Popular products: máximo 3km de distancia
+        // Popular products: maximo 3km de distancia
         let (popularProducts, _) = await fetchProducts(first: 8, branchType: branchType, categoryId: categoryId, radiusKm: 3.0, jwt: jwt)
-        
+
         let feedData = FeedData(
             categories: categories,
             stores: stores,
@@ -102,28 +401,28 @@ class ProductFeedRepository {
             hasMoreProducts: recentPageInfo.hasNextPage,
             nextCursor: recentPageInfo.endCursor
         )
-        
+
         return .success(feedData)
     }
-    
+
     func fetchMoreProducts(after cursor: String, radiusKm: Double? = nil, categoryId: String? = nil) async -> Result<([FeedProduct], PageInfo), Error> {
         let jwt = AuthManager.shared.getAccessToken()
         let branchType = BranchTypeManager.shared.selectedType.rawValue
-        
+
         let (products, pageInfo) = await fetchProducts(first: 10, after: cursor, branchType: branchType, categoryId: categoryId, radiusKm: radiusKm, jwt: jwt)
         return .success((products, pageInfo))
     }
-    
-    // MARK: - Private fetch methods using fetchIgnoringCacheData to avoid double callback
-    
-    private func fetchCategories(branchType: String) async -> [FeedCategory] {
+
+    // MARK: - Categories (still needed for filter chips)
+
+    func fetchCategories(branchType: String) async -> [FeedCategory] {
         let query = LlegoAPI.GetProductCategoriesQuery(branchType: .some(branchType))
-        
+
         return await withCheckedContinuation { continuation in
             ApolloClientManager.shared.apollo.fetch(query: query, cachePolicy: .fetchIgnoringCacheCompletely) { result in
                 var cats: [FeedCategory] = []
                 cats.append(FeedCategory(id: "all", name: "Todos", icon: "square.grid.2x2", isAll: true, isFeatured: false))
-                
+
                 if case .success(let graphQLResult) = result, let data = graphQLResult.data {
                     for cat in data.productCategories {
                         cats.append(FeedCategory(id: cat.id, name: cat.name, icon: cat.iconIos, isAll: false, isFeatured: false))
@@ -133,8 +432,10 @@ class ProductFeedRepository {
             }
         }
     }
-    
-    private func fetchStores(branchType: String, radiusKm: Double?, categoryId: String?, jwt: String?) async -> [FeedStore] {
+
+    // MARK: - Stores (still needed for store section)
+
+    func fetchStores(branchType: String, radiusKm: Double?, categoryId: String?, jwt: String?) async -> [FeedStore] {
         let query = LlegoAPI.GetBranchesQuery(
             first: 15,
             after: .none,
@@ -144,11 +445,11 @@ class ProductFeedRepository {
             productCategoryId: categoryId.map { .some($0) } ?? .none,
             jwt: jwt.map { .some($0) } ?? .none
         )
-        
+
         return await withCheckedContinuation { continuation in
             ApolloClientManager.shared.apollo.fetch(query: query, cachePolicy: .fetchIgnoringCacheCompletely) { result in
                 var stores: [FeedStore] = []
-                
+
                 if case .success(let graphQLResult) = result, let data = graphQLResult.data {
                     for edge in data.branches.edges {
                         stores.append(FeedStore(
@@ -166,7 +467,9 @@ class ProductFeedRepository {
             }
         }
     }
-    
+
+    // MARK: - Private fetch methods using fetchIgnoringCacheData to avoid double callback
+
     private func fetchProducts(first: Int, after: String? = nil, branchType: String, categoryId: String?, radiusKm: Double?, jwt: String?) async -> ([FeedProduct], PageInfo) {
         let query = LlegoAPI.GetProductsQuery(
             first: Int32(first),
@@ -178,12 +481,12 @@ class ProductFeedRepository {
             radiusKm: radiusKm.map { .some($0) } ?? .none,
             jwt: jwt.map { .some($0) } ?? .none
         )
-        
+
         return await withCheckedContinuation { continuation in
             ApolloClientManager.shared.apollo.fetch(query: query, cachePolicy: .fetchIgnoringCacheCompletely) { result in
                 var products: [FeedProduct] = []
                 var pageInfo = PageInfo(hasNextPage: false, hasPreviousPage: false, startCursor: nil, endCursor: nil, totalCount: 0)
-                
+
                 if case .success(let graphQLResult) = result, let data = graphQLResult.data {
                     for edge in data.products.edges {
                         products.append(FeedProduct(

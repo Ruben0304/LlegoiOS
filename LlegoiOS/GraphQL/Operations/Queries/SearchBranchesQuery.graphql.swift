@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "SearchBranches"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query SearchBranches($query: String!, $first: Int! = 20, $after: String, $useVectorSearch: Boolean, $radiusKm: Float, $jwt: String) { searchBranches( query: $query first: $first after: $after useVectorSearch: $useVectorSearch radiusKm: $radiusKm jwt: $jwt ) { __typename edges { __typename node { __typename id businessId name address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius createdAt score distanceKm } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
+        #"query SearchBranches($query: String!, $first: Int! = 20, $after: String, $useVectorSearch: Boolean, $radiusKm: Float, $jwt: String) { searchBranches( query: $query first: $first after: $after useVectorSearch: $useVectorSearch radiusKm: $radiusKm jwt: $jwt ) { __typename edges { __typename node { __typename id businessId name address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius createdAt score distanceKm products(limit: 4, availableOnly: true) { __typename id name price currency imageUrl availability } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
       ))
 
     public var query: String
@@ -129,6 +129,10 @@ public extension LlegoAPI {
               .field("createdAt", LlegoAPI.DateTime.self),
               .field("score", Double.self),
               .field("distanceKm", Double?.self),
+              .field("products", [Product].self, arguments: [
+                "limit": 4,
+                "availableOnly": true
+              ]),
             ] }
             @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
               SearchBranchesQuery.Data.SearchBranches.Edge.Node.self
@@ -150,6 +154,8 @@ public extension LlegoAPI {
             public var score: Double { __data["score"] }
             /// Distance in kilometers from user
             public var distanceKm: Double? { __data["distanceKm"] }
+            /// Products from this branch
+            public var products: [Product] { __data["products"] }
 
             /// SearchBranches.Edge.Node.Coordinates
             ///
@@ -170,6 +176,36 @@ public extension LlegoAPI {
 
               public var type: String { __data["type"] }
               public var coordinates: [Double] { __data["coordinates"] }
+            }
+
+            /// SearchBranches.Edge.Node.Product
+            ///
+            /// Parent Type: `ProductType`
+            public struct Product: LlegoAPI.SelectionSet {
+              @_spi(Unsafe) public let __data: DataDict
+              @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+              @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.ProductType }
+              @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+                .field("__typename", String.self),
+                .field("id", String.self),
+                .field("name", String.self),
+                .field("price", Double.self),
+                .field("currency", String.self),
+                .field("imageUrl", String.self),
+                .field("availability", Bool.self),
+              ] }
+              @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+                SearchBranchesQuery.Data.SearchBranches.Edge.Node.Product.self
+              ] }
+
+              public var id: String { __data["id"] }
+              public var name: String { __data["name"] }
+              public var price: Double { __data["price"] }
+              public var currency: String { __data["currency"] }
+              /// Presigned URL for the product image
+              public var imageUrl: String { __data["imageUrl"] }
+              public var availability: Bool { __data["availability"] }
             }
           }
         }

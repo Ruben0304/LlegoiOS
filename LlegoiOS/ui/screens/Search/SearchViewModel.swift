@@ -201,37 +201,23 @@ class SearchViewModel: ObservableObject {
     
     private func searchStores(query: String) {
         print("🔍 SearchViewModel - searchStores() calling repository with query: '\(query)'")
-        storeRepository.searchBranches(query: query, limit: 20) { [weak self] result in
+        searchRepository.searchBranches(query: query, first: 20) { [weak self] result in
             Task { @MainActor in
                 guard let self = self else { return }
 
                 switch result {
-                case .success(let branchesGraphQL):
-                    print("✅ SearchViewModel - Stores search SUCCESS, found \(branchesGraphQL.count) stores")
-                    print("🏪 SearchViewModel - Stores: \(branchesGraphQL.map { $0.name }.joined(separator: ", "))")
-                    self.stores = branchesGraphQL.map { branch in
-                        StoreWithCoordinates(
-                            id: branch.id,
-                            name: branch.name,
-                            etaMinutes: self.calculateETA(deliveryRadius: branch.deliveryRadius),
-                            logoUrl: branch.avatarUrl ?? self.defaultLogoUrl,
-                            bannerUrl: branch.coverUrl ?? self.defaultBannerUrl,
-                            address: branch.address,
-                            rating: nil,
-                            coordinate: CLLocationCoordinate2D(
-                                latitude: branch.coordinates.latitude,
-                                longitude: branch.coordinates.longitude
-                            )
-                        )
-                    }
+                case .success(let (storesData, products)):
+                    print("✅ SearchViewModel - Stores search SUCCESS, found \(storesData.count) stores")
+                    print("🏪 SearchViewModel - Stores: \(storesData.map { $0.name }.joined(separator: ", "))")
+                    print("📦 SearchViewModel - Productos anidados recibidos para \(products.count) tiendas")
+
+                    // Asignar tiendas y productos directamente
+                    self.stores = storesData
+                    self.storeProducts = products
 
                     self.state = self.stores.isEmpty ? .empty : .success
                     print("🔍 SearchViewModel - State set to: \(self.stores.isEmpty ? "empty" : "success")")
-
-                    // Cargar productos para cada tienda encontrada
-                    for store in self.stores {
-                        self.loadProductsForStore(storeId: store.id)
-                    }
+                    print("✅ SearchViewModel - Optimización: productos cargados en 1 sola llamada (antes eran N+1)")
 
                 case .failure(let error):
                     print("❌ SearchViewModel - Stores search FAILED: \(error.localizedDescription)")
