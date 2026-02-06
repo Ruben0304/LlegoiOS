@@ -231,6 +231,82 @@ class StoreDetailRepository {
         }
     }
 
+    // MARK: - Branch Likes
+
+    /// Like a branch (add to user's liked branches)
+    func likeBranch(branchId: String, completion: @escaping @Sendable (Result<Bool, Error>) -> Void) {
+        let client = apolloClient
+
+        Task { @MainActor in
+            let jwt = AuthManager.shared.getAccessToken()
+
+            client.perform(mutation: LlegoAPI.LikeBranchMutation(
+                branchId: branchId,
+                jwt: jwt.map { .some($0) } ?? .none
+            )) { result in
+                switch result {
+                case .success(let graphQLResult):
+                    if let errors = graphQLResult.errors {
+                        print("❌ GraphQL Errors (Like Branch):")
+                        errors.forEach { error in
+                            print("  - \(error.localizedDescription)")
+                        }
+                        completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: "GraphQL errors occurred"])))
+                        return
+                    }
+
+                    if graphQLResult.data?.likeBranch != nil {
+                        print("✅ Successfully liked branch: \(branchId)")
+                        completion(.success(true))
+                    } else {
+                        completion(.failure(NSError(domain: "LikeBranch", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to like branch"])))
+                    }
+
+                case .failure(let error):
+                    print("❌ Network Error (Like Branch): \(error.localizedDescription)")
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+
+    /// Unlike a branch (remove from user's liked branches)
+    func unlikeBranch(branchId: String, completion: @escaping @Sendable (Result<Bool, Error>) -> Void) {
+        let client = apolloClient
+
+        Task { @MainActor in
+            let jwt = AuthManager.shared.getAccessToken()
+
+            client.perform(mutation: LlegoAPI.UnlikeBranchMutation(
+                branchId: branchId,
+                jwt: jwt.map { .some($0) } ?? .none
+            )) { result in
+                switch result {
+                case .success(let graphQLResult):
+                    if let errors = graphQLResult.errors {
+                        print("❌ GraphQL Errors (Unlike Branch):")
+                        errors.forEach { error in
+                            print("  - \(error.localizedDescription)")
+                        }
+                        completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: "GraphQL errors occurred"])))
+                        return
+                    }
+
+                    if let success = graphQLResult.data?.unlikeBranch, success {
+                        print("✅ Successfully unliked branch: \(branchId)")
+                        completion(.success(true))
+                    } else {
+                        completion(.failure(NSError(domain: "UnlikeBranch", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to unlike branch"])))
+                    }
+
+                case .failure(let error):
+                    print("❌ Network Error (Unlike Branch): \(error.localizedDescription)")
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+
     private static func parseSocialMedia(_ json: LlegoAPI.JSON?) -> [String: String]? {
         guard let jsonString = json,
               let data = jsonString.data(using: .utf8),

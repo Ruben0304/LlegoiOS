@@ -7,9 +7,9 @@ struct StoreDetailView: View {
     let storeId: String
 
     @StateObject private var viewModel = StoreDetailViewModel()
+    @StateObject private var branchLikesManager = BranchLikesManager.shared
     @Environment(\.dismiss) private var dismiss
     @State private var region: MKCoordinateRegion
-    @State private var showShareSheet = false
 
     // Default images - Empty strings to trigger AsyncImage failure -> shows generic assets
     private let defaultLogoUrl = ""
@@ -531,25 +531,12 @@ struct StoreDetailView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
-                        showShareSheet = true
+                        toggleBranchLike()
                     }) {
-                        Image(systemName: "square.and.arrow.up")
+                        Image(systemName: branchLikesManager.isLiked(branchId: storeId) ? "heart.fill" : "heart")
                             .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(branchLikesManager.isLiked(branchId: storeId) ? .red : .primary)
                     }
-                }
-            }
-            .sheet(isPresented: $showShareSheet) {
-                if let detail = viewModel.branchDetail {
-                    EmptyView()
-                        .onAppear {
-//                            ShareHelper.shareStore(
-//                                id: detail.id,
-//                                name: detail.name,
-//                                description: detail.address,
-//                                imageURL: viewModel.getLogoUrl()
-//                            )
-//                            showShareSheet = false
-                        }
                 }
             }
             .onAppear {
@@ -557,6 +544,15 @@ struct StoreDetailView: View {
                 // This ensures we get products, siblings, business info, etc.
                 viewModel.loadBranchDetail(id: storeId)
             }
+        }
+    }
+
+    // MARK: - Helper Methods
+
+    private func toggleBranchLike() {
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            branchLikesManager.toggleLike(branchId: storeId)
         }
     }
 }
@@ -693,32 +689,10 @@ struct SiblingBranchCard: View {
     }
 }
 
-// ShareSheet for native sharing
-struct ShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
-        return controller
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}
-
 struct StoreDetailView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {
-            StoreDetailView(
-                store: Store(
-                    id: "1",
-                    name: "Fresh Market",
-                    etaMinutes: 25,
-                    logoUrl: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&h=200&fit=crop&crop=center",
-                    bannerUrl: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&h=200&fit=crop&crop=center",
-                    address: "Av. Principal #123",
-                    rating: 4.8
-                )
-            )
+            StoreDetailView(storeId: "1")
         }
     }
 }

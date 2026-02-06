@@ -146,6 +146,15 @@ class StoreDetailViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Branch Likes
+    func toggleLike(branchId: String) {
+        BranchLikesManager.shared.toggleLike(branchId: branchId)
+    }
+
+    func isLiked(branchId: String) -> Bool {
+        return BranchLikesManager.shared.isLiked(branchId: branchId)
+    }
+
     // MARK: - Helper Methods
     func calculateETA(deliveryRadius: Double?) -> Int {
         // Estimación simple: 5 minutos por km + 10 minutos base

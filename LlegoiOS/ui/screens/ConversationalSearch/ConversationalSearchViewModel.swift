@@ -112,10 +112,18 @@ class ConversationalSearchViewModel: ObservableObject {
                     print("🔍 [VIEWMODEL] Error completo: \(error)")
                     print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
+                    if let backendError = error as? AIChatBackendError {
+                        self.errorMessage = backendError.fallbackMessage
+                        self.state = .error(backendError.fallbackMessage)
+                        let assistantErrorMessage = self.makeAssistantErrorMessage(from: backendError)
+                        self.messages.append(assistantErrorMessage)
+                        print("⚠️ [VIEWMODEL] Error tipado por código: \(backendError.code.rawValue)")
+                        return
+                    }
+
                     self.errorMessage = error.localizedDescription
                     self.state = .error(error.localizedDescription)
 
-                    // Agregar mensaje de error
                     let errorMessage = ConversationalChatMessage(
                         text: "Lo siento, hubo un error al procesar tu mensaje. Por favor intenta de nuevo.",
                         isFromUser: false,
@@ -155,5 +163,52 @@ class ConversationalSearchViewModel: ObservableObject {
 
         print("✅ [VIEWMODEL] Mensaje de bienvenida agregado")
         print("📊 [VIEWMODEL] Total mensajes: \(messages.count)\n")
+    }
+
+    private func makeAssistantErrorMessage(from backendError: AIChatBackendError) -> ConversationalChatMessage {
+        let quotaSummary = quotaSummaryText(backendError.quota)
+        switch backendError.code {
+        case .freeQuotaExceeded:
+            return ConversationalChatMessage(
+                text: """
+Se acabó tu cuota gratuita.
+Ya usaste tus consultas gratis en este dispositivo. Pásate a Plan Pro para seguir usando AI Chat.\(quotaSummary)
+""",
+                isFromUser: false,
+                timestamp: Date(),
+                actionTitle: "Ir a Planes",
+                action: .openPlans
+            )
+        case .quotaExceeded:
+            return ConversationalChatMessage(
+                text: """
+Alcanzaste tu límite de consultas.
+Llegaste al máximo de consultas de tu plan actual. Mejora tu plan para continuar.\(quotaSummary)
+""",
+                isFromUser: false,
+                timestamp: Date(),
+                actionTitle: "Ver planes",
+                action: .openPlans
+            )
+        case .deviceIdRequired:
+            return ConversationalChatMessage(
+                text: "No pudimos validar tu dispositivo.\nActualiza la app o inténtalo de nuevo para continuar con AI Chat.",
+                isFromUser: false,
+                timestamp: Date()
+            )
+        }
+    }
+
+    private func quotaSummaryText(_ quota: AIChatQuotaInfo?) -> String {
+        guard quota != nil else { return "" }
+        var lines: [String] = []
+        if let used = quota?.used, let limit = quota?.limit {
+            lines.append("Usadas \(used) de \(limit)")
+        }
+        if let remaining = quota?.remaining {
+            lines.append("Restantes \(remaining)")
+        }
+        guard !lines.isEmpty else { return "" }
+        return "\n\n" + lines.joined(separator: "\n")
     }
 }

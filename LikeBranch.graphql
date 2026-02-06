@@ -1,0 +1,8 @@
+mutation LikeBranch($branchId: String!, $jwt: String) {
+  likeBranch(branchId: $branchId, jwt: $jwt) {
+    id
+    userId
+    branchId
+    createdAt
+  }
+}

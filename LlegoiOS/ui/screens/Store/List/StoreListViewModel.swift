@@ -202,28 +202,8 @@ class StoreListViewModel: ObservableObject {
         }
     }
 
-    // Load products for a specific store
-    func loadProductsForStore(storeId: String) {
-        isLoadingProducts[storeId] = true
-        print("🛒 Cargando productos para tienda: \(storeId)")
-
-        repository.fetchBranchProducts(branchId: storeId, limit: 4) { [weak self] result in
-            guard let self = self else { return }
-
-            Task { @MainActor in
-                self.isLoadingProducts[storeId] = false
-
-                switch result {
-                case .success(let products):
-                    print("✅ ViewModel recibió \(products.count) productos para tienda \(storeId)")
-                    self.storeProducts[storeId] = products
-                case .failure(let error):
-                    print("❌ ViewModel falló al cargar productos para tienda \(storeId): \(error.localizedDescription)")
-                    self.storeProducts[storeId] = []
-                }
-            }
-        }
-    }
+    // REMOVED: loadProductsForStore() - Products are now loaded with nested queries in loadStores() and loadMoreStores()
+    // No need for separate product fetching since GetBranches.graphql already includes products
 
     // Get products for a store
     func products(for storeId: String) -> [ProductGraphQL] {
@@ -260,6 +240,28 @@ class StoreListViewModel: ObservableObject {
                             )
                         )
                     }
+
+                    // Map nested products from search results to storeProducts dictionary
+                    for branch in branchesGraphQL {
+                        let mappedProducts = branch.products.map { product in
+                            ProductGraphQL(
+                                id: product.id,
+                                branchId: branch.id,
+                                name: product.name,
+                                price: product.price,
+                                currency: product.currency,
+                                imageUrl: product.imageUrl,
+                                availability: true,
+                                createdAt: "",
+                                businessName: branch.name,
+                                distanceKm: nil,
+                                categoryId: nil,
+                                categoryName: nil
+                            )
+                        }
+                        self.storeProducts[branch.id] = mappedProducts
+                    }
+
                     completion(searchResults)
 
                 case .failure(let error):

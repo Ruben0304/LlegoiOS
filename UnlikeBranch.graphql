@@ -1,0 +1,3 @@
+mutation UnlikeBranch($branchId: String!, $jwt: String) {
+  unlikeBranch(branchId: $branchId, jwt: $jwt)
+}

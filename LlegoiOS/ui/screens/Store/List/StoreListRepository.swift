@@ -373,7 +373,18 @@ class StoreListRepository {
                                 }
 
                                 let mappedBranches = data.searchBranches.edges.map { edge in
-                                    BranchGraphQL(
+                                    // Map nested products (fallback text search)
+                                    let mappedProducts = edge.node.products.map { product in
+                                        BranchProductGraphQL(
+                                            id: product.id,
+                                            name: product.name,
+                                            price: product.price,
+                                            currency: product.currency,
+                                            imageUrl: product.imageUrl
+                                        )
+                                    }
+
+                                    return BranchGraphQL(
                                         id: edge.node.id,
                                         businessId: edge.node.businessId,
                                         name: edge.node.name,
@@ -388,7 +399,8 @@ class StoreListRepository {
                                         coverUrl: edge.node.coverUrl,
                                         deliveryRadius: edge.node.deliveryRadius,
                                         facilities: nil,
-                                        createdAt: edge.node.createdAt
+                                        createdAt: edge.node.createdAt,
+                                        products: mappedProducts
                                     )
                                 }
 
@@ -413,9 +425,20 @@ class StoreListRepository {
                     return
                 }
 
-                // Map search results
+                // Map search results with nested products
                 let mappedBranches = data.searchBranches.edges.map { edge in
-                    BranchGraphQL(
+                    // Map nested products
+                    let mappedProducts = edge.node.products.map { product in
+                        BranchProductGraphQL(
+                            id: product.id,
+                            name: product.name,
+                            price: product.price,
+                            currency: product.currency,
+                            imageUrl: product.imageUrl
+                        )
+                    }
+
+                    return BranchGraphQL(
                         id: edge.node.id,
                         businessId: edge.node.businessId,
                         name: edge.node.name,
@@ -430,7 +453,8 @@ class StoreListRepository {
                         coverUrl: edge.node.coverUrl,
                         deliveryRadius: edge.node.deliveryRadius,
                         facilities: nil,
-                        createdAt: edge.node.createdAt
+                        createdAt: edge.node.createdAt,
+                        products: mappedProducts
                     )
                 }
 

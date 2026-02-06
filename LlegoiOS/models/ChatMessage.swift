@@ -7,6 +7,10 @@
 
 import Foundation
 
+enum ConversationalChatAction: Equatable {
+    case openPlans
+}
+
 struct ConversationalChatMessage: Identifiable, Equatable {
     let id = UUID()
     let text: String
@@ -16,6 +20,8 @@ struct ConversationalChatMessage: Identifiable, Equatable {
     var productEntities: [AIChatProductEntity]?
     var branchEntities: [AIChatBranchEntity]?
     var confidence: Double?
+    var actionTitle: String?
+    var action: ConversationalChatAction?
     
     init(
         text: String,
@@ -24,7 +30,9 @@ struct ConversationalChatMessage: Identifiable, Equatable {
         responseType: String? = nil,
         productEntities: [AIChatProductEntity]? = nil,
         branchEntities: [AIChatBranchEntity]? = nil,
-        confidence: Double? = nil
+        confidence: Double? = nil,
+        actionTitle: String? = nil,
+        action: ConversationalChatAction? = nil
     ) {
         self.text = text
         self.isFromUser = isFromUser
@@ -33,6 +41,8 @@ struct ConversationalChatMessage: Identifiable, Equatable {
         self.productEntities = productEntities
         self.branchEntities = branchEntities
         self.confidence = confidence
+        self.actionTitle = actionTitle
+        self.action = action
     }
     
     static func == (lhs: ConversationalChatMessage, rhs: ConversationalChatMessage) -> Bool {

@@ -34,6 +34,7 @@ public extension LlegoAPI {
       case "AuthResponse": return LlegoAPI.Objects.AuthResponse
       case "BranchConnection": return LlegoAPI.Objects.BranchConnection
       case "BranchEdge": return LlegoAPI.Objects.BranchEdge
+      case "BranchLikeType": return LlegoAPI.Objects.BranchLikeType
       case "BranchSuggestionType": return LlegoAPI.Objects.BranchSuggestionType
       case "BranchType": return LlegoAPI.Objects.BranchType
       case "BusinessType": return LlegoAPI.Objects.BusinessType

@@ -192,12 +192,10 @@ class ProductFeedRepository {
         let branchTypeRaw = BranchTypeManager.shared.selectedType.rawValue
         let branchTipo = LlegoAPI.BranchTipo(rawValue: branchTypeRaw)
 
-        // Log JWT status
-        if let token = jwt {
-            print("🔐 Complete feed request with JWT: \(String(token.prefix(20)))...")
-        } else {
-            print("🔓 Complete feed request without JWT (user not authenticated)")
-        }
+        // Log JWT status (only in DEBUG)
+        #if DEBUG
+        print(jwt != nil ? "🔐 Complete feed request with JWT" : "🔓 Complete feed request without JWT (user not authenticated)")
+        #endif
 
         return await withCheckedContinuation { continuation in
             let query = LlegoAPI.GetCompleteFeedQuery(
@@ -300,12 +298,10 @@ class ProductFeedRepository {
     func fetchFeed(first: Int = 10) async -> Result<FeedResponse, Error> {
         let jwt = AuthManager.shared.getAccessToken()
 
-        // Log JWT status
-        if let token = jwt {
-            print("🔐 Feed request with JWT: \(String(token.prefix(20)))...")
-        } else {
-            print("🔓 Feed request without JWT (user not authenticated)")
-        }
+        // Log JWT status (only in DEBUG)
+        #if DEBUG
+        print(jwt != nil ? "🔐 Feed request with JWT" : "🔓 Feed request without JWT (user not authenticated)")
+        #endif
 
         return await withCheckedContinuation { continuation in
             let query = LlegoAPI.GetFeedQuery(
@@ -377,6 +373,10 @@ class ProductFeedRepository {
 
     // MARK: - Legacy Methods (for categories, stores, and pagination)
 
+    /// @deprecated Use fetchCompleteFeed() instead for better performance
+    /// This method makes 5 sequential queries (categories, stores, 3x products) vs 1 optimized query
+    /// Migrating to fetchCompleteFeed() reduces latency by 5x
+    @available(*, deprecated, message: "Use fetchCompleteFeed() instead. This method makes 5 sequential queries vs 1, causing 5x higher latency.")
     func fetchFeedData(radiusKm: Double? = nil, categoryId: String? = nil) async -> Result<FeedData, Error> {
         let jwt = AuthManager.shared.getAccessToken()
         let branchType = BranchTypeManager.shared.selectedType.rawValue
@@ -405,6 +405,8 @@ class ProductFeedRepository {
         return .success(feedData)
     }
 
+    /// @deprecated Use fetchCompleteFeed() with pagination instead
+    @available(*, deprecated, message: "Use fetchCompleteFeed() with pagination parameters instead")
     func fetchMoreProducts(after cursor: String, radiusKm: Double? = nil, categoryId: String? = nil) async -> Result<([FeedProduct], PageInfo), Error> {
         let jwt = AuthManager.shared.getAccessToken()
         let branchType = BranchTypeManager.shared.selectedType.rawValue

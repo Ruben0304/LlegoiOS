@@ -23,7 +23,9 @@ class SearchRepository {
 
         // Obtener JWT si está disponible
         let jwt = AuthManager.shared.getAccessToken()
-        print("🔑 SearchRepository - JWT: \(jwt != nil ? "presente (\(jwt!.prefix(20))...)" : "NO presente")")
+        #if DEBUG
+        print("🔑 SearchRepository - JWT: \(jwt != nil ? "presente" : "NO presente")")
+        #endif
 
         // Obtener tipo de branch global
         let branchType = BranchTypeManager.shared.selectedType.rawValue
@@ -100,7 +102,9 @@ class SearchRepository {
 
         // Obtener JWT si está disponible
         let jwt = AuthManager.shared.getAccessToken()
-        print("🔑 SearchRepository - JWT: \(jwt != nil ? "presente (\(jwt!.prefix(20))...)" : "NO presente")")
+        #if DEBUG
+        print("🔑 SearchRepository - JWT: \(jwt != nil ? "presente" : "NO presente")")
+        #endif
 
         let searchQuery = LlegoAPI.SearchBranchesQuery(
             query: query,

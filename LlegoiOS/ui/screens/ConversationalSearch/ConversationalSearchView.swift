@@ -35,7 +35,7 @@ struct ConversationalSearchView: View {
 
     // Search mode
     @State private var searchMode: SearchMode = .search
-    @State private var showLlegoPlus: Bool = false
+    @State private var showPlansAndPricing: Bool = false
 
     // Message input
     @State private var messageText: String = ""
@@ -70,7 +70,11 @@ struct ConversationalSearchView: View {
                                 .padding(.top, 120)
                             } else {
                                 ForEach(viewModel.messages) { message in
-                                    MessageBubble(message: message, selectedProductId: $selectedProductId)
+                                    MessageBubble(
+                                        message: message,
+                                        selectedProductId: $selectedProductId,
+                                        onActionTap: handleMessageAction
+                                    )
                                         .id(message.id)
                                 }
 
@@ -93,7 +97,7 @@ struct ConversationalSearchView: View {
                 }
             }
 
-            NavigationLink(destination: LlegoPlusBenefitsView(), isActive: $showLlegoPlus) {
+            NavigationLink(destination: PlansAndPricingView(), isActive: $showPlansAndPricing) {
                 EmptyView()
             }
             .hidden()
@@ -239,6 +243,13 @@ struct ConversationalSearchView: View {
 
         // Enviar al ViewModel
         viewModel.sendMessage(textToSend)
+    }
+
+    private func handleMessageAction(_ action: ConversationalChatAction) {
+        switch action {
+        case .openPlans:
+            showPlansAndPricing = true
+        }
     }
 }
 import SwiftUI
@@ -626,6 +637,7 @@ struct LlegoPlusComparisonRowView: View {
 struct MessageBubble: View {
     let message: ConversationalChatMessage
     @Binding var selectedProductId: String?
+    let onActionTap: (ConversationalChatAction) -> Void
 
     // MARK: - Debug Logging
     private static func logMessageRender(message: ConversationalChatMessage, responseType: String) {
@@ -772,6 +784,23 @@ struct MessageBubble: View {
                     ConfidenceBadge(confidence: confidence)
                         .padding(.top, 6)
                 }
+            }
+
+            if !message.isFromUser,
+               let actionTitle = message.actionTitle,
+               let action = message.action {
+                Button(action: {
+                    onActionTap(action)
+                }) {
+                    Text(actionTitle)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(Color.llegoPrimary)
+                        .clipShape(Capsule())
+                }
+                .padding(.leading, 40)
             }
         }
     }

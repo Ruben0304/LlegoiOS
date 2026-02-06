@@ -26,21 +26,25 @@ final class ConversationalSearchRepository {
             // Verificar autenticación
             let jwt = AuthManager.shared.getAccessToken()
             let isAuthenticated = AuthManager.shared.isAuthenticated
+            let deviceId = DeviceIDManager.shared.getDeviceId()
+            let jwtInput: GraphQLNullable<String> = jwt.map { .some($0) } ?? .none
+            let deviceIdInput: GraphQLNullable<String> = deviceId.map { .some($0) } ?? .none
+            #if DEBUG
             print("🔐 [REPOSITORY] isAuthenticated: \(isAuthenticated)")
             print("🎫 [REPOSITORY] JWT presente: \(jwt != nil)")
-            if let jwt = jwt {
-                let tokenPreview = String(jwt.prefix(20)) + "..."
-                print("🎫 [REPOSITORY] JWT preview: \(tokenPreview)")
-            } else {
+            print("📱 [REPOSITORY] deviceId presente: \(deviceId != nil)")
+            if jwt == nil {
                 print("⚠️ [REPOSITORY] JWT NO DISPONIBLE - La query puede fallar si requiere autenticación")
             }
+            #endif
 
             print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
             client.fetch(
                 query: LlegoAPI.AIChatQuery(
                     message: message,
-                    jwt: jwt != nil ? .some(jwt!) : .none
+                    deviceId: deviceIdInput,
+                    jwt: jwtInput
                 ),
                 cachePolicy: .fetchIgnoringCacheData // No cachear para obtener respuestas frescas del AI
             ) { result in
@@ -66,7 +70,16 @@ final class ConversationalSearchRepository {
                                 }
                             }
                             print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-                            completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: "Error en la consulta de AI"])))
+                            if let backendError = self.parseBackendError(from: errors) {
+                                completion(.failure(backendError))
+                            } else {
+                                let firstMessage = errors.first?.message ?? "Error en la consulta de AI"
+                                completion(.failure(NSError(
+                                    domain: "GraphQL",
+                                    code: -1,
+                                    userInfo: [NSLocalizedDescriptionKey: firstMessage]
+                                )))
+                            }
                             return
                         }
 
@@ -219,6 +232,96 @@ final class ConversationalSearchRepository {
         }
     }
 
+    private func parseBackendError(from errors: [GraphQLError]) -> AIChatBackendError? {
+        for error in errors {
+            guard
+                let extensions = error.extensions,
+                let codeRaw = stringValue(from: extensions["code"]),
+                let code = AIChatBackendErrorCode(rawValue: codeRaw)
+            else {
+                continue
+            }
+
+            let quota: AIChatQuotaInfo?
+            if let quotaRaw = extensions["quota"], let quotaDict = dictionaryValue(from: quotaRaw) {
+                quota = AIChatQuotaInfo(
+                    source: stringValue(from: quotaDict["source"]),
+                    limit: intValue(from: quotaDict["limit"]),
+                    used: intValue(from: quotaDict["used"]),
+                    remaining: intValue(from: quotaDict["remaining"])
+                )
+            } else {
+                quota = nil
+            }
+
+            return AIChatBackendError(
+                code: code,
+                quota: quota,
+                fallbackMessage: error.message ?? "Ocurrió un error en AI Chat."
+            )
+        }
+        return nil
+    }
+
+    private func stringValue(from raw: Any?) -> String? {
+        if let value = raw as? String {
+            return value
+        }
+        if let value = raw as? AnyHashable {
+            if let string = value.base as? String {
+                return string
+            }
+            return String(describing: value.base)
+        }
+        return nil
+    }
+
+    private func intValue(from raw: Any?) -> Int? {
+        if let value = raw as? Int {
+            return value
+        }
+        if let value = raw as? Int32 {
+            return Int(value)
+        }
+        if let value = raw as? Int64 {
+            return Int(value)
+        }
+        if let value = raw as? Double {
+            return Int(value)
+        }
+        if let value = raw as? Float {
+            return Int(value)
+        }
+        if let value = raw as? NSNumber {
+            return value.intValue
+        }
+        if let value = raw as? String {
+            return Int(value)
+        }
+        if let value = raw as? AnyHashable {
+            return intValue(from: value.base)
+        }
+        return nil
+    }
+
+    private func dictionaryValue(from raw: Any?) -> [String: Any]? {
+        if let dict = raw as? [String: Any] {
+            return dict
+        }
+        if let dict = raw as? [String: AnyHashable] {
+            return dict.mapValues { $0.base }
+        }
+        if let value = raw as? AnyHashable {
+            if let dict = value.base as? [String: Any] {
+                return dict
+            }
+            if let dict = value.base as? [String: AnyHashable] {
+                return dict.mapValues { $0.base }
+            }
+        }
+        return nil
+    }
+
 }
 
 // MARK: - Models específicos de ConversationalSearchRepository
@@ -229,6 +332,29 @@ struct AIChatData: Sendable {
     let productEntities: [AIChatProductEntity]
     let branchEntities: [AIChatBranchEntity]
     let confidence: Double
+}
+
+enum AIChatBackendErrorCode: String, Sendable {
+    case freeQuotaExceeded = "AI_FREE_QUOTA_EXCEEDED"
+    case quotaExceeded = "AI_QUOTA_EXCEEDED"
+    case deviceIdRequired = "AI_DEVICE_ID_REQUIRED"
+}
+
+struct AIChatQuotaInfo: Sendable {
+    let source: String?
+    let limit: Int?
+    let used: Int?
+    let remaining: Int?
+}
+
+struct AIChatBackendError: LocalizedError, Sendable {
+    let code: AIChatBackendErrorCode
+    let quota: AIChatQuotaInfo?
+    let fallbackMessage: String
+
+    var errorDescription: String? {
+        fallbackMessage
+    }
 }
 
 struct AIChatProductEntity: Identifiable, Sendable, Hashable {
