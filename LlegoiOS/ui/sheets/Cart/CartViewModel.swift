@@ -19,14 +19,19 @@ class CartViewModel: ObservableObject {
     @Published var isCreatingOrder: Bool = false
     @Published var createdOrder: CreatedOrder?
     @Published var orderError: String?
-    
+
     // Payment Methods
     @Published var paymentMethods: [PaymentMethodModel] = []
     @Published var isLoadingPaymentMethods: Bool = false
-    
+
     // Payment Attempt
     @Published var currentPaymentAttempt: PaymentAttemptModel?
     @Published var isInitiatingPayment: Bool = false
+
+    // Delivery Fee Estimation
+    @Published var deliveryFeeEstimate: DeliveryFeeEstimate?
+    @Published var isLoadingDeliveryFee: Bool = false
+    @Published var deliveryFeeError: String?
 
     private let repository = CartRepository()
     private let cartManager = CartManager.shared
@@ -34,7 +39,7 @@ class CartViewModel: ObservableObject {
     private let paymentRepository = PaymentRepository()
     private let paymentMethodManager = PaymentMethodManager.shared
     private let authManager = AuthManager.shared
-    
+
     // Store branchId from cart products
     private var cartBranchId: String?
     private var cartProducts: [CartProductGraphQL] = []
@@ -54,7 +59,23 @@ class CartViewModel: ObservableObject {
     }
 
     var deliveryFee: Double {
-        cartItems.isEmpty ? 0.0 : 2.50
+        if cartItems.isEmpty { return 0.0 }
+        return deliveryFeeEstimate?.deliveryFee ?? 0.0
+    }
+
+    /// Moneda del envío estimado
+    var deliveryFeeCurrency: String? {
+        deliveryFeeEstimate?.currency
+    }
+
+    /// Distancia estimada en km
+    var deliveryDistanceKm: Double? {
+        deliveryFeeEstimate?.distanceKm
+    }
+
+    /// Nombre de la zona de envío
+    var deliveryZoneName: String? {
+        deliveryFeeEstimate?.zoneName
     }
 
     /// Tasa de servicio actual (15% normal, 10% con descuento)
@@ -86,7 +107,34 @@ class CartViewModel: ObservableObject {
     }
 
     var formattedDeliveryFee: String {
-        formatPrice(deliveryFee)
+        if isLoadingDeliveryFee {
+            return "Calculando..."
+        }
+        if deliveryFeeError != nil && deliveryFeeEstimate == nil {
+            return "--"
+        }
+        if let estimate = deliveryFeeEstimate {
+            return formatPriceWithCurrency(estimate.deliveryFee, currency: estimate.currency)
+        }
+        return formatPriceWithCurrency(deliveryFee, currency: "CUP")
+    }
+
+    /// Descripción del envío (distancia + zona)
+    var deliveryFeeDescription: String {
+        if isLoadingDeliveryFee {
+            return "Estimando envío..."
+        }
+        if let error = deliveryFeeError, deliveryFeeEstimate == nil {
+            return error
+        }
+        guard let estimate = deliveryFeeEstimate else {
+            return "Entrega"
+        }
+        let distanceText = String(format: "%.1f km", estimate.distanceKm)
+        if let zone = estimate.zoneName, !zone.isEmpty {
+            return "\(distanceText) · \(zone)"
+        }
+        return distanceText
     }
 
     var formattedServiceFee: String {
@@ -141,10 +189,10 @@ class CartViewModel: ObservableObject {
                 case .success(let cartProducts):
                     // Store cart products for order creation
                     self.cartProducts = cartProducts
-                    
+
                     // Get branchId from first product (assuming all products are from same branch)
                     self.cartBranchId = cartProducts.first?.branchId
-                    
+
                     // Mapear a UI models
                     self.cartItems = cartProducts.map { product in
                         CartItem(
@@ -162,9 +210,11 @@ class CartViewModel: ObservableObject {
                     print("✅ Loaded \(self.cartItems.count) items in cart")
                     if let branchId = self.cartBranchId {
                         print("📍 Branch ID: \(branchId)")
+                        // Estimar envío usando el branchId del primer producto
+                        self.fetchDeliveryFeeEstimate(branchId: branchId)
                     }
                     self.state = .success
-                    
+
                     // Load payment methods after cart is loaded
                     self.loadPaymentMethods()
 
@@ -176,13 +226,38 @@ class CartViewModel: ObservableObject {
             }
         }
     }
-    
+
     // MARK: - Load Payment Methods
-    
+
+    // MARK: - Delivery Fee Estimation
+
+    /// Obtener estimación de envío desde el backend
+    func fetchDeliveryFeeEstimate(branchId: String) {
+        isLoadingDeliveryFee = true
+        deliveryFeeError = nil
+
+        repository.estimateDeliveryFee(branchId: branchId) { [weak self] result in
+            Task { @MainActor in
+                guard let self = self else { return }
+                self.isLoadingDeliveryFee = false
+
+                switch result {
+                case .success(let estimate):
+                    self.deliveryFeeEstimate = estimate
+                    print("✅ Delivery fee loaded: \(estimate.deliveryFee) \(estimate.currency)")
+
+                case .failure(let error):
+                    self.deliveryFeeError = "No se pudo estimar el envío"
+                    print("❌ Error fetching delivery fee: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
     func loadPaymentMethods() {
         Task {
             isLoadingPaymentMethods = true
-            
+
             do {
                 let methods = try await paymentMethodManager.fetchPaymentMethods()
                 await MainActor.run {
@@ -201,15 +276,15 @@ class CartViewModel: ObservableObject {
             }
         }
     }
-    
+
     // MARK: - Filter Payment Methods
-    
+
     func paymentMethodsByCurrency(_ currency: String) -> [PaymentMethodModel] {
         paymentMethods.filter { $0.currency.uppercased() == currency.uppercased() }
     }
-    
+
     // MARK: - Create Order with New Payment Flow
-    
+
     /// Crear pedido y luego iniciar el pago
     func createOrderAndInitiatePayment(
         paymentMethodId: String,
@@ -221,13 +296,13 @@ class CartViewModel: ObservableObject {
             completion(.failure(error))
             return
         }
-        
+
         guard !cartItems.isEmpty else {
             let error = NSError(domain: "CartViewModel", code: -2, userInfo: [NSLocalizedDescriptionKey: "El carrito está vacío"])
             completion(.failure(error))
             return
         }
-        
+
         // Get user location for delivery address
         let locationManager = UserLocationManager.shared
         guard let userLocation = locationManager.userLocation else {
@@ -235,15 +310,15 @@ class CartViewModel: ObservableObject {
             completion(.failure(error))
             return
         }
-        
+
         isCreatingOrder = true
         orderError = nil
-        
+
         // Build items array
         let items = cartItems.map { item in
             (productId: item.id, quantity: item.quantity)
         }
-        
+
         // Build delivery address
         let deliveryAddress = DeliveryAddressInput(
             street: locationManager.userAddress,
@@ -252,13 +327,13 @@ class CartViewModel: ObservableObject {
             latitude: userLocation.latitude,
             longitude: userLocation.longitude
         )
-        
+
         print("🛒 Creating order with new payment flow...")
         print("   Branch: \(branchId)")
         print("   Items: \(items.count)")
         print("   Payment Method: \(paymentMethodId)")
         print("   Address: \(locationManager.userAddress)")
-        
+
         // Step 1: Create Order (without payment)
         createOrderRepository.createOrder(
             branchId: branchId,
@@ -269,20 +344,20 @@ class CartViewModel: ObservableObject {
             comments: comments
         ) { [weak self] result in
             guard let self = self else { return }
-            
+
             Task { @MainActor in
                 switch result {
                 case .success(let order):
                     print("✅ Order created: \(order.orderNumber)")
                     self.createdOrder = order
-                    
+
                     // Step 2: Initiate Payment
                     do {
                         let paymentResult = try await self.initiatePaymentForOrder(
                             orderId: order.id,
                             paymentMethodId: paymentMethodId
                         )
-                        
+
                         await MainActor.run {
                             self.isCreatingOrder = false
                             print("✅ Payment initiated: \(paymentResult.paymentAttempt.id)")
@@ -296,7 +371,7 @@ class CartViewModel: ObservableObject {
                             completion(.failure(error))
                         }
                     }
-                    
+
                 case .failure(let error):
                     print("❌ Error creating order: \(error.localizedDescription)")
                     await MainActor.run {
@@ -308,9 +383,9 @@ class CartViewModel: ObservableObject {
             }
         }
     }
-    
+
     // MARK: - Initiate Payment
-    
+
     private func initiatePaymentForOrder(
         orderId: String,
         paymentMethodId: String
@@ -318,11 +393,11 @@ class CartViewModel: ObservableObject {
         guard let jwt = await authManager.getAccessToken() else {
             throw NSError(domain: "CartViewModel", code: -4, userInfo: [NSLocalizedDescriptionKey: "No hay sesión activa"])
         }
-        
+
         await MainActor.run {
             self.isInitiatingPayment = true
         }
-        
+
         do {
             let result = try await paymentRepository.initiatePayment(
                 orderId: orderId,
@@ -330,12 +405,12 @@ class CartViewModel: ObservableObject {
                 jwt: jwt,
                 includeDeliveryFee: true
             )
-            
+
             await MainActor.run {
                 self.currentPaymentAttempt = result.paymentAttempt
                 self.isInitiatingPayment = false
             }
-            
+
             return result
         } catch {
             await MainActor.run {
@@ -344,9 +419,9 @@ class CartViewModel: ObservableObject {
             throw error
         }
     }
-    
+
     // MARK: - Confirm Payment Sent (for manual methods)
-    
+
     func confirmPaymentSent(
         paymentAttemptId: String,
         proofUrl: String,
@@ -358,27 +433,27 @@ class CartViewModel: ObservableObject {
                 completion(.failure(error))
                 return
             }
-            
+
             do {
                 let paymentAttempt = try await paymentRepository.confirmPaymentSent(
                     paymentAttemptId: paymentAttemptId,
                     proofUrl: proofUrl,
                     jwt: jwt
                 )
-                
+
                 await MainActor.run {
                     self.currentPaymentAttempt = paymentAttempt
                 }
-                
+
                 completion(.success(paymentAttempt))
             } catch {
                 completion(.failure(error))
             }
         }
     }
-    
+
     // MARK: - Legacy Create Order (for backward compatibility)
-    
+
     /// Crear pedido real en el backend (método legacy)
     func createOrder(
         paymentMethod: String,
@@ -391,13 +466,13 @@ class CartViewModel: ObservableObject {
             completion(.failure(error))
             return
         }
-        
+
         guard !cartItems.isEmpty else {
             let error = NSError(domain: "CartViewModel", code: -2, userInfo: [NSLocalizedDescriptionKey: "El carrito está vacío"])
             completion(.failure(error))
             return
         }
-        
+
         // Get user location for delivery address
         let locationManager = UserLocationManager.shared
         guard let userLocation = locationManager.userLocation else {
@@ -405,15 +480,15 @@ class CartViewModel: ObservableObject {
             completion(.failure(error))
             return
         }
-        
+
         isCreatingOrder = true
         orderError = nil
-        
+
         // Build items array
         let items = cartItems.map { item in
             (productId: item.id, quantity: item.quantity)
         }
-        
+
         // Build delivery address
         let deliveryAddress = DeliveryAddressInput(
             street: locationManager.userAddress,
@@ -422,13 +497,13 @@ class CartViewModel: ObservableObject {
             latitude: userLocation.latitude,
             longitude: userLocation.longitude
         )
-        
+
         print("🛒 Creating order...")
         print("   Branch: \(branchId)")
         print("   Items: \(items.count)")
         print("   Payment: \(paymentMethod)")
         print("   Address: \(locationManager.userAddress)")
-        
+
         createOrderRepository.createOrder(
             branchId: branchId,
             items: items,
@@ -440,13 +515,13 @@ class CartViewModel: ObservableObject {
             Task { @MainActor in
                 guard let self = self else { return }
                 self.isCreatingOrder = false
-                
+
                 switch result {
                 case .success(let order):
                     print("✅ Order created successfully: \(order.orderNumber)")
                     self.createdOrder = order
                     completion(.success(order))
-                    
+
                 case .failure(let error):
                     print("❌ Error creating order: \(error.localizedDescription)")
                     self.orderError = error.localizedDescription
@@ -494,6 +569,10 @@ class CartViewModel: ObservableObject {
 
     private func formatPrice(_ price: Double) -> String {
         return String(format: "$%.2f", price)
+    }
+
+    private func formatPriceWithCurrency(_ price: Double, currency: String) -> String {
+        return String(format: "%.2f %@", price, currency)
     }
 }
 

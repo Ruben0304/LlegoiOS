@@ -14,6 +14,7 @@ struct ProductDetailView: View {
     @State private var contentAppeared = false
     @State private var quantity: Int = 1
     @State private var selectedVariantIndex: Int = 0
+    @State private var showAddedToCartFeedback = false
 
     // Variantes calculadas dinámicamente usando el precio real del producto
     private var variants: [ProductVariant] {
@@ -96,7 +97,7 @@ struct ProductDetailView: View {
                             .font(.system(size: 18, weight: .semibold))
                     }
                 }
-                
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { toggleFavorite() }) {
                         Image(systemName: favoritesManager.isFavorite(productId: productId) ? "heart.fill" : "heart")
@@ -105,14 +106,14 @@ struct ProductDetailView: View {
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                 
-                      
+
+
 
                         Button(action: { shareProduct() }) {
                             Image(systemName: "square.and.arrow.up")
-                              
+
                         }
-                
+
                 }
 
                 // Bottom bar flotante - Quantity control
@@ -126,7 +127,7 @@ struct ProductDetailView: View {
                 ToolbarItem(placement: .bottomBar) {
                     addToCartButton
                 }
-                
+
             }
             .onAppear {
                 viewModel.loadProductDetail(id: productId)
@@ -455,19 +456,19 @@ struct ProductDetailView: View {
             Button(action: decrementQuantity) {
                 Image(systemName: "minus")
                     .font(.system(size: 16, weight: .medium))
-                   
+
                     .frame(width: 36, height: 36)
             }
 
             Text("\(quantity)")
                 .font(.system(size: 17, weight: .semibold))
-                
+
                 .frame(minWidth: 28)
 
             Button(action: incrementQuantity) {
                 Image(systemName: "plus")
                     .font(.system(size: 16, weight: .medium))
-                   
+
                     .frame(width: 36, height: 36)
             }
         }
@@ -476,18 +477,24 @@ struct ProductDetailView: View {
     }
 
     private var addToCartButton: some View {
-        Button(action: addToCart) {
-            HStack(spacing: 8) {
-                Image(systemName: "cart")
-                Text("Añadir al carrito")
-                   
+        ZStack {
+            Button(action: addToCart) {
+                HStack(spacing: 8) {
+                    Image(systemName: showAddedToCartFeedback ? "checkmark" : "cart")
+                        .contentTransition(.symbolEffect(.replace))
+                    Text(showAddedToCartFeedback ? "¡Agregado!" : "Añadir al carrito")
+
+                }
+                    .font(.system(size: 16, weight: .semibold))
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
             }
-                .font(.system(size: 16, weight: .semibold))
-                .padding(.horizontal, 24)
-                .padding(.vertical, 12)
+            .buttonStyle(.glassProminent)
+            .tint(showAddedToCartFeedback ? .green : gradientManager.currentAccentColor)
+            .scaleEffect(showAddedToCartFeedback ? 1.05 : 1.0)
+            .animation(.spring(response: 0.35, dampingFraction: 0.6), value: showAddedToCartFeedback)
+            .disabled(showAddedToCartFeedback)
         }
-        .buttonStyle(.glassProminent)
-        .tint(gradientManager.currentAccentColor)
     }
 
     // MARK: - Helpers
@@ -519,11 +526,21 @@ struct ProductDetailView: View {
     }
 
     private func addToCart() {
-        let generator = UIImpactFeedbackGenerator(style: .medium)
+        let generator = UINotificationFeedbackGenerator()
         generator.prepare()
-        generator.impactOccurred()
+        generator.notificationOccurred(.success)
 
         cartManager.addToCart(productId: productId, quantity: quantity)
+
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) {
+            showAddedToCartFeedback = true
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation(.easeOut(duration: 0.25)) {
+                showAddedToCartFeedback = false
+            }
+        }
     }
 
     private func shareProduct() {

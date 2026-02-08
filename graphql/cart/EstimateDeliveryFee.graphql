@@ -1,0 +1,10 @@
+query EstimateDeliveryFee($branchId: String!, $jwt: String!) {
+  estimateDeliveryFee(branchId: $branchId, jwt: $jwt) {
+    deliveryFee
+    currency
+    distanceKm
+    zoneName
+    branchId
+    branchName
+  }
+}

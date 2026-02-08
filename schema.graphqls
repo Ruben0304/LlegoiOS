@@ -52,6 +52,8 @@ type Query {
   productCategories(branchType: String = null): [ProductCategoryType!]!
   "Get product category by ID"
   productCategory(id: String!): ProductCategoryType
+  "Semantic vector search across products, branches, or businesses. Returns enriched results from Qdrant + MongoDB."
+  semanticSearch(query: String!, collection: SemanticSearchCollection!, limit: Int! = 10, jwt: String = null): SemanticSearchResultType!
   "Send a message to the AI assistant and get a response with RAG"
   aiChat(input: AiAssistantChatInput!, jwt: String = null): AiAssistantResponseType
   "Obtener mis pedidos con paginación"
@@ -72,6 +74,8 @@ type Query {
   myCurrentDelivery(jwt: String!): OrderType
   "Estadísticas de pedidos"
   orderStats(fromDate: DateTime!, toDate: DateTime!, jwt: String!, branchId: String = null): OrderStatsType!
+  "Estimar precio de envío antes de crear el pedido. Usa la ubicación guardada del usuario autenticado."
+  estimateDeliveryFee(branchId: String!, jwt: String!, subtotal: Float! = 0): DeliveryFeeEstimateType!
   "Get business type configurations (supports incremental sync)"
   businessTypeConfigs(lastSyncAt: DateTime = null): [BusinessTypeConfigType!]!
   "Obtener todos los métodos de pago disponibles"
@@ -168,6 +172,9 @@ type UserType {
   applePrivateEmail: String
   wallet: WalletBalanceType!
   walletStatus: String!
+  isPro: Boolean!
+  location: JSON
+  aiConsultasLimit: JSON
   "URL firmada del avatar del usuario"
   avatarUrl: String
 }
@@ -222,6 +229,11 @@ type BranchType {
   facilities: [String!]!
   tipos: [BranchTipo!]!
   paymentMethodIds: [String!]!
+  useAppMessaging: Boolean!
+  vehicles: [BranchVehicle!]!
+  accounts: [TransferAccountType!]!
+  qrPayments: [QrPaymentType!]!
+  phones: [TransferPhoneType!]!
   createdAt: DateTime!
   wallet: WalletBalanceType!
   walletStatus: String!
@@ -237,6 +249,20 @@ type BranchType {
 type CoordinatesType {
   type: String!
   coordinates: [Float!]!
+}
+type TransferAccountType {
+  cardNumber: String!
+  cardHolderName: String!
+  bankName: String!
+  isActive: Boolean!
+}
+type QrPaymentType {
+  value: String!
+  isActive: Boolean!
+}
+type TransferPhoneType {
+  phone: String!
+  isActive: Boolean!
 }
 type ProductType {
   id: String!
@@ -330,6 +356,11 @@ type ScoredBranchType {
   facilities: [String!]!
   tipos: [BranchTipo!]!
   paymentMethodIds: [String!]!
+  useAppMessaging: Boolean!
+  vehicles: [BranchVehicle!]!
+  accounts: [TransferAccountType!]!
+  qrPayments: [QrPaymentType!]!
+  phones: [TransferPhoneType!]!
   createdAt: DateTime!
   score: Float!
   distanceM: Float
@@ -377,6 +408,11 @@ type NearbyBranchType {
   facilities: [String!]!
   tipos: [BranchTipo!]!
   paymentMethodIds: [String!]!
+  useAppMessaging: Boolean!
+  vehicles: [BranchVehicle!]!
+  accounts: [TransferAccountType!]!
+  qrPayments: [QrPaymentType!]!
+  phones: [TransferPhoneType!]!
   createdAt: DateTime!
   distanceM: Float!
   wallet: WalletBalanceType!
@@ -437,6 +473,46 @@ type CategoryType {
 type SubcategoryType {
   name: String!
   imageUrl: String!
+}
+type SemanticSearchResultType {
+  "Collection that was searched: products, branches, or businesses"
+  collection: String!
+  "Total number of results returned"
+  totalResults: Int!
+  "Product results (populated when collection=products)"
+  products: [SemanticSearchProductResult!]!
+  "Branch results (populated when collection=branches)"
+  branches: [SemanticSearchBranchResult!]!
+  "Business results (populated when collection=businesses)"
+  businesses: [SemanticSearchBusinessResult!]!
+}
+type SemanticSearchProductResult {
+  "Similarity score from vector search (0.0 to 1.0)"
+  score: Float!
+  "The matched product"
+  product: ProductType!
+  "Branch name where product is sold"
+  branchName: String
+  "Branch avatar S3 key"
+  branchAvatar: String
+  "Branch address"
+  branchAddress: String
+  "Branch phone number"
+  branchPhone: String
+  "Presigned URL for the branch avatar"
+  branchAvatarUrl: String
+}
+type SemanticSearchBranchResult {
+  "Similarity score from vector search (0.0 to 1.0)"
+  score: Float!
+  "The matched branch"
+  branch: BranchType!
+}
+type SemanticSearchBusinessResult {
+  "Similarity score from vector search (0.0 to 1.0)"
+  score: Float!
+  "The matched business"
+  business: BusinessType!
 }
 type AiAssistantResponseType {
   "Type of response: search_products, search_branches, create_draft_order, request_details, general_response"
@@ -535,6 +611,7 @@ type OrderType {
   businessId: String!
   subtotal: Float!
   deliveryFee: Float!
+  deliveryMode: String!
   total: Float!
   currency: String!
   status: OrderStatusEnum!
@@ -544,6 +621,7 @@ type OrderType {
   updatedAt: DateTime!
   lastStatusAt: DateTime!
   deliveryPersonId: String
+  deliveryZoneId: String
   estimatedDeliveryTime: DateTime
   paymentId: String
   currentPaymentAttemptId: String
@@ -639,6 +717,15 @@ type OrderStatsType {
   totalRevenue: Float!
   averageOrderValue: Float!
   averageDeliveryTime: Int!
+}
+type DeliveryFeeEstimateType {
+  deliveryFee: Float!
+  currency: String!
+  distanceKm: Float!
+  zoneName: String
+  h3Index: String
+  branchId: String!
+  branchName: String!
 }
 type BusinessTypeConfigType {
   id: String!
@@ -1012,8 +1099,8 @@ type Mutation {
   addOrderComment(input: AddOrderCommentInput!, jwt: String!): OrderType!
   "Calificar pedido después de entrega"
   rateOrder(orderId: String!, rating: Int!, jwt: String!, comment: String = null): OrderType!
-  "Aceptar pedido"
-  acceptOrder(orderId: String!, estimatedMinutes: Int!, jwt: String!): OrderType!
+  "Aceptar pedido. Si se proporciona deliveryFee, el branch establece manualmente el precio de envío."
+  acceptOrder(orderId: String!, estimatedMinutes: Int!, jwt: String!, deliveryFee: Float = null): OrderType!
   "Rechazar pedido"
   rejectOrder(orderId: String!, reason: String!, jwt: String!): OrderType!
   "Modificar items del pedido"
@@ -1210,6 +1297,18 @@ enum BranchTipo {
   DULCERIA
   TIENDA
 }
+enum BranchVehicle {
+  MOTO
+  BICICLETA
+  CARRO
+  CAMIONETA
+  CAMINANDO
+}
+enum SemanticSearchCollection {
+  PRODUCTS
+  BRANCHES
+  BUSINESSES
+}
 enum OrderStatusEnum {
   PENDING_ACCEPTANCE
   MODIFIED_BY_STORE
@@ -1350,10 +1449,27 @@ input RegisterBranchInput {
   coverImage: String = null
   deliveryRadius: Float = null
   facilities: [String!] = null
+  accounts: [TransferAccountInput!] = null
+  qrPayments: [QrPaymentInput!] = null
+  phones: [TransferPhoneInput!] = null
 }
 input CoordinatesInput {
   lat: Float!
   lng: Float!
+}
+input TransferAccountInput {
+  cardNumber: String!
+  cardHolderName: String!
+  bankName: String!
+  isActive: Boolean! = true
+}
+input QrPaymentInput {
+  value: String!
+  isActive: Boolean! = true
+}
+input TransferPhoneInput {
+  phone: String!
+  isActive: Boolean! = true
 }
 input UpdateBusinessInput {
   name: String = null
@@ -1381,6 +1497,11 @@ input CreateBranchInput {
   coverImage: String = null
   deliveryRadius: Float = null
   facilities: [String!] = null
+  useAppMessaging: Boolean! = true
+  vehicles: [BranchVehicle!] = null
+  accounts: [TransferAccountInput!] = null
+  qrPayments: [QrPaymentInput!] = null
+  phones: [TransferPhoneInput!] = null
 }
 input UpdateBranchInput {
   name: String = null
@@ -1396,6 +1517,11 @@ input UpdateBranchInput {
   coverImage: String = null
   tipos: [BranchTipo!] = null
   paymentMethodIds: [String!] = null
+  useAppMessaging: Boolean = null
+  vehicles: [BranchVehicle!] = null
+  accounts: [TransferAccountInput!] = null
+  qrPayments: [QrPaymentInput!] = null
+  phones: [TransferPhoneInput!] = null
 }
 input CreateProductInput {
   name: String!

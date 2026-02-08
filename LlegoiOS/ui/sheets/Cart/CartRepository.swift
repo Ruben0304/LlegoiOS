@@ -7,6 +7,7 @@ import Combine
 class CartRepository {
     private let apolloClient = ApolloClientManager.shared.apollo
     private let cartManager = CartManager.shared
+    private let authManager = AuthManager.shared
 
     // MARK: - GraphQL Fetching
 
@@ -77,6 +78,75 @@ class CartRepository {
             case .failure(let error):
                 print("❌ Network error fetching cart products: \(error.localizedDescription)")
                 completion(.failure(error))
+            }
+        }
+    }
+
+    // MARK: - Delivery Fee Estimation
+
+    /// Estimar el costo de envío para una sucursal
+    func estimateDeliveryFee(branchId: String, completion: @escaping @Sendable (Result<DeliveryFeeEstimate, Error>) -> Void) {
+        let client = apolloClient
+
+        Task { @MainActor in
+            guard let jwt = authManager.getAccessToken() else {
+                print("❌ CartRepository: No JWT available for delivery fee estimation")
+                completion(.failure(NSError(
+                    domain: "CartRepository",
+                    code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: "No hay sesión activa"]
+                )))
+                return
+            }
+
+            print("🚚 CartRepository: Estimating delivery fee for branch \(branchId)...")
+
+            client.fetch(
+                query: LlegoAPI.EstimateDeliveryFeeQuery(
+                    branchId: branchId,
+                    jwt: jwt
+                ),
+                cachePolicy: .fetchIgnoringCacheData
+            ) { result in
+                switch result {
+                case .success(let graphQLResult):
+                    if let errors = graphQLResult.errors {
+                        print("❌ GraphQL Errors estimating delivery fee:")
+                        errors.forEach { print("  - \($0.localizedDescription)") }
+                        completion(.failure(NSError(
+                            domain: "GraphQL",
+                            code: -1,
+                            userInfo: [NSLocalizedDescriptionKey: errors.first?.localizedDescription ?? "Error estimando envío"]
+                        )))
+                        return
+                    }
+
+                    guard let data = graphQLResult.data?.estimateDeliveryFee else {
+                        print("❌ CartRepository: No delivery fee data returned")
+                        completion(.failure(NSError(
+                            domain: "CartRepository",
+                            code: -2,
+                            userInfo: [NSLocalizedDescriptionKey: "No se recibieron datos de envío"]
+                        )))
+                        return
+                    }
+
+                    let estimate = DeliveryFeeEstimate(
+                        deliveryFee: data.deliveryFee,
+                        currency: data.currency,
+                        distanceKm: data.distanceKm,
+                        zoneName: data.zoneName,
+                        branchId: data.branchId,
+                        branchName: data.branchName
+                    )
+
+                    print("✅ Delivery fee estimated: \(estimate.deliveryFee) \(estimate.currency) (distance: \(estimate.distanceKm) km, zone: \(estimate.zoneName ?? "N/A"))")
+                    completion(.success(estimate))
+
+                case .failure(let error):
+                    print("❌ Network error estimating delivery fee: \(error.localizedDescription)")
+                    completion(.failure(error))
+                }
             }
         }
     }
@@ -246,6 +316,16 @@ class CartRepository {
 struct CartItemLocal: Codable, Sendable {
     let productId: String
     var quantity: Int
+}
+
+/// Estimación de costo de envío desde el backend
+struct DeliveryFeeEstimate: Sendable {
+    let deliveryFee: Double
+    let currency: String
+    let distanceKm: Double
+    let zoneName: String?
+    let branchId: String
+    let branchName: String
 }
 
 /// Producto completo del carrito (datos GraphQL + cantidad local)

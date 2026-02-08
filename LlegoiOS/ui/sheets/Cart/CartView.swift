@@ -54,12 +54,12 @@ struct CartView: View {
     @State private var showAdView = false
 
     // MARK: - Computed Properties
-    
+
     /// Métodos de pago disponibles (desde el backend)
     var availablePaymentMethods: [PaymentMethod] {
         viewModel.paymentMethods.map { PaymentMethod.from($0) }
     }
-    
+
     /// Métodos de pago filtrados por moneda seleccionada
     var filteredPaymentMethods: [PaymentMethod] {
         let currencyCode = selectedCurrency.rawValue
@@ -521,7 +521,7 @@ struct CartView: View {
              showPaymentAlert = true
              return
         }
-        
+
         // Autenticación Biométrica (FaceID / TouchID)
         authenticateAndPay(paymentMethod: paymentMethod)
     }
@@ -554,12 +554,12 @@ struct CartView: View {
             executePaymentProcessing(paymentMethod: paymentMethod)
         }
     }
-    
+
     private func playSuccessFeedback() {
         // Haptic Feedback
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
-        
+
         // System Sound (Simular el 'Ding' de confirmación)
         // 1407: System Payment Success / Confirm
         AudioServicesPlaySystemSound(1407)
@@ -582,28 +582,28 @@ struct CartView: View {
             createOrderWithPaymentMethod(paymentMethod.id)
         }
     }
-    
+
     // MARK: - Create Order
     private func createOrderWithPaymentMethod(_ paymentMethodId: String, paymentIntentId: String? = nil) {
         isLoadingPayment = true
-        
+
         viewModel.createOrder(
             paymentMethod: paymentMethodId,
             paymentIntentId: paymentIntentId
         ) { [self] result in
             Task { @MainActor in
                 self.isLoadingPayment = false
-                
+
                 switch result {
                 case .success(let order):
                     print("✅ Pedido creado: \(order.orderNumber)")
-                    
+
                     // Limpiar carrito
                     self.viewModel.clearCart()
-                    
+
                     // Mostrar confirmación
                     self.showOrderConfirmation = true
-                    
+
                 case .failure(let error):
                     print("❌ Error creando pedido: \(error.localizedDescription)")
                     self.paymentAlertMessage = "Error al crear el pedido: \(error.localizedDescription)"
@@ -617,14 +617,14 @@ struct CartView: View {
     // TODO: Actualizar para usar el nuevo flujo de pagos con initiatePayment
     private func generatePaymentLink() {
         isLoadingPayment = true
-        
+
         // Este método necesita ser actualizado para usar el nuevo sistema de pagos
         print("⚠️ generatePaymentLink() necesita ser actualizado al nuevo sistema")
-        
+
         isLoadingPayment = false
         paymentAlertMessage = "Esta funcionalidad está siendo actualizada al nuevo sistema de pagos"
         showPaymentAlert = true
-        
+
         /* CÓDIGO LEGACY - COMENTADO
         // Convertir el total a centavos
         let amountInCents = Int(viewModel.total * 100)
@@ -664,14 +664,14 @@ struct CartView: View {
     // TODO: Actualizar para usar el nuevo flujo de pagos con initiatePayment
     private func initiateStripePayment() {
         isLoadingPayment = true
-        
+
         // Este método necesita ser actualizado para usar el nuevo sistema de pagos
         print("⚠️ initiateStripePayment() necesita ser actualizado al nuevo sistema")
-        
+
         isLoadingPayment = false
         paymentAlertMessage = "Esta funcionalidad está siendo actualizada al nuevo sistema de pagos"
         showPaymentAlert = true
-        
+
         /* CÓDIGO LEGACY - COMENTADO
         // Convertir el total a centavos (Stripe maneja montos en centavos)
         let amountInCents = Int(viewModel.total * 100)
@@ -829,7 +829,7 @@ struct CartView: View {
         switch result {
         case .completed:
             print("✅ Pago completado exitosamente")
-            
+
             // Crear pedido real después del pago exitoso
             createOrderWithPaymentMethod("credit_card")
 
@@ -845,7 +845,7 @@ struct CartView: View {
         }
     }
 
-    
+
 
     private var emptyCartView: some View {
         VStack(spacing: 24) {
@@ -935,16 +935,22 @@ struct CartView: View {
                         .font(.system(size: 15, weight: .bold))
                         .foregroundColor(.primary)
 
-                    Text("Entrega")
+                    Text(viewModel.deliveryFeeDescription)
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(viewModel.deliveryFeeError != nil && viewModel.deliveryFeeEstimate == nil ? .red : .secondary)
                 }
 
                 Spacer()
 
-                Text(viewModel.formattedDeliveryFee)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
+                if viewModel.isLoadingDeliveryFee {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle())
+                        .scaleEffect(0.8)
+                } else {
+                    Text(viewModel.formattedDeliveryFee)
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary)
+                }
             }
             .padding(12)
             .background(Color.white)
@@ -980,7 +986,7 @@ struct CartView: View {
                         Text("Viendo promoción")
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(.secondary)
-                        
+
                         Text(viewModel.formattedTotalWithDiscount)
                             .font(.system(size: 16, weight: .bold, design: .rounded))
                             .foregroundColor(.green)
@@ -989,9 +995,9 @@ struct CartView: View {
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.green.opacity(0.7))
                     }
-                    
+
                     Spacer()
-                    
+
                     Button(action: {
                         showAdView = true
                     }) {
@@ -1089,8 +1095,8 @@ struct CartView: View {
         }
     }
 
-   
-        
+
+
 }
 
 // MARK: - Payment Method Picker View
@@ -1146,11 +1152,11 @@ struct PaymentMethodPickerView: View {
                     Image(systemName: "creditcard.trianglebadge.exclamationmark")
                         .font(.system(size: 50))
                         .foregroundColor(.gray)
-                    
+
                     Text("No hay métodos de pago disponibles")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.primary)
-                    
+
                     Text("Por favor, intenta de nuevo más tarde")
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
@@ -2171,7 +2177,7 @@ struct ImagePicker: UIViewControllerRepresentable {
 // MARK: - Ad Watcher View (Mandatory Ads for Discount)
 struct AdWatcherView: View {
     let onComplete: () -> Void
-    
+
     @Environment(\.dismiss) private var dismiss
     @State private var currentAdIndex: Int = 0
     @State private var secondsRemaining: Int = 30
@@ -2179,16 +2185,16 @@ struct AdWatcherView: View {
     @State private var isVideoPlaying: Bool = true
     @State private var showCompletionAnimation: Bool = false
     @State private var timer: Timer?
-    
+
     private let totalAds = 2
     private let skipAfterSeconds = 30
-    
+
     // Simulated ad data
     private let ads: [(title: String, brand: String, color: Color, icon: String)] = [
         ("Descubre ofertas increíbles", "MegaStore", .blue, "bag.fill"),
         ("Tu próximo viaje te espera", "TravelMax", .purple, "airplane")
     ]
-    
+
     var body: some View {
         ZStack {
             // Background gradient based on current ad
@@ -2202,22 +2208,22 @@ struct AdWatcherView: View {
                 endPoint: .bottomTrailing
             )
             .ignoresSafeArea()
-            
+
             VStack(spacing: 0) {
                 // Top bar with progress and timer
                 adTopBar
-                
+
                 Spacer()
-                
+
                 // Simulated video content
                 simulatedVideoContent
-                
+
                 Spacer()
-                
+
                 // Bottom controls
                 adBottomControls
             }
-            
+
             // Completion animation overlay
             if showCompletionAnimation {
                 completionOverlay
@@ -2230,7 +2236,7 @@ struct AdWatcherView: View {
             timer?.invalidate()
         }
     }
-    
+
     // MARK: - Top Bar
     private var adTopBar: some View {
         VStack(spacing: 12) {
@@ -2253,7 +2259,7 @@ struct AdWatcherView: View {
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
-            
+
             // Ad info and timer
             HStack {
                 // Ad counter
@@ -2264,9 +2270,9 @@ struct AdWatcherView: View {
                         .font(.system(size: 13, weight: .semibold))
                 }
                 .foregroundColor(.white.opacity(0.9))
-                
+
                 Spacer()
-                
+
                 // Timer badge
                 HStack(spacing: 4) {
                     Image(systemName: canSkip ? "forward.fill" : "clock.fill")
@@ -2291,7 +2297,7 @@ struct AdWatcherView: View {
         }
         .padding(.top, 50)
     }
-    
+
     // MARK: - Simulated Video Content
     private var simulatedVideoContent: some View {
         VStack(spacing: 24) {
@@ -2300,18 +2306,18 @@ struct AdWatcherView: View {
                 Circle()
                     .fill(Color.white.opacity(0.15))
                     .frame(width: 120, height: 120)
-                
+
                 Circle()
                     .fill(Color.white.opacity(0.1))
                     .frame(width: 100, height: 100)
-                
+
                 Image(systemName: ads[currentAdIndex].icon)
                     .font(.system(size: 44, weight: .semibold))
                     .foregroundColor(.white)
             }
             .scaleEffect(isVideoPlaying ? 1.0 : 0.95)
             .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: isVideoPlaying)
-            
+
             // Ad text
             VStack(spacing: 12) {
                 Text(ads[currentAdIndex].brand)
@@ -2319,14 +2325,14 @@ struct AdWatcherView: View {
                     .foregroundColor(.white.opacity(0.7))
                     .textCase(.uppercase)
                     .tracking(2)
-                
+
                 Text(ads[currentAdIndex].title)
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
             }
-            
+
             // Simulated video progress bar
             VStack(spacing: 8) {
                 GeometryReader { geo in
@@ -2334,7 +2340,7 @@ struct AdWatcherView: View {
                         Capsule()
                             .fill(Color.white.opacity(0.2))
                             .frame(height: 4)
-                        
+
                         Capsule()
                             .fill(Color.white)
                             .frame(width: geo.size.width * CGFloat(skipAfterSeconds - secondsRemaining) / CGFloat(skipAfterSeconds), height: 4)
@@ -2342,7 +2348,7 @@ struct AdWatcherView: View {
                 }
                 .frame(height: 4)
                 .padding(.horizontal, 40)
-                
+
                 // Video duration indicator
                 HStack {
                     Text(formatTime(skipAfterSeconds - secondsRemaining))
@@ -2356,7 +2362,7 @@ struct AdWatcherView: View {
             }
         }
     }
-    
+
     // MARK: - Bottom Controls
     private var adBottomControls: some View {
         VStack(spacing: 16) {
@@ -2364,7 +2370,7 @@ struct AdWatcherView: View {
             HStack(spacing: 8) {
                 Image(systemName: "gift.fill")
                     .font(.system(size: 14, weight: .semibold))
-                
+
                 Text("Mira \(totalAds) videos y reduce tu cargo de servicio al 10%")
                     .font(.system(size: 13, weight: .medium))
             }
@@ -2375,7 +2381,7 @@ struct AdWatcherView: View {
                 Capsule()
                     .fill(Color.white.opacity(0.1))
             )
-            
+
             // Sound toggle (simulated)
             HStack(spacing: 20) {
                 Button(action: {}) {
@@ -2383,7 +2389,7 @@ struct AdWatcherView: View {
                         .font(.system(size: 18, weight: .medium))
                         .foregroundColor(.white.opacity(0.7))
                 }
-                
+
                 Button(action: {}) {
                     Image(systemName: "info.circle")
                         .font(.system(size: 18, weight: .medium))
@@ -2393,34 +2399,34 @@ struct AdWatcherView: View {
         }
         .padding(.bottom, 50)
     }
-    
+
     // MARK: - Completion Overlay
     private var completionOverlay: some View {
         ZStack {
             Color.black.opacity(0.8)
                 .ignoresSafeArea()
-            
+
             VStack(spacing: 24) {
                 ZStack {
                     Circle()
                         .fill(Color.green.opacity(0.2))
                         .frame(width: 120, height: 120)
-                    
+
                     Image(systemName: "checkmark.seal.fill")
                         .font(.system(size: 56, weight: .semibold))
                         .foregroundColor(.green)
                 }
-                
+
                 VStack(spacing: 8) {
                     Text("¡Descuento activado!")
                         .font(.system(size: 24, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
-                    
+
                     Text("Tu cargo de servicio ahora es del 10%")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(.white.opacity(0.8))
                 }
-                
+
                 Button(action: {
                     onComplete()
                 }) {
@@ -2438,12 +2444,12 @@ struct AdWatcherView: View {
         }
         .transition(.opacity)
     }
-    
+
     // MARK: - Timer Logic
     private func startTimer() {
         secondsRemaining = skipAfterSeconds
         canSkip = false
-        
+
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             if secondsRemaining > 0 {
                 secondsRemaining -= 1
@@ -2453,10 +2459,10 @@ struct AdWatcherView: View {
             }
         }
     }
-    
+
     private func skipOrFinishAd() {
         timer?.invalidate()
-        
+
         if currentAdIndex < totalAds - 1 {
             // Move to next ad
             withAnimation(.easeInOut(duration: 0.3)) {
@@ -2468,13 +2474,13 @@ struct AdWatcherView: View {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
                 showCompletionAnimation = true
             }
-            
+
             // Haptic feedback
             let generator = UINotificationFeedbackGenerator()
             generator.notificationOccurred(.success)
         }
     }
-    
+
     private func formatTime(_ seconds: Int) -> String {
         let mins = seconds / 60
         let secs = seconds % 60

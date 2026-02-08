@@ -42,6 +42,7 @@ public extension LlegoAPI {
       case "CameraConfigType": return LlegoAPI.Objects.CameraConfigType
       case "CoordinatesType": return LlegoAPI.Objects.CoordinatesType
       case "DeliveryAddressType": return LlegoAPI.Objects.DeliveryAddressType
+      case "DeliveryFeeEstimateType": return LlegoAPI.Objects.DeliveryFeeEstimateType
       case "DeliveryPersonType": return LlegoAPI.Objects.DeliveryPersonType
       case "DeviceTokenType": return LlegoAPI.Objects.DeviceTokenType
       case "FavoriteCartType": return LlegoAPI.Objects.FavoriteCartType
