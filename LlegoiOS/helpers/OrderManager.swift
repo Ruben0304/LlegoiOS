@@ -1,6 +1,7 @@
-import Foundation
-import CoreLocation
+import ActivityKit
 import Combine
+import CoreLocation
+import Foundation
 import UserNotifications
 
 // MARK: - Delivery Status Enum
@@ -84,11 +85,15 @@ class OrderManager: ObservableObject {
     @Published var driverLocation: CLLocationCoordinate2D?
     @Published var estimatedMinutesRemaining: Int = 0
     @Published var orderStatus: DeliveryStatus = .idle
+    @Published var remainingDistanceMeters: Double = 0
+
+    // Live Activity
+    private var currentActivity: Activity<DeliveryActivityAttributes>?
 
     // Private properties
     private var timer: Timer?
     private var simulationStartTime: Date?
-    private let simulationDuration: TimeInterval = 120 // 2 minutos
+    private let simulationDuration: TimeInterval = 30  // 30 segundos para prueba rápida
     private var routePoints: [CLLocationCoordinate2D] = []
     private var currentRouteIndex: Int = 0
 
@@ -97,7 +102,8 @@ class OrderManager: ObservableObject {
     }
 
     private func requestNotificationPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) {
+            granted, error in
             if granted {
                 print("✅ Permisos de notificación otorgados")
             } else {
@@ -138,7 +144,7 @@ class OrderManager: ObservableObject {
                 latitude: restaurantCoordinates.latitude,
                 longitude: restaurantCoordinates.longitude
             ),
-            estimatedDeliveryMinutes: 2, // 2 minutos de simulación
+            estimatedDeliveryMinutes: 1,  // 30 segundos de simulación
             paymentMethod: paymentMethod,
             createdAt: Date(),
             status: .pending
@@ -156,16 +162,21 @@ class OrderManager: ObservableObject {
         // Iniciar simulación
         startSimulation()
 
+        // Iniciar Live Activity
+        startLiveActivity(for: order)
+
         print("✅ OrderManager: Pedido iniciado - ID: \(order.id)")
     }
 
     /// Detiene el pedido actual
     func stopOrder() {
         stopSimulation()
+        endLiveActivity()
         currentOrder = nil
         driverLocation = nil
         orderStatus = .idle
         estimatedMinutesRemaining = 0
+        remainingDistanceMeters = 0
         print("⏹️ OrderManager: Pedido detenido")
     }
 
@@ -178,6 +189,7 @@ class OrderManager: ObservableObject {
         orderStatus = .cancelled
 
         stopSimulation()
+        endLiveActivity()
 
         print("❌ OrderManager: Pedido cancelado - ID: \(order.id)")
     }
@@ -190,15 +202,15 @@ class OrderManager: ObservableObject {
 
         // Actualizar estado inicial
         orderStatus = .confirmed
-        estimatedMinutesRemaining = 2
+        estimatedMinutesRemaining = 1
 
         // Iniciar ubicación del conductor en el restaurante
         if let order = currentOrder {
             driverLocation = order.restaurantCoordinates.clLocationCoordinate
         }
 
-        // Timer que se ejecuta cada 3 segundos (40 updates en 2 minutos)
-        timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
+        // Timer que se ejecuta cada 1 segundo (30 updates en 30 segundos)
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.updateSimulation()
             }
@@ -217,7 +229,8 @@ class OrderManager: ObservableObject {
 
     private func updateSimulation() {
         guard let startTime = simulationStartTime,
-              let order = currentOrder else {
+            let order = currentOrder
+        else {
             stopSimulation()
             return
         }
@@ -232,8 +245,12 @@ class OrderManager: ObservableObject {
         // Actualizar estado según el progreso
         updateOrderStatus(progress: progress)
 
-        // Actualizar ubicación del conductor
+        // Actualizar ubicación del conductor y distancia restante
         updateDriverLocation(progress: progress)
+        updateRemainingDistance()
+
+        // Actualizar Live Activity
+        updateLiveActivity(progress: progress)
 
         // Verificar si se completó la simulación
         if progress >= 1.0 {
@@ -277,8 +294,12 @@ class OrderManager: ObservableObject {
 
             let segmentProgress = (Double(routePoints.count - 1) * progress) - Double(clampedIndex)
 
-            let interpolatedLat = currentPoint.latitude + (nextPoint.latitude - currentPoint.latitude) * segmentProgress
-            let interpolatedLon = currentPoint.longitude + (nextPoint.longitude - currentPoint.longitude) * segmentProgress
+            let interpolatedLat =
+                currentPoint.latitude + (nextPoint.latitude - currentPoint.latitude)
+                * segmentProgress
+            let interpolatedLon =
+                currentPoint.longitude + (nextPoint.longitude - currentPoint.longitude)
+                * segmentProgress
 
             driverLocation = CLLocationCoordinate2D(
                 latitude: interpolatedLat,
@@ -291,6 +312,17 @@ class OrderManager: ObservableObject {
         currentRouteIndex = clampedIndex
     }
 
+    private func updateRemainingDistance() {
+        guard let driver = driverLocation, let order = currentOrder else {
+            remainingDistanceMeters = 0
+            return
+        }
+        let destination = order.deliveryCoordinates.clLocationCoordinate
+        let driverCL = CLLocation(latitude: driver.latitude, longitude: driver.longitude)
+        let destCL = CLLocation(latitude: destination.latitude, longitude: destination.longitude)
+        remainingDistanceMeters = driverCL.distance(from: destCL)
+    }
+
     private func completeOrder() {
         guard var order = currentOrder else { return }
 
@@ -298,8 +330,12 @@ class OrderManager: ObservableObject {
         currentOrder = order
         orderStatus = .delivered
         estimatedMinutesRemaining = 0
+        remainingDistanceMeters = 0
 
         stopSimulation()
+
+        // Finalizar Live Activity con estado entregado
+        endLiveActivity(delivered: true)
 
         // Enviar notificación
         sendDeliveryNotification()
@@ -317,7 +353,8 @@ class OrderManager: ObservableObject {
         content.badge = 1
 
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
+        let request = UNNotificationRequest(
+            identifier: UUID().uuidString, content: content, trigger: trigger)
 
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
@@ -325,6 +362,96 @@ class OrderManager: ObservableObject {
             } else {
                 print("✅ Notificación de entrega enviada correctamente")
             }
+        }
+    }
+
+    // MARK: - Live Activity Management
+
+    private func startLiveActivity(for order: ActiveOrder) {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+            print("⚠️ Live Activities no están habilitadas")
+            return
+        }
+
+        let attributes = DeliveryActivityAttributes(
+            orderID: order.id,
+            storeName: order.restaurantLocation,
+            storeIcon: "storefront.fill",
+            totalAmount: "\(order.currency) \(String(format: "%.2f", order.totalAmount))",
+            deliveryAddress: order.deliveryLocation
+        )
+
+        let initialState = DeliveryActivityAttributes.ContentState(
+            status: orderStatus.rawValue,
+            statusDisplayText: orderStatus.displayText,
+            statusIcon: orderStatus.icon,
+            progressValue: 0.0,
+            remainingDistance: formattedRemainingDistance,
+            estimatedMinutes: estimatedMinutesRemaining
+        )
+
+        do {
+            let activity = try Activity<DeliveryActivityAttributes>.request(
+                attributes: attributes,
+                content: .init(state: initialState, staleDate: nil),
+                pushType: nil
+            )
+            currentActivity = activity
+            print("🟢 Live Activity iniciada: \(activity.id)")
+        } catch {
+            print("❌ Error iniciando Live Activity: \(error.localizedDescription)")
+        }
+    }
+
+    private func updateLiveActivity(progress: Double) {
+        guard let activity = currentActivity else { return }
+
+        let updatedState = DeliveryActivityAttributes.ContentState(
+            status: orderStatus.rawValue,
+            statusDisplayText: orderStatus.displayText,
+            statusIcon: orderStatus.icon,
+            progressValue: progress,
+            remainingDistance: formattedRemainingDistance,
+            estimatedMinutes: estimatedMinutesRemaining
+        )
+
+        Task {
+            await activity.update(.init(state: updatedState, staleDate: nil))
+        }
+    }
+
+    private func endLiveActivity(delivered: Bool = false) {
+        guard let activity = currentActivity else { return }
+
+        let finalState = DeliveryActivityAttributes.ContentState(
+            status: delivered
+                ? DeliveryStatus.delivered.rawValue : DeliveryStatus.cancelled.rawValue,
+            statusDisplayText: delivered ? "¡Entregado!" : "Cancelado",
+            statusIcon: delivered ? "checkmark.seal.fill" : "xmark.circle",
+            progressValue: delivered ? 1.0 : 0.0,
+            remainingDistance: delivered ? "Llegó" : "--",
+            estimatedMinutes: 0
+        )
+
+        Task {
+            await activity.end(
+                .init(state: finalState, staleDate: nil),
+                dismissalPolicy: .after(.now + 60)
+            )
+            print("🔴 Live Activity finalizada (delivered: \(delivered))")
+        }
+
+        currentActivity = nil
+    }
+
+    /// Distancia restante formateada para la Live Activity
+    private var formattedRemainingDistance: String {
+        let meters = remainingDistanceMeters
+        if meters <= 0 { return "Llegó" }
+        if meters < 1000 {
+            return "\(Int(meters)) m"
+        } else {
+            return String(format: "%.1f km", meters / 1000)
         }
     }
 
@@ -348,7 +475,7 @@ class OrderManager: ObservableObject {
             let baseLon = start.longitude + (end.longitude - start.longitude) * progress
 
             // Añadir variación sinusoidal para simular calles (no línea recta)
-            let variation = sin(progress * .pi * 3) * 0.0005 // Variación pequeña
+            let variation = sin(progress * .pi * 3) * 0.0005  // Variación pequeña
 
             let adjustedLat = baseLat + variation
             let adjustedLon = baseLon + variation * 0.7
@@ -376,24 +503,27 @@ extension OrderManager {
                 ActiveOrder.OrderProduct(
                     id: "1",
                     name: "Pizza Margarita",
-                    imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen PNG.png",
+                    imageUrl:
+                        "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen PNG.png",
                     quantity: 2,
                     price: 15.50
                 ),
                 ActiveOrder.OrderProduct(
                     id: "2",
                     name: "Tres Leches",
-                    imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen (13).png",
+                    imageUrl:
+                        "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen (13).png",
                     quantity: 1,
                     price: 8.00
                 ),
                 ActiveOrder.OrderProduct(
                     id: "3",
                     name: "Batido de Mamey",
-                    imageUrl: "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen (17).png",
+                    imageUrl:
+                        "https://bucket-production-435ad.up.railway.app:443/products-assets/Imagen (17).png",
                     quantity: 1,
                     price: 5.00
-                )
+                ),
             ],
             totalAmount: 45.50,
             currency: "USD",

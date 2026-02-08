@@ -1,5 +1,5 @@
-import UIKit
 import SwiftUI
+import UIKit
 
 struct ComposeView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
@@ -14,55 +14,54 @@ struct ComposeView: UIViewControllerRepresentable {
 
 struct ContentView: View {
     @State private var selectedTab = 0
-//     @State private var isOnboardingCompleted = OnboardingHelper.isOnboardingCompleted
-    @State private var isOnboardingCompleted = true
+    @State private var isOnboardingCompleted = OnboardingHelper.isOnboardingCompleted
 
     var body: some View {
         if isOnboardingCompleted {
             MainAppView(selectedTab: $selectedTab)
         } else {
             OnboardingView(isOnboardingCompleted: $isOnboardingCompleted)
-                .preferredColorScheme(.light) // Onboarding siempre en modo claro
+                .preferredColorScheme(.dark)  // Onboarding con fondo oscuro premium
                 .onChange(of: isOnboardingCompleted) { completed in
                     if completed {
                         OnboardingHelper.completeOnboarding()
                     }
                 }
         }
-//        MainAppView(selectedTab: $selectedTab)
-//            .onAppear {
-//                testGraphQLConnection()
-//            }
+        //        MainAppView(selectedTab: $selectedTab)
+        //            .onAppear {
+        //                testGraphQLConnection()
+        //            }
     }
 
     // Test GraphQL connection
-//    private func testGraphQLConnection() {
-//        print("🚀 Testing GraphQL connection...")
-//
-//        productRepository.fetchProducts { result in
-//            switch result {
-//            case .success(let products):
-//                print("✅ Successfully fetched \(products.count) products:")
-//                print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-//                for (index, product) in products.enumerated() {
-//                    print("\n📦 Product #\(index + 1):")
-//                    print("   ID: \(product.id)")
-//                    print("   Name: \(product.name)")
-//                    print("   Description: \(product.description)")
-//                    print("   Price: \(product.currency) \(product.price)")
-//                    print("   Weight: \(product.weight)")
-//                    print("   Available: \(product.availability ? "Yes" : "No")")
-//                    print("   Image: \(product.image)")
-//                    print("   Branch ID: \(product.branchId)")
-//                    print("   Created: \(product.createdAt)")
-//                }
-//                print("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-//
-//            case .failure(let error):
-//                print("❌ Failed to fetch products: \(error.localizedDescription)")
-//            }
-//        }
-//    }
+    //    private func testGraphQLConnection() {
+    //        print("🚀 Testing GraphQL connection...")
+    //
+    //        productRepository.fetchProducts { result in
+    //            switch result {
+    //            case .success(let products):
+    //                print("✅ Successfully fetched \(products.count) products:")
+    //                print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    //                for (index, product) in products.enumerated() {
+    //                    print("\n📦 Product #\(index + 1):")
+    //                    print("   ID: \(product.id)")
+    //                    print("   Name: \(product.name)")
+    //                    print("   Description: \(product.description)")
+    //                    print("   Price: \(product.currency) \(product.price)")
+    //                    print("   Weight: \(product.weight)")
+    //                    print("   Available: \(product.availability ? "Yes" : "No")")
+    //                    print("   Image: \(product.image)")
+    //                    print("   Branch ID: \(product.branchId)")
+    //                    print("   Created: \(product.createdAt)")
+    //                }
+    //                print("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    //
+    //            case .failure(let error):
+    //                print("❌ Failed to fetch products: \(error.localizedDescription)")
+    //            }
+    //        }
+    //    }
 }
 
 struct MainAppView: View {
@@ -78,10 +77,8 @@ struct MainAppView: View {
 
     // Determinar si hay un pedido activo
     private var hasActiveOrder: Bool {
-        orderManager.currentOrder != nil &&
-        orderManager.orderStatus != .idle &&
-        orderManager.orderStatus != .cancelled &&
-        orderManager.orderStatus != .delivered
+        orderManager.currentOrder != nil && orderManager.orderStatus != .idle
+            && orderManager.orderStatus != .cancelled && orderManager.orderStatus != .delivered
     }
 
     var body: some View {
@@ -89,32 +86,38 @@ struct MainAppView: View {
             Group {
                 if #available(iOS 26.0, *) {
 
-                        TabView() {
-                            Tab("Inicio", systemImage: "house") {
-                                HomeView()
-                                    .ignoresSafeArea(.container, edges: .bottom)
-                            }
-                            Tab("Para ti", systemImage: "flame") {
-                                ProductFeedView()
-                                    .ignoresSafeArea(.container, edges: .bottom)
-                            }
-                            Tab("Lugares", systemImage: "map") {
-                                StoreMapView()
-                                    .ignoresSafeArea(.container, edges: .bottom)
-                            }
-
-                            // Tab de búsqueda con role: .search
-                            // Cuando se selecciona, el campo de búsqueda reemplaza la barra de pestañas
-                            Tab(role: .search) {
-                                SearchView(searchText: $searchText)
-                            }
-                            
-                        
+                    TabView {
+                        Tab("Inicio", systemImage: "house") {
+                            HomeView()
+                                .ignoresSafeArea(.container, edges: .bottom)
                         }
-                        // .searchToolbarBehavior(.minimize)
-                        .tabBarMinimizeBehavior(.onScrollDown)
-                        .tint(gradientManager.currentAccentColor)
-                      
+                        Tab("Para ti", systemImage: "flame") {
+                            ProductFeedView()
+                                .ignoresSafeArea(.container, edges: .bottom)
+                        }
+                        Tab("Lugares", systemImage: "map") {
+                            StoreMapView()
+                                .ignoresSafeArea(.container, edges: .bottom)
+                        }
+
+                        // Tab de búsqueda con role: .search
+                        // Cuando se selecciona, el campo de búsqueda reemplaza la barra de pestañas
+                        Tab(role: .search) {
+                            SearchView(searchText: $searchText)
+                        }
+
+                    }
+                    .tabViewBottomAccessory() {
+                        OrderTrackingCard(
+                            orderManager: orderManager,
+                            onTap: {
+                                showTrackingFullScreen = true
+                            }
+                        )
+                    }
+                    // .searchToolbarBehavior(.minimize)
+                    .tabBarMinimizeBehavior(.onScrollDown)
+                    .tint(gradientManager.currentAccentColor)
 
                     // .toolbarBackground(.hidden, for: .tabBar)
                     // .background(.clear)
@@ -157,7 +160,7 @@ struct MainAppView: View {
                     .background(.clear)
                 }
             }
-            
+
             // Overlay de ubicación obligatoria
             if !userLocationManager.hasLocation {
                 LocationRequiredOverlay()
@@ -169,11 +172,18 @@ struct MainAppView: View {
             if appUpdateViewModel.showUpdateAlert {
                 AppUpdateModal(viewModel: appUpdateViewModel)
                     .transition(.opacity)
-                    .zIndex(200) // Mayor que el overlay de ubicación
+                    .zIndex(200)  // Mayor que el overlay de ubicación
             }
         }
         .animation(.easeInOut(duration: 0.3), value: userLocationManager.hasLocation)
         .animation(.easeInOut(duration: 0.3), value: appUpdateViewModel.showUpdateAlert)
+        .fullScreenCover(isPresented: $showTrackingFullScreen) {
+            if #available(iOS 26.0, *) {
+                NavigationStack {
+                    LiveOrderTrackingView(orderManager: orderManager)
+                }
+            }
+        }
         .onAppear {
             // Iniciar verificación periódica de actualizaciones
             appUpdateViewModel.startPeriodicCheck()

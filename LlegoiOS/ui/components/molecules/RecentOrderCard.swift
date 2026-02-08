@@ -4,6 +4,7 @@ struct RecentOrderCard: View {
     let order: RecentOrder
     @StateObject private var gradientManager = GradientStateManager.shared
     @Environment(\.colorScheme) private var colorScheme
+    @State private var showingTransferPayment = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -172,35 +173,71 @@ struct RecentOrderCard: View {
     // MARK: - Footer Section
 
     private var footerSection: some View {
-        HStack {
-            // Currency Badge
-            HStack(spacing: 6) {
-                Image(systemName: "dollarsign.circle.fill")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(gradientManager.currentAccentColor)
+        VStack(spacing: 12) {
+            HStack {
+                // Currency Badge
+                HStack(spacing: 6) {
+                    Image(systemName: "dollarsign.circle.fill")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(gradientManager.currentAccentColor)
 
-                Text(order.currency)
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                    Text(order.currency)
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(gradientManager.currentAccentColor.opacity(0.12))
+                )
+
+                Spacer()
+
+                // Total Price
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("Total")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.secondary)
+
+                    Text(order.formattedTotal)
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundColor(gradientManager.currentAccentColor)
+                }
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(gradientManager.currentAccentColor.opacity(0.12))
-            )
-
-            Spacer()
-
-            // Total Price
-            VStack(alignment: .trailing, spacing: 2) {
-                Text("Total")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(.secondary)
-
-                Text(order.formattedTotal)
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundColor(gradientManager.currentAccentColor)
+            
+            // Botón de pagar por transferencia (solo si el pedido está pendiente de pago)
+            if shouldShowTransferButton {
+                Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    showingTransferPayment = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.left.arrow.right")
+                            .font(.system(size: 14, weight: .semibold))
+                        
+                        Text("Pagar por transferencia")
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .foregroundColor(.white)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        gradientManager.currentAccentColor,
+                                        gradientManager.currentAccentColor.opacity(0.8)
+                                    ],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                    )
+                    .shadow(color: gradientManager.currentAccentColor.opacity(0.3), radius: 8, x: 0, y: 4)
+                }
+                .buttonStyle(.plain)
             }
         }
         .padding(16)
@@ -208,5 +245,16 @@ struct RecentOrderCard: View {
             RoundedRectangle(cornerRadius: 20)
                 .fill(gradientManager.currentAccentColor.opacity(0.05))
         )
+        .sheet(isPresented: $showingTransferPayment) {
+            TransferPaymentView(order: order)
+        }
+    }
+    
+    // MARK: - Helper Properties
+    
+    /// Determina si se debe mostrar el botón de pagar por transferencia
+    private var shouldShowTransferButton: Bool {
+        // Mostrar el botón solo si el pedido está pendiente de aceptación o aceptado
+        return order.status == .pendingAcceptance || order.status == .accepted
     }
 }

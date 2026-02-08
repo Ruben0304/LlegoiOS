@@ -92,3 +92,4 @@ iOSInjectionProject/
 # SENSITIVE DATA - DO NOT COMMIT
 # API Keys and Secrets
 LlegoiOS/network/Secrets.swift
+LlegoiOS/network/StripeSecrets.swift

@@ -17,7 +17,20 @@
 		87CB529B2E90242F00618C59 /* ApolloSQLite in Frameworks */ = {isa = PBXBuildFile; productRef = 87CB529A2E90242F00618C59 /* ApolloSQLite */; };
 		87CB529D2E90242F00618C59 /* ApolloWebSocket in Frameworks */ = {isa = PBXBuildFile; productRef = 87CB529C2E90242F00618C59 /* ApolloWebSocket */; };
 		87D766B02E91C0B5003D2461 /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = 87D766AF2E91C0B5003D2461 /* Lottie */; };
+		D304E2C92F386705002BB7C4 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D304E2C82F386705002BB7C4 /* WidgetKit.framework */; };
+		D304E2CB2F386705002BB7C4 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D304E2CA2F386705002BB7C4 /* SwiftUI.framework */; };
+		D304E2D82F386708002BB7C4 /* LlegoWidgetExtensionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D304E2C62F386705002BB7C4 /* LlegoWidgetExtensionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		D304E2D62F386708002BB7C4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 87F968C52E8F622A00EC1A7C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D304E2C52F386705002BB7C4;
+			remoteInfo = LlegoWidgetExtensionExtension;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
 		87B49C2D2EAFCE6D002EF780 /* Embed Watch Content */ = {
@@ -30,11 +43,25 @@
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D304E2DD2F386708002BB7C4 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				D304E2D82F386708002BB7C4 /* LlegoWidgetExtensionExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		87B147A52E9346C400A515EF /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		87F968CD2E8F622A00EC1A7C /* LlegoiOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LlegoiOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D304E2C62F386705002BB7C4 /* LlegoWidgetExtensionExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = LlegoWidgetExtensionExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		D304E2C82F386705002BB7C4 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		D304E2CA2F386705002BB7C4 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -44,6 +71,13 @@
 				Info.plist,
 			);
 			target = 87F968CC2E8F622A00EC1A7C /* LlegoiOS */;
+		};
+		D304E2DC2F386708002BB7C4 /* Exceptions for "LlegoWidgetExtension" folder in "LlegoWidgetExtensionExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = D304E2C52F386705002BB7C4 /* LlegoWidgetExtensionExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -59,6 +93,14 @@
 				87F740BD2EBD526300D775F3 /* Exceptions for "LlegoiOS" folder in "LlegoiOS" target */,
 			);
 			path = LlegoiOS;
+			sourceTree = "<group>";
+		};
+		D304E2CC2F386705002BB7C4 /* LlegoWidgetExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				D304E2DC2F386708002BB7C4 /* Exceptions for "LlegoWidgetExtension" folder in "LlegoWidgetExtensionExtension" target */,
+			);
+			path = LlegoWidgetExtension;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -80,6 +122,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D304E2C32F386705002BB7C4 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D304E2CB2F386705002BB7C4 /* SwiftUI.framework in Frameworks */,
+				D304E2C92F386705002BB7C4 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -95,6 +146,8 @@
 			children = (
 				87F968CF2E8F622A00EC1A7C /* LlegoiOS */,
 				87B49C232EAFCE6B002EF780 /* LeegoWatchOS Watch App */,
+				D304E2CC2F386705002BB7C4 /* LlegoWidgetExtension */,
+				D304E2C72F386705002BB7C4 /* Frameworks */,
 				87F968CE2E8F622A00EC1A7C /* Products */,
 				095875A3AD4E80E59A68CD27 /* Pods */,
 				87B147A52E9346C400A515EF /* AppIcon.icon */,
@@ -105,8 +158,18 @@
 			isa = PBXGroup;
 			children = (
 				87F968CD2E8F622A00EC1A7C /* LlegoiOS.app */,
+				D304E2C62F386705002BB7C4 /* LlegoWidgetExtensionExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		D304E2C72F386705002BB7C4 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D304E2C82F386705002BB7C4 /* WidgetKit.framework */,
+				D304E2CA2F386705002BB7C4 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -120,10 +183,12 @@
 				87F968CA2E8F622A00EC1A7C /* Frameworks */,
 				87F968CB2E8F622A00EC1A7C /* Resources */,
 				87B49C2D2EAFCE6D002EF780 /* Embed Watch Content */,
+				D304E2DD2F386708002BB7C4 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				D304E2D72F386708002BB7C4 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				87F968CF2E8F622A00EC1A7C /* LlegoiOS */,
@@ -144,6 +209,28 @@
 			productReference = 87F968CD2E8F622A00EC1A7C /* LlegoiOS.app */;
 			productType = "com.apple.product-type.application";
 		};
+		D304E2C52F386705002BB7C4 /* LlegoWidgetExtensionExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D304E2D92F386708002BB7C4 /* Build configuration list for PBXNativeTarget "LlegoWidgetExtensionExtension" */;
+			buildPhases = (
+				D304E2C22F386705002BB7C4 /* Sources */,
+				D304E2C32F386705002BB7C4 /* Frameworks */,
+				D304E2C42F386705002BB7C4 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				D304E2CC2F386705002BB7C4 /* LlegoWidgetExtension */,
+			);
+			name = LlegoWidgetExtensionExtension;
+			packageProductDependencies = (
+			);
+			productName = LlegoWidgetExtensionExtension;
+			productReference = D304E2C62F386705002BB7C4 /* LlegoWidgetExtensionExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -151,11 +238,14 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2600;
+				LastSwiftUpdateCheck = 2620;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
 					87F968CC2E8F622A00EC1A7C = {
 						CreatedOnToolsVersion = 26.0.1;
+					};
+					D304E2C52F386705002BB7C4 = {
+						CreatedOnToolsVersion = 26.2;
 					};
 				};
 			};
@@ -180,6 +270,7 @@
 			projectRoot = "";
 			targets = (
 				87F968CC2E8F622A00EC1A7C /* LlegoiOS */,
+				D304E2C52F386705002BB7C4 /* LlegoWidgetExtensionExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -193,6 +284,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D304E2C42F386705002BB7C4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -203,7 +301,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D304E2C22F386705002BB7C4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D304E2D72F386708002BB7C4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D304E2C52F386705002BB7C4 /* LlegoWidgetExtensionExtension */;
+			targetProxy = D304E2D62F386708002BB7C4 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		87F968D62E8F622C00EC1A7C /* Debug */ = {
@@ -333,7 +446,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 5;
-				DEVELOPMENT_TEAM = 3978UBKA75;
+				DEVELOPMENT_TEAM = 29RDKY9DF6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LlegoiOS/Info.plist;
@@ -378,7 +491,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 5;
-				DEVELOPMENT_TEAM = 3978UBKA75;
+				DEVELOPMENT_TEAM = 29RDKY9DF6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LlegoiOS/Info.plist;
@@ -413,6 +526,74 @@
 			};
 			name = Release;
 		};
+		D304E2DA2F386708002BB7C4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 29RDKY9DF6;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LlegoWidgetExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = LlegoWidgetExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ruben.LlegoiOS.LlegoWidgetExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		D304E2DB2F386708002BB7C4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 29RDKY9DF6;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LlegoWidgetExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = LlegoWidgetExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ruben.LlegoiOS.LlegoWidgetExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -430,6 +611,15 @@
 			buildConfigurations = (
 				87F968D92E8F622C00EC1A7C /* Debug */,
 				87F968DA2E8F622C00EC1A7C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D304E2D92F386708002BB7C4 /* Build configuration list for PBXNativeTarget "LlegoWidgetExtensionExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D304E2DA2F386708002BB7C4 /* Debug */,
+				D304E2DB2F386708002BB7C4 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
