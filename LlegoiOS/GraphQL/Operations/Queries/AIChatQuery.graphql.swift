@@ -9,22 +9,26 @@ public extension LlegoAPI {
     public static let operationName: String = "AIChat"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query AIChat($message: String!, $jwt: String) { aiChat(input: { message: $message }, jwt: $jwt) { __typename responseType aiText suggestedProducts { __typename product { __typename id name description price currency imageUrl availability } reason branchName branchAvatarUrl branchAddress branchPhone } suggestedBranches { __typename branch { __typename id name address phone status tipos avatarUrl coordinates { __typename type coordinates } } reason } confidence } }"#
+        #"query AIChat($message: String!, $deviceId: String, $jwt: String) { aiChat(input: { message: $message, deviceId: $deviceId }, jwt: $jwt) { __typename responseType aiText suggestedProducts { __typename product { __typename id name description price currency imageUrl availability } reason branchName branchAvatarUrl branchAddress branchPhone } suggestedBranches { __typename branch { __typename id name address phone status tipos avatarUrl coordinates { __typename type coordinates } } reason } confidence } }"#
       ))
 
     public var message: String
+    public var deviceId: GraphQLNullable<String>
     public var jwt: GraphQLNullable<String>
 
     public init(
       message: String,
+      deviceId: GraphQLNullable<String>,
       jwt: GraphQLNullable<String>
     ) {
       self.message = message
+      self.deviceId = deviceId
       self.jwt = jwt
     }
 
     @_spi(Unsafe) public var __variables: Variables? { [
       "message": message,
+      "deviceId": deviceId,
       "jwt": jwt
     ] }
 
@@ -35,7 +39,10 @@ public extension LlegoAPI {
       @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.Query }
       @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
         .field("aiChat", AiChat?.self, arguments: [
-          "input": ["message": .variable("message")],
+          "input": [
+            "message": .variable("message"),
+            "deviceId": .variable("deviceId")
+          ],
           "jwt": .variable("jwt")
         ]),
       ] }

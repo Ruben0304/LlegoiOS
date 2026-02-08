@@ -164,7 +164,17 @@ enum FeedSectionType: String {
 
 struct FeedResponse: Sendable {
     let sections: [FeedSection]
+    let sectionDiagnostics: [FeedSectionDiagnostic]
     let timestamp: String
+}
+
+struct FeedSectionDiagnostic: Sendable {
+    let sectionId: String
+    let title: String
+    let status: String
+    let reason: String?
+    let totalBeforeDedup: Int?
+    let totalAfterDedup: Int?
 }
 
 // MARK: - Legacy Feed Data (for backward compatibility with categories/stores)
@@ -183,24 +193,31 @@ struct FeedData: Sendable {
 
 @MainActor
 class ProductFeedRepository {
+    // Request all known feed sections explicitly.
+    private let allSections = [
+        FeedSectionType.paraTi.rawValue,
+        FeedSectionType.popularesCerca.rawValue,
+        FeedSectionType.trending.rawValue,
+        FeedSectionType.basadoBusquedas.rawValue,
+        FeedSectionType.nuevosLugaresFavoritos.rawValue,
+        FeedSectionType.masFavoriteados.rawValue,
+        FeedSectionType.cercaTi.rawValue,
+        FeedSectionType.tePodriagustar.rawValue
+    ]
 
     // MARK: - Complete Feed API (Single Query Optimization)
 
-    /// Fetch complete feed data (feed sections, categories, stores) in a single GraphQL query
-    func fetchCompleteFeed(first: Int = 10, radiusKm: Double? = nil, categoryId: String? = nil) async -> Result<(FeedResponse, [FeedCategory], [FeedStore]), Error> {
+    /// Fetch complete feed data (feed sections, categories, stores, tutorials) in a single GraphQL query
+    func fetchCompleteFeed(first: Int = 10, radiusKm: Double? = nil, categoryId: String? = nil) async -> Result<(FeedResponse, [FeedCategory], [FeedStore], [Tutorial]), Error> {
         let jwt = AuthManager.shared.getAccessToken()
         let branchTypeRaw = BranchTypeManager.shared.selectedType.rawValue
         let branchTipo = LlegoAPI.BranchTipo(rawValue: branchTypeRaw)
-
-        // Log JWT status (only in DEBUG)
-        #if DEBUG
-        print(jwt != nil ? "🔐 Complete feed request with JWT" : "🔓 Complete feed request without JWT (user not authenticated)")
-        #endif
 
         return await withCheckedContinuation { continuation in
             let query = LlegoAPI.GetCompleteFeedQuery(
                 jwt: jwt.map { .some($0) } ?? .none,
                 first: .some(Int32(first)),
+                sections: .some(allSections),
                 branchType: .some(branchTypeRaw),
                 branchTipo: branchTipo.map { .some(GraphQLEnum($0)) } ?? .none,
                 radiusKm: radiusKm.map { .some($0) } ?? .none,
@@ -244,8 +261,20 @@ class ProductFeedRepository {
                             )
                         }
 
+                        let sectionDiagnostics = data.getFeed.sectionDiagnostics.map { diagnostic in
+                            FeedSectionDiagnostic(
+                                sectionId: diagnostic.sectionId,
+                                title: diagnostic.title,
+                                status: diagnostic.status,
+                                reason: diagnostic.reason,
+                                totalBeforeDedup: diagnostic.totalBeforeDedup,
+                                totalAfterDedup: diagnostic.totalAfterDedup
+                            )
+                        }
+
                         let feedResponse = FeedResponse(
                             sections: sections,
+                            sectionDiagnostics: sectionDiagnostics,
                             timestamp: String(describing: data.getFeed.timestamp)
                         )
 
@@ -269,7 +298,28 @@ class ProductFeedRepository {
                             )
                         }
 
-                        continuation.resume(returning: .success((feedResponse, categories, stores)))
+                        // Parse tutorials (sorted by backend order)
+                        let tutorials = data.activeTutorials
+                            .filter { $0.appTarget.rawValue == "CUSTOMER" }
+                            .sorted(by: { $0.order < $1.order })
+                            .map { tutorialData -> Tutorial in
+                            // Format duration from seconds to mm:ss
+                            let minutes = tutorialData.duration / 60
+                            let seconds = tutorialData.duration % 60
+                            let formattedDuration = String(format: "%d:%02d", minutes, seconds)
+
+                            return Tutorial(
+                                id: tutorialData.id,
+                                title: tutorialData.title,
+                                description: tutorialData.description,
+                                duration: formattedDuration,
+                                thumbnailUrl: tutorialData.thumbnailUrlSigned ?? tutorialData.thumbnailUrl ?? "",
+                                videoUrl: tutorialData.videoUrlSigned,
+                                category: tutorialData.tags.first
+                            )
+                            }
+
+                        continuation.resume(returning: .success((feedResponse, categories, stores, tutorials)))
                     } else if let errors = graphQLResult.errors, !errors.isEmpty {
                         continuation.resume(returning: .failure(NSError(
                             domain: "GraphQL",
@@ -298,15 +348,11 @@ class ProductFeedRepository {
     func fetchFeed(first: Int = 10) async -> Result<FeedResponse, Error> {
         let jwt = AuthManager.shared.getAccessToken()
 
-        // Log JWT status (only in DEBUG)
-        #if DEBUG
-        print(jwt != nil ? "🔐 Feed request with JWT" : "🔓 Feed request without JWT (user not authenticated)")
-        #endif
-
         return await withCheckedContinuation { continuation in
             let query = LlegoAPI.GetFeedQuery(
                 jwt: jwt.map { .some($0) } ?? .none,
-                first: .some(Int32(first))
+                first: .some(Int32(first)),
+                sections: .some(allSections)
             )
 
             ApolloClientManager.shared.apollo.fetch(query: query, cachePolicy: .fetchIgnoringCacheCompletely) { result in
@@ -345,8 +391,20 @@ class ProductFeedRepository {
                             )
                         }
 
+                        let sectionDiagnostics = data.getFeed.sectionDiagnostics.map { diagnostic in
+                            FeedSectionDiagnostic(
+                                sectionId: diagnostic.sectionId,
+                                title: diagnostic.title,
+                                status: diagnostic.status,
+                                reason: diagnostic.reason,
+                                totalBeforeDedup: diagnostic.totalBeforeDedup,
+                                totalAfterDedup: diagnostic.totalAfterDedup
+                            )
+                        }
+
                         let feedResponse = FeedResponse(
                             sections: sections,
+                            sectionDiagnostics: sectionDiagnostics,
                             timestamp: String(describing: data.getFeed.timestamp)
                         )
                         continuation.resume(returning: .success(feedResponse))

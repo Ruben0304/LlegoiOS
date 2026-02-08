@@ -1,0 +1,15 @@
+query GetActiveTutorials {
+  activeTutorials {
+    id
+    title
+    description
+    videoUrl
+    videoUrlSigned
+    duration
+    appTarget
+    thumbnailUrl
+    thumbnailUrlSigned
+    order
+    tags
+  }
+}

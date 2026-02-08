@@ -39,36 +39,8 @@ class ProductFeedViewModel: ObservableObject {
     // Tutorials visibility
     @Published var showTutorials: Bool = true
 
-    // Sample tutorials
-    @Published var tutorials: [Tutorial] = [
-        Tutorial(
-            id: "1",
-            title: "Cómo hacer tu primer pedido",
-            description: "Aprende a navegar la app y realizar tu primera compra",
-            duration: "3:45",
-            thumbnailUrl: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&h=300&fit=crop",
-            videoUrl: "https://example.com/video1.mp4",
-            category: "Primeros pasos"
-        ),
-        Tutorial(
-            id: "2",
-            title: "Métodos de pago disponibles",
-            description: "Conoce todas las formas de pagar en Llego",
-            duration: "2:30",
-            thumbnailUrl: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=400&h=300&fit=crop",
-            videoUrl: "https://example.com/video2.mp4",
-            category: "Pagos"
-        ),
-        Tutorial(
-            id: "3",
-            title: "Seguimiento de pedidos",
-            description: "Rastrea tu pedido en tiempo real",
-            duration: "4:15",
-            thumbnailUrl: "https://images.unsplash.com/photo-1526367790999-0150786686a2?w=400&h=300&fit=crop",
-            videoUrl: "https://example.com/video3.mp4",
-            category: "Entregas"
-        )
-    ]
+    // Real tutorials from backend (activeTutorials query)
+    @Published var tutorials: [Tutorial] = []
 
     // MARK: - Private Properties
     private var hasLoaded: Bool = false
@@ -89,7 +61,6 @@ class ProductFeedViewModel: ObservableObject {
             .dropFirst() // Ignore initial value
             .sink { [weak self] _ in
                 guard let self = self else { return }
-                print("🔄 ProductFeedViewModel - Branch type changed, reloading feed")
                 self.loadFeed(isRefreshing: true)
             }
             .store(in: &cancellables)
@@ -122,19 +93,26 @@ class ProductFeedViewModel: ObservableObject {
             )
 
             switch result {
-            case .success(let (feedResponse, categories, stores)):
+            case .success(let (feedResponse, categories, stores, tutorials)):
                 self.feedSections = feedResponse.sections
                 self.categories = categories
                 self.stores = stores
+                self.tutorials = tutorials
                 self.promotions = Promotion.samples // TODO: Replace with API data
 
-                // Log feed sections info
-                print("📦 Feed loaded successfully - \(feedResponse.sections.count) sections")
-                for section in feedResponse.sections {
-                    print("   └─ [\(section.sectionId)] \"\(section.title)\" - \(section.products.count) productos")
-                }
-                print("   📂 Categories: \(categories.count)")
-                print("   🏪 Stores: \(stores.count)")
+                let summary = feedResponse.sections
+                    .map { "[\($0.sectionId): \($0.products.count)]" }
+                    .joined(separator: ", ")
+                print("📦 Feed: \(feedResponse.sections.count) secciones → \(summary)")
+                let diagnosticsSummary = feedResponse.sectionDiagnostics
+                    .map { diagnostic -> String in
+                        let reason = diagnostic.reason ?? "-"
+                        let before = diagnostic.totalBeforeDedup.map(String.init) ?? "-"
+                        let after = diagnostic.totalAfterDedup.map(String.init) ?? "-"
+                        return "[\(diagnostic.sectionId): \(diagnostic.status), reason=\(reason), before=\(before), after=\(after)]"
+                    }
+                    .joined(separator: ", ")
+                print("🧪 Feed diagnostics (\(feedResponse.sectionDiagnostics.count)) → \(diagnosticsSummary)")
 
                 // Populate legacy arrays from sections for backward compatibility
                 self.populateLegacyArraysFromSections()

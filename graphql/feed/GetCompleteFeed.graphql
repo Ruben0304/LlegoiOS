@@ -1,13 +1,14 @@
 query GetCompleteFeed(
   $jwt: String
   $first: Int
+  $sections: [String!]
   $branchType: String
   $branchTipo: BranchTipo
   $radiusKm: Float
   $categoryId: String
 ) {
   # 1. Feed sections (personalized feed)
-  getFeed(jwt: $jwt, first: $first) {
+  getFeed(jwt: $jwt, first: $first, sections: $sections) {
     sections {
       sectionId
       title
@@ -30,6 +31,14 @@ query GetCompleteFeed(
         score
         description
       }
+    }
+    sectionDiagnostics {
+      sectionId
+      title
+      status
+      reason
+      totalBeforeDedup
+      totalAfterDedup
     }
     timestamp
   }
@@ -59,5 +68,20 @@ query GetCompleteFeed(
         distanceKm
       }
     }
+  }
+
+  # 4. Active tutorials for client app
+  activeTutorials {
+    id
+    title
+    description
+    videoUrl
+    videoUrlSigned
+    duration
+    appTarget
+    thumbnailUrl
+    thumbnailUrlSigned
+    order
+    tags
   }
 }

@@ -9,23 +9,27 @@ public extension LlegoAPI {
     public static let operationName: String = "GetFeed"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetFeed($jwt: String, $first: Int = 10) { getFeed(first: $first, jwt: $jwt) { __typename sections { __typename sectionId title description totalCount products { __typename id branchId name description price currency availability score imageUrl categoryName branch { __typename id name address tipos } } } timestamp } }"#
+        #"query GetFeed($jwt: String, $first: Int = 10, $sections: [String!]) { getFeed(first: $first, jwt: $jwt, sections: $sections) { __typename sections { __typename sectionId title description totalCount products { __typename id branchId name description price currency availability score imageUrl categoryName branch { __typename id name address tipos } } } sectionDiagnostics { __typename sectionId title status reason totalBeforeDedup totalAfterDedup } timestamp } }"#
       ))
 
     public var jwt: GraphQLNullable<String>
     public var first: GraphQLNullable<Int32>
+    public var sections: GraphQLNullable<[String]>
 
     public init(
       jwt: GraphQLNullable<String>,
-      first: GraphQLNullable<Int32> = 10
+      first: GraphQLNullable<Int32> = 10,
+      sections: GraphQLNullable<[String]>
     ) {
       self.jwt = jwt
       self.first = first
+      self.sections = sections
     }
 
     @_spi(Unsafe) public var __variables: Variables? { [
       "jwt": jwt,
-      "first": first
+      "first": first,
+      "sections": sections
     ] }
 
     public struct Data: LlegoAPI.SelectionSet {
@@ -36,7 +40,8 @@ public extension LlegoAPI {
       @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
         .field("getFeed", GetFeed.self, arguments: [
           "first": .variable("first"),
-          "jwt": .variable("jwt")
+          "jwt": .variable("jwt"),
+          "sections": .variable("sections")
         ]),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
@@ -57,6 +62,7 @@ public extension LlegoAPI {
         @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
           .field("__typename", String.self),
           .field("sections", [Section].self),
+          .field("sectionDiagnostics", [SectionDiagnostic].self),
           .field("timestamp", LlegoAPI.DateTime.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
@@ -64,6 +70,7 @@ public extension LlegoAPI {
         ] }
 
         public var sections: [Section] { __data["sections"] }
+        public var sectionDiagnostics: [SectionDiagnostic] { __data["sectionDiagnostics"] }
         public var timestamp: LlegoAPI.DateTime { __data["timestamp"] }
 
         /// GetFeed.Section
@@ -158,6 +165,35 @@ public extension LlegoAPI {
               public var tipos: [GraphQLEnum<LlegoAPI.BranchTipo>] { __data["tipos"] }
             }
           }
+        }
+
+        /// GetFeed.SectionDiagnostic
+        ///
+        /// Parent Type: `FeedSectionDiagnostic`
+        public struct SectionDiagnostic: LlegoAPI.SelectionSet {
+          @_spi(Unsafe) public let __data: DataDict
+          @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+          @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.FeedSectionDiagnostic }
+          @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+            .field("__typename", String.self),
+            .field("sectionId", String.self),
+            .field("title", String.self),
+            .field("status", String.self),
+            .field("reason", String?.self),
+            .field("totalBeforeDedup", Int?.self),
+            .field("totalAfterDedup", Int?.self),
+          ] }
+          @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+            GetFeedQuery.Data.GetFeed.SectionDiagnostic.self
+          ] }
+
+          public var sectionId: String { __data["sectionId"] }
+          public var title: String { __data["title"] }
+          public var status: String { __data["status"] }
+          public var reason: String? { __data["reason"] }
+          public var totalBeforeDedup: Int? { __data["totalBeforeDedup"] }
+          public var totalAfterDedup: Int? { __data["totalAfterDedup"] }
         }
       }
     }

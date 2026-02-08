@@ -113,4 +113,19 @@ query GetProductFeed(
       }
     }
   }
+
+  # Tutoriales activos para la app de cliente
+  activeTutorials {
+    id
+    title
+    description
+    videoUrl
+    videoUrlSigned
+    duration
+    appTarget
+    thumbnailUrl
+    thumbnailUrlSigned
+    order
+    tags
+  }
 }

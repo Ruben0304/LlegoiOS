@@ -1,5 +1,5 @@
-query AIChat($message: String!, $jwt: String) {
-  aiChat(input: { message: $message }, jwt: $jwt) {
+query AIChat($message: String!, $deviceId: String, $jwt: String) {
+  aiChat(input: { message: $message, deviceId: $deviceId }, jwt: $jwt) {
     responseType
     aiText
     suggestedProducts {

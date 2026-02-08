@@ -49,6 +49,7 @@ public extension LlegoAPI {
       case "FeedProductType": return LlegoAPI.Objects.FeedProductType
       case "FeedResponse": return LlegoAPI.Objects.FeedResponse
       case "FeedSection": return LlegoAPI.Objects.FeedSection
+      case "FeedSectionDiagnostic": return LlegoAPI.Objects.FeedSectionDiagnostic
       case "GradientConfigType": return LlegoAPI.Objects.GradientConfigType
       case "InitiatePaymentResult": return LlegoAPI.Objects.InitiatePaymentResult
       case "IosConfigType": return LlegoAPI.Objects.IosConfigType
@@ -72,6 +73,7 @@ public extension LlegoAPI {
       case "Query": return LlegoAPI.Objects.Query
       case "ScoredBranchType": return LlegoAPI.Objects.ScoredBranchType
       case "ScoredProductType": return LlegoAPI.Objects.ScoredProductType
+      case "TutorialType": return LlegoAPI.Objects.TutorialType
       case "UserData": return LlegoAPI.Objects.UserData
       case "UserType": return LlegoAPI.Objects.UserType
       case "WalletBalanceType": return LlegoAPI.Objects.WalletBalanceType

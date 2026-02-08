@@ -15,7 +15,12 @@ public struct LottieView: UIViewRepresentable {
     private let speed: CGFloat
 
     public init(name: String, loopMode: LottieLoopMode = .loop, contentMode: UIView.ContentMode = .scaleAspectFill, speed: CGFloat = 1.0) {
-        self.source = .name(name)
+        // Detectar automáticamente si es .lottie o .json
+        if Bundle.main.url(forResource: name, withExtension: "lottie") != nil {
+            self.source = .dotLottieName(name)
+        } else {
+            self.source = .name(name)
+        }
         self.loopMode = loopMode
         self.contentMode = contentMode
         self.speed = speed
@@ -66,6 +71,7 @@ public struct LottieView: UIViewRepresentable {
 
         let animationView = LottieAnimationView()
         animationView.translatesAutoresizingMaskIntoConstraints = false
+        animationView.configuration = LottieConfiguration(renderingEngine: .automatic)
         animationView.contentMode = contentMode
         animationView.loopMode = loopMode
         animationView.animationSpeed = speed
@@ -101,14 +107,14 @@ public struct LottieView: UIViewRepresentable {
         case .name(let name):
             // Archivo JSON tradicional
             animationView.animation = LottieAnimation.named(name)
-            animationView.play()
+            startPlayback(on: animationView)
             
         case .url(let url):
             // JSON desde URL remota
             LottieAnimation.loadedFrom(url: url, closure: { animation in
                 DispatchQueue.main.async {
                     animationView.animation = animation
-                    animationView.play()
+                    startPlayback(on: animationView)
                 }
             }, animationCache: LRUAnimationCache.sharedCache)
             
@@ -124,7 +130,7 @@ public struct LottieView: UIViewRepresentable {
                     switch result {
                     case .success(let dotLottie):
                         animationView.loadAnimation(from: dotLottie)
-                        animationView.play()
+                        startPlayback(on: animationView)
                     case .failure(let error):
                         print("Error cargando archivo .lottie: \(error)")
                     }
@@ -138,12 +144,19 @@ public struct LottieView: UIViewRepresentable {
                     switch result {
                     case .success(let dotLottie):
                         animationView.loadAnimation(from: dotLottie)
-                        animationView.play()
+                        startPlayback(on: animationView)
                     case .failure(let error):
                         print("Error cargando archivo .lottie remoto: \(error)")
                     }
                 }
             }
         }
+    }
+
+    private func startPlayback(on animationView: LottieAnimationView) {
+        animationView.loopMode = loopMode
+        animationView.animationSpeed = speed
+        animationView.currentProgress = 0
+        animationView.play(fromProgress: 0, toProgress: 1, loopMode: loopMode)
     }
 }

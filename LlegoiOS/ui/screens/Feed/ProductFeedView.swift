@@ -9,7 +9,6 @@ struct ProductFeedView: View {
     @State private var showFavoritesSheet = false
     @State private var showCartSheet = false
     @State private var selectedTutorial: Tutorial? = nil
-    @State private var showVideoPlayer = false
     @State private var selectedProductId: String?
     @Environment(\.colorScheme) private var colorScheme
 
@@ -84,10 +83,10 @@ struct ProductFeedView: View {
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
-            .sheet(isPresented: $showVideoPlayer) {
-                if let tutorial = selectedTutorial {
-                    TutorialVideoPlayerView(tutorial: tutorial, accentColor: gradientManager.currentAccentColor)
-                }
+            .fullScreenCover(item: $selectedTutorial) { tutorial in
+                VideoPlayerView(tutorial: tutorial, onDismiss: {
+                    selectedTutorial = nil
+                })
             }
             .fullScreenCover(item: $selectedProductId) { productId in
                 ProductDetailView(productId: productId)
@@ -342,7 +341,6 @@ struct ProductFeedView: View {
                     ForEach(viewModel.tutorials) { tutorial in
                         TutorialFeedCard(tutorial: tutorial, accentColor: gradientManager.currentAccentColor) {
                             selectedTutorial = tutorial
-                            showVideoPlayer = true
                         }
                         .padding(.vertical, 12)
                     }
@@ -395,11 +393,21 @@ struct ProductFeedView: View {
 
     // MARK: - Loading State
     private var loadingState: some View {
-        CircularLoadingIndicator(
-            color: gradientManager.currentAccentColor,
-            lineWidth: 6,
-            size: 60
-        )
+        ZStack {
+            CircularLoadingIndicator(
+                color: gradientManager.currentAccentColor,
+                lineWidth: 6,
+                size: 440
+            )
+            .frame(width: 640, height: 640)
+            .offset(y: -85)
+
+            Text("Cargando...")
+                .font(.system(size: 22, weight: .semibold, design: .rounded))
+                .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                .offset(y: 30)
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -758,6 +766,7 @@ struct TutorialFeedCard: View {
     let accentColor: Color
     let onTap: () -> Void
     @Environment(\.colorScheme) private var colorScheme
+    @ObservedObject private var downloadManager = TutorialDownloadManager.shared
     private let cardWidth: CGFloat = 240
     private let cardHeight: CGFloat = 135
 
@@ -847,10 +856,43 @@ struct TutorialFeedCard: View {
                 .padding(12)
             }
             .frame(width: cardWidth, height: cardHeight)
+            .overlay(alignment: .topLeading) {
+                downloadStateBadge
+                    .padding(10)
+            }
             .cornerRadius(16)
             .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
         }
         .buttonStyle(PlainButtonStyle())
+    }
+
+    @ViewBuilder
+    private var downloadStateBadge: some View {
+        switch downloadManager.status(for: tutorial.id) {
+        case .downloaded:
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 20))
+                .foregroundColor(.green)
+                .padding(6)
+                .background(.ultraThinMaterial, in: Circle())
+
+        case .downloading(let progress):
+            HStack(spacing: 6) {
+                ProgressView(value: progress, total: 1.0)
+                    .progressViewStyle(.circular)
+                    .tint(.white)
+                    .frame(width: 16, height: 16)
+                Text("\(Int(progress * 100))%")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(.white)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(Color.black.opacity(0.65), in: Capsule())
+
+        default:
+            EmptyView()
+        }
     }
 }
 

@@ -134,6 +134,18 @@ type Query {
   hasRespondedToSurvey(surveyId: String!, jwt: String!): Boolean!
   "Get personalized feed with multiple sections"
   getFeed(first: Int! = 10, radiusKm: Float = null, sections: [String!] = null, jwt: String = null): FeedResponse!
+  "Get all tutorials"
+  tutorials: [TutorialType!]!
+  "Get active tutorials only"
+  activeTutorials: [TutorialType!]!
+  "Get tutorials by app target"
+  tutorialsByApp(appTarget: AppTarget!): [TutorialType!]!
+  "Get tutorial by ID"
+  tutorial(id: String!): TutorialType
+  "Search tutorials by title, description or tags"
+  searchTutorials(query: String!): [TutorialType!]!
+  "Get tutorials by tags"
+  tutorialsByTags(tags: [String!]!): [TutorialType!]!
   "Saludo de ejemplo"
   hello(jwt: String = null): String!
   "Saluda por nombre"
@@ -894,6 +906,7 @@ type QuestionResponseType {
 }
 type FeedResponse {
   sections: [FeedSection!]!
+  sectionDiagnostics: [FeedSectionDiagnostic!]!
   timestamp: DateTime!
 }
 type FeedSection {
@@ -923,6 +936,32 @@ type FeedProductType {
   categoryName: String
   "Branch associated with this product"
   branch: BranchType
+}
+type FeedSectionDiagnostic {
+  sectionId: String!
+  title: String!
+  status: String!
+  reason: String
+  totalBeforeDedup: Int
+  totalAfterDedup: Int
+}
+type TutorialType {
+  id: String!
+  title: String!
+  description: String!
+  videoUrl: String!
+  duration: Int!
+  appTarget: AppTarget!
+  thumbnailUrl: String
+  order: Int!
+  isActive: Boolean!
+  tags: [String!]!
+  createdAt: DateTime!
+  updatedAt: DateTime
+  "Presigned URL for the tutorial video"
+  videoUrlSigned: String!
+  "Presigned URL for the tutorial thumbnail"
+  thumbnailUrlSigned: String
 }
 type Mutation {
   "Register a new user"
@@ -1073,6 +1112,14 @@ type Mutation {
   likeBranch(branchId: String!, jwt: String = null): BranchLikeType!
   "Remover like de un branch"
   unlikeBranch(branchId: String!, jwt: String = null): Boolean!
+  "Create a new tutorial (admin only)"
+  createTutorial(input: CreateTutorialInput!, jwt: String = null): TutorialType!
+  "Update a tutorial (admin only)"
+  updateTutorial(id: String!, input: UpdateTutorialInput!, jwt: String = null): TutorialType!
+  "Delete a tutorial (admin only)"
+  deleteTutorial(id: String!, jwt: String = null): Boolean!
+  "Toggle tutorial active status (admin only)"
+  toggleTutorialActive(id: String!, jwt: String = null): TutorialType!
 }
 type AuthResponse {
   accessToken: String!
@@ -1235,6 +1282,11 @@ enum QuestionTypeEnum {
   MULTIPLE_CHOICE
   TEXT
 }
+enum AppTarget {
+  CUSTOMER
+  MERCHANT
+  BOTH
+}
 enum DevicePlatformEnum {
   IOS
   ANDROID
@@ -1242,6 +1294,8 @@ enum DevicePlatformEnum {
 input AiAssistantChatInput {
   "The user message/query to send"
   message: String!
+  "Unique device identifier from mobile app (required for free quota)"
+  deviceId: String = null
 }
 input RegisterInput {
   name: String!
@@ -1557,6 +1611,28 @@ input SubmitSurveyResponseInput {
 input QuestionResponseInput {
   questionId: String!
   answer: String!
+}
+input CreateTutorialInput {
+  title: String!
+  description: String!
+  videoUrl: String!
+  duration: Int!
+  appTarget: AppTarget!
+  thumbnailUrl: String = null
+  order: Int! = 0
+  isActive: Boolean! = true
+  tags: [String!]! = []
+}
+input UpdateTutorialInput {
+  title: String = null
+  description: String = null
+  videoUrl: String = null
+  duration: Int = null
+  appTarget: AppTarget = null
+  thumbnailUrl: String = null
+  order: Int = null
+  isActive: Boolean = null
+  tags: [String!] = null
 }
 "Exposes a URL that specifies the behavior of this scalar."
 directive @specifiedBy(

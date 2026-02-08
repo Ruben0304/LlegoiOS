@@ -9,11 +9,12 @@ public extension LlegoAPI {
     public static let operationName: String = "GetCompleteFeed"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetCompleteFeed($jwt: String, $first: Int, $branchType: String, $branchTipo: BranchTipo, $radiusKm: Float, $categoryId: String) { getFeed(jwt: $jwt, first: $first) { __typename sections { __typename sectionId title description totalCount products { __typename id name price currency imageUrl branchId branch { __typename name address tipos } categoryName availability score description } } timestamp } productCategories(branchType: $branchType) { __typename id name iconIos } branches( first: 15 tipo: $branchTipo radiusKm: $radiusKm productCategoryId: $categoryId ) { __typename edges { __typename node { __typename id businessId name avatarUrl coverUrl address distanceKm } } } }"#
+        #"query GetCompleteFeed($jwt: String, $first: Int, $sections: [String!], $branchType: String, $branchTipo: BranchTipo, $radiusKm: Float, $categoryId: String) { getFeed(jwt: $jwt, first: $first, sections: $sections) { __typename sections { __typename sectionId title description totalCount products { __typename id name price currency imageUrl branchId branch { __typename name address tipos } categoryName availability score description } } sectionDiagnostics { __typename sectionId title status reason totalBeforeDedup totalAfterDedup } timestamp } productCategories(branchType: $branchType) { __typename id name iconIos } branches( first: 15 tipo: $branchTipo radiusKm: $radiusKm productCategoryId: $categoryId ) { __typename edges { __typename node { __typename id businessId name avatarUrl coverUrl address distanceKm } } } activeTutorials { __typename id title description videoUrl videoUrlSigned duration appTarget thumbnailUrl thumbnailUrlSigned order tags } }"#
       ))
 
     public var jwt: GraphQLNullable<String>
     public var first: GraphQLNullable<Int32>
+    public var sections: GraphQLNullable<[String]>
     public var branchType: GraphQLNullable<String>
     public var branchTipo: GraphQLNullable<GraphQLEnum<BranchTipo>>
     public var radiusKm: GraphQLNullable<Double>
@@ -22,6 +23,7 @@ public extension LlegoAPI {
     public init(
       jwt: GraphQLNullable<String>,
       first: GraphQLNullable<Int32>,
+      sections: GraphQLNullable<[String]>,
       branchType: GraphQLNullable<String>,
       branchTipo: GraphQLNullable<GraphQLEnum<BranchTipo>>,
       radiusKm: GraphQLNullable<Double>,
@@ -29,6 +31,7 @@ public extension LlegoAPI {
     ) {
       self.jwt = jwt
       self.first = first
+      self.sections = sections
       self.branchType = branchType
       self.branchTipo = branchTipo
       self.radiusKm = radiusKm
@@ -38,6 +41,7 @@ public extension LlegoAPI {
     @_spi(Unsafe) public var __variables: Variables? { [
       "jwt": jwt,
       "first": first,
+      "sections": sections,
       "branchType": branchType,
       "branchTipo": branchTipo,
       "radiusKm": radiusKm,
@@ -52,7 +56,8 @@ public extension LlegoAPI {
       @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
         .field("getFeed", GetFeed.self, arguments: [
           "jwt": .variable("jwt"),
-          "first": .variable("first")
+          "first": .variable("first"),
+          "sections": .variable("sections")
         ]),
         .field("productCategories", [ProductCategory].self, arguments: ["branchType": .variable("branchType")]),
         .field("branches", Branches.self, arguments: [
@@ -61,6 +66,7 @@ public extension LlegoAPI {
           "radiusKm": .variable("radiusKm"),
           "productCategoryId": .variable("categoryId")
         ]),
+        .field("activeTutorials", [ActiveTutorial].self),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
         GetCompleteFeedQuery.Data.self
@@ -72,6 +78,8 @@ public extension LlegoAPI {
       public var productCategories: [ProductCategory] { __data["productCategories"] }
       /// Lista de sucursales con scoring por cercanía (paginado)
       public var branches: Branches { __data["branches"] }
+      /// Get active tutorials only
+      public var activeTutorials: [ActiveTutorial] { __data["activeTutorials"] }
 
       /// GetFeed
       ///
@@ -84,6 +92,7 @@ public extension LlegoAPI {
         @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
           .field("__typename", String.self),
           .field("sections", [Section].self),
+          .field("sectionDiagnostics", [SectionDiagnostic].self),
           .field("timestamp", LlegoAPI.DateTime.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
@@ -91,6 +100,7 @@ public extension LlegoAPI {
         ] }
 
         public var sections: [Section] { __data["sections"] }
+        public var sectionDiagnostics: [SectionDiagnostic] { __data["sectionDiagnostics"] }
         public var timestamp: LlegoAPI.DateTime { __data["timestamp"] }
 
         /// GetFeed.Section
@@ -183,6 +193,35 @@ public extension LlegoAPI {
               public var tipos: [GraphQLEnum<LlegoAPI.BranchTipo>] { __data["tipos"] }
             }
           }
+        }
+
+        /// GetFeed.SectionDiagnostic
+        ///
+        /// Parent Type: `FeedSectionDiagnostic`
+        public struct SectionDiagnostic: LlegoAPI.SelectionSet {
+          @_spi(Unsafe) public let __data: DataDict
+          @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+          @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.FeedSectionDiagnostic }
+          @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+            .field("__typename", String.self),
+            .field("sectionId", String.self),
+            .field("title", String.self),
+            .field("status", String.self),
+            .field("reason", String?.self),
+            .field("totalBeforeDedup", Int?.self),
+            .field("totalAfterDedup", Int?.self),
+          ] }
+          @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+            GetCompleteFeedQuery.Data.GetFeed.SectionDiagnostic.self
+          ] }
+
+          public var sectionId: String { __data["sectionId"] }
+          public var title: String { __data["title"] }
+          public var status: String { __data["status"] }
+          public var reason: String? { __data["reason"] }
+          public var totalBeforeDedup: Int? { __data["totalBeforeDedup"] }
+          public var totalAfterDedup: Int? { __data["totalAfterDedup"] }
         }
       }
 
@@ -279,6 +318,47 @@ public extension LlegoAPI {
             public var distanceKm: Double? { __data["distanceKm"] }
           }
         }
+      }
+
+      /// ActiveTutorial
+      ///
+      /// Parent Type: `TutorialType`
+      public struct ActiveTutorial: LlegoAPI.SelectionSet {
+        @_spi(Unsafe) public let __data: DataDict
+        @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+        @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.TutorialType }
+        @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+          .field("__typename", String.self),
+          .field("id", String.self),
+          .field("title", String.self),
+          .field("description", String.self),
+          .field("videoUrl", String.self),
+          .field("videoUrlSigned", String.self),
+          .field("duration", Int.self),
+          .field("appTarget", GraphQLEnum<LlegoAPI.AppTarget>.self),
+          .field("thumbnailUrl", String?.self),
+          .field("thumbnailUrlSigned", String?.self),
+          .field("order", Int.self),
+          .field("tags", [String].self),
+        ] }
+        @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+          GetCompleteFeedQuery.Data.ActiveTutorial.self
+        ] }
+
+        public var id: String { __data["id"] }
+        public var title: String { __data["title"] }
+        public var description: String { __data["description"] }
+        public var videoUrl: String { __data["videoUrl"] }
+        /// Presigned URL for the tutorial video
+        public var videoUrlSigned: String { __data["videoUrlSigned"] }
+        public var duration: Int { __data["duration"] }
+        public var appTarget: GraphQLEnum<LlegoAPI.AppTarget> { __data["appTarget"] }
+        public var thumbnailUrl: String? { __data["thumbnailUrl"] }
+        /// Presigned URL for the tutorial thumbnail
+        public var thumbnailUrlSigned: String? { __data["thumbnailUrlSigned"] }
+        public var order: Int { __data["order"] }
+        public var tags: [String] { __data["tags"] }
       }
     }
   }
