@@ -118,6 +118,9 @@ struct OrderTrackingCard: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .contentShape(Rectangle())
+        .onTapGesture {
+            onTap()
+        }
         .onAppear {
             captureUrlsOnce()
         }
@@ -300,30 +303,7 @@ struct OrderTrackingCard: View {
                 .frame(width: 55)
             }
 
-            Spacer()
-
-            // Botón de acción
-            Button(action: onTap) {
-                Text("Ver")
-                    .foregroundColor(.white)
-                    .font(.system(size: 13, weight: .semibold))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 6)
-                    .background(
-                        Capsule()
-                            .fill(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        Color.llegoPrimary,
-                                        Color.llegoPrimary.opacity(0.8),
-                                    ]),
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                    )
-            }
-            .padding(.leading, 8)
+            Spacer(minLength: 0)
         }
     }
 

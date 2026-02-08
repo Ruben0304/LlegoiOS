@@ -14,19 +14,26 @@ struct ComposeView: UIViewControllerRepresentable {
 
 struct ContentView: View {
     @State private var selectedTab = 0
-    @State private var isOnboardingCompleted = OnboardingHelper.isOnboardingCompleted
+    @State private var showOnboarding = OnboardingHelper.shouldShowOnboardingOnLaunch
+    @State private var isOnboardingCompleted = false
 
     var body: some View {
-        if isOnboardingCompleted {
-            MainAppView(selectedTab: $selectedTab)
-        } else {
+        if showOnboarding {
             OnboardingView(isOnboardingCompleted: $isOnboardingCompleted)
                 .preferredColorScheme(.dark)  // Onboarding con fondo oscuro premium
                 .onChange(of: isOnboardingCompleted) { completed in
                     if completed {
                         OnboardingHelper.completeOnboarding()
+                        showOnboarding = false
                     }
                 }
+                .onAppear {
+                    // Se marca al mostrarse para evitar volver a enseñarlo
+                    // en siguientes aperturas aunque el usuario no lo complete.
+                    OnboardingHelper.markOnboardingShown()
+                }
+        } else {
+            MainAppView(selectedTab: $selectedTab)
         }
         //        MainAppView(selectedTab: $selectedTab)
         //            .onAppear {

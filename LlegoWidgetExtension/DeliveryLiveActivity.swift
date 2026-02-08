@@ -330,23 +330,15 @@ struct DeliveryLiveActivity: Widget {
 
     @ViewBuilder
     private func appLogoView(size: CGFloat) -> some View {
-        if UIImage(named: "icon") != nil {
-            Image("icon")
-                .resizable()
-                .aspectRatio(contentMode: .fill)
+        ZStack {
+            Circle()
+                .fill(.white.opacity(0.14))
                 .frame(width: size, height: size)
-                .clipShape(Circle())
-        } else if let uiImage = UIImage(named: "AppIcon") {
-            Image(uiImage: uiImage)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(width: size, height: size)
-                .clipShape(Circle())
-        } else {
+
             Image(systemName: "shippingbox.fill")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .padding(size * 0.2)
+                .padding(size * 0.22)
                 .foregroundStyle(Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255))
                 .frame(width: size, height: size)
         }
