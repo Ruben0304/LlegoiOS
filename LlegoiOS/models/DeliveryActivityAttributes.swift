@@ -6,6 +6,10 @@ struct DeliveryActivityAttributes: ActivityAttributes {
     let orderID: String
     let storeName: String
     let storeIcon: String  // SF Symbol name
+    let storeImageUrl: String?
+    let userAvatarUrl: String?
+    let storeImageData: Data?
+    let userAvatarData: Data?
     let totalAmount: String
     let deliveryAddress: String
 

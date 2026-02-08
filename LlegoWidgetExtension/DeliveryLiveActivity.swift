@@ -1,5 +1,6 @@
 import ActivityKit
 import SwiftUI
+import UIKit
 import WidgetKit
 
 struct DeliveryLiveActivity: Widget {
@@ -13,11 +14,8 @@ struct DeliveryLiveActivity: Widget {
 
                 DynamicIslandExpandedRegion(.leading) {
                     HStack(spacing: 6) {
-                        Image(systemName: "storefront.fill")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(Color(red: 124 / 255, green: 65 / 255, blue: 43 / 255))
-
-                        Text(context.attributes.storeName)
+                        appLogoView(size: 18)
+                        Text(headlineStatusText(context))
                             .font(.system(size: 13, weight: .semibold, design: .rounded))
                             .lineLimit(1)
                             .foregroundStyle(.white)
@@ -54,12 +52,14 @@ struct DeliveryLiveActivity: Widget {
                         // Progress bar with icons
                         HStack(spacing: 0) {
                             // Store icon
-                            Image(systemName: "storefront.fill")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(
-                                    Color(red: 124 / 255, green: 65 / 255, blue: 43 / 255)
-                                )
-                                .frame(width: 20)
+                            activityAvatar(
+                                imageData: context.attributes.storeImageData,
+                                imageURL: context.attributes.storeImageUrl,
+                                placeholderSystemName: "storefront.fill",
+                                size: 20,
+                                foreground: Color(red: 124 / 255, green: 65 / 255, blue: 43 / 255)
+                            )
+                            .frame(width: 20)
 
                             // Progress track
                             GeometryReader { geometry in
@@ -117,14 +117,16 @@ struct DeliveryLiveActivity: Widget {
                             .padding(.horizontal, 6)
 
                             // House icon
-                            Image(systemName: "house.fill")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(
-                                    context.state.progressValue >= 1.0
-                                        ? Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255)
-                                        : .gray
-                                )
-                                .frame(width: 20)
+                            activityAvatar(
+                                imageData: context.attributes.userAvatarData,
+                                imageURL: context.attributes.userAvatarUrl,
+                                placeholderSystemName: "house.fill",
+                                size: 20,
+                                foreground: context.state.progressValue >= 1.0
+                                    ? Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255)
+                                    : .gray
+                            )
+                            .frame(width: 20)
                         }
 
                         // Status text
@@ -137,9 +139,13 @@ struct DeliveryLiveActivity: Widget {
             } compactLeading: {
                 // MARK: - Compact Leading
                 HStack(spacing: 4) {
-                    Image(systemName: "storefront.fill")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Color(red: 124 / 255, green: 65 / 255, blue: 43 / 255))
+                    activityAvatar(
+                        imageData: context.attributes.storeImageData,
+                        imageURL: context.attributes.storeImageUrl,
+                        placeholderSystemName: "storefront.fill",
+                        size: 14,
+                        foreground: Color(red: 124 / 255, green: 65 / 255, blue: 43 / 255)
+                    )
 
                     Image(systemName: "bicycle")
                         .font(.system(size: 13, weight: .bold))
@@ -168,21 +174,15 @@ struct DeliveryLiveActivity: Widget {
         -> some View
     {
         VStack(spacing: 12) {
-            // Header: store name + distance
+            // Header: app logo + status + distance
             HStack {
                 HStack(spacing: 8) {
-                    Image(systemName: "storefront.fill")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(Color(red: 124 / 255, green: 65 / 255, blue: 43 / 255))
+                    appLogoView(size: 24)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(context.attributes.storeName)
+                        Text(headlineStatusText(context))
                             .font(.system(size: 15, weight: .bold, design: .rounded))
                             .lineLimit(1)
-
-                        Text(context.state.statusDisplayText)
-                            .font(.system(size: 12, weight: .medium, design: .rounded))
-                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -209,10 +209,14 @@ struct DeliveryLiveActivity: Widget {
 
             // Progress bar with store → bicycle → house
             HStack(spacing: 0) {
-                Image(systemName: "storefront.fill")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color(red: 124 / 255, green: 65 / 255, blue: 43 / 255))
-                    .frame(width: 24)
+                activityAvatar(
+                    imageData: context.attributes.storeImageData,
+                    imageURL: context.attributes.storeImageUrl,
+                    placeholderSystemName: "storefront.fill",
+                    size: 24,
+                    foreground: Color(red: 124 / 255, green: 65 / 255, blue: 43 / 255)
+                )
+                .frame(width: 24)
 
                 GeometryReader { geometry in
                     ZStack(alignment: .leading) {
@@ -256,18 +260,95 @@ struct DeliveryLiveActivity: Widget {
                 .frame(height: 20)
                 .padding(.horizontal, 8)
 
-                Image(systemName: "house.fill")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(
-                        context.state.progressValue >= 1.0
-                            ? Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255)
-                            : .gray
-                    )
-                    .frame(width: 24)
+                activityAvatar(
+                    imageData: context.attributes.userAvatarData,
+                    imageURL: context.attributes.userAvatarUrl,
+                    placeholderSystemName: "house.fill",
+                    size: 24,
+                    foreground: context.state.progressValue >= 1.0
+                        ? Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255)
+                        : .gray
+                )
+                .frame(width: 24)
             }
         }
         .padding(16)
         .activityBackgroundTint(Color(red: 15 / 255, green: 15 / 255, blue: 15 / 255))
         .activitySystemActionForegroundColor(.white)
+    }
+
+    @ViewBuilder
+    private func activityAvatar(
+        imageData: Data?,
+        imageURL: String?,
+        placeholderSystemName: String,
+        size: CGFloat,
+        foreground: Color
+    ) -> some View {
+        if let imageData, let uiImage = UIImage(data: imageData) {
+            Image(uiImage: uiImage)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: size, height: size)
+                .clipShape(Circle())
+        } else if let imageURL, let url = URL(string: imageURL), !imageURL.isEmpty {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                default:
+                    Image(systemName: placeholderSystemName)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .padding(size * 0.22)
+                        .foregroundStyle(foreground)
+                }
+            }
+            .frame(width: size, height: size)
+            .clipShape(Circle())
+        } else {
+            Image(systemName: placeholderSystemName)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .padding(size * 0.22)
+                .foregroundStyle(foreground)
+                .frame(width: size, height: size)
+        }
+    }
+
+    private func headlineStatusText(_ context: ActivityViewContext<DeliveryActivityAttributes>)
+        -> String
+    {
+        let status = context.state.status.lowercased()
+        if status == "delivered" || context.state.progressValue >= 1.0 {
+            return "Entrega completada"
+        }
+        return "Pedido en camino"
+    }
+
+    @ViewBuilder
+    private func appLogoView(size: CGFloat) -> some View {
+        if UIImage(named: "icon") != nil {
+            Image("icon")
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: size, height: size)
+                .clipShape(Circle())
+        } else if let uiImage = UIImage(named: "AppIcon") {
+            Image(uiImage: uiImage)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: size, height: size)
+                .clipShape(Circle())
+        } else {
+            Image(systemName: "shippingbox.fill")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .padding(size * 0.2)
+                .foregroundStyle(Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255))
+                .frame(width: size, height: size)
+        }
     }
 }

@@ -6,9 +6,9 @@
 //  Input estilo iMessage + selector de modo
 //
 
-import SwiftUI
 import Combine
 import MapKit
+import SwiftUI
 
 enum SearchMode: CaseIterable {
     case search
@@ -48,9 +48,12 @@ struct ConversationalSearchView: View {
             feedGradientBackground
                 .ignoresSafeArea()
                 .animation(.easeInOut(duration: 0.8), value: gradientManager.currentCategoryIndex)
-            
 
             VStack(spacing: 0) {
+                providerSelector
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+
                 // Messages ScrollView
                 ScrollViewReader { proxy in
                     ScrollView {
@@ -75,7 +78,7 @@ struct ConversationalSearchView: View {
                                         selectedProductId: $selectedProductId,
                                         onActionTap: handleMessageAction
                                     )
-                                        .id(message.id)
+                                    .id(message.id)
                                 }
 
                                 // Typing indicator
@@ -106,8 +109,8 @@ struct ConversationalSearchView: View {
         .toolbar {
             // Back button con animación de gradiente al regresar
             ToolbarItem(placement: .navigationBarLeading) {
-                BackButton( action: {
-                    dismiss()// Acción para el botón plus (adjuntar archivos, etc.)
+                BackButton(action: {
+                    dismiss()  // Acción para el botón plus (adjuntar archivos, etc.)
                 })
             }
 
@@ -126,9 +129,9 @@ struct ConversationalSearchView: View {
             ToolbarItem(placement: .bottomBar) {
                 messageInputToolbar
             }
-            
+
             ToolbarSpacer(.fixed, placement: .bottomBar)
-            
+
             // Botón de enviar en el toolbar inferior - estilo estándar
             ToolbarItem(placement: .bottomBar) {
                 Button(action: handleSendAction) {
@@ -146,6 +149,7 @@ struct ConversationalSearchView: View {
             print("🎨 [VIEW] categoryIndex: \(categoryIndex)")
             print("📊 [VIEW] Mensajes actuales: \(viewModel.messages.count)")
             print("🔍 [VIEW] Search Mode: \(searchMode.title)")
+            viewModel.refreshAppleIntelligenceAvailability()
 
             // Establecer el índice de categoría para mantener el mismo fondo de HomeView
             gradientManager.setCategoryIndex(categoryIndex)
@@ -168,6 +172,26 @@ struct ConversationalSearchView: View {
         }
     }
 
+    private var providerSelector: some View {
+        VStack(spacing: 6) {
+            Picker("Proveedor IA", selection: $viewModel.selectedProvider) {
+                ForEach(ConversationalAIProvider.allCases) { provider in
+                    Text(provider.title).tag(provider)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            if viewModel.selectedProvider == .appleIntelligence,
+                let message = viewModel.appleIntelligenceAvailabilityMessage
+            {
+                Text(message)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.red)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+
     // MARK: - Feed Gradient Background (más notable para conversational search)
     private var feedGradientBackground: some View {
         let palette = gradientManager.getCurrentGradientPalette()
@@ -182,7 +206,8 @@ struct ConversationalSearchView: View {
                 gradient: Gradient(stops: [
                     .init(color: palette.light.opacity(0.3), location: 0.0),
                     .init(color: palette.veryLight.opacity(0.5), location: 0.4),
-                    .init(color: Color.white.opacity(colorScheme == .dark ? 0.1 : 0.9), location: 1.0)
+                    .init(
+                        color: Color.white.opacity(colorScheme == .dark ? 0.1 : 0.9), location: 1.0),
                 ]),
                 center: UnitPoint(x: 0.85, y: 0.15),
                 startRadius: 10,
@@ -203,7 +228,7 @@ struct ConversationalSearchView: View {
             .padding(.horizontal, 12)
             .frame(maxWidth: .infinity)
     }
-    
+
     // MARK: - Send Action Handler
     private func handleSendAction() {
         print("\n╔═══════════════════════════════════════════════════╗")
@@ -252,7 +277,6 @@ struct ConversationalSearchView: View {
         }
     }
 }
-import SwiftUI
 
 struct LlegoPlusBenefitsView: View {
     @State private var revealBenefits = false
@@ -278,7 +302,7 @@ struct LlegoPlusBenefitsView: View {
             title: "Cashback en compras",
             freeValue: "No",
             plusValue: "Sí"
-        )
+        ),
     ]
 
     private let benefits: [LlegoPlusBenefit] = [
@@ -301,7 +325,7 @@ struct LlegoPlusBenefitsView: View {
             systemImage: "dollarsign.circle.fill",
             title: "Cashback en cada compra",
             description: "Acumula saldo y úsalo en tus próximos pedidos."
-        )
+        ),
     ]
 
     var body: some View {
@@ -363,7 +387,7 @@ struct LlegoPlusBenefitsView: View {
                     LinearGradient(
                         gradient: Gradient(colors: [
                             Color.llegoPrimary.opacity(0.08),
-                            Color.llegoPrimary.opacity(0.02)
+                            Color.llegoPrimary.opacity(0.02),
                         ]),
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -378,7 +402,7 @@ struct LlegoPlusBenefitsView: View {
                     LinearGradient(
                         gradient: Gradient(colors: [
                             Color.llegoPrimary.opacity(0.06),
-                            Color.llegoPrimary.opacity(0.02)
+                            Color.llegoPrimary.opacity(0.02),
                         ]),
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -625,8 +649,6 @@ struct LlegoPlusComparisonRowView: View {
     }
 }
 
-
-
 // Preview
 #Preview {
     LlegoPlusBenefitsView()
@@ -638,6 +660,7 @@ struct MessageBubble: View {
     let message: ConversationalChatMessage
     @Binding var selectedProductId: String?
     let onActionTap: (ConversationalChatAction) -> Void
+    @State private var hasLoggedRender = false
 
     // MARK: - Debug Logging
     private static func logMessageRender(message: ConversationalChatMessage, responseType: String) {
@@ -669,8 +692,7 @@ struct MessageBubble: View {
         }
 
         // Si no hay entidades
-        if (message.productEntities?.isEmpty ?? true) &&
-           (message.branchEntities?.isEmpty ?? true) {
+        if (message.productEntities?.isEmpty ?? true) && (message.branchEntities?.isEmpty ?? true) {
             print("\nℹ️ [UI RENDER] Tipo: \(responseType) - Solo texto, sin entidades a renderizar")
         }
 
@@ -690,7 +712,7 @@ struct MessageBubble: View {
                         .clipShape(Circle())
                         .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
                 }
-                
+
                 // Burbuja de texto
                 HStack {
                     if message.isFromUser {
@@ -715,7 +737,7 @@ struct MessageBubble: View {
                         Spacer()
                     }
                 }
-                
+
                 // Avatar del usuario (a la derecha)
                 if message.isFromUser {
                     AsyncImage(url: URL(string: "https://i.pravatar.cc/150?img=12")) { phase in
@@ -741,16 +763,16 @@ struct MessageBubble: View {
                     }
                 }
             }
-            
+
             // Mostrar entidades según el tipo de respuesta
             if !message.isFromUser, let responseType = message.responseType {
-                let _ = Self.logMessageRender(message: message, responseType: responseType)
                 let responseTypeLower = responseType.lowercased()
 
                 // PRODUCTOS
                 if responseTypeLower == "search_products",
-                   let productEntities = message.productEntities,
-                   !productEntities.isEmpty {
+                    let productEntities = message.productEntities,
+                    !productEntities.isEmpty
+                {
 
                     VStack(spacing: 10) {
                         ForEach(productEntities) { product in
@@ -766,8 +788,9 @@ struct MessageBubble: View {
 
                 // TIENDAS / SUCURSALES
                 else if responseTypeLower == "search_branches",
-                        let branchEntities = message.branchEntities,
-                        !branchEntities.isEmpty {
+                    let branchEntities = message.branchEntities,
+                    !branchEntities.isEmpty
+                {
 
                     VStack(spacing: 10) {
                         ForEach(branchEntities) { branch in
@@ -787,8 +810,9 @@ struct MessageBubble: View {
             }
 
             if !message.isFromUser,
-               let actionTitle = message.actionTitle,
-               let action = message.action {
+                let actionTitle = message.actionTitle,
+                let action = message.action
+            {
                 Button(action: {
                     onActionTap(action)
                 }) {
@@ -802,6 +826,12 @@ struct MessageBubble: View {
                 }
                 .padding(.leading, 40)
             }
+        }
+        .onAppear {
+            guard !hasLoggedRender else { return }
+            guard !message.isFromUser, let responseType = message.responseType else { return }
+            hasLoggedRender = true
+            Self.logMessageRender(message: message, responseType: responseType)
         }
     }
 }
@@ -878,7 +908,7 @@ struct TypingIndicator: View {
                     gradient: Gradient(colors: [
                         Color.white.opacity(0.0),
                         Color.white.opacity(0.6),
-                        Color.white.opacity(0.0)
+                        Color.white.opacity(0.0),
                     ]),
                     startPoint: .leading,
                     endPoint: .trailing
@@ -895,7 +925,7 @@ struct TypingIndicator: View {
         .onAppear {
             withAnimation(
                 .linear(duration: 1.5)
-                .repeatForever(autoreverses: false)
+                    .repeatForever(autoreverses: false)
             ) {
                 shimmerOffset = 2.0
             }
@@ -906,9 +936,9 @@ struct TypingIndicator: View {
     private var aiGradient: LinearGradient {
         LinearGradient(
             gradient: Gradient(colors: [
-                Color(red: 0.9, green: 0.4, blue: 0.9).opacity(0.3), // Rosa
-                Color(red: 0.6, green: 0.4, blue: 0.9).opacity(0.3), // Morado
-                Color(red: 0.8, green: 0.5, blue: 1.0).opacity(0.3)  // Lila
+                Color(red: 0.9, green: 0.4, blue: 0.9).opacity(0.3),  // Rosa
+                Color(red: 0.6, green: 0.4, blue: 0.9).opacity(0.3),  // Morado
+                Color(red: 0.8, green: 0.5, blue: 1.0).opacity(0.3),  // Lila
             ]),
             startPoint: .leading,
             endPoint: .trailing
@@ -939,7 +969,11 @@ struct StreamingMarkdownText: View {
 
     private var attributedText: AttributedString {
         // Intentar parsear como Markdown
-        if let attributed = try? AttributedString(markdown: displayedText, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)) {
+        if let attributed = try? AttributedString(
+            markdown: displayedText,
+            options: AttributedString.MarkdownParsingOptions(
+                interpretedSyntax: .inlineOnlyPreservingWhitespace))
+        {
             return attributed
         }
         // Si falla, devolver texto plano
@@ -967,7 +1001,7 @@ struct StreamingMarkdownText: View {
 
         // Streaming character por character
         let characters = Array(text)
-        let baseDelay = 0.02 // 20ms por caracter
+        let baseDelay = 0.02  // 20ms por caracter
 
         timer = Timer.scheduledTimer(withTimeInterval: baseDelay, repeats: true) { t in
             if currentIndex < characters.count {

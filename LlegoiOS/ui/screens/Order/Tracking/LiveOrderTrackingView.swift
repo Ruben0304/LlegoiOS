@@ -7,6 +7,13 @@ struct LiveOrderTrackingView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
 
+    // URLs capturadas una sola vez para evitar recargas
+    @State private var storeImageUrl: URL?
+    @State private var userAvatarUrl: URL?
+    @State private var storeUIImage: UIImage?
+    @State private var userAvatarUIImage: UIImage?
+    @State private var didCaptureUrls = false
+
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 23.1136, longitude: -82.3666),
         span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
@@ -94,7 +101,28 @@ struct LiveOrderTrackingView: View {
             }
         }
         .onAppear {
+            captureUrlsOnce()
             fitMapToRoute()
+        }
+        .onChange(of: orderManager.currentOrder?.id) { _ in
+            storeUIImage = nil
+            userAvatarUIImage = nil
+            storeImageUrl = nil
+            userAvatarUrl = nil
+            didCaptureUrls = false
+            captureUrlsOnce()
+        }
+        .onChange(of: orderManager.currentOrder?.storeImageUrl) { _ in
+            storeUIImage = nil
+            storeImageUrl = nil
+            didCaptureUrls = false
+            captureUrlsOnce()
+        }
+        .onChange(of: orderManager.currentOrder?.userAvatarUrl) { _ in
+            userAvatarUIImage = nil
+            userAvatarUrl = nil
+            didCaptureUrls = false
+            captureUrlsOnce()
         }
         .onChange(of: orderManager.driverLocation?.latitude) { _ in
             centerOnDriver()
@@ -134,6 +162,62 @@ struct LiveOrderTrackingView: View {
 
     // MARK: - Map Annotations
 
+    // MARK: - Capture URLs Once
+
+    private func captureUrlsOnce() {
+        guard !didCaptureUrls, let order = orderManager.currentOrder else { return }
+        if let urlString = order.storeImageUrl, !urlString.isEmpty {
+            storeImageUrl = URL(string: urlString)
+        }
+        if let urlString = order.userAvatarUrl, !urlString.isEmpty {
+            userAvatarUrl = URL(string: urlString)
+        }
+        preloadImages()
+        didCaptureUrls = true
+    }
+
+    private var stableStoreCacheKey: String {
+        "live_tracking_store_\(orderManager.currentOrder?.id ?? "none")"
+    }
+
+    private var stableUserCacheKey: String {
+        "live_tracking_user_\(orderManager.currentOrder?.id ?? "none")"
+    }
+
+    private func preloadImages() {
+        preloadImage(url: storeImageUrl, cacheKey: stableStoreCacheKey) { image in
+            self.storeUIImage = image
+        }
+        preloadImage(url: userAvatarUrl, cacheKey: stableUserCacheKey) { image in
+            self.userAvatarUIImage = image
+        }
+    }
+
+    private func preloadImage(
+        url: URL?,
+        cacheKey: String,
+        onLoaded: @escaping (UIImage?) -> Void
+    ) {
+        guard let url else {
+            onLoaded(nil)
+            return
+        }
+
+        if let cached = ImageCacheManager.shared.getImage(for: cacheKey) {
+            onLoaded(cached)
+            return
+        }
+
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            guard let data, let image = UIImage(data: data) else {
+                DispatchQueue.main.async { onLoaded(nil) }
+                return
+            }
+            ImageCacheManager.shared.setImage(image, for: cacheKey)
+            DispatchQueue.main.async { onLoaded(image) }
+        }.resume()
+    }
+
     @ViewBuilder
     private func annotationView(for item: LiveMapAnnotation) -> some View {
         switch item.type {
@@ -141,22 +225,78 @@ struct LiveOrderTrackingView: View {
             ZStack {
                 Circle()
                     .fill(Color.llegoTertiary)
-                    .frame(width: 40, height: 40)
-                Image(systemName: "storefront.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.white)
+                    .frame(width: 44, height: 44)
+                Group {
+                    if let image = storeUIImage {
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } else {
+                        CachedAsyncImage(
+                            url: storeImageUrl,
+                            cacheKey: stableStoreCacheKey
+                        ) { image in
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            Image("generic_logo")
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } failure: {
+                            Image("generic_logo")
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        }
+                    }
+                }
+                .frame(width: 44, height: 44)
+                .clipShape(Circle())
             }
+            .overlay(
+                Circle()
+                    .stroke(Color.llegoTertiary, lineWidth: 2.5)
+                    .frame(width: 44, height: 44)
+            )
             .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
 
         case .destination:
             ZStack {
                 Circle()
                     .fill(Color.llegoPrimary)
-                    .frame(width: 40, height: 40)
-                Image(systemName: "house.fill")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.white)
+                    .frame(width: 44, height: 44)
+                Group {
+                    if let image = userAvatarUIImage {
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } else {
+                        CachedAsyncImage(
+                            url: userAvatarUrl,
+                            cacheKey: stableUserCacheKey
+                        ) { image in
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            Image(systemName: "person.fill")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(.white)
+                        } failure: {
+                            Image(systemName: "person.fill")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundColor(.white)
+                        }
+                    }
+                }
+                .frame(width: 44, height: 44)
+                .clipShape(Circle())
             }
+            .overlay(
+                Circle()
+                    .stroke(Color.llegoPrimary, lineWidth: 2.5)
+                    .frame(width: 44, height: 44)
+            )
             .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
 
         case .driver:

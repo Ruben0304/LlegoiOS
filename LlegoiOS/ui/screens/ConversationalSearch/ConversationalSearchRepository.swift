@@ -5,14 +5,55 @@
 //  Repository para manejar las queries de AI Chat
 //
 
-import Foundation
 import Apollo
+import Foundation
 
 @MainActor
 final class ConversationalSearchRepository {
     private let apolloClient = ApolloClientManager.shared.apollo
+    private let localAIAssistantService = LocalAIAssistantService.shared
 
     func sendMessage(
+        message: String,
+        provider: ConversationalAIProvider,
+        completion: @escaping @Sendable (Result<AIChatData, Error>) -> Void
+    ) {
+        switch provider {
+        case .appleIntelligence:
+            sendMessageWithAppleIntelligence(message: message, completion: completion)
+        case .llegoAI:
+            sendMessageWithBackend(message: message, completion: completion)
+        }
+    }
+
+    private func sendMessageWithAppleIntelligence(
+        message: String,
+        completion: @escaping @Sendable (Result<AIChatData, Error>) -> Void
+    ) {
+        Task { @MainActor in
+            guard let jwt = AuthManager.shared.getAccessToken() else {
+                completion(.failure(LocalAIAssistantError.unauthenticated))
+                return
+            }
+
+            let sessionId =
+                AuthManager.shared.userId ?? DeviceIDManager.shared.getDeviceId()
+                ?? UUID().uuidString
+
+            do {
+                let output = try await localAIAssistantService.sendMessage(
+                    message: message,
+                    sessionId: sessionId,
+                    jwt: jwt
+                )
+                completion(.success(mapLocalOutputToChatData(output)))
+            } catch {
+                completion(.failure(error))
+            }
+        }
+    }
+
+    private func sendMessageWithBackend(
         message: String,
         completion: @escaping @Sendable (Result<AIChatData, Error>) -> Void
     ) {
@@ -30,12 +71,14 @@ final class ConversationalSearchRepository {
             let jwtInput: GraphQLNullable<String> = jwt.map { .some($0) } ?? .none
             let deviceIdInput: GraphQLNullable<String> = deviceId.map { .some($0) } ?? .none
             #if DEBUG
-            print("🔐 [REPOSITORY] isAuthenticated: \(isAuthenticated)")
-            print("🎫 [REPOSITORY] JWT presente: \(jwt != nil)")
-            print("📱 [REPOSITORY] deviceId presente: \(deviceId != nil)")
-            if jwt == nil {
-                print("⚠️ [REPOSITORY] JWT NO DISPONIBLE - La query puede fallar si requiere autenticación")
-            }
+                print("🔐 [REPOSITORY] isAuthenticated: \(isAuthenticated)")
+                print("🎫 [REPOSITORY] JWT presente: \(jwt != nil)")
+                print("📱 [REPOSITORY] deviceId presente: \(deviceId != nil)")
+                if jwt == nil {
+                    print(
+                        "⚠️ [REPOSITORY] JWT NO DISPONIBLE - La query puede fallar si requiere autenticación"
+                    )
+                }
             #endif
 
             print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -46,7 +89,7 @@ final class ConversationalSearchRepository {
                     deviceId: deviceIdInput,
                     jwt: jwtInput
                 ),
-                cachePolicy: .fetchIgnoringCacheData // No cachear para obtener respuestas frescas del AI
+                cachePolicy: .fetchIgnoringCacheData  // No cachear para obtener respuestas frescas del AI
             ) { result in
                 Task { @MainActor in
                     print("\n📡 [REPOSITORY] Respuesta recibida del servidor")
@@ -73,12 +116,15 @@ final class ConversationalSearchRepository {
                             if let backendError = self.parseBackendError(from: errors) {
                                 completion(.failure(backendError))
                             } else {
-                                let firstMessage = errors.first?.message ?? "Error en la consulta de AI"
-                                completion(.failure(NSError(
-                                    domain: "GraphQL",
-                                    code: -1,
-                                    userInfo: [NSLocalizedDescriptionKey: firstMessage]
-                                )))
+                                let firstMessage =
+                                    errors.first?.message ?? "Error en la consulta de AI"
+                                completion(
+                                    .failure(
+                                        NSError(
+                                            domain: "GraphQL",
+                                            code: -1,
+                                            userInfo: [NSLocalizedDescriptionKey: firstMessage]
+                                        )))
                             }
                             return
                         }
@@ -89,7 +135,14 @@ final class ConversationalSearchRepository {
                             print("❌ [REPOSITORY] graphQLResult.data es NIL")
                             print("⚠️ [REPOSITORY] Esto significa que el servidor no devolvió datos")
                             print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-                            completion(.failure(NSError(domain: "GraphQL", code: -2, userInfo: [NSLocalizedDescriptionKey: "No se recibió respuesta del AI"])))
+                            completion(
+                                .failure(
+                                    NSError(
+                                        domain: "GraphQL", code: -2,
+                                        userInfo: [
+                                            NSLocalizedDescriptionKey:
+                                                "No se recibió respuesta del AI"
+                                        ])))
                             return
                         }
 
@@ -114,11 +167,16 @@ final class ConversationalSearchRepository {
                             print("   - Probar con un usuario autenticado")
                             print("   - Verificar que el resolver de aiChat esté funcionando")
                             print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-                            completion(.failure(NSError(
-                                domain: "GraphQL",
-                                code: -3,
-                                userInfo: [NSLocalizedDescriptionKey: "Respuesta vacía de AI - El backend devolvió aiChat: null"]
-                            )))
+                            completion(
+                                .failure(
+                                    NSError(
+                                        domain: "GraphQL",
+                                        code: -3,
+                                        userInfo: [
+                                            NSLocalizedDescriptionKey:
+                                                "Respuesta vacía de AI - El backend devolvió aiChat: null"
+                                        ]
+                                    )))
                             return
                         }
 
@@ -142,8 +200,10 @@ final class ConversationalSearchRepository {
                                 print("     ├─ Imagen URL: \(product.imageUrl)")
                                 print("     ├─ Disponible: \(product.availability ? "Sí" : "No")")
                                 print("     ├─ Branch Name: \(suggestion.branchName ?? "N/A")")
-                                print("     ├─ Branch Avatar: \(suggestion.branchAvatarUrl ?? "N/A")")
-                                print("     ├─ Branch Address: \(suggestion.branchAddress ?? "N/A")")
+                                print(
+                                    "     ├─ Branch Avatar: \(suggestion.branchAvatarUrl ?? "N/A")")
+                                print(
+                                    "     ├─ Branch Address: \(suggestion.branchAddress ?? "N/A")")
                                 print("     ├─ Branch Phone: \(suggestion.branchPhone ?? "N/A")")
                                 print("     └─ Razón: \(suggestion.reason ?? "N/A")")
                             }
@@ -159,7 +219,9 @@ final class ConversationalSearchRepository {
                                 print("     ├─ Teléfono: \(branch.phone)")
                                 print("     ├─ Estado: \(branch.status)")
                                 print("     ├─ Avatar URL: \(branch.avatarUrl ?? "N/A")")
-                                print("     ├─ Coordenadas: [\(branch.coordinates.coordinates.map { String($0) }.joined(separator: ", "))]")
+                                print(
+                                    "     ├─ Coordenadas: [\(branch.coordinates.coordinates.map { String($0) }.joined(separator: ", "))]"
+                                )
                                 print("     └─ Razón: \(suggestion.reason ?? "N/A")")
                             }
                         }
@@ -210,8 +272,12 @@ final class ConversationalSearchRepository {
 
                         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
                         print("✅ [REPOSITORY] AIChatData creado exitosamente")
-                        print("📦 [REPOSITORY] Productos en AIChatData: \(chatData.productEntities.count)")
-                        print("🏪 [REPOSITORY] Branches en AIChatData: \(chatData.branchEntities.count)")
+                        print(
+                            "📦 [REPOSITORY] Productos en AIChatData: \(chatData.productEntities.count)"
+                        )
+                        print(
+                            "🏪 [REPOSITORY] Branches en AIChatData: \(chatData.branchEntities.count)"
+                        )
                         print("🎉 [REPOSITORY] Completando con SUCCESS")
                         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 
@@ -230,6 +296,47 @@ final class ConversationalSearchRepository {
                 }
             }
         }
+    }
+
+    private func mapLocalOutputToChatData(_ output: LocalAIAssistantOutput) -> AIChatData {
+        let products = output.products.map {
+            AIChatProductEntity(
+                id: $0.id,
+                name: $0.name,
+                description: $0.description,
+                price: $0.price,
+                currency: $0.currency,
+                imageUrl: $0.imageUrl,
+                availability: $0.availability,
+                branchName: $0.branchName,
+                branchAvatarUrl: $0.branchAvatarUrl,
+                branchAddress: $0.branchAddress,
+                branchPhone: $0.branchPhone,
+                reason: $0.reason
+            )
+        }
+
+        let branches = output.branches.map {
+            AIChatBranchEntity(
+                id: $0.id,
+                name: $0.name,
+                address: $0.address,
+                phone: $0.phone,
+                status: $0.status,
+                avatarUrl: $0.avatarUrl,
+                coordinates: AIChatCoordinates(
+                    type: $0.coordinatesType, coordinates: $0.coordinates),
+                reason: $0.reason
+            )
+        }
+
+        return AIChatData(
+            responseType: output.responseType,
+            aiText: output.aiText,
+            productEntities: products,
+            branchEntities: branches,
+            confidence: output.confidence
+        )
     }
 
     private func parseBackendError(from errors: [GraphQLError]) -> AIChatBackendError? {
@@ -403,8 +510,10 @@ extension AIChatBranchEntity {
         let etaMinutes = Int.random(in: 15...45)
 
         // URLs de placeholder para logo y banner
-        let logoUrl = "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&h=200&fit=crop&crop=center"
-        let bannerUrl = "https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&h=200&fit=crop&crop=center"
+        let logoUrl =
+            "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=200&h=200&fit=crop&crop=center"
+        let bannerUrl =
+            "https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&h=200&fit=crop&crop=center"
 
         return Store(
             id: id,
@@ -413,7 +522,7 @@ extension AIChatBranchEntity {
             logoUrl: logoUrl,
             bannerUrl: bannerUrl,
             address: address,
-            rating: nil // Por ahora sin rating
+            rating: nil  // Por ahora sin rating
         )
     }
 }

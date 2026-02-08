@@ -735,6 +735,8 @@ struct TransferPaymentView: View {
         let restaurantCoord = CLLocationCoordinate2D(latitude: 23.1150, longitude: -82.3680)
         let deliveryCoord = CLLocationCoordinate2D(latitude: 23.1136, longitude: -82.3666)
 
+        let userAvatarUrl = AuthManager.shared.currentUser?.avatarUrl
+
         OrderManager.shared.startOrder(
             products: testProducts,
             totalAmount: order.total,
@@ -743,7 +745,10 @@ struct TransferPaymentView: View {
             deliveryCoordinates: deliveryCoord,
             restaurantLocation: order.storeName,
             restaurantCoordinates: restaurantCoord,
-            paymentMethod: "Transferencia"
+            paymentMethod: "Transferencia",
+            paymentCompleted: true,
+            storeImageUrl: order.storeImageUrl,
+            userAvatarUrl: userAvatarUrl
         )
 
         print(

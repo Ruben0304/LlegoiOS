@@ -2,6 +2,7 @@ import ActivityKit
 import Combine
 import CoreLocation
 import Foundation
+import UIKit
 import UserNotifications
 
 // MARK: - Delivery Status Enum
@@ -54,8 +55,11 @@ struct ActiveOrder: Codable, Identifiable {
     let restaurantCoordinates: LocationCoordinate
     let estimatedDeliveryMinutes: Int
     let paymentMethod: String
+    let paymentCompleted: Bool
     let createdAt: Date
     var status: DeliveryStatus
+    let storeImageUrl: String?
+    let userAvatarUrl: String?
 
     struct OrderProduct: Codable, Identifiable {
         let id: String
@@ -126,7 +130,10 @@ class OrderManager: ObservableObject {
         deliveryCoordinates: CLLocationCoordinate2D,
         restaurantLocation: String,
         restaurantCoordinates: CLLocationCoordinate2D,
-        paymentMethod: String
+        paymentMethod: String,
+        paymentCompleted: Bool = false,
+        storeImageUrl: String? = nil,
+        userAvatarUrl: String? = nil
     ) {
         // Crear el pedido
         let order = ActiveOrder(
@@ -146,8 +153,11 @@ class OrderManager: ObservableObject {
             ),
             estimatedDeliveryMinutes: 1,  // 30 segundos de simulación
             paymentMethod: paymentMethod,
+            paymentCompleted: paymentCompleted,
             createdAt: Date(),
-            status: .pending
+            status: .pending,
+            storeImageUrl: storeImageUrl,
+            userAvatarUrl: userAvatarUrl
         )
 
         currentOrder = order
@@ -368,18 +378,16 @@ class OrderManager: ObservableObject {
     // MARK: - Live Activity Management
 
     private func startLiveActivity(for order: ActiveOrder) {
+        Task { [weak self] in
+            await self?.startLiveActivityAsync(for: order)
+        }
+    }
+
+    private func startLiveActivityAsync(for order: ActiveOrder) async {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
             print("⚠️ Live Activities no están habilitadas")
             return
         }
-
-        let attributes = DeliveryActivityAttributes(
-            orderID: order.id,
-            storeName: order.restaurantLocation,
-            storeIcon: "storefront.fill",
-            totalAmount: "\(order.currency) \(String(format: "%.2f", order.totalAmount))",
-            deliveryAddress: order.deliveryLocation
-        )
 
         let initialState = DeliveryActivityAttributes.ContentState(
             status: orderStatus.rawValue,
@@ -390,17 +398,148 @@ class OrderManager: ObservableObject {
             estimatedMinutes: estimatedMinutesRemaining
         )
 
+        let storeImageDataLarge = await fetchThumbnailData(
+            from: order.storeImageUrl, maxSide: 28, maxBytes: 1800)
+        let storeImageDataSmall = await fetchThumbnailData(
+            from: order.storeImageUrl, maxSide: 18, maxBytes: 700)
+        let userAvatarDataSmall = await fetchThumbnailData(
+            from: order.userAvatarUrl, maxSide: 16, maxBytes: 500)
+
+        print(
+            "🖼️ LiveActivity payload images storeLarge=\(storeImageDataLarge?.count ?? 0)B storeSmall=\(storeImageDataSmall?.count ?? 0)B userSmall=\(userAvatarDataSmall?.count ?? 0)B"
+        )
+
+        // Intento 1: logo tienda (prioridad) + avatar usuario.
+        var attributes = DeliveryActivityAttributes(
+            orderID: order.id,
+            storeName: trimmedForActivity(order.restaurantLocation, max: 56),
+            storeIcon: "storefront.fill",
+            storeImageUrl: nil,
+            userAvatarUrl: nil,
+            storeImageData: storeImageDataLarge,
+            userAvatarData: userAvatarDataSmall,
+            totalAmount: "\(order.currency) \(String(format: "%.2f", order.totalAmount))",
+            deliveryAddress: trimmedForActivity(order.deliveryLocation, max: 72)
+        )
+
+        if let activity = tryRequestLiveActivity(attributes: attributes, state: initialState) {
+            currentActivity = activity
+            print("🟢 Live Activity iniciada (logo + avatar): \(activity.id)")
+            return
+        }
+
+        // Intento 2: solo logo de tienda en tamaño pequeño.
+        attributes = DeliveryActivityAttributes(
+            orderID: order.id,
+            storeName: trimmedForActivity(order.restaurantLocation, max: 48),
+            storeIcon: "storefront.fill",
+            storeImageUrl: nil,
+            userAvatarUrl: nil,
+            storeImageData: storeImageDataSmall,
+            userAvatarData: nil,
+            totalAmount: "\(order.currency) \(String(format: "%.2f", order.totalAmount))",
+            deliveryAddress: trimmedForActivity(order.deliveryLocation, max: 60)
+        )
+        if let activity = tryRequestLiveActivity(attributes: attributes, state: initialState) {
+            currentActivity = activity
+            print("🟢 Live Activity iniciada (solo logo tienda): \(activity.id)")
+            return
+        }
+
+        // Intento 3: payload mínimo sin imágenes.
+        attributes = DeliveryActivityAttributes(
+            orderID: order.id,
+            storeName: trimmedForActivity(order.restaurantLocation, max: 36),
+            storeIcon: "storefront.fill",
+            storeImageUrl: nil,
+            userAvatarUrl: nil,
+            storeImageData: nil,
+            userAvatarData: nil,
+            totalAmount: "\(order.currency) \(String(format: "%.2f", order.totalAmount))",
+            deliveryAddress: trimmedForActivity(order.deliveryLocation, max: 48)
+        )
+        if let activity = tryRequestLiveActivity(attributes: attributes, state: initialState) {
+            currentActivity = activity
+            print("🟢 Live Activity iniciada (sin imágenes fallback): \(activity.id)")
+            return
+        }
+
+        print(
+            "❌ Error iniciando Live Activity: todos los intentos fallaron por tamaño u otro error")
+    }
+
+    private func tryRequestLiveActivity(
+        attributes: DeliveryActivityAttributes,
+        state: DeliveryActivityAttributes.ContentState
+    ) -> Activity<DeliveryActivityAttributes>? {
         do {
-            let activity = try Activity<DeliveryActivityAttributes>.request(
+            return try Activity<DeliveryActivityAttributes>.request(
                 attributes: attributes,
-                content: .init(state: initialState, staleDate: nil),
+                content: .init(state: state, staleDate: nil),
                 pushType: nil
             )
-            currentActivity = activity
-            print("🟢 Live Activity iniciada: \(activity.id)")
         } catch {
-            print("❌ Error iniciando Live Activity: \(error.localizedDescription)")
+            print("⚠️ Live Activity request falló: \(error.localizedDescription)")
+            return nil
         }
+    }
+
+    private func fetchThumbnailData(from urlString: String?, maxSide: CGFloat, maxBytes: Int) async
+        -> Data?
+    {
+        guard
+            let urlString,
+            !urlString.isEmpty,
+            let url = URL(string: urlString)
+        else {
+            return nil
+        }
+
+        do {
+            var request = URLRequest(url: url)
+            if let token = AuthManager.shared.getAccessToken(), !token.isEmpty {
+                request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            }
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard
+                let http = response as? HTTPURLResponse,
+                (200..<300).contains(http.statusCode),
+                let image = UIImage(data: data)
+            else {
+                return nil
+            }
+
+            let resized = resizeImage(image, maxSide: maxSide)
+            guard var compressed = resized.jpegData(compressionQuality: 0.45) else {
+                return nil
+            }
+            if compressed.count > maxBytes {
+                guard let smaller = resized.jpegData(compressionQuality: 0.25) else {
+                    return nil
+                }
+                compressed = smaller
+            }
+            return compressed.count <= maxBytes ? compressed : nil
+        } catch {
+            return nil
+        }
+    }
+
+    private func resizeImage(_ image: UIImage, maxSide: CGFloat) -> UIImage {
+        let size = image.size
+        guard size.width > 0, size.height > 0 else { return image }
+        let scale = min(maxSide / size.width, maxSide / size.height, 1.0)
+        let target = CGSize(width: size.width * scale, height: size.height * scale)
+        let renderer = UIGraphicsImageRenderer(size: target)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: target))
+        }
+    }
+
+    private func trimmedForActivity(_ value: String, max: Int) -> String {
+        guard value.count > max else { return value }
+        let index = value.index(value.startIndex, offsetBy: max)
+        return String(value[..<index])
     }
 
     private func updateLiveActivity(progress: Double) {
@@ -539,8 +678,11 @@ extension OrderManager {
             ),
             estimatedDeliveryMinutes: 2,
             paymentMethod: "Efectivo CUP",
+            paymentCompleted: true,
             createdAt: Date(),
-            status: .pending
+            status: .pending,
+            storeImageUrl: nil,
+            userAvatarUrl: nil
         )
     }
 }

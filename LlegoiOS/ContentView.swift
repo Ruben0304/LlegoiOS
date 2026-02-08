@@ -77,7 +77,7 @@ struct MainAppView: View {
 
     // Determinar si hay un pedido activo
     private var hasActiveOrder: Bool {
-        orderManager.currentOrder != nil && orderManager.orderStatus != .idle
+        orderManager.currentOrder?.paymentCompleted == true && orderManager.orderStatus != .idle
             && orderManager.orderStatus != .cancelled && orderManager.orderStatus != .delivered
     }
 
@@ -85,7 +85,6 @@ struct MainAppView: View {
         ZStack {
             Group {
                 if #available(iOS 26.0, *) {
-
                     TabView {
                         Tab("Inicio", systemImage: "house") {
                             HomeView()
@@ -107,13 +106,11 @@ struct MainAppView: View {
                         }
 
                     }
-                    .tabViewBottomAccessory() {
-                        OrderTrackingCard(
-                            orderManager: orderManager,
-                            onTap: {
-                                showTrackingFullScreen = true
-                            }
-                        )
+                    .withTrackingAccessory(
+                        hasActiveOrder: hasActiveOrder,
+                        orderManager: orderManager
+                    ) {
+                        showTrackingFullScreen = true
                     }
                     // .searchToolbarBehavior(.minimize)
                     .tabBarMinimizeBehavior(.onScrollDown)
@@ -184,6 +181,11 @@ struct MainAppView: View {
                 }
             }
         }
+        .onChange(of: hasActiveOrder) { isActive in
+            if !isActive {
+                showTrackingFullScreen = false
+            }
+        }
         .onAppear {
             // Iniciar verificación periódica de actualizaciones
             appUpdateViewModel.startPeriodicCheck()
@@ -194,6 +196,27 @@ struct MainAppView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .navigateToHome)) { _ in
             selectedTab = 0
+        }
+    }
+}
+
+@available(iOS 26.0, *)
+extension View {
+    @ViewBuilder
+    fileprivate func withTrackingAccessory(
+        hasActiveOrder: Bool,
+        orderManager: OrderManager,
+        onTap: @escaping () -> Void
+    ) -> some View {
+        if hasActiveOrder {
+            self.tabViewBottomAccessory {
+                OrderTrackingCard(
+                    orderManager: orderManager,
+                    onTap: onTap
+                )
+            }
+        } else {
+            self
         }
     }
 }
