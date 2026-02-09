@@ -383,7 +383,7 @@ struct OnboardingVideoIntroPage: View {
     var body: some View {
         VStack {
             VStack(spacing: 12) {
-                HStack(spacing: 12) {
+                HStack(spacing: 4) {
                     Image("icon")
                         .resizable()
                         .scaledToFit()
@@ -392,14 +392,14 @@ struct OnboardingVideoIntroPage: View {
                         .shadow(color: .black.opacity(0.22), radius: 6, x: 0, y: 3)
 
                     Text(page.title)
-                        .font(.custom("AvenirNextCondensed-DemiBold", size: 48))
+                        .font(.system(size: 48, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
                         .kerning(0.4)
                         .multilineTextAlignment(.center)
                 }
 
                 Text(page.description)
-                    .font(.custom("AvenirNext-Medium", size: 17))
+                    .font(.system(size: 17, weight: .medium, design: .rounded))
                     .foregroundColor(Color.white.opacity(0.82))
                     .multilineTextAlignment(.center)
                     .lineSpacing(3)
