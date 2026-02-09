@@ -1,11 +1,14 @@
-import Foundation
 import Apollo
+import Foundation
 
 class MapRepository {
     private let apolloClient = ApolloClientManager.shared.apollo
 
     // Fetch all branches from GraphQL
-    func fetchBranches(businessId: String? = nil, radiusKm: Double? = nil, completion: @escaping @Sendable (Result<[MapBranchGraphQL], Error>) -> Void) {
+    func fetchBranches(
+        businessId: String? = nil, productCategoryId: String? = nil, radiusKm: Double? = nil,
+        completion: @escaping @Sendable (Result<[MapBranchGraphQL], Error>) -> Void
+    ) {
         // Capturar apolloClient antes del Task para evitar data races
         let client = apolloClient
 
@@ -18,9 +21,10 @@ class MapRepository {
                 first: 100,
                 after: .none,
                 businessId: businessId.map { .some($0) } ?? .none,
-                tipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) } ?? .none,
+                tipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) }
+                    ?? .none,
                 radiusKm: radiusKm.map { .some($0) } ?? .none,
-                productCategoryId: .none,
+                productCategoryId: productCategoryId.map { .some($0) } ?? .none,
                 jwt: jwt.map { .some($0) } ?? .none
             )
 
@@ -32,7 +36,12 @@ class MapRepository {
                         errors.forEach { error in
                             print("  - \(error.localizedDescription)")
                         }
-                        completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: "GraphQL errors occurred"])))
+                        completion(
+                            .failure(
+                                NSError(
+                                    domain: "GraphQL", code: -1,
+                                    userInfo: [NSLocalizedDescriptionKey: "GraphQL errors occurred"]
+                                )))
                         return
                     }
 

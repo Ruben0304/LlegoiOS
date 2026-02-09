@@ -5,8 +5,8 @@
 # Con JWT retorna todas las secciones personalizadas disponibles.
 # `first` controla cuántos productos por sección (max 50).
 # =============================================================
-query GetFeed($jwt: String, $first: Int = 10, $sections: [String!]) {
-  getFeed(first: $first, jwt: $jwt, sections: $sections) {
+query GetFeed($jwt: String, $first: Int = 10, $sections: [String!], $branchTipo: String!, $productCategoryId: String) {
+  getFeed(first: $first, jwt: $jwt, sections: $sections, branchTipo: $branchTipo, productCategoryId: $productCategoryId) {
     sections {
       sectionId
       title
@@ -22,6 +22,7 @@ query GetFeed($jwt: String, $first: Int = 10, $sections: [String!]) {
         availability
         score
         imageUrl
+        categoryId
         categoryName
         branch {
           id

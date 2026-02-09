@@ -507,6 +507,12 @@ struct HomeView: View {
                 branchTypeManager.setTypeFromCategoryIndex(currentIndex)
                 // Load wallet balance
                 walletManager.loadBalance()
+                // DEBUG: Print full JWT token on Home screen appear
+                if let jwt = authManager.getAccessToken() {
+                    print("🔐 JWT (FULL): \(jwt)")
+                } else {
+                    print("🔐 JWT not available (no session)")
+                }
             }
             .onDisappear {
                 pressSoundStopTimer?.invalidate()
@@ -704,3 +710,4 @@ struct Feature: Identifiable {
     let title: String
     let subtitle: String
 }
+

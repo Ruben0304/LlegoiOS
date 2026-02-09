@@ -9,13 +9,14 @@ public extension LlegoAPI {
     public static let operationName: String = "SearchBranches"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query SearchBranches($query: String!, $first: Int! = 20, $after: String, $useVectorSearch: Boolean, $radiusKm: Float, $jwt: String) { searchBranches( query: $query first: $first after: $after useVectorSearch: $useVectorSearch radiusKm: $radiusKm jwt: $jwt ) { __typename edges { __typename node { __typename id businessId name address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius createdAt score distanceKm products(limit: 4, availableOnly: true) { __typename id name price currency imageUrl availability } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
+        #"query SearchBranches($query: String!, $first: Int! = 20, $after: String, $useVectorSearch: Boolean, $productCategoryId: String, $radiusKm: Float, $jwt: String) { searchBranches( query: $query first: $first after: $after useVectorSearch: $useVectorSearch productCategoryId: $productCategoryId radiusKm: $radiusKm jwt: $jwt ) { __typename edges { __typename node { __typename id businessId name address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius createdAt score distanceKm products(limit: 4, availableOnly: true) { __typename id name price currency imageUrl availability } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
       ))
 
     public var query: String
     public var first: Int32
     public var after: GraphQLNullable<String>
     public var useVectorSearch: GraphQLNullable<Bool>
+    public var productCategoryId: GraphQLNullable<String>
     public var radiusKm: GraphQLNullable<Double>
     public var jwt: GraphQLNullable<String>
 
@@ -24,6 +25,7 @@ public extension LlegoAPI {
       first: Int32 = 20,
       after: GraphQLNullable<String>,
       useVectorSearch: GraphQLNullable<Bool>,
+      productCategoryId: GraphQLNullable<String>,
       radiusKm: GraphQLNullable<Double>,
       jwt: GraphQLNullable<String>
     ) {
@@ -31,6 +33,7 @@ public extension LlegoAPI {
       self.first = first
       self.after = after
       self.useVectorSearch = useVectorSearch
+      self.productCategoryId = productCategoryId
       self.radiusKm = radiusKm
       self.jwt = jwt
     }
@@ -40,6 +43,7 @@ public extension LlegoAPI {
       "first": first,
       "after": after,
       "useVectorSearch": useVectorSearch,
+      "productCategoryId": productCategoryId,
       "radiusKm": radiusKm,
       "jwt": jwt
     ] }
@@ -55,6 +59,7 @@ public extension LlegoAPI {
           "first": .variable("first"),
           "after": .variable("after"),
           "useVectorSearch": .variable("useVectorSearch"),
+          "productCategoryId": .variable("productCategoryId"),
           "radiusKm": .variable("radiusKm"),
           "jwt": .variable("jwt")
         ]),

@@ -10,6 +10,7 @@ struct StoreDetailView: View {
     @StateObject private var branchLikesManager = BranchLikesManager.shared
     @Environment(\.dismiss) private var dismiss
     @State private var region: MKCoordinateRegion
+    @State private var selectedProductId: String?
 
     // Default images - Empty strings to trigger AsyncImage failure -> shows generic assets
     private let defaultLogoUrl = ""
@@ -157,7 +158,7 @@ struct StoreDetailView: View {
                                     }
                                 }
                                 .frame(width: geometry.size.width, height: 280)
-                                
+
                                 // Gradient overlay for better contrast
                                 LinearGradient(
                                     colors: [Color.clear, Color.black.opacity(0.3)],
@@ -165,7 +166,7 @@ struct StoreDetailView: View {
                                     endPoint: .bottom
                                 )
                                 .frame(width: geometry.size.width, height: 280)
-                                
+
                                 // Profile Logo (overlapping)
                                 HStack(spacing: 16) {
                                     AsyncImage(url: URL(string: store.logoUrl)) { phase in
@@ -217,7 +218,7 @@ struct StoreDetailView: View {
                                                 .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
                                         }
                                     }
-                                    
+
                                     Spacer()
                                 }
                                 .padding(.horizontal, 20)
@@ -241,13 +242,13 @@ struct StoreDetailView: View {
                                                 .font(.system(size: 30, weight: .bold))
                                                 .foregroundColor(.black)
                                                 .lineLimit(2)
-                                            
+
                                             if let address = store.address {
                                                 HStack(spacing: 6) {
                                                     Image(systemName: "mappin.circle.fill")
                                                         .font(.system(size: 14))
                                                         .foregroundColor(.llegoPrimary)
-                                                    
+
                                                     Text(address)
                                                         .font(.system(size: 15, weight: .regular))
                                                         .foregroundColor(.secondary)
@@ -255,21 +256,21 @@ struct StoreDetailView: View {
                                                 }
                                             }
                                         }
-                                        
+
                                         Spacer()
-                                        
+
                                         if let rating = store.rating {
                                             VStack(spacing: 4) {
                                                 HStack(spacing: 4) {
                                                     Image(systemName: "star.fill")
                                                         .font(.system(size: 18))
                                                         .foregroundColor(.yellow)
-                                                    
+
                                                     Text(String(format: "%.1f", rating))
                                                         .font(.system(size: 22, weight: .bold))
                                                         .foregroundColor(.black)
                                                 }
-                                                
+
                                                 Text("Rating")
                                                     .font(.system(size: 11, weight: .medium))
                                                     .foregroundColor(.secondary)
@@ -284,13 +285,13 @@ struct StoreDetailView: View {
                                         }
                                     }
                                     .padding(.top, 10)
-                                    
+
                                     // Delivery Time Badge
                                     HStack(spacing: 8) {
                                         Image(systemName: "bolt.fill")
                                             .font(.system(size: 14))
                                             .foregroundColor(.llegoPrimary)
-                                        
+
                                         Text("Entrega en \(store.etaMinutes) min")
                                             .font(.system(size: 15, weight: .semibold))
                                             .foregroundColor(.llegoPrimary)
@@ -304,7 +305,7 @@ struct StoreDetailView: View {
                                 }
                                 .padding(.horizontal, 20)
                                 .padding(.bottom, 24)
-                                
+
                                 // Social Links Section - Only show if has social media
                                 if let socialMedia = viewModel.socialMedia, !socialMedia.isEmpty {
                                     VStack(alignment: .leading, spacing: 16) {
@@ -344,7 +345,7 @@ struct StoreDetailView: View {
                                     .padding(.horizontal, 20)
                                     .padding(.bottom, 24)
                                 }
-                                
+
                                 // Map Section - Always show, with message if no coordinates
                                 VStack(alignment: .leading, spacing: 16) {
                                     HStack {
@@ -410,9 +411,9 @@ struct StoreDetailView: View {
                                 )
                                 .padding(.horizontal, 20)
                                 .padding(.bottom, 24)
-                                
 
-                                
+
+
                                 // Branches Section - Redesigned
                                 if !viewModel.siblingBranches.isEmpty {
                                     VStack(alignment: .leading, spacing: 16) {
@@ -449,11 +450,11 @@ struct StoreDetailView: View {
                                 }
 
                                 // Products Section - Show branch products
-                                if !viewModel.branchProducts.isEmpty {
+                                if viewModel.isLoadingProducts || !viewModel.branchProducts.isEmpty {
                                     VStack(alignment: .leading, spacing: 16) {
                                         HStack {
                                             VStack(alignment: .leading, spacing: 4) {
-                                                Text("Productos")
+                                                Text("Nuestros productos")
                                                     .font(.system(size: 22, weight: .bold))
                                                     .foregroundColor(.black)
 
@@ -485,9 +486,15 @@ struct StoreDetailView: View {
                                                 Spacer()
                                             }
                                         } else {
-                                            ScrollView(.horizontal, showsIndicators: false) {
-                                                HStack(spacing: 16) {
-                                                    ForEach(viewModel.branchProducts, id: \.id) { product in
+                                            LazyVGrid(
+                                                columns: [
+                                                    GridItem(.flexible(), spacing: 16),
+                                                    GridItem(.flexible(), spacing: 16)
+                                                ],
+                                                alignment: .center,
+                                                spacing: 20
+                                            ) {
+                                                ForEach(Array(viewModel.branchProducts.prefix(4)), id: \.id) { product in
                                                         ProductCard(
                                                             product: Product(
                                                                 id: product.id,
@@ -499,13 +506,16 @@ struct StoreDetailView: View {
                                                             ),
                                                             count: .constant(0),
                                                             onIncrement: {},
-                                                            onDecrement: {}
+                                                            onDecrement: {},
+                                                            onProductTap: {
+                                                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                                                selectedProductId = product.id
+                                                            }
                                                         )
-                                                        .frame(width: 180)
-                                                    }
                                                 }
-                                                .padding(.horizontal, 20)
                                             }
+                                            .padding(.horizontal, 20)
+                                            .padding(.top, 4)
                                         }
                                     }
                                     .padding(.bottom, 40)
@@ -528,7 +538,7 @@ struct StoreDetailView: View {
                         dismiss()
                     })
                 }
-                
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         toggleBranchLike()
@@ -543,6 +553,9 @@ struct StoreDetailView: View {
                 // ALWAYS load full details from backend, even if we have initialStore
                 // This ensures we get products, siblings, business info, etc.
                 viewModel.loadBranchDetail(id: storeId)
+            }
+            .fullScreenCover(item: $selectedProductId) { productId in
+                ProductDetailView(productId: productId)
             }
         }
     }
@@ -612,7 +625,7 @@ struct MapLocation: Identifiable {
 struct SiblingBranchCard: View {
     let branch: BranchGraphQL
     let eta: Int
-    
+
     var body: some View {
         HStack(spacing: 0) {
             // Image
@@ -638,14 +651,14 @@ struct SiblingBranchCard: View {
             }
             .frame(width: 80, height: 80)
             .clipped()
-            
+
             // Info Content
             VStack(alignment: .leading, spacing: 6) {
                 Text(branch.name)
                     .font(.system(size: 15, weight: .bold))
                     .foregroundColor(.black)
                     .lineLimit(1)
-                
+
                 if !branch.address.isEmpty {
                     HStack(spacing: 4) {
                         Image(systemName: "mappin.and.ellipse")
@@ -657,7 +670,7 @@ struct SiblingBranchCard: View {
                             .lineLimit(1)
                     }
                 }
-                
+
                 HStack(spacing: 4) {
                     Image(systemName: "bolt.fill")
                         .font(.system(size: 10))
@@ -673,9 +686,9 @@ struct SiblingBranchCard: View {
             }
             .padding(12)
             .frame(height: 80)
-            
+
             Spacer()
-            
+
             // Chevron
             Image(systemName: "chevron.right")
                 .font(.system(size: 12, weight: .semibold))

@@ -9,6 +9,7 @@ struct CategoryChip: View {
     let isFeatured: Bool
     let onTap: () -> Void
     var accentColor: Color = Color.llegoPrimary
+    var isTinted: Bool = true
 
     @State private var gradientAngle: Angle = .degrees(0)
     @Environment(\.colorScheme) private var colorScheme
@@ -19,9 +20,11 @@ struct CategoryChip: View {
                 Image(systemName: isSelected ? "checkmark" : icon)
                     .fontWeight(.semibold)
                     .font(.system(size: 14))
+                    .foregroundColor(isTinted ? .white : .black)
                 Text(title)
                     .fontWeight(.semibold)
                     .font(.system(size: 14))
+                    .foregroundColor(isTinted ? .white : .black)
             }
             .padding(.horizontal, 3)
             .padding(.vertical, 2)
@@ -30,7 +33,7 @@ struct CategoryChip: View {
         .buttonBorderShape(.capsule)
         .clipShape(Capsule())
         .compositingGroup()
-        .tint(accentColor)
+        .tint(isTinted ? accentColor : .clear)
         .overlay {
             if isSelected {
                 Capsule()

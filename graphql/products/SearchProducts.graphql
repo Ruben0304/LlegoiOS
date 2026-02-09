@@ -1,5 +1,5 @@
-query SearchProducts($query: String!, $first: Int! = 20, $after: String, $useVectorSearch: Boolean, $branchTipo: BranchTipo, $radiusKm: Float, $jwt: String) {
-  searchProducts(query: $query, first: $first, after: $after, useVectorSearch: $useVectorSearch, branchTipo: $branchTipo, radiusKm: $radiusKm, jwt: $jwt) {
+query SearchProducts($query: String!, $first: Int! = 20, $after: String, $useVectorSearch: Boolean, $branchTipo: BranchTipo, $categoryId: String, $radiusKm: Float, $jwt: String) {
+  searchProducts(query: $query, first: $first, after: $after, useVectorSearch: $useVectorSearch, branchTipo: $branchTipo, categoryId: $categoryId, radiusKm: $radiusKm, jwt: $jwt) {
     edges {
       node {
         id

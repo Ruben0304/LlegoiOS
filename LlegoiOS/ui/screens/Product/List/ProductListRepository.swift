@@ -1,36 +1,47 @@
-import Foundation
 import Apollo
 import Combine
+import Foundation
 
 class ProductListRepository {
     private let apolloClient = ApolloClientManager.shared.apollo
 
     // Fetch all products from GraphQL with cursor pagination
-    @MainActor func fetchProducts(first: Int = 20, after: String? = nil, branchId: String? = nil, radiusKm: Double? = nil, completion: @escaping @Sendable (Result<(products: [ProductGraphQL], pageInfo: PageInfo), Error>) -> Void) {
+    @MainActor func fetchProducts(
+        first: Int = 20, after: String? = nil, branchId: String? = nil, categoryId: String? = nil,
+        radiusKm: Double? = nil,
+        completion:
+            @escaping @Sendable (Result<(products: [ProductGraphQL], pageInfo: PageInfo), Error>) ->
+            Void
+    ) {
         // Obtener JWT si está disponible
         let jwt = AuthManager.shared.getAccessToken()
 
         // Obtener tipo de branch global
         let branchType = BranchTypeManager.shared.selectedType.rawValue
-        
-        print("📦 fetchProducts - branchId: \(branchId ?? "nil"), branchType: \(branchType), first: \(first)")
+
+        print(
+            "📦 fetchProducts - branchId: \(branchId ?? "nil"), branchType: \(branchType), first: \(first)"
+        )
 
         let query = LlegoAPI.GetProductsQuery(
             first: Int32(first),
             after: after.map { .some($0) } ?? .none,
             branchId: branchId.map { .some($0) } ?? .none,
-            categoryId: .none,
+            categoryId: categoryId.map { .some($0) } ?? .none,
             availableOnly: .none,
-            branchTipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) } ?? .none,
+            branchTipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) }
+                ?? .none,
             radiusKm: radiusKm.map { .some($0) } ?? .none,
             jwt: jwt.map { .some($0) } ?? .none
         )
-        
+
         // Usar política de caché diferente si hay branchId específico
         // Para evitar mostrar datos incorrectos del caché
-        let cachePolicy: CachePolicy_v1 = branchId != nil ? .fetchIgnoringCacheData : .returnCacheDataAndFetch
-        
-        apolloClient.fetch(query: query, cachePolicy: cachePolicy) { [apolloClient = self.apolloClient] result in
+        let cachePolicy: CachePolicy_v1 =
+            branchId != nil ? .fetchIgnoringCacheData : .returnCacheDataAndFetch
+
+        apolloClient.fetch(query: query, cachePolicy: cachePolicy) {
+            [apolloClient = self.apolloClient] result in
             switch result {
             case .success(let graphQLResult):
                 if let errors = graphQLResult.errors {
@@ -38,13 +49,19 @@ class ProductListRepository {
                     errors.forEach { error in
                         print("  - \(error.localizedDescription)")
                     }
-                    completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: "GraphQL errors occurred"])))
+                    completion(
+                        .failure(
+                            NSError(
+                                domain: "GraphQL", code: -1,
+                                userInfo: [NSLocalizedDescriptionKey: "GraphQL errors occurred"])))
                     return
                 }
 
                 guard let data = graphQLResult.data else {
                     print("⚠️ No products data received")
-                    let emptyPageInfo = PageInfo(hasNextPage: false, hasPreviousPage: false, startCursor: nil, endCursor: nil, totalCount: 0)
+                    let emptyPageInfo = PageInfo(
+                        hasNextPage: false, hasPreviousPage: false, startCursor: nil,
+                        endCursor: nil, totalCount: 0)
                     completion(.success((products: [], pageInfo: emptyPageInfo)))
                     return
                 }
@@ -74,7 +91,9 @@ class ProductListRepository {
                     totalCount: Int(data.products.pageInfo.totalCount)
                 )
 
-                print("✅ Fetched \(mappedProducts.count) products from GraphQL for Shop (hasNextPage: \(pageInfo.hasNextPage), totalCount: \(pageInfo.totalCount))")
+                print(
+                    "✅ Fetched \(mappedProducts.count) products from GraphQL for Shop (hasNextPage: \(pageInfo.hasNextPage), totalCount: \(pageInfo.totalCount))"
+                )
                 completion(.success((products: mappedProducts, pageInfo: pageInfo)))
 
             case .failure(let error):
@@ -82,16 +101,18 @@ class ProductListRepository {
 
                 // Si es error de red (offline), intentar cargar SOLO desde caché
                 if let nsError = error as NSError?,
-                   nsError.domain == NSURLErrorDomain &&
-                   (nsError.code == NSURLErrorNotConnectedToInternet ||
-                    nsError.code == NSURLErrorTimedOut ||
-                    nsError.code == NSURLErrorCannotConnectToHost ||
-                    nsError.code == NSURLErrorNetworkConnectionLost) {
+                    nsError.domain == NSURLErrorDomain
+                        && (nsError.code == NSURLErrorNotConnectedToInternet
+                            || nsError.code == NSURLErrorTimedOut
+                            || nsError.code == NSURLErrorCannotConnectToHost
+                            || nsError.code == NSURLErrorNetworkConnectionLost)
+                {
 
                     print("🔄 Sin conexión - Intentando cargar productos desde caché...")
 
                     // Intentar cargar SOLO desde caché (sin red)
-                    apolloClient.fetch(query: query, cachePolicy: .returnCacheDataDontFetch) { cacheResult in
+                    apolloClient.fetch(query: query, cachePolicy: .returnCacheDataDontFetch) {
+                        cacheResult in
                         switch cacheResult {
                         case .success(let graphQLResult):
                             if let data = graphQLResult.data {
@@ -120,16 +141,22 @@ class ProductListRepository {
                                     totalCount: Int(data.products.pageInfo.totalCount)
                                 )
 
-                                print("✅ Cargados \(mappedProducts.count) productos desde caché (offline)")
+                                print(
+                                    "✅ Cargados \(mappedProducts.count) productos desde caché (offline)"
+                                )
                                 completion(.success((products: mappedProducts, pageInfo: pageInfo)))
                             } else {
                                 print("⚠️ No hay datos de productos en caché")
-                                let emptyPageInfo = PageInfo(hasNextPage: false, hasPreviousPage: false, startCursor: nil, endCursor: nil, totalCount: 0)
+                                let emptyPageInfo = PageInfo(
+                                    hasNextPage: false, hasPreviousPage: false, startCursor: nil,
+                                    endCursor: nil, totalCount: 0)
                                 completion(.success((products: [], pageInfo: emptyPageInfo)))
                             }
                         case .failure:
                             print("❌ No hay productos en caché")
-                            let emptyPageInfo = PageInfo(hasNextPage: false, hasPreviousPage: false, startCursor: nil, endCursor: nil, totalCount: 0)
+                            let emptyPageInfo = PageInfo(
+                                hasNextPage: false, hasPreviousPage: false, startCursor: nil,
+                                endCursor: nil, totalCount: 0)
                             completion(.success((products: [], pageInfo: emptyPageInfo)))
                         }
                     }
@@ -142,7 +169,13 @@ class ProductListRepository {
     }
 
     // Search products with vector search (with automatic fallback to text search)
-    @MainActor func searchProducts(query: String, first: Int = 20, after: String? = nil, branchId: String? = nil, useVectorSearch: Bool = true, radiusKm: Double? = nil, completion: @escaping @Sendable (Result<(products: [ProductGraphQL], pageInfo: PageInfo), Error>) -> Void) {
+    @MainActor func searchProducts(
+        query: String, first: Int = 20, after: String? = nil, branchId: String? = nil,
+        categoryId: String? = nil, useVectorSearch: Bool = true, radiusKm: Double? = nil,
+        completion:
+            @escaping @Sendable (Result<(products: [ProductGraphQL], pageInfo: PageInfo), Error>) ->
+            Void
+    ) {
         // Obtener JWT si está disponible
         let jwt = AuthManager.shared.getAccessToken()
 
@@ -154,12 +187,15 @@ class ProductListRepository {
             first: Int32(first),
             after: after.map { .some($0) } ?? .none,
             useVectorSearch: .some(useVectorSearch),
-            branchTipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) } ?? .none,
+            branchTipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) }
+                ?? .none,
+            categoryId: categoryId.map { .some($0) } ?? .none,
             radiusKm: radiusKm.map { .some($0) } ?? .none,
             jwt: jwt.map { .some($0) } ?? .none
         )
 
-        apolloClient.fetch(query: searchQuery, cachePolicy: .fetchIgnoringCacheData) { [apolloClient = self.apolloClient] result in
+        apolloClient.fetch(query: searchQuery, cachePolicy: .fetchIgnoringCacheData) {
+            [apolloClient = self.apolloClient] result in
             switch result {
             case .success(let graphQLResult):
                 if let errors = graphQLResult.errors {
@@ -174,16 +210,23 @@ class ProductListRepository {
                     }
 
                     if isRateLimitError {
-                        print("⏱️ RATE LIMIT DETECTED - Backend ha excedido el límite de búsquedas por minuto")
+                        print(
+                            "⏱️ RATE LIMIT DETECTED - Backend ha excedido el límite de búsquedas por minuto"
+                        )
                         print("⏱️ Límite: 10 búsquedas/minuto")
                         print("⏱️ Sugerencia: Espera unos segundos antes de realizar otra búsqueda")
                         print("💡 Recomendación: El usuario debe esperar aproximadamente 1 minuto")
-                        
-                        completion(.failure(NSError(
-                            domain: "RateLimit",
-                            code: 429,
-                            userInfo: [NSLocalizedDescriptionKey: "Demasiadas búsquedas. Por favor espera un momento e intenta de nuevo."]
-                        )))
+
+                        completion(
+                            .failure(
+                                NSError(
+                                    domain: "RateLimit",
+                                    code: 429,
+                                    userInfo: [
+                                        NSLocalizedDescriptionKey:
+                                            "Demasiadas búsquedas. Por favor espera un momento e intenta de nuevo."
+                                    ]
+                                )))
                         return
                     }
 
@@ -195,40 +238,64 @@ class ProductListRepository {
                             first: Int32(first),
                             after: after.map { .some($0) } ?? .none,
                             useVectorSearch: .some(false),
-                            branchTipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) } ?? .none,
+                            branchTipo: LlegoAPI.BranchTipo(rawValue: branchType).map {
+                                .some(GraphQLEnum($0))
+                            } ?? .none,
+                            categoryId: categoryId.map { .some($0) } ?? .none,
                             radiusKm: radiusKm.map { .some($0) } ?? .none,
                             jwt: jwt.map { .some($0) } ?? .none
                         )
 
-                        apolloClient.fetch(query: textSearchQuery, cachePolicy: .fetchIgnoringCacheData) { fallbackResult in
+                        apolloClient.fetch(
+                            query: textSearchQuery, cachePolicy: .fetchIgnoringCacheData
+                        ) { fallbackResult in
                             switch fallbackResult {
                             case .success(let fallbackGraphQLResult):
                                 if let fallbackErrors = fallbackGraphQLResult.errors {
                                     print("❌ Text search also failed:")
-                                    fallbackErrors.forEach { print("  - \($0.localizedDescription)") }
-                                    
+                                    fallbackErrors.forEach {
+                                        print("  - \($0.localizedDescription)")
+                                    }
+
                                     // Check rate limit in fallback too
                                     let isFallbackRateLimit = fallbackErrors.contains { error in
-                                        error.localizedDescription.lowercased().contains("rate limit")
+                                        error.localizedDescription.lowercased().contains(
+                                            "rate limit")
                                     }
-                                    
+
                                     if isFallbackRateLimit {
                                         print("⏱️ RATE LIMIT en text search también")
-                                        print("💡 El backend está limitando las búsquedas - espera 1 minuto")
-                                        completion(.failure(NSError(
-                                            domain: "RateLimit",
-                                            code: 429,
-                                            userInfo: [NSLocalizedDescriptionKey: "Demasiadas búsquedas. Por favor espera un momento e intenta de nuevo."]
-                                        )))
+                                        print(
+                                            "💡 El backend está limitando las búsquedas - espera 1 minuto"
+                                        )
+                                        completion(
+                                            .failure(
+                                                NSError(
+                                                    domain: "RateLimit",
+                                                    code: 429,
+                                                    userInfo: [
+                                                        NSLocalizedDescriptionKey:
+                                                            "Demasiadas búsquedas. Por favor espera un momento e intenta de nuevo."
+                                                    ]
+                                                )))
                                     } else {
-                                        completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: "Both vector and text search failed"])))
+                                        completion(
+                                            .failure(
+                                                NSError(
+                                                    domain: "GraphQL", code: -1,
+                                                    userInfo: [
+                                                        NSLocalizedDescriptionKey:
+                                                            "Both vector and text search failed"
+                                                    ])))
                                     }
                                     return
                                 }
 
                                 guard let data = fallbackGraphQLResult.data else {
                                     print("⚠️ No search results from text search")
-                                    let emptyPageInfo = PageInfo(hasNextPage: false, hasPreviousPage: false, startCursor: nil, endCursor: nil, totalCount: 0)
+                                    let emptyPageInfo = PageInfo(
+                                        hasNextPage: false, hasPreviousPage: false,
+                                        startCursor: nil, endCursor: nil, totalCount: 0)
                                     completion(.success((products: [], pageInfo: emptyPageInfo)))
                                     return
                                 }
@@ -252,7 +319,9 @@ class ProductListRepository {
                                 }
 
                                 if let branchId = branchId {
-                                    mappedProducts = mappedProducts.filter { $0.branchId == branchId }
+                                    mappedProducts = mappedProducts.filter {
+                                        $0.branchId == branchId
+                                    }
                                 }
 
                                 let pageInfo = PageInfo(
@@ -263,24 +332,34 @@ class ProductListRepository {
                                     totalCount: Int(data.searchProducts.pageInfo.totalCount)
                                 )
 
-                                print("✅ Text search fallback found \(mappedProducts.count) products")
+                                print(
+                                    "✅ Text search fallback found \(mappedProducts.count) products")
                                 completion(.success((products: mappedProducts, pageInfo: pageInfo)))
 
                             case .failure(let error):
-                                print("❌ Text search fallback failed: \(error.localizedDescription)")
+                                print(
+                                    "❌ Text search fallback failed: \(error.localizedDescription)")
                                 completion(.failure(error))
                             }
                         }
                         return
                     }
 
-                    completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: "GraphQL search errors occurred"])))
+                    completion(
+                        .failure(
+                            NSError(
+                                domain: "GraphQL", code: -1,
+                                userInfo: [
+                                    NSLocalizedDescriptionKey: "GraphQL search errors occurred"
+                                ])))
                     return
                 }
 
                 guard let data = graphQLResult.data else {
                     print("⚠️ No search results received")
-                    let emptyPageInfo = PageInfo(hasNextPage: false, hasPreviousPage: false, startCursor: nil, endCursor: nil, totalCount: 0)
+                    let emptyPageInfo = PageInfo(
+                        hasNextPage: false, hasPreviousPage: false, startCursor: nil,
+                        endCursor: nil, totalCount: 0)
                     completion(.success((products: [], pageInfo: emptyPageInfo)))
                     return
                 }
@@ -316,7 +395,9 @@ class ProductListRepository {
                     totalCount: Int(data.searchProducts.pageInfo.totalCount)
                 )
 
-                print("✅ Found \(mappedProducts.count) products matching '\(query)'" + (branchId != nil ? " for branch \(branchId!)" : ""))
+                print(
+                    "✅ Found \(mappedProducts.count) products matching '\(query)'"
+                        + (branchId != nil ? " for branch \(branchId!)" : ""))
                 completion(.success((products: mappedProducts, pageInfo: pageInfo)))
 
             case .failure(let error):
@@ -327,8 +408,12 @@ class ProductListRepository {
     }
 
     // Fetch product categories for a specific branch type
-    @MainActor func fetchProductCategories(branchType: String?, completion: @escaping @Sendable (Result<[ProductCategoryGraphQL], Error>) -> Void) {
-        let query = LlegoAPI.GetProductCategoriesQuery(branchType: branchType.map { .some($0) } ?? .none)
+    @MainActor func fetchProductCategories(
+        branchType: String?,
+        completion: @escaping @Sendable (Result<[ProductCategoryGraphQL], Error>) -> Void
+    ) {
+        let query = LlegoAPI.GetProductCategoriesQuery(
+            branchType: branchType.map { .some($0) } ?? .none)
 
         apolloClient.fetch(query: query, cachePolicy: .returnCacheDataAndFetch) { result in
             switch result {
@@ -338,7 +423,11 @@ class ProductListRepository {
                     errors.forEach { error in
                         print("  - \(error.localizedDescription)")
                     }
-                    completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: "GraphQL errors occurred"])))
+                    completion(
+                        .failure(
+                            NSError(
+                                domain: "GraphQL", code: -1,
+                                userInfo: [NSLocalizedDescriptionKey: "GraphQL errors occurred"])))
                     return
                 }
 
@@ -359,7 +448,9 @@ class ProductListRepository {
                     )
                 }
 
-                print("✅ Fetched \(categories.count) categories for branch type: \(branchType ?? "all")")
+                print(
+                    "✅ Fetched \(categories.count) categories for branch type: \(branchType ?? "all")"
+                )
                 completion(.success(categories))
 
             case .failure(let error):
@@ -397,9 +488,14 @@ struct ProductGraphQL: Identifiable, Sendable {
     let distanceKm: Double?
     let categoryId: String?
     let categoryName: String?
-    
+
     // Inicializador con valor por defecto para businessLogoUrl (retrocompatibilidad)
-    init(id: String, branchId: String, name: String, price: Double, currency: String, imageUrl: String, availability: Bool, createdAt: String, businessName: String, businessLogoUrl: String = "", distanceKm: Double?, categoryId: String?, categoryName: String?) {
+    init(
+        id: String, branchId: String, name: String, price: Double, currency: String,
+        imageUrl: String, availability: Bool, createdAt: String, businessName: String,
+        businessLogoUrl: String = "", distanceKm: Double?, categoryId: String?,
+        categoryName: String?
+    ) {
         self.id = id
         self.branchId = branchId
         self.name = name

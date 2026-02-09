@@ -7,9 +7,12 @@ extension String: @retroactive Identifiable {
 struct ProductListView: View {
     @ObservedObject var viewModel: ProductListViewModel
     @StateObject private var favoritesManager = FavoritesManager.shared
+    @StateObject private var cartManager = CartManager.shared
+    @StateObject private var gradientManager = GradientStateManager.shared
     @State private var productCounts: [String: Int] = [:]
     @State private var showFiltersSheet = false
     @State private var showFavoritesSheet = false
+    @State private var showCartSheet = false
     @State private var animationDelay: Double = 0
     @FocusState private var isSearchFocused: Bool
     @State private var isSearchPresented: Bool = false
@@ -20,7 +23,7 @@ struct ProductListView: View {
     let initialBranchId: String?
     let branchName: String?
     let storeGradient: ExtractedGradient?
-    
+
     // ViewModel propio para cuando hay branchId (no compartido)
     @StateObject private var branchViewModel = ProductListViewModel()
 
@@ -33,12 +36,12 @@ struct ProductListView: View {
         self.branchName = branchName
         self.storeGradient = storeGradient
     }
-    
+
     // ViewModel activo: usa branchViewModel si hay branchId, sino usa el viewModel compartido
     private var activeViewModel: ProductListViewModel {
         initialBranchId != nil ? branchViewModel : viewModel
     }
-    
+
     // Bindings para el ViewModel activo
     private var maxDistanceBinding: Binding<Double> {
         Binding(
@@ -46,7 +49,7 @@ struct ProductListView: View {
             set: { activeViewModel.maxDistance = $0 }
         )
     }
-    
+
     private var searchQueryBinding: Binding<String> {
         Binding(
             get: { activeViewModel.searchQuery },
@@ -138,6 +141,21 @@ struct ProductListView: View {
                     .navigationViewStyle(StackNavigationViewStyle())
                 }
             }
+            .sheet(isPresented: $showCartSheet) {
+                if #available(iOS 16.0, *) {
+                    NavigationView {
+                        CartView()
+                    }
+                    .navigationViewStyle(StackNavigationViewStyle())
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+                } else {
+                    NavigationView {
+                        CartView()
+                    }
+                    .navigationViewStyle(StackNavigationViewStyle())
+                }
+            }
             .navigationTitle(branchName ?? "15.40$")
             .navigationBarTitleDisplayMode(.inline)
             .searchable(
@@ -157,18 +175,18 @@ struct ProductListView: View {
                 }
             }
             .searchFocused($isSearchFocused)
-            .toolbar{
+            .toolbar {
                 // Show different toolbar items based on context
                 if initialBranchId == nil {
                     // Default view: show distance filter
-                    ToolbarItem(placement: .topBarTrailing) {
+                    ToolbarItem(placement: .navigationBarTrailing) {
                         Button(action: {
                             showFiltersSheet = true
                         }) {
                             HStack(spacing: 6) {
                                 Image(systemName: "location.circle")
                                     .font(.system(size: 14, weight: .semibold))
-                               
+
                                 if activeViewModel.maxDistance < 50 {
                                     Circle()
                                         .fill(Color.llegoPrimary)
@@ -178,30 +196,48 @@ struct ProductListView: View {
                         }
                     }
                 } else {
-                    // Branch-specific view: show cart button
-                    ToolbarItem(placement: .topBarTrailing) {
+                    ToolbarItem(placement: .navigationBarTrailing) {
                         Button(action: {
                             showFavoritesSheet = true
+                        }) {
+                            Image(systemName: "heart")
+                                .font(.system(size: 16, weight: .semibold))
+                                .frame(width: 30, height: 30)
+                                .foregroundColor(gradientManager.currentAccentColor)
+                        }
+                        .badge(favoritesManager.favoriteItemCount)
+                        .accessibilityLabel("Favoritos")
+                    }
+
+                    ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
+
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: {
+                            showCartSheet = true
                         }) {
                             Image(systemName: "cart")
                                 .font(.system(size: 16, weight: .semibold))
                                 .frame(width: 30, height: 30)
-                                .foregroundColor(.black)
+                                .foregroundColor(gradientManager.currentAccentColor)
                         }
-                        .badge(favoritesManager.favoriteItemCount)
+                        .badge(cartManager.cartItemCount)
+                        .accessibilityLabel("Carrito")
                     }
                 }
 
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: {
-                        showFavoritesSheet = true
-                    }) {
-                        Image(systemName: "heart")
-                            .font(.system(size: 16, weight: .semibold))
-                            .frame(width: 30, height: 30)
-                            .foregroundColor(initialBranchId != nil ? .black : .llegoPrimary)
+                if initialBranchId == nil {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: {
+                            showFavoritesSheet = true
+                        }) {
+                            Image(systemName: "heart")
+                                .font(.system(size: 16, weight: .semibold))
+                                .frame(width: 30, height: 30)
+                                .foregroundColor(.llegoPrimary)
+                        }
+                        .badge(favoritesManager.favoriteItemCount)
+                        .accessibilityLabel("Favoritos")
                     }
-                    .badge(favoritesManager.favoriteItemCount)
                 }
             }
             .fullScreenCover(item: $selectedProductId) { productId in
@@ -212,7 +248,7 @@ struct ProductListView: View {
 
 
     // MARK: - Results Counter
-    
+
 
     private var productsGrid: some View {
         ScrollView {
@@ -321,7 +357,7 @@ struct ProductListView: View {
         ScrollView {
             categoryScroll
                 .padding(.top, 6)
-            
+
             LazyVGrid(
                 columns: [
                     GridItem(.flexible(), spacing: 16),
@@ -378,7 +414,8 @@ struct ProductListView: View {
                                 activeViewModel.selectedCategory = category.name
                             }
                             activeViewModel.applyFilters()
-                        }
+                        },
+                        isTinted: initialBranchId == nil
                     )
                 }
             }

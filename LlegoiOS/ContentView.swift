@@ -14,7 +14,8 @@ struct ComposeView: UIViewControllerRepresentable {
 
 struct ContentView: View {
     @State private var selectedTab = 0
-    @State private var showOnboarding = OnboardingHelper.shouldShowOnboardingOnLaunch
+    // Fuerza mostrar onboarding en cada arranque de la app.
+    @State private var showOnboarding = true
     @State private var isOnboardingCompleted = false
 
     var body: some View {
@@ -26,11 +27,6 @@ struct ContentView: View {
                         OnboardingHelper.completeOnboarding()
                         showOnboarding = false
                     }
-                }
-                .onAppear {
-                    // Se marca al mostrarse para evitar volver a enseñarlo
-                    // en siguientes aperturas aunque el usuario no lo complete.
-                    OnboardingHelper.markOnboardingShown()
                 }
         } else {
             MainAppView(selectedTab: $selectedTab)

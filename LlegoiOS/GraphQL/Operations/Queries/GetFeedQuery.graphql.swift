@@ -9,27 +9,35 @@ public extension LlegoAPI {
     public static let operationName: String = "GetFeed"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetFeed($jwt: String, $first: Int = 10, $sections: [String!]) { getFeed(first: $first, jwt: $jwt, sections: $sections) { __typename sections { __typename sectionId title description totalCount products { __typename id branchId name description price currency availability score imageUrl categoryName branch { __typename id name address tipos } } } sectionDiagnostics { __typename sectionId title status reason totalBeforeDedup totalAfterDedup } timestamp } }"#
+        #"query GetFeed($jwt: String, $first: Int = 10, $sections: [String!], $branchTipo: String!, $productCategoryId: String) { getFeed( first: $first jwt: $jwt sections: $sections branchTipo: $branchTipo productCategoryId: $productCategoryId ) { __typename sections { __typename sectionId title description totalCount products { __typename id branchId name description price currency availability score imageUrl categoryId categoryName branch { __typename id name address tipos } } } sectionDiagnostics { __typename sectionId title status reason totalBeforeDedup totalAfterDedup } timestamp } }"#
       ))
 
     public var jwt: GraphQLNullable<String>
     public var first: GraphQLNullable<Int32>
     public var sections: GraphQLNullable<[String]>
+    public var branchTipo: String
+    public var productCategoryId: GraphQLNullable<String>
 
     public init(
       jwt: GraphQLNullable<String>,
       first: GraphQLNullable<Int32> = 10,
-      sections: GraphQLNullable<[String]>
+      sections: GraphQLNullable<[String]>,
+      branchTipo: String,
+      productCategoryId: GraphQLNullable<String>
     ) {
       self.jwt = jwt
       self.first = first
       self.sections = sections
+      self.branchTipo = branchTipo
+      self.productCategoryId = productCategoryId
     }
 
     @_spi(Unsafe) public var __variables: Variables? { [
       "jwt": jwt,
       "first": first,
-      "sections": sections
+      "sections": sections,
+      "branchTipo": branchTipo,
+      "productCategoryId": productCategoryId
     ] }
 
     public struct Data: LlegoAPI.SelectionSet {
@@ -41,7 +49,9 @@ public extension LlegoAPI {
         .field("getFeed", GetFeed.self, arguments: [
           "first": .variable("first"),
           "jwt": .variable("jwt"),
-          "sections": .variable("sections")
+          "sections": .variable("sections"),
+          "branchTipo": .variable("branchTipo"),
+          "productCategoryId": .variable("productCategoryId")
         ]),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
@@ -118,6 +128,7 @@ public extension LlegoAPI {
               .field("availability", Bool.self),
               .field("score", Double.self),
               .field("imageUrl", String.self),
+              .field("categoryId", String?.self),
               .field("categoryName", String?.self),
               .field("branch", Branch?.self),
             ] }
@@ -135,6 +146,7 @@ public extension LlegoAPI {
             public var score: Double { __data["score"] }
             /// Presigned URL for the product image
             public var imageUrl: String { __data["imageUrl"] }
+            public var categoryId: String? { __data["categoryId"] }
             /// Product category name
             public var categoryName: String? { __data["categoryName"] }
             /// Branch associated with this product

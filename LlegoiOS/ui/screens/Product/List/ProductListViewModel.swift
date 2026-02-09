@@ -1,6 +1,6 @@
+import Combine
 import Foundation
 import SwiftUI
-import Combine
 
 struct ProductCategory: Identifiable {
     let id: String
@@ -52,7 +52,7 @@ class ProductListViewModel: ObservableObject {
     @Published var totalCount: Int = 0
 
     // Filtros
-    @Published var maxDistance: Double = 50.0 // 50 = sin límite
+    @Published var maxDistance: Double = 50.0  // 50 = sin límite
     @Published var selectedCategory: String? = nil
     @Published var searchQuery: String = ""
     @Published var isSearching: Bool = false
@@ -77,12 +77,24 @@ class ProductListViewModel: ObservableObject {
     var hasActiveFilters: Bool {
         maxDistance < 50 || selectedCategory != nil || !searchQuery.isEmpty
     }
-    
+
     /// Radio efectivo para las queries (nil si es 50 o más)
     private var effectiveRadiusKm: Double? {
         maxDistance < 50 ? maxDistance : nil
     }
-    
+
+    private var selectedCategoryId: String? {
+        guard let selectedCategory else { return nil }
+        if selectedCategory == "all" { return nil }
+        if let byId = categories.first(where: { $0.id == selectedCategory }) {
+            return byId.isAll ? nil : byId.id
+        }
+        if let byName = categories.first(where: { $0.name == selectedCategory }) {
+            return byName.isAll ? nil : byName.id
+        }
+        return nil
+    }
+
     init() {
         // Cargar el radio guardado del UserLocationManager
         if let savedRadius = userLocationManager.searchRadiusKm {
@@ -129,7 +141,9 @@ class ProductListViewModel: ObservableObject {
                     mappedCategories.append(contentsOf: backendCategories)
                     self.categories = mappedCategories
 
-                    print("✅ Loaded \(backendCategories.count) categories (+ 'Todos') for branch type: \(branchType)")
+                    print(
+                        "✅ Loaded \(backendCategories.count) categories (+ 'Todos') for branch type: \(branchType)"
+                    )
 
                 case .failure(let error):
                     print("❌ Error loading categories: \(error.localizedDescription)")
@@ -170,10 +184,15 @@ class ProductListViewModel: ObservableObject {
             isLoading = true
             state = .loading
         }
-        
-        print("📦 ProductListViewModel.loadProducts - branchId: \(branchId ?? "nil"), isRefreshing: \(isRefreshing), hasLoaded: \(hasLoaded)")
 
-        repository.fetchProducts(first: 8, after: nil, branchId: branchId, radiusKm: effectiveRadiusKm) { [weak self] result in
+        print(
+            "📦 ProductListViewModel.loadProducts - branchId: \(branchId ?? "nil"), isRefreshing: \(isRefreshing), hasLoaded: \(hasLoaded)"
+        )
+
+        repository.fetchProducts(
+            first: 8, after: nil, branchId: branchId, categoryId: selectedCategoryId,
+            radiusKm: effectiveRadiusKm
+        ) { [weak self] result in
             guard let self = self else { return }
 
             Task { @MainActor in
@@ -209,20 +228,24 @@ class ProductListViewModel: ObservableObject {
                         self.state = .success
                     }
 
-                    print("✅ Loaded \(self.products.count) products (hasNextPage: \(pageInfo.hasNextPage), totalCount: \(pageInfo.totalCount))" + (self.branchId != nil ? " for branch \(self.branchId!)" : ""))
+                    print(
+                        "✅ Loaded \(self.products.count) products (hasNextPage: \(pageInfo.hasNextPage), totalCount: \(pageInfo.totalCount))"
+                            + (self.branchId != nil ? " for branch \(self.branchId!)" : ""))
 
                 case .failure(let error):
                     self.isLoading = false
 
                     // Mejorar mensaje de error para offline
                     let nsError = error as NSError
-                    let isNetworkError = nsError.domain == NSURLErrorDomain &&
-                        (nsError.code == NSURLErrorNotConnectedToInternet ||
-                         nsError.code == NSURLErrorTimedOut ||
-                         nsError.code == NSURLErrorCannotConnectToHost ||
-                         nsError.code == NSURLErrorNetworkConnectionLost)
+                    let isNetworkError =
+                        nsError.domain == NSURLErrorDomain
+                        && (nsError.code == NSURLErrorNotConnectedToInternet
+                            || nsError.code == NSURLErrorTimedOut
+                            || nsError.code == NSURLErrorCannotConnectToHost
+                            || nsError.code == NSURLErrorNetworkConnectionLost)
 
-                    let errorMessage = isNetworkError
+                    let errorMessage =
+                        isNetworkError
                         ? "No hay conexión a internet y no hay productos guardados en caché"
                         : "Error al cargar productos: \(error.localizedDescription)"
 
@@ -244,14 +267,19 @@ class ProductListViewModel: ObservableObject {
 
     func loadMoreProducts() {
         guard !isLoadingMore, hasNextPage, let cursor = currentCursor else {
-            print("📦 loadMoreProducts - Skipping (isLoadingMore: \(isLoadingMore), hasNextPage: \(hasNextPage), cursor: \(currentCursor ?? "nil"))")
+            print(
+                "📦 loadMoreProducts - Skipping (isLoadingMore: \(isLoadingMore), hasNextPage: \(hasNextPage), cursor: \(currentCursor ?? "nil"))"
+            )
             return
         }
 
         print("📦 loadMoreProducts - Loading next page with cursor: \(cursor)")
         isLoadingMore = true
 
-        repository.fetchProducts(first: 8, after: cursor, branchId: branchId, radiusKm: effectiveRadiusKm) { [weak self] result in
+        repository.fetchProducts(
+            first: 8, after: cursor, branchId: branchId, categoryId: selectedCategoryId,
+            radiusKm: effectiveRadiusKm
+        ) { [weak self] result in
             guard let self = self else { return }
 
             Task { @MainActor in
@@ -284,7 +312,9 @@ class ProductListViewModel: ObservableObject {
 
                     self.applyFiltersAndSort()
 
-                    print("✅ Loaded \(newProducts.count) more products (total: \(self.products.count), hasNextPage: \(pageInfo.hasNextPage))")
+                    print(
+                        "✅ Loaded \(newProducts.count) more products (total: \(self.products.count), hasNextPage: \(pageInfo.hasNextPage))"
+                    )
 
                 case .failure(let error):
                     print("❌ Error loading more products: \(error.localizedDescription)")
@@ -301,7 +331,8 @@ class ProductListViewModel: ObservableObject {
 
         let thresholdIndex = filteredProducts.index(filteredProducts.endIndex, offsetBy: -3)
         if let currentIndex = filteredProducts.firstIndex(where: { $0.id == currentItem.id }),
-           currentIndex >= thresholdIndex {
+            currentIndex >= thresholdIndex
+        {
             loadMoreProducts()
         }
     }
@@ -335,7 +366,10 @@ class ProductListViewModel: ObservableObject {
         print("🔍 performVectorSearch() - Starting search for: '\(searchQuery)'")
         isSearching = true
 
-        repository.searchProducts(query: searchQuery, first: 50, after: nil, branchId: branchId, radiusKm: effectiveRadiusKm) { [weak self] result in
+        repository.searchProducts(
+            query: searchQuery, first: 50, after: nil, branchId: branchId,
+            categoryId: selectedCategoryId, radiusKm: effectiveRadiusKm
+        ) { [weak self] result in
             guard let self = self else { return }
 
             Task { @MainActor in
@@ -343,7 +377,9 @@ class ProductListViewModel: ObservableObject {
 
                 switch result {
                 case .success(let (productsGraphQL, pageInfo)):
-                    print("✅ Vector search returned \(productsGraphQL.count) products (hasNextPage: \(pageInfo.hasNextPage))")
+                    print(
+                        "✅ Vector search returned \(productsGraphQL.count) products (hasNextPage: \(pageInfo.hasNextPage))"
+                    )
 
                     // Map to UI models
                     let searchResults = productsGraphQL.map { productGraphQL in
@@ -375,13 +411,15 @@ class ProductListViewModel: ObservableObject {
 
                 case .failure(let error):
                     let nsError = error as NSError
-                    
+
                     // Check if it's a rate limit error
                     if nsError.domain == "RateLimit" && nsError.code == 429 {
                         print("⏱️ Rate limit alcanzado en búsqueda de productos")
-                        print("💡 Sugerencia: El backend está limitando las búsquedas a 10 por minuto")
+                        print(
+                            "💡 Sugerencia: El backend está limitando las búsquedas a 10 por minuto")
                         // Show user-friendly message
-                        self.state = .error("Demasiadas búsquedas. Por favor espera un momento e intenta de nuevo.")
+                        self.state = .error(
+                            "Demasiadas búsquedas. Por favor espera un momento e intenta de nuevo.")
                     } else {
                         print("❌ Vector search failed: \(error.localizedDescription)")
                         // Fallback to local filtering if search fails
@@ -403,8 +441,8 @@ class ProductListViewModel: ObservableObject {
         if let category = selectedCategory {
             result = result.filter { product in
                 // Filtrar por nombre del producto que contenga la categoría
-                product.name.localizedCaseInsensitiveContains(category) ||
-                category.localizedCaseInsensitiveContains(product.name)
+                product.name.localizedCaseInsensitiveContains(category)
+                    || category.localizedCaseInsensitiveContains(product.name)
             }
         }
 
@@ -440,7 +478,8 @@ class ProductListViewModel: ObservableObject {
         formatter.numberStyle = .currency
         formatter.currencySymbol = getCurrencySymbol(for: currency)
         formatter.maximumFractionDigits = 2
-        return formatter.string(from: NSNumber(value: price)) ?? "\(getCurrencySymbol(for: currency))\(price)"
+        return formatter.string(from: NSNumber(value: price))
+            ?? "\(getCurrencySymbol(for: currency))\(price)"
     }
 
     private func getCurrencySymbol(for currency: String) -> String {
@@ -454,7 +493,8 @@ class ProductListViewModel: ObservableObject {
 
     private func extractPrice(from priceString: String) -> Double {
         // Extraer el precio numérico de un string como "$12.50"
-        let cleanedString = priceString
+        let cleanedString =
+            priceString
             .replacingOccurrences(of: "$", with: "")
             .replacingOccurrences(of: "€", with: "")
             .replacingOccurrences(of: ",", with: "")

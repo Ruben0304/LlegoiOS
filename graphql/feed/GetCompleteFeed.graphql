@@ -2,13 +2,19 @@ query GetCompleteFeed(
   $jwt: String
   $first: Int
   $sections: [String!]
-  $branchType: String
-  $branchTipo: BranchTipo
+  $branchTipo: String!
+  $branchTipoEnum: BranchTipo
   $radiusKm: Float
   $categoryId: String
 ) {
   # 1. Feed sections (personalized feed)
-  getFeed(jwt: $jwt, first: $first, sections: $sections) {
+  getFeed(
+    jwt: $jwt
+    first: $first
+    sections: $sections
+    branchTipo: $branchTipo
+    productCategoryId: $categoryId
+  ) {
     sections {
       sectionId
       title
@@ -21,6 +27,7 @@ query GetCompleteFeed(
         currency
         imageUrl
         branchId
+        categoryId
         branch {
           name
           address
@@ -44,7 +51,7 @@ query GetCompleteFeed(
   }
 
   # 2. Categories for filter chips
-  productCategories(branchType: $branchType) {
+  productCategories(branchType: $branchTipo) {
     id
     name
     iconIos
@@ -53,7 +60,7 @@ query GetCompleteFeed(
   # 3. Stores for "Lo mejor de Llego" section
   branches(
     first: 15
-    tipo: $branchTipo
+    tipo: $branchTipoEnum
     radiusKm: $radiusKm
     productCategoryId: $categoryId
   ) {

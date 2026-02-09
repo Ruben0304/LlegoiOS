@@ -1,6 +1,6 @@
+import Combine
 import Foundation
 import SwiftUI
-import Combine
 
 enum ProductFeedViewState {
     case idle
@@ -58,7 +58,7 @@ class ProductFeedViewModel: ObservableObject {
 
     private func setupBranchTypeObserver() {
         branchTypeManager.$selectedType
-            .dropFirst() // Ignore initial value
+            .dropFirst()  // Ignore initial value
             .sink { [weak self] _ in
                 guard let self = self else { return }
                 self.loadFeed(isRefreshing: true)
@@ -98,7 +98,7 @@ class ProductFeedViewModel: ObservableObject {
                 self.categories = categories
                 self.stores = stores
                 self.tutorials = tutorials
-                self.promotions = Promotion.samples // TODO: Replace with API data
+                self.promotions = Promotion.samples  // TODO: Replace with API data
 
                 let summary = feedResponse.sections
                     .map { "[\($0.sectionId): \($0.products.count)]" }
@@ -109,10 +109,13 @@ class ProductFeedViewModel: ObservableObject {
                         let reason = diagnostic.reason ?? "-"
                         let before = diagnostic.totalBeforeDedup.map(String.init) ?? "-"
                         let after = diagnostic.totalAfterDedup.map(String.init) ?? "-"
-                        return "[\(diagnostic.sectionId): \(diagnostic.status), reason=\(reason), before=\(before), after=\(after)]"
+                        return
+                            "[\(diagnostic.sectionId): \(diagnostic.status), reason=\(reason), before=\(before), after=\(after)]"
                     }
                     .joined(separator: ", ")
-                print("🧪 Feed diagnostics (\(feedResponse.sectionDiagnostics.count)) → \(diagnosticsSummary)")
+                print(
+                    "🧪 Feed diagnostics (\(feedResponse.sectionDiagnostics.count)) → \(diagnosticsSummary)"
+                )
 
                 // Populate legacy arrays from sections for backward compatibility
                 self.populateLegacyArraysFromSections()
@@ -125,7 +128,8 @@ class ProductFeedViewModel: ObservableObject {
                 self.isLoading = false
                 let nsError = error as NSError
                 let isNetworkError = nsError.domain == NSURLErrorDomain
-                let errorMessage = isNetworkError
+                let errorMessage =
+                    isNetworkError
                     ? "No hay conexión a internet"
                     : "Error al cargar el feed: \(error.localizedDescription)"
                 self.state = .error(errorMessage)
@@ -136,17 +140,23 @@ class ProductFeedViewModel: ObservableObject {
     /// Populate legacy product arrays from the new feed sections for backward compatibility
     private func populateLegacyArraysFromSections() {
         // "para_ti" section goes to featuredProducts
-        if let paraTiSection = feedSections.first(where: { $0.sectionId == FeedSectionType.paraTi.rawValue }) {
+        if let paraTiSection = feedSections.first(where: {
+            $0.sectionId == FeedSectionType.paraTi.rawValue
+        }) {
             self.featuredProducts = paraTiSection.products
         }
 
         // "populares_cerca" section goes to popularProducts
-        if let popularesSection = feedSections.first(where: { $0.sectionId == FeedSectionType.popularesCerca.rawValue }) {
+        if let popularesSection = feedSections.first(where: {
+            $0.sectionId == FeedSectionType.popularesCerca.rawValue
+        }) {
             self.popularProducts = popularesSection.products
         }
 
         // "te_podria_gustar" section goes to recentProducts
-        if let recentSection = feedSections.first(where: { $0.sectionId == FeedSectionType.tePodriagustar.rawValue }) {
+        if let recentSection = feedSections.first(where: {
+            $0.sectionId == FeedSectionType.tePodriagustar.rawValue
+        }) {
             self.recentProducts = recentSection.products
         }
     }
@@ -157,7 +167,8 @@ class ProductFeedViewModel: ObservableObject {
         isLoadingMore = true
 
         Task {
-            let result = await repository.fetchMoreProducts(after: cursor, radiusKm: nil, categoryId: selectedCategory)
+            let result = await repository.fetchMoreProducts(
+                after: cursor, radiusKm: nil, categoryId: selectedCategory)
 
             self.isLoadingMore = false
 
@@ -186,7 +197,8 @@ class ProductFeedViewModel: ObservableObject {
 
         let thresholdIndex = recentProducts.count - 3
         if let currentIndex = recentProducts.firstIndex(where: { $0.id == currentItem.id }),
-           currentIndex >= thresholdIndex {
+            currentIndex >= thresholdIndex
+        {
             loadMoreProducts()
         }
     }
@@ -209,7 +221,7 @@ class ProductFeedViewModel: ObservableObject {
         let previousCategory = selectedCategory
 
         if let category = category {
-            selectedCategory = category.isAll ? nil : category.name
+            selectedCategory = category.isAll ? nil : category.id
         } else {
             selectedCategory = nil
         }
@@ -255,13 +267,13 @@ class ProductFeedViewModel: ObservableObject {
     }
 
     var filteredPopularProducts: [FeedProduct] {
-        let maxDistanceKm = 3.0 // 2-3km maximo
+        let maxDistanceKm = 3.0  // 2-3km maximo
 
         var filtered = popularProducts
 
         // Primero filtrar por distancia
         filtered = filtered.filter { product in
-            guard let distance = product.distanceKm else { return true } // Allow products without distance
+            guard let distance = product.distanceKm else { return true }  // Allow products without distance
             return distance <= maxDistanceKm
         }
 

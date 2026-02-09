@@ -5,18 +5,19 @@
 //  Repositorio para búsqueda de productos y tiendas
 //
 
-import Foundation
 import Apollo
+import Foundation
 import MapKit
 
 class SearchRepository {
     private let apolloClient = ApolloClientManager.shared.apollo
-    
+
     // MARK: - Search Products
     @MainActor
     func searchProducts(
         query: String,
         first: Int32 = 20,
+        categoryId: String? = nil,
         completion: @escaping @Sendable (Result<[Product], Error>) -> Void
     ) {
         print("🌐 SearchRepository - searchProducts() called with query: '\(query)'")
@@ -24,7 +25,7 @@ class SearchRepository {
         // Obtener JWT si está disponible
         let jwt = AuthManager.shared.getAccessToken()
         #if DEBUG
-        print("🔑 SearchRepository - JWT: \(jwt != nil ? "presente" : "NO presente")")
+            print("🔑 SearchRepository - JWT: \(jwt != nil ? "presente" : "NO presente")")
         #endif
 
         // Obtener tipo de branch global
@@ -36,7 +37,9 @@ class SearchRepository {
             first: first,
             after: .none,
             useVectorSearch: .some(true),
-            branchTipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) } ?? .none,
+            branchTipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) }
+                ?? .none,
+            categoryId: categoryId.map { .some($0) } ?? .none,
             radiusKm: .none,
             jwt: jwt.map { .some($0) } ?? .none
         )
@@ -50,12 +53,19 @@ class SearchRepository {
                 print("✅ SearchRepository - GraphQL query SUCCESS")
 
                 if let errors = graphQLResult.errors, !errors.isEmpty {
-                    print("❌ SearchRepository - GraphQL errors: \(errors.compactMap { $0.message }.joined(separator: ", "))")
-                    completion(.failure(NSError(
-                        domain: "GraphQL",
-                        code: -1,
-                        userInfo: [NSLocalizedDescriptionKey: errors.first?.message ?? "Error desconocido"]
-                    )))
+                    print(
+                        "❌ SearchRepository - GraphQL errors: \(errors.compactMap { $0.message }.joined(separator: ", "))"
+                    )
+                    completion(
+                        .failure(
+                            NSError(
+                                domain: "GraphQL",
+                                code: -1,
+                                userInfo: [
+                                    NSLocalizedDescriptionKey: errors.first?.message
+                                        ?? "Error desconocido"
+                                ]
+                            )))
                     return
                 }
 
@@ -65,7 +75,9 @@ class SearchRepository {
                     return
                 }
 
-                print("📦 SearchRepository - Received \(data.searchProducts.edges.count) product edges")
+                print(
+                    "📦 SearchRepository - Received \(data.searchProducts.edges.count) product edges"
+                )
 
                 let products = data.searchProducts.edges.map { edge -> Product in
                     let node = edge.node
@@ -90,20 +102,24 @@ class SearchRepository {
             }
         }
     }
-    
+
     // MARK: - Search Branches/Stores (con productos anidados)
     @MainActor
     func searchBranches(
         query: String,
         first: Int32 = 20,
-        completion: @escaping @Sendable (Result<([StoreWithCoordinates], [String: [ProductGraphQL]]), Error>) -> Void
+        productCategoryId: String? = nil,
+        completion:
+            @escaping @Sendable (
+                Result<([StoreWithCoordinates], [String: [ProductGraphQL]]), Error>
+            ) -> Void
     ) {
         print("🌐 SearchRepository - searchBranches() called with query: '\(query)'")
 
         // Obtener JWT si está disponible
         let jwt = AuthManager.shared.getAccessToken()
         #if DEBUG
-        print("🔑 SearchRepository - JWT: \(jwt != nil ? "presente" : "NO presente")")
+            print("🔑 SearchRepository - JWT: \(jwt != nil ? "presente" : "NO presente")")
         #endif
 
         let searchQuery = LlegoAPI.SearchBranchesQuery(
@@ -111,6 +127,7 @@ class SearchRepository {
             first: first,
             after: .none,
             useVectorSearch: .some(true),
+            productCategoryId: productCategoryId.map { .some($0) } ?? .none,
             radiusKm: .none,
             jwt: jwt.map { .some($0) } ?? .none
         )
@@ -124,12 +141,19 @@ class SearchRepository {
                 print("✅ SearchRepository - GraphQL query SUCCESS")
 
                 if let errors = graphQLResult.errors, !errors.isEmpty {
-                    print("❌ SearchRepository - GraphQL errors: \(errors.compactMap { $0.message }.joined(separator: ", "))")
-                    completion(.failure(NSError(
-                        domain: "GraphQL",
-                        code: -1,
-                        userInfo: [NSLocalizedDescriptionKey: errors.first?.message ?? "Error desconocido"]
-                    )))
+                    print(
+                        "❌ SearchRepository - GraphQL errors: \(errors.compactMap { $0.message }.joined(separator: ", "))"
+                    )
+                    completion(
+                        .failure(
+                            NSError(
+                                domain: "GraphQL",
+                                code: -1,
+                                userInfo: [
+                                    NSLocalizedDescriptionKey: errors.first?.message
+                                        ?? "Error desconocido"
+                                ]
+                            )))
                     return
                 }
 
@@ -139,7 +163,8 @@ class SearchRepository {
                     return
                 }
 
-                print("🏪 SearchRepository - Received \(data.searchBranches.edges.count) branch edges")
+                print(
+                    "🏪 SearchRepository - Received \(data.searchBranches.edges.count) branch edges")
 
                 var storeProducts: [String: [ProductGraphQL]] = [:]
 
@@ -184,7 +209,9 @@ class SearchRepository {
                     )
                 }
 
-                print("✅ SearchRepository - Mapped to \(stores.count) Store objects con productos anidados")
+                print(
+                    "✅ SearchRepository - Mapped to \(stores.count) Store objects con productos anidados"
+                )
                 completion(.success((stores, storeProducts)))
 
             case .failure(let error):

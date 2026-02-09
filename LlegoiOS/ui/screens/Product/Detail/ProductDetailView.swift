@@ -15,6 +15,8 @@ struct ProductDetailView: View {
     @State private var quantity: Int = 1
     @State private var selectedVariantIndex: Int = 0
     @State private var showAddedToCartFeedback = false
+    @State private var showCartSheet = false
+    @State private var selectedSimilarProductId: String?
 
     // Variantes calculadas dinámicamente usando el precio real del producto
     private var variants: [ProductVariant] {
@@ -101,19 +103,22 @@ struct ProductDetailView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { toggleFavorite() }) {
                         Image(systemName: favoritesManager.isFavorite(productId: productId) ? "heart.fill" : "heart")
-                            .foregroundColor(favoritesManager.isFavorite(productId: productId) ? .red : .primary)
+                            .foregroundColor(gradientManager.currentAccentColor)
                     }
                 }
 
+                ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
+
                 ToolbarItem(placement: .navigationBarTrailing) {
-
-
-
-                        Button(action: { shareProduct() }) {
-                            Image(systemName: "square.and.arrow.up")
-
-                        }
-
+                    Button(action: { showCartSheet = true }) {
+                        Image(systemName: "cart")
+                            .foregroundColor(gradientManager.currentAccentColor)
+                    }
+                    .badge(cartManager.cartItemCount > 0 ? Text("\(cartManager.cartItemCount)")
+                        .monospacedDigit()
+                        .foregroundColor(gradientManager.currentAccentColor)
+                        .bold() : nil)
+                    .accessibilityLabel("Carrito")
                 }
 
                 // Bottom bar flotante - Quantity control
@@ -129,6 +134,12 @@ struct ProductDetailView: View {
                 }
 
             }
+            .sheet(isPresented: $showCartSheet) {
+                NavigationView { CartView() }
+                    .navigationViewStyle(StackNavigationViewStyle())
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            }
             .onAppear {
                 viewModel.loadProductDetail(id: productId)
             }
@@ -136,6 +147,9 @@ struct ProductDetailView: View {
                 if detail != nil {
                     startEntranceAnimations()
                 }
+            }
+            .fullScreenCover(item: $selectedSimilarProductId) { productId in
+                ProductDetailView(productId: productId)
             }
         }
     }
@@ -237,6 +251,9 @@ struct ProductDetailView: View {
 
             // Description
             descriptionSection
+
+            // Similar Products
+            similarProductsSection
         }
         .padding(20)
         .padding(.bottom, 100)
@@ -449,6 +466,59 @@ struct ProductDetailView: View {
         }
     }
 
+    private var similarProductsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Productos similares")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.primary)
+
+                Spacer()
+            }
+            .padding(.top, 8)
+
+            if viewModel.isLoadingSimilarProducts {
+                HStack(spacing: 10) {
+                    ProgressView()
+                        .tint(gradientManager.currentAccentColor)
+                    Text("Cargando similares...")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, 14)
+            } else if viewModel.similarProducts.isEmpty {
+                Text("No hay productos similares por ahora.")
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundColor(.secondary)
+                    .padding(.vertical, 8)
+            } else {
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(), spacing: 16),
+                        GridItem(.flexible(), spacing: 16)
+                    ],
+                    alignment: .center,
+                    spacing: 20
+                ) {
+                    ForEach(viewModel.similarProducts) { similarProduct in
+                        ProductCard(
+                            product: similarProduct,
+                            count: .constant(0),
+                            onIncrement: {},
+                            onDecrement: {},
+                            onProductTap: {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                selectedSimilarProductId = similarProduct.id
+                            }
+                        )
+                    }
+                }
+                .padding(.top, 2)
+            }
+        }
+    }
+
     // MARK: - Bottom Toolbar Views
 
     private var quantityControlView: some View {
@@ -541,10 +611,6 @@ struct ProductDetailView: View {
                 showAddedToCartFeedback = false
             }
         }
-    }
-
-    private func shareProduct() {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
     private func startEntranceAnimations() {

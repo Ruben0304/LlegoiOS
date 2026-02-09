@@ -153,7 +153,7 @@ struct SearchView: View {
             )
         }
     }
-    
+
     // MARK: - Category Picker
     private var categoryPicker: some View {
         Picker("Categoría", selection: $viewModel.selectedCategory) {
@@ -166,7 +166,7 @@ struct SearchView: View {
         .controlSize(.large)
         .padding(.bottom, 16)
     }
-    
+
     // MARK: - Initial Content (datos sin búsqueda)
     private var initialContent: some View {
         Group {
@@ -178,7 +178,7 @@ struct SearchView: View {
             }
         }
     }
-    
+
     // MARK: - Loading Content
     private var loadingContent: some View {
         CircularLoadingIndicator(
@@ -189,7 +189,7 @@ struct SearchView: View {
         .frame(maxWidth: .infinity)
         .padding(.top, 60)
     }
-    
+
     // MARK: - Results Content
     private var resultsContent: some View {
         Group {
@@ -201,7 +201,7 @@ struct SearchView: View {
             }
         }
     }
-    
+
     // MARK: - Products Grid (igual que ProductListView)
     private var productsGrid: some View {
         LazyVGrid(
@@ -248,7 +248,7 @@ struct SearchView: View {
         .padding(.horizontal, 20)
         .padding(.top, 8)
     }
-    
+
     // MARK: - Stores Grid (igual que StoreListView con StoreProductsCard)
     private var storesGrid: some View {
         LazyVStack(spacing: 24) {
@@ -280,18 +280,18 @@ struct SearchView: View {
         .padding(.horizontal, 16)
         .padding(.top, 8)
     }
-    
+
     // MARK: - Empty Content
     private var emptyContent: some View {
         VStack(spacing: 16) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 48, weight: .ultraLight))
                 .foregroundColor(.secondary.opacity(0.5))
-            
+
             Text("No se encontraron resultados")
                 .font(.system(size: 18, weight: .medium))
                 .foregroundColor(.secondary)
-            
+
             Text("Intenta con otra búsqueda")
                 .font(.system(size: 14))
                 .foregroundColor(.secondary.opacity(0.7))
@@ -299,23 +299,23 @@ struct SearchView: View {
         .frame(maxWidth: .infinity)
         .padding(.top, 60)
     }
-    
+
     // MARK: - Error Content
     private func errorContent(message: String) -> some View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 48, weight: .ultraLight))
                 .foregroundColor(.orange.opacity(0.7))
-            
+
             Text("Error al buscar")
                 .font(.system(size: 18, weight: .medium))
                 .foregroundColor(.secondary)
-            
+
             Text(message)
                 .font(.system(size: 14))
                 .foregroundColor(.secondary.opacity(0.7))
                 .multilineTextAlignment(.center)
-            
+
             Button("Reintentar") {
                 viewModel.search(query: searchText)
             }

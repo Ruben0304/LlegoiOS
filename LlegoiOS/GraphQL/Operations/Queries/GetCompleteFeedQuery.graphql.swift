@@ -9,14 +9,14 @@ public extension LlegoAPI {
     public static let operationName: String = "GetCompleteFeed"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetCompleteFeed($jwt: String, $first: Int, $sections: [String!], $branchType: String, $branchTipo: BranchTipo, $radiusKm: Float, $categoryId: String) { getFeed(jwt: $jwt, first: $first, sections: $sections) { __typename sections { __typename sectionId title description totalCount products { __typename id name price currency imageUrl branchId branch { __typename name address tipos } categoryName availability score description } } sectionDiagnostics { __typename sectionId title status reason totalBeforeDedup totalAfterDedup } timestamp } productCategories(branchType: $branchType) { __typename id name iconIos } branches( first: 15 tipo: $branchTipo radiusKm: $radiusKm productCategoryId: $categoryId ) { __typename edges { __typename node { __typename id businessId name avatarUrl coverUrl address distanceKm } } } activeTutorials { __typename id title description videoUrl videoUrlSigned duration appTarget thumbnailUrl thumbnailUrlSigned order tags } }"#
+        #"query GetCompleteFeed($jwt: String, $first: Int, $sections: [String!], $branchTipo: String!, $branchTipoEnum: BranchTipo, $radiusKm: Float, $categoryId: String) { getFeed( jwt: $jwt first: $first sections: $sections branchTipo: $branchTipo productCategoryId: $categoryId ) { __typename sections { __typename sectionId title description totalCount products { __typename id name price currency imageUrl branchId categoryId branch { __typename name address tipos } categoryName availability score description } } sectionDiagnostics { __typename sectionId title status reason totalBeforeDedup totalAfterDedup } timestamp } productCategories(branchType: $branchTipo) { __typename id name iconIos } branches( first: 15 tipo: $branchTipoEnum radiusKm: $radiusKm productCategoryId: $categoryId ) { __typename edges { __typename node { __typename id businessId name avatarUrl coverUrl address distanceKm } } } activeTutorials { __typename id title description videoUrl videoUrlSigned duration appTarget thumbnailUrl thumbnailUrlSigned order tags } }"#
       ))
 
     public var jwt: GraphQLNullable<String>
     public var first: GraphQLNullable<Int32>
     public var sections: GraphQLNullable<[String]>
-    public var branchType: GraphQLNullable<String>
-    public var branchTipo: GraphQLNullable<GraphQLEnum<BranchTipo>>
+    public var branchTipo: String
+    public var branchTipoEnum: GraphQLNullable<GraphQLEnum<BranchTipo>>
     public var radiusKm: GraphQLNullable<Double>
     public var categoryId: GraphQLNullable<String>
 
@@ -24,16 +24,16 @@ public extension LlegoAPI {
       jwt: GraphQLNullable<String>,
       first: GraphQLNullable<Int32>,
       sections: GraphQLNullable<[String]>,
-      branchType: GraphQLNullable<String>,
-      branchTipo: GraphQLNullable<GraphQLEnum<BranchTipo>>,
+      branchTipo: String,
+      branchTipoEnum: GraphQLNullable<GraphQLEnum<BranchTipo>>,
       radiusKm: GraphQLNullable<Double>,
       categoryId: GraphQLNullable<String>
     ) {
       self.jwt = jwt
       self.first = first
       self.sections = sections
-      self.branchType = branchType
       self.branchTipo = branchTipo
+      self.branchTipoEnum = branchTipoEnum
       self.radiusKm = radiusKm
       self.categoryId = categoryId
     }
@@ -42,8 +42,8 @@ public extension LlegoAPI {
       "jwt": jwt,
       "first": first,
       "sections": sections,
-      "branchType": branchType,
       "branchTipo": branchTipo,
+      "branchTipoEnum": branchTipoEnum,
       "radiusKm": radiusKm,
       "categoryId": categoryId
     ] }
@@ -57,12 +57,14 @@ public extension LlegoAPI {
         .field("getFeed", GetFeed.self, arguments: [
           "jwt": .variable("jwt"),
           "first": .variable("first"),
-          "sections": .variable("sections")
+          "sections": .variable("sections"),
+          "branchTipo": .variable("branchTipo"),
+          "productCategoryId": .variable("categoryId")
         ]),
-        .field("productCategories", [ProductCategory].self, arguments: ["branchType": .variable("branchType")]),
+        .field("productCategories", [ProductCategory].self, arguments: ["branchType": .variable("branchTipo")]),
         .field("branches", Branches.self, arguments: [
           "first": 15,
-          "tipo": .variable("branchTipo"),
+          "tipo": .variable("branchTipoEnum"),
           "radiusKm": .variable("radiusKm"),
           "productCategoryId": .variable("categoryId")
         ]),
@@ -145,6 +147,7 @@ public extension LlegoAPI {
               .field("currency", String.self),
               .field("imageUrl", String.self),
               .field("branchId", String.self),
+              .field("categoryId", String?.self),
               .field("branch", Branch?.self),
               .field("categoryName", String?.self),
               .field("availability", Bool.self),
@@ -162,6 +165,7 @@ public extension LlegoAPI {
             /// Presigned URL for the product image
             public var imageUrl: String { __data["imageUrl"] }
             public var branchId: String { __data["branchId"] }
+            public var categoryId: String? { __data["categoryId"] }
             /// Branch associated with this product
             public var branch: Branch? { __data["branch"] }
             /// Product category name

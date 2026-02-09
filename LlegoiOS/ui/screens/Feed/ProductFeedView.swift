@@ -1,5 +1,5 @@
-import SwiftUI
 import AVKit
+import SwiftUI
 
 struct ProductFeedView: View {
     @StateObject private var viewModel = ProductFeedViewModel()
@@ -18,7 +18,8 @@ struct ProductFeedView: View {
                 // Fondo gradiente sutil que se sincroniza con HomeView
                 feedGradientBackground
                     .ignoresSafeArea()
-                    .animation(.easeInOut(duration: 0.8), value: gradientManager.currentCategoryIndex)
+                    .animation(
+                        .easeInOut(duration: 0.8), value: gradientManager.currentCategoryIndex)
 
                 VStack(alignment: .leading, spacing: 0) {
                     if viewModel.isLoading {
@@ -48,10 +49,13 @@ struct ProductFeedView: View {
                         Image(systemName: "heart")
                             .font(.system(size: 16, weight: .semibold))
                     }
-                    .badge(favoritesManager.favoriteItemCount > 0 ? Text("\(favoritesManager.favoriteItemCount)")
-                        .monospacedDigit()
-                        .foregroundColor(gradientManager.currentAccentColor)
-                        .bold() : nil)
+                    .badge(
+                        favoritesManager.favoriteItemCount > 0
+                            ? Text("\(favoritesManager.favoriteItemCount)")
+                                .monospacedDigit()
+                                .foregroundColor(gradientManager.currentAccentColor)
+                                .bold() : nil
+                    )
                     .accessibilityLabel("Favoritos")
                 }
 
@@ -64,10 +68,13 @@ struct ProductFeedView: View {
                         Image(systemName: "cart")
                             .font(.system(size: 16, weight: .semibold))
                     }
-                    .badge(cartManager.cartItemCount > 0 ? Text("\(cartManager.cartItemCount)")
-                        .monospacedDigit()
-                        .foregroundColor(gradientManager.currentAccentColor)
-                        .bold() : nil)
+                    .badge(
+                        cartManager.cartItemCount > 0
+                            ? Text("\(cartManager.cartItemCount)")
+                                .monospacedDigit()
+                                .foregroundColor(gradientManager.currentAccentColor)
+                                .bold() : nil
+                    )
                     .accessibilityLabel("Carrito")
                 }
             }
@@ -84,9 +91,11 @@ struct ProductFeedView: View {
                     .presentationDragIndicator(.visible)
             }
             .fullScreenCover(item: $selectedTutorial) { tutorial in
-                VideoPlayerView(tutorial: tutorial, onDismiss: {
-                    selectedTutorial = nil
-                })
+                VideoPlayerView(
+                    tutorial: tutorial,
+                    onDismiss: {
+                        selectedTutorial = nil
+                    })
             }
             .fullScreenCover(item: $selectedProductId) { productId in
                 ProductDetailView(productId: productId)
@@ -109,7 +118,9 @@ struct ProductFeedView: View {
                 gradient: Gradient(stops: [
                     .init(color: palette.light.opacity(0.15), location: 0.0),
                     .init(color: palette.veryLight.opacity(0.3), location: 0.4),
-                    .init(color: Color.white.opacity(colorScheme == .dark ? 0.05 : 0.95), location: 1.0)
+                    .init(
+                        color: Color.white.opacity(colorScheme == .dark ? 0.05 : 0.95),
+                        location: 1.0),
                 ]),
                 center: UnitPoint(x: 0.85, y: 0.15),
                 startRadius: 10,
@@ -130,25 +141,33 @@ struct ProductFeedView: View {
                     featuredProductsSection(section: paraTiSection)
                 }
 
-                // Dynamic sections from backend (except para_ti)
-                ForEach(viewModel.horizontalSections) { section in
+                // First dynamic section from backend (except para_ti)
+                if let firstSection = viewModel.horizontalSections.first,
+                    !viewModel.filteredProducts(for: firstSection).isEmpty
+                {
+                    dynamicSection(firstSection)
+                }
+
+                // Stores section (loaded separately) - forced as 3rd main section
+                if !viewModel.filteredStores.isEmpty {
+                    storesSection
+                }
+
+                // Remaining dynamic sections
+                ForEach(Array(viewModel.horizontalSections.dropFirst())) { section in
                     if !viewModel.filteredProducts(for: section).isEmpty {
                         dynamicSection(section)
                     }
                 }
 
-                // Stores section (loaded separately)
-                if !viewModel.filteredStores.isEmpty {
-                    storesSection
-                }
-
                 // Tutorials section
                 if viewModel.showTutorials && !viewModel.tutorials.isEmpty {
                     tutorialsSection
-                        .transition(.asymmetric(
-                            insertion: .opacity.combined(with: .move(edge: .top)),
-                            removal: .opacity.combined(with: .scale(scale: 0.95))
-                        ))
+                        .transition(
+                            .asymmetric(
+                                insertion: .opacity.combined(with: .move(edge: .top)),
+                                removal: .opacity.combined(with: .scale(scale: 0.95))
+                            ))
                 }
 
                 // Promotions section
@@ -170,9 +189,10 @@ struct ProductFeedView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
                 ForEach(viewModel.categories) { category in
-                    let isSelected = category.isAll
+                    let isSelected =
+                        category.isAll
                         ? viewModel.selectedCategory == nil
-                        : viewModel.selectedCategory == category.name
+                        : viewModel.selectedCategory == category.id
 
                     CategoryChip(
                         title: category.name,
@@ -310,8 +330,10 @@ struct ProductFeedView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 14) {
                     ForEach(viewModel.promotions) { promotion in
-                        PromotionCard(promotion: promotion, accentColor: gradientManager.currentAccentColor)
-                            .padding(.vertical, 12)
+                        PromotionCard(
+                            promotion: promotion, accentColor: gradientManager.currentAccentColor
+                        )
+                        .padding(.vertical, 12)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -339,7 +361,9 @@ struct ProductFeedView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
                     ForEach(viewModel.tutorials) { tutorial in
-                        TutorialFeedCard(tutorial: tutorial, accentColor: gradientManager.currentAccentColor) {
+                        TutorialFeedCard(
+                            tutorial: tutorial, accentColor: gradientManager.currentAccentColor
+                        ) {
                             selectedTutorial = tutorial
                         }
                         .padding(.vertical, 12)
@@ -355,7 +379,7 @@ struct ProductFeedView: View {
     private var storesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Lo mejor de Llego")
+                Text("Negocios destacados")
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 Spacer()
@@ -371,7 +395,8 @@ struct ProductFeedView: View {
                 HStack(spacing: 20) {
                     ForEach(viewModel.filteredStores) { store in
                         NavigationLink(destination: StoreDetailView(storeId: store.id)) {
-                            StoreCircleCard(store: store, accentColor: gradientManager.currentAccentColor)
+                            StoreCircleCard(
+                                store: store, accentColor: gradientManager.currentAccentColor)
                         }
                         .buttonStyle(.plain)
                         .padding(.vertical, 12)
@@ -460,7 +485,6 @@ struct ProductFeedView: View {
     }
 }
 
-
 // MARK: - Store Circle Card
 struct StoreCircleCard: View {
     let store: FeedStore
@@ -473,7 +497,9 @@ struct StoreCircleCard: View {
                 Circle()
                     .fill(Color.cardBackground(colorScheme))
                     .frame(width: 100, height: 100)
-                    .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.15), radius: 10, x: 0, y: 5)
+                    .shadow(
+                        color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.15), radius: 10,
+                        x: 0, y: 5)
 
                 if let avatarUrl = store.avatarUrl, !avatarUrl.isEmpty {
                     CachedAsyncImage(
@@ -651,7 +677,8 @@ struct SmallProductCard: View {
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color.cardBackground(colorScheme))
-                .shadow(color: .black.opacity(colorScheme == .dark ? 0.3 : 0.08), radius: 8, x: 0, y: 4)
+                .shadow(
+                    color: .black.opacity(colorScheme == .dark ? 0.3 : 0.08), radius: 8, x: 0, y: 4)
         )
     }
 
@@ -755,7 +782,8 @@ struct CompactProductCard: View {
         .background(
             RoundedRectangle(cornerRadius: 18)
                 .fill(Color.cardBackground(colorScheme))
-                .shadow(color: .black.opacity(colorScheme == .dark ? 0.3 : 0.1), radius: 10, x: 0, y: 5)
+                .shadow(
+                    color: .black.opacity(colorScheme == .dark ? 0.3 : 0.1), radius: 10, x: 0, y: 5)
         )
     }
 }
@@ -794,7 +822,7 @@ struct TutorialFeedCard: View {
                 LinearGradient(
                     gradient: Gradient(colors: [
                         Color.black.opacity(0.75),
-                        Color.clear
+                        Color.clear,
                     ]),
                     startPoint: .bottom,
                     endPoint: .center
@@ -806,7 +834,6 @@ struct TutorialFeedCard: View {
                     Circle()
                         .glassEffect(.regular.interactive())
                         .frame(width: 48, height: 48)
-
 
                     Image(systemName: "play.fill")
                         .font(.system(size: 20, weight: .bold))
@@ -918,7 +945,7 @@ struct TutorialVideoPlayerView: View {
                             .padding(.horizontal)
                     }
                 }
-                .aspectRatio(16/9, contentMode: .fit)
+                .aspectRatio(16 / 9, contentMode: .fit)
 
                 VStack(alignment: .leading, spacing: 12) {
                     Text(tutorial.title)
@@ -1082,7 +1109,8 @@ struct PromotionCard: View {
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color.cardBackground(colorScheme))
-                .shadow(color: .black.opacity(colorScheme == .dark ? 0.3 : 0.1), radius: 10, x: 0, y: 5)
+                .shadow(
+                    color: .black.opacity(colorScheme == .dark ? 0.3 : 0.1), radius: 10, x: 0, y: 5)
         )
     }
 }

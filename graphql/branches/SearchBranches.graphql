@@ -1,5 +1,5 @@
-query SearchBranches($query: String!, $first: Int! = 20, $after: String, $useVectorSearch: Boolean, $radiusKm: Float, $jwt: String) {
-  searchBranches(query: $query, first: $first, after: $after, useVectorSearch: $useVectorSearch, radiusKm: $radiusKm, jwt: $jwt) {
+query SearchBranches($query: String!, $first: Int! = 20, $after: String, $useVectorSearch: Boolean, $productCategoryId: String, $radiusKm: Float, $jwt: String) {
+  searchBranches(query: $query, first: $first, after: $after, useVectorSearch: $useVectorSearch, productCategoryId: $productCategoryId, radiusKm: $radiusKm, jwt: $jwt) {
     edges {
       node {
         id

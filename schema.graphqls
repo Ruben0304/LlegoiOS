@@ -31,9 +31,9 @@ type Query {
   "Obtener sucursal por ID"
   branch(id: String!, jwt: String = null): BranchType
   "Buscar sucursales con scoring por cercanía (paginado)"
-  searchBranches(query: String!, first: Int = null, after: String = null, useVectorSearch: Boolean! = true, radiusKm: Float = null, jwt: String = null): BranchConnection!
+  searchBranches(query: String!, first: Int = null, after: String = null, useVectorSearch: Boolean! = true, productCategoryId: String = null, radiusKm: Float = null, jwt: String = null): BranchConnection!
   "Buscar sucursales cercanas por coordenadas (paginado)"
-  nearbyBranches(longitude: Float!, latitude: Float!, first: Int = null, after: String = null, radiusKm: Float! = 5, onlyActive: Boolean! = true, tipo: BranchTipo = null, jwt: String = null): NearbyBranchConnection!
+  nearbyBranches(longitude: Float!, latitude: Float!, first: Int = null, after: String = null, radiusKm: Float! = 5, onlyActive: Boolean! = true, tipo: BranchTipo = null, productCategoryId: String = null, jwt: String = null): NearbyBranchConnection!
   "Obtener ubicación de una sucursal desde MongoDB"
   branchLocation(branchId: String!, jwt: String = null): CoordinatesType
   "Obtener todas las sucursales a las que tengo acceso (propias + compartidas)"
@@ -43,7 +43,7 @@ type Query {
   "Obtener producto por ID"
   product(id: String!, jwt: String = null): ProductType
   "Buscar productos con scoring por cercanía (paginado)"
-  searchProducts(query: String!, first: Int = null, after: String = null, useVectorSearch: Boolean! = true, branchTipo: BranchTipo = null, radiusKm: Float = null, jwt: String = null): ProductConnection!
+  searchProducts(query: String!, first: Int = null, after: String = null, useVectorSearch: Boolean! = true, branchTipo: BranchTipo = null, categoryId: String = null, radiusKm: Float = null, jwt: String = null): ProductConnection!
   "Lista de categorías con subcategorías"
   categories(jwt: String = null): [CategoryType!]!
   "Obtener categoría por ID"
@@ -72,6 +72,14 @@ type Query {
   availableOrdersForDelivery(latitude: Float!, longitude: Float!, jwt: String!, radiusKm: Float! = 5): [OrderType!]!
   "Pedido actual del repartidor"
   myCurrentDelivery(jwt: String!): OrderType
+  "Historial de pedidos del repartidor autenticado"
+  myDeliveries(jwt: String!, status: OrderStatusEnum = null, page: Int! = 1, pageSize: Int! = 20): [OrderType!]!
+  "Estadísticas del repartidor autenticado"
+  myDeliveryStats(jwt: String!): DeliveryPersonStatsType!
+  "Mis solicitudes de vinculación a sucursales"
+  myBranchLinkRequests(jwt: String!, status: DeliveryRequestStatusEnum = null): [BranchDeliveryRequestType!]!
+  "Solicitudes de vinculación a una sucursal (para managers)"
+  branchLinkRequests(branchId: String!, jwt: String!, status: DeliveryRequestStatusEnum = null): [BranchDeliveryRequestType!]!
   "Estadísticas de pedidos"
   orderStats(fromDate: DateTime!, toDate: DateTime!, jwt: String!, branchId: String = null): OrderStatsType!
   "Estimar precio de envío antes de crear el pedido. Usa la ubicación guardada del usuario autenticado."
@@ -137,7 +145,7 @@ type Query {
   "Verificar si el usuario ya respondió una encuesta"
   hasRespondedToSurvey(surveyId: String!, jwt: String!): Boolean!
   "Get personalized feed with multiple sections"
-  getFeed(first: Int! = 10, radiusKm: Float = null, sections: [String!] = null, jwt: String = null): FeedResponse!
+  getFeed(branchTipo: String!, first: Int! = 10, radiusKm: Float = null, sections: [String!] = null, productCategoryId: String = null, jwt: String = null): FeedResponse!
   "Get all tutorials"
   tutorials: [TutorialType!]!
   "Get active tutorials only"
@@ -626,6 +634,12 @@ type OrderType {
   paymentId: String
   currentPaymentAttemptId: String
   paidAt: DateTime
+  assignedAt: DateTime
+  pickedUpAt: DateTime
+  completedAt: DateTime
+  deliveryDistanceKm: Float
+  deliveryDurationMin: Int
+  deliveryEarnings: Float
   rating: Int
   ratingComment: String
   "Order items"
@@ -634,6 +648,8 @@ type OrderType {
   discounts: [OrderDiscountType!]!
   "Delivery address"
   deliveryAddress: DeliveryAddressType!
+  "Pickup address (branch location)"
+  pickupAddress: PickupAddressType
   "Order timeline"
   timeline: [OrderTimelineType!]!
   "Order comments"
@@ -676,6 +692,11 @@ type DeliveryAddressType {
   "Delivery coordinates"
   coordinates: CoordinatesType!
 }
+type PickupAddressType {
+  street: String
+  "Pickup coordinates"
+  coordinates: CoordinatesType!
+}
 type OrderTimelineType {
   status: OrderStatusEnum!
   timestamp: DateTime!
@@ -709,6 +730,28 @@ type OrderTrackingType {
   estimatedMinutes: Int
   distanceKm: Float
   routePolyline: String
+}
+type DeliveryPersonStatsType {
+  totalDeliveries: Int!
+  totalEarnings: Float!
+  totalDistanceKm: Float!
+  avgDurationMin: Float!
+  avgRating: Float!
+}
+type BranchDeliveryRequestType {
+  id: String!
+  deliveryPersonId: String!
+  branchId: String!
+  status: DeliveryRequestStatusEnum!
+  message: String
+  respondedBy: String
+  respondedAt: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  "Detalles de la sucursal"
+  branch: BranchType
+  "Detalles del repartidor"
+  deliveryPerson: DeliveryPersonType
 }
 type OrderStatsType {
   totalOrders: Int!
@@ -1119,6 +1162,12 @@ type Mutation {
   confirmDelivery(orderId: String!, jwt: String!): OrderType!
   "Asignar repartidor manualmente"
   assignDeliveryPerson(input: AssignDeliveryPersonInput!, jwt: String!): OrderType!
+  "Solicitar vinculación a una sucursal como repartidor"
+  requestBranchLink(input: RequestBranchLinkInput!, jwt: String!): BranchDeliveryRequestType!
+  "Responder a una solicitud de vinculación (manager)"
+  respondBranchLinkRequest(input: RespondBranchLinkInput!, jwt: String!): BranchDeliveryRequestType!
+  "Cancelar solicitud de vinculación propia"
+  cancelBranchLinkRequest(requestId: String!, jwt: String!): Boolean!
   "Forzar cambio de estado (admin)"
   forceOrderStatus(orderId: String!, status: OrderStatusEnum!, reason: String!, jwt: String!): OrderType!
   "Register device token for push notifications"
@@ -1341,6 +1390,11 @@ enum VehicleTypeEnum {
   BICICLETA
   AUTO
   A_PIE
+}
+enum DeliveryRequestStatusEnum {
+  PENDING
+  ACCEPTED
+  REJECTED
 }
 enum PaymentAttemptStatusEnum {
   PENDING
@@ -1589,6 +1643,14 @@ input AssignDeliveryPersonInput {
   orderId: String!
   deliveryPersonId: String!
   estimatedMinutes: Int = null
+}
+input RequestBranchLinkInput {
+  branchId: String!
+  message: String = null
+}
+input RespondBranchLinkInput {
+  requestId: String!
+  accept: Boolean!
 }
 input RegisterDeviceTokenInput {
   token: String!

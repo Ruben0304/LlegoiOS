@@ -1,4 +1,6 @@
+import AVFoundation
 import SwiftUI
+import UIKit
 
 // MARK: - Onboarding Data Model
 struct OnboardingPageData: Identifiable {
@@ -25,12 +27,20 @@ struct FloatingParticle: Identifiable {
 // MARK: - Main Onboarding View
 struct OnboardingView: View {
     @Binding var isOnboardingCompleted: Bool
+    @Environment(\.scenePhase) private var scenePhase
     @State private var currentPage = 0
     @State private var appeared = false
     @State private var dragOffset: CGFloat = 0
     @State private var isTransitioning = false
 
     private let pages: [OnboardingPageData] = [
+        OnboardingPageData(
+            title: "Llegó",
+            subtitle: "",
+            description: "Delivery en Cuba. Pide en minutos y recibe en la puerta de tu casa",
+            iconName: "play.rectangle.fill",
+            accentColor: Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255)
+        ),
         OnboardingPageData(
             title: "Bienvenido a\nLlegó",
             subtitle: "Tu delivery favorito en Cuba",
@@ -74,10 +84,16 @@ struct OnboardingView: View {
                 )
                 .ignoresSafeArea()
 
+                if currentPage == 0 {
+                    OnboardingIntroVideoBackground(isPlaying: scenePhase == .active)
+                        .transition(.opacity)
+                }
+
                 // Floating particles layer
                 OnboardingParticlesView(currentPage: currentPage)
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
+                    .opacity(currentPage == 0 ? 0.0 : 1.0)
 
                 // Main content
                 VStack(spacing: 0) {
@@ -85,12 +101,20 @@ struct OnboardingView: View {
                     ZStack {
                         ForEach(Array(pages.enumerated()), id: \.element.id) { index, page in
                             if index == currentPage {
-                                OnboardingPageContent(
-                                    page: page,
-                                    pageIndex: index,
-                                    geometry: geometry,
-                                    isLastPage: index == pages.count - 1
-                                )
+                                Group {
+                                    if index == 0 {
+                                        OnboardingVideoIntroPage(
+                                            page: page
+                                        )
+                                    } else {
+                                        OnboardingPageContent(
+                                            page: page,
+                                            pageIndex: max(0, index - 1),
+                                            geometry: geometry,
+                                            isLastPage: index == pages.count - 1
+                                        )
+                                    }
+                                }
                                 .transition(
                                     .asymmetric(
                                         insertion: .move(edge: .trailing).combined(with: .opacity),
@@ -178,7 +202,14 @@ struct OnboardingGradientBackground: View {
 
     private var gradientColors: [GradientPalette] {
         [
-            // Page 0 - Welcome: Deep teal
+            // Page 0 - Video intro: Deep cinematic
+            GradientPalette(
+                dark: Color(red: 0.01, green: 0.07, blue: 0.09),
+                medium: Color(red: 0.03, green: 0.14, blue: 0.17),
+                light: Color(red: 0.06, green: 0.20, blue: 0.24),
+                accent: Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255).opacity(0.10)
+            ),
+            // Page 1 - Welcome: Deep teal
             GradientPalette(
                 dark: Color(red: 0.01, green: 0.15, blue: 0.16),
                 medium: Color(red: 0.02, green: 0.22, blue: 0.24),
@@ -340,6 +371,196 @@ struct OnboardingParticlesView: View {
                 color: particleColors.randomElement() ?? .white.opacity(0.1)
             )
         }
+    }
+}
+
+// MARK: - Video Intro Page
+struct OnboardingVideoIntroPage: View {
+    let page: OnboardingPageData
+
+    @State private var copyAppeared = false
+
+    var body: some View {
+        VStack {
+            VStack(spacing: 12) {
+                HStack(spacing: 12) {
+                    Image("icon")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 74, height: 74)
+                        .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                        .shadow(color: .black.opacity(0.22), radius: 6, x: 0, y: 3)
+
+                    Text(page.title)
+                        .font(.custom("AvenirNextCondensed-DemiBold", size: 48))
+                        .foregroundColor(.white)
+                        .kerning(0.4)
+                        .multilineTextAlignment(.center)
+                }
+
+                Text(page.description)
+                    .font(.custom("AvenirNext-Medium", size: 17))
+                    .foregroundColor(Color.white.opacity(0.82))
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(3)
+                    .padding(.horizontal, 30)
+                    .padding(.top, 4)
+            }
+            .padding(.bottom, 36)
+            .padding(.horizontal, 12)
+            .offset(y: copyAppeared ? 0 : 16)
+            .opacity(copyAppeared ? 1 : 0)
+            .animation(
+                .spring(response: 0.65, dampingFraction: 0.86).delay(0.08),
+                value: copyAppeared
+            )
+            .padding(.top, 30)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            copyAppeared = false
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                copyAppeared = true
+            }
+        }
+    }
+}
+
+// MARK: - Fullscreen Video Background (Intro)
+struct OnboardingIntroVideoBackground: View {
+    let isPlaying: Bool
+    private let bottomInset: CGFloat = 150
+    private let overlapIntoPanel: CGFloat = 20
+
+    var body: some View {
+        GeometryReader { proxy in
+            let videoHeight = max(0, proxy.size.height - bottomInset + overlapIntoPanel)
+
+            ZStack(alignment: .top) {
+                OnboardingLoopingVideoView(
+                    resourceName: "onboarding",
+                    resourceExtension: "mov",
+                    isPlaying: isPlaying
+                )
+                .scaleEffect(1.10)
+                .frame(width: proxy.size.width, height: videoHeight, alignment: .top)
+                .clipped()
+
+                Color.black.opacity(0.06)
+                    .frame(width: proxy.size.width, height: videoHeight, alignment: .top)
+
+                LinearGradient(
+                    stops: [
+                        .init(color: Color.black.opacity(0.74), location: 0.0),
+                        .init(color: Color.black.opacity(0.58), location: 0.22),
+                        .init(color: Color.black.opacity(0.22), location: 0.50),
+                        .init(color: Color.black.opacity(0.34), location: 0.78),
+                        .init(color: Color.black.opacity(0.56), location: 1.0),
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(width: proxy.size.width, height: videoHeight, alignment: .top)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+        .ignoresSafeArea(edges: .top)
+    }
+}
+
+// MARK: - Video Layer (No Controls)
+struct OnboardingLoopingVideoView: UIViewRepresentable {
+    let resourceName: String
+    let resourceExtension: String
+    let isPlaying: Bool
+    var videoGravity: AVLayerVideoGravity = .resizeAspectFill
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    func makeUIView(context: Context) -> OnboardingPlayerContainerView {
+        let view = OnboardingPlayerContainerView()
+        view.playerLayer.videoGravity = videoGravity
+
+        guard let videoURL = resolveVideoURL() else {
+            return view
+        }
+
+        let queuePlayer = AVQueuePlayer()
+        queuePlayer.isMuted = true
+        queuePlayer.preventsDisplaySleepDuringVideoPlayback = false
+
+        let item = AVPlayerItem(url: videoURL)
+        context.coordinator.looper = AVPlayerLooper(player: queuePlayer, templateItem: item)
+        context.coordinator.player = queuePlayer
+
+        view.player = queuePlayer
+
+        if isPlaying {
+            queuePlayer.play()
+        }
+
+        return view
+    }
+
+    func updateUIView(_ uiView: OnboardingPlayerContainerView, context: Context) {
+        uiView.playerLayer.videoGravity = videoGravity
+
+        guard let player = context.coordinator.player else { return }
+
+        if isPlaying {
+            player.play()
+        } else {
+            player.pause()
+        }
+    }
+
+    static func dismantleUIView(
+        _ uiView: OnboardingPlayerContainerView,
+        coordinator: Coordinator
+    ) {
+        coordinator.player?.pause()
+        uiView.player = nil
+        coordinator.looper = nil
+        coordinator.player = nil
+    }
+
+    private func resolveVideoURL() -> URL? {
+        Bundle.main.url(
+            forResource: resourceName,
+            withExtension: resourceExtension,
+            subdirectory: "resources/videos"
+        )
+            ?? Bundle.main.url(
+                forResource: resourceName,
+                withExtension: resourceExtension,
+                subdirectory: "videos"
+            )
+            ?? Bundle.main.url(forResource: resourceName, withExtension: resourceExtension)
+    }
+
+    final class Coordinator {
+        var player: AVQueuePlayer?
+        var looper: AVPlayerLooper?
+    }
+}
+
+final class OnboardingPlayerContainerView: UIView {
+    override static var layerClass: AnyClass {
+        AVPlayerLayer.self
+    }
+
+    var playerLayer: AVPlayerLayer {
+        layer as! AVPlayerLayer
+    }
+
+    var player: AVPlayer? {
+        get { playerLayer.player }
+        set { playerLayer.player = newValue }
     }
 }
 
@@ -897,17 +1118,12 @@ struct OnboardingBottomPanel: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color.black.opacity(0.4),
-                            Color.black.opacity(0.6),
+                            Color(red: 0.07, green: 0.11, blue: 0.12),
+                            Color(red: 0.03, green: 0.06, blue: 0.07),
                         ],
                         startPoint: .top,
                         endPoint: .bottom
                     )
-                )
-                .background(
-                    OnboardingBottomShape()
-                        .fill(.ultraThinMaterial)
-                        .opacity(0.5)
                 )
                 .ignoresSafeArea(edges: .bottom)
         )
