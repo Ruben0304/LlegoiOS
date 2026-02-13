@@ -73,8 +73,8 @@ struct OrderDetailView: View {
         .navigationTitle("Pedido #\(viewModel.order?.orderNumber.suffix(6) ?? "")")
         .navigationBarTitleDisplayMode(.inline)
         .alert("Cancelar Pedido", isPresented: $showCancelAlert) {
-            Button("No", role: .cancel) { }
-            Button("Sí, cancelar", role: .destructive) { 
+            Button("No", role: .cancel) {}
+            Button("Sí, cancelar", role: .destructive) {
                 viewModel.cancelOrder {
                     onDismiss?()
                     dismiss()
@@ -84,7 +84,7 @@ struct OrderDetailView: View {
             Text("¿Estás seguro de que deseas cancelar este pedido?")
         }
         .alert("Pago", isPresented: $viewModel.showPaymentAlert) {
-            Button("OK", role: .cancel) { }
+            Button("OK", role: .cancel) {}
         } message: {
             Text(viewModel.paymentAlertMessage ?? "Error al procesar el pago.")
         }
@@ -111,7 +111,7 @@ struct OrderDetailView: View {
                 gradient: Gradient(stops: [
                     .init(color: palette.light.opacity(0.12), location: 0.0),
                     .init(color: palette.veryLight.opacity(0.25), location: 0.4),
-                    .init(color: Color.feedBackground(colorScheme).opacity(0.98), location: 1.0)
+                    .init(color: Color.feedBackground(colorScheme).opacity(0.98), location: 1.0),
                 ]),
                 center: UnitPoint(x: 0.85, y: 0.15),
                 startRadius: 10,
@@ -261,7 +261,6 @@ struct OrderDetailView: View {
         .padding(.vertical, 12)
     }
 
-
     // MARK: - Pricing Section
 
     private func pricingSection(_ order: OrderDetail) -> some View {
@@ -277,7 +276,9 @@ struct OrderDetailView: View {
                     priceRow(title: "Envío", value: order.formattedDeliveryFee)
 
                     ForEach(order.discounts) { discount in
-                        priceRow(title: discount.title, value: discount.formattedAmount, valueColor: gradientManager.currentAccentColor)
+                        priceRow(
+                            title: discount.title, value: discount.formattedAmount,
+                            valueColor: gradientManager.currentAccentColor)
                     }
 
                     Divider()
@@ -299,12 +300,15 @@ struct OrderDetailView: View {
             card {
                 VStack(spacing: 12) {
                     HStack(spacing: 12) {
-                        Image(systemName: paymentIconName(for: viewModel.paymentMethod, fallback: order.paymentMethod))
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(gradientManager.currentAccentColor)
-                            .frame(width: 44, height: 44)
-                            .background(gradientManager.currentAccentColor.opacity(0.12))
-                            .clipShape(Circle())
+                        Image(
+                            systemName: paymentIconName(
+                                for: viewModel.paymentMethod, fallback: order.paymentMethod)
+                        )
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(gradientManager.currentAccentColor)
+                        .frame(width: 44, height: 44)
+                        .background(gradientManager.currentAccentColor.opacity(0.12))
+                        .clipShape(Circle())
 
                         VStack(alignment: .leading, spacing: 4) {
                             Text(paymentMethodLabel(order))
@@ -335,9 +339,11 @@ struct OrderDetailView: View {
                             Image(systemName: "info.circle.fill")
                                 .font(.system(size: 14))
                                 .foregroundColor(gradientManager.currentAccentColor)
-                            Text("Debes completar el pago para que el negocio continúe con tu pedido.")
-                                .font(.system(size: 13))
-                                .foregroundColor(.secondary)
+                            Text(
+                                "Debes completar el pago para que el negocio continúe con tu pedido."
+                            )
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
                         }
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -349,10 +355,14 @@ struct OrderDetailView: View {
         }
     }
 
-    private func priceRow(title: String, value: String, valueColor: Color? = nil, isEmphasis: Bool = false) -> some View {
+    private func priceRow(
+        title: String, value: String, valueColor: Color? = nil, isEmphasis: Bool = false
+    ) -> some View {
         HStack {
             Text(title)
-                .font(.system(size: isEmphasis ? 15 : 14, weight: isEmphasis ? .semibold : .regular))
+                .font(
+                    .system(size: isEmphasis ? 15 : 14, weight: isEmphasis ? .semibold : .regular)
+                )
                 .foregroundColor(isEmphasis ? Color.adaptiveOnSurface(colorScheme) : .secondary)
             Spacer()
             Text(value)
@@ -439,9 +449,10 @@ struct OrderDetailView: View {
             .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 14)
-                    .fill(comment.author == .customer
-                          ? Color.gray.opacity(colorScheme == .dark ? 0.2 : 0.1)
-                          : gradientManager.currentAccentColor.opacity(0.15))
+                    .fill(
+                        comment.author == .customer
+                            ? Color.gray.opacity(colorScheme == .dark ? 0.2 : 0.1)
+                            : gradientManager.currentAccentColor.opacity(0.15))
             )
 
             if comment.author == .customer { Spacer(minLength: 40) }
@@ -456,9 +467,10 @@ struct OrderDetailView: View {
                 .background(Color.gray.opacity(0.2))
             HStack(spacing: 10) {
                 let shouldShowPay = viewModel.canInitiatePayment(for: order)
-                let shouldShowAccept = order.status == .modifiedByStore
+                let shouldShowAccept = OrderPermissionPolicy.canAcceptModifications(
+                    status: order.status)
 
-                if order.canCancel && !shouldShowPay {
+                if order.canCancel {
                     Button {
                         showCancelAlert = true
                     } label: {
@@ -471,7 +483,7 @@ struct OrderDetailView: View {
                     .tint(.red)
                 }
 
-                if shouldShowAccept && !shouldShowPay {
+                if shouldShowAccept {
                     Button {
                         viewModel.acceptModifications {
                             onDismiss?()
@@ -496,8 +508,11 @@ struct OrderDetailView: View {
                                 ProgressView()
                                     .tint(.white)
                             } else {
-                                Image(systemName: paymentIconName(for: viewModel.paymentMethod, fallback: order.paymentMethod))
-                                    .font(.system(size: 16, weight: .semibold))
+                                Image(
+                                    systemName: paymentIconName(
+                                        for: viewModel.paymentMethod, fallback: order.paymentMethod)
+                                )
+                                .font(.system(size: 16, weight: .semibold))
                             }
                             Text("Pagar \(order.formattedTotal)")
                                 .font(.system(size: 16, weight: .semibold))
@@ -510,7 +525,7 @@ struct OrderDetailView: View {
                     .disabled(viewModel.isInitiatingPayment || viewModel.isProcessing)
                 }
 
-                if order.status == .onTheWay || order.status == .preparing {
+                if OrderPermissionPolicy.canShowTracking(status: order.status) {
                     NavigationLink(destination: OrderTrackingView(orderId: order.id)) {
                         Text("Ver tracking")
                             .font(.system(size: 16, weight: .semibold))
@@ -596,7 +611,7 @@ struct OrderDetailView: View {
 
         return "creditcard.fill"
     }
-    
+
     private func statusBadge(_ status: OrderStatusEnum) -> some View {
         HStack(spacing: 4) {
             Image(systemName: status.icon)
@@ -617,7 +632,9 @@ struct OrderDetailView: View {
             .background(
                 RoundedRectangle(cornerRadius: 16)
                     .fill(Color.cardBackground(colorScheme))
-                    .shadow(color: .black.opacity(colorScheme == .dark ? 0.3 : 0.08), radius: 10, x: 0, y: 4)
+                    .shadow(
+                        color: .black.opacity(colorScheme == .dark ? 0.3 : 0.08), radius: 10, x: 0,
+                        y: 4)
             )
     }
 }

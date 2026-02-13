@@ -24,7 +24,9 @@ struct RecentOrderCard: View {
         .background(
             RoundedRectangle(cornerRadius: 18)
                 .fill(Color.cardBackground(colorScheme))
-                .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.1), radius: 10, x: 0, y: 5)
+                .shadow(
+                    color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.1), radius: 10, x: 0,
+                    y: 5)
         )
     }
 
@@ -107,7 +109,8 @@ struct RecentOrderCard: View {
         HStack(spacing: 12) {
             // Items Preview
             HStack(spacing: -8) {
-                ForEach(Array(order.items.prefix(3).enumerated()), id: \.element.id) { index, item in
+                ForEach(Array(order.items.prefix(3).enumerated()), id: \.element.id) {
+                    index, item in
                     AsyncImage(url: URL(string: item.imageUrl ?? "")) { phase in
                         switch phase {
                         case .success(let image):
@@ -205,7 +208,7 @@ struct RecentOrderCard: View {
                         .foregroundColor(gradientManager.currentAccentColor)
                 }
             }
-            
+
             // Botón de pagar por transferencia (solo si el pedido está pendiente de pago)
             if shouldShowTransferButton {
                 Button {
@@ -215,7 +218,7 @@ struct RecentOrderCard: View {
                     HStack(spacing: 8) {
                         Image(systemName: "arrow.left.arrow.right")
                             .font(.system(size: 14, weight: .semibold))
-                        
+
                         Text("Pagar por transferencia")
                             .font(.system(size: 15, weight: .bold, design: .rounded))
                     }
@@ -228,14 +231,16 @@ struct RecentOrderCard: View {
                                 LinearGradient(
                                     colors: [
                                         gradientManager.currentAccentColor,
-                                        gradientManager.currentAccentColor.opacity(0.8)
+                                        gradientManager.currentAccentColor.opacity(0.8),
                                     ],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
                             )
                     )
-                    .shadow(color: gradientManager.currentAccentColor.opacity(0.3), radius: 8, x: 0, y: 4)
+                    .shadow(
+                        color: gradientManager.currentAccentColor.opacity(0.3), radius: 8, x: 0,
+                        y: 4)
                 }
                 .buttonStyle(.plain)
             }
@@ -249,12 +254,14 @@ struct RecentOrderCard: View {
             TransferPaymentView(order: order)
         }
     }
-    
+
     // MARK: - Helper Properties
-    
+
     /// Determina si se debe mostrar el botón de pagar por transferencia
     private var shouldShowTransferButton: Bool {
-        // Mostrar el botón solo si el pedido está pendiente de aceptación o aceptado
-        return order.status == .pendingAcceptance || order.status == .accepted
+        OrderPermissionPolicy.canShowTransferPaymentShortcut(
+            status: order.status,
+            paymentStatus: order.paymentStatus
+        )
     }
 }

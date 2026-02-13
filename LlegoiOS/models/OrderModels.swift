@@ -10,7 +10,7 @@ enum OrderStatusEnum: String, CaseIterable, Codable {
     case onTheWay = "ON_THE_WAY"
     case delivered = "DELIVERED"
     case cancelled = "CANCELLED"
-    
+
     var displayName: String {
         switch self {
         case .pendingAcceptance: return "Pendiente"
@@ -23,7 +23,7 @@ enum OrderStatusEnum: String, CaseIterable, Codable {
         case .cancelled: return "Cancelado"
         }
     }
-    
+
     var color: Color {
         switch self {
         case .pendingAcceptance: return .orange
@@ -36,7 +36,7 @@ enum OrderStatusEnum: String, CaseIterable, Codable {
         case .cancelled: return .red
         }
     }
-    
+
     var icon: String {
         switch self {
         case .pendingAcceptance: return "clock.fill"
@@ -84,13 +84,14 @@ struct RecentOrder: Identifiable {
     let total: Double
     let currency: String
     let status: OrderStatusEnum
+    let paymentStatus: PaymentStatusEnum
     let itemCount: Int
     let items: [OrderListItem]
-    
+
     var formattedTotal: String {
         String(format: "$%.2f", total)
     }
-    
+
     var formattedDate: String {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
@@ -117,6 +118,7 @@ let sampleRecentOrders: [RecentOrder] = [
         total: 12.50,
         currency: "USD",
         status: .pendingAcceptance,
+        paymentStatus: .pending,
         itemCount: 3,
         items: []
     ),
@@ -129,6 +131,7 @@ let sampleRecentOrders: [RecentOrder] = [
         total: 22.80,
         currency: "USD",
         status: .onTheWay,
+        paymentStatus: .completed,
         itemCount: 2,
         items: []
     ),
@@ -141,7 +144,8 @@ let sampleRecentOrders: [RecentOrder] = [
         total: 18.20,
         currency: "USD",
         status: .cancelled,
+        paymentStatus: .failed,
         itemCount: 4,
         items: []
-    )
+    ),
 ]

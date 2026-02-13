@@ -877,6 +877,7 @@ extension String {
             total: 1500.00,
             currency: "CUP",
             status: .pendingAcceptance,
+            paymentStatus: .pending,
             itemCount: 3,
             items: []
         )

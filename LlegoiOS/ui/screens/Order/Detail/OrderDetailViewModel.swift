@@ -1,5 +1,5 @@
-import Foundation
 import Combine
+import Foundation
 import PassKit
 import StripePaymentSheet
 
@@ -31,16 +31,16 @@ final class OrderDetailViewModel: ObservableObject {
     }
 
     // MARK: - Load Order
-    
+
     func load() {
         isLoading = true
         errorMessage = nil
-        
+
         repository.fetchOrder(id: orderId) { [weak self] result in
             Task { @MainActor in
                 guard let self = self else { return }
                 self.isLoading = false
-                
+
                 switch result {
                 case .success(let detail):
                     self.order = detail
@@ -51,26 +51,29 @@ final class OrderDetailViewModel: ObservableObject {
             }
         }
     }
-    
+
     // MARK: - Refresh
-    
+
     func refresh() {
         load()
     }
 
     // MARK: - Accept Modifications
-    
+
     func acceptModifications(onSuccess: @escaping @Sendable () -> Void = {}) {
-        guard let order = order, order.status == .modifiedByStore else { return }
-        
+        guard
+            let order = order,
+            OrderPermissionPolicy.canAcceptModifications(status: order.status)
+        else { return }
+
         isProcessing = true
         errorMessage = nil
-        
+
         repository.acceptModifications(orderId: orderId) { [weak self] result in
             Task { @MainActor in
                 guard let self = self else { return }
                 self.isProcessing = false
-                
+
                 switch result {
                 case .success(let updatedOrder):
                     self.order = updatedOrder
@@ -84,18 +87,18 @@ final class OrderDetailViewModel: ObservableObject {
     }
 
     // MARK: - Cancel Order
-    
+
     func cancelOrder(reason: String? = nil, onSuccess: @escaping @Sendable () -> Void = {}) {
         guard let order = order, order.canCancel else { return }
-        
+
         isProcessing = true
         errorMessage = nil
-        
+
         repository.cancelOrder(orderId: orderId, reason: reason) { [weak self] result in
             Task { @MainActor in
                 guard let self = self else { return }
                 self.isProcessing = false
-                
+
                 switch result {
                 case .success(let updatedOrder):
                     self.order = updatedOrder
@@ -107,24 +110,24 @@ final class OrderDetailViewModel: ObservableObject {
             }
         }
     }
-    
+
     // MARK: - Add Comment
-    
+
     func sendComment() {
         let message = newComment.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !message.isEmpty else { return }
-        
+
         isProcessing = true
-        
+
         repository.addComment(orderId: orderId, message: message) { [weak self] result in
             Task { @MainActor in
                 guard let self = self else { return }
                 self.isProcessing = false
-                
+
                 switch result {
                 case .success:
                     self.newComment = ""
-                    self.load() // Reload to get updated comments
+                    self.load()  // Reload to get updated comments
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                 }
@@ -196,11 +199,11 @@ final class OrderDetailViewModel: ObservableObject {
     }
 
     func canInitiatePayment(for order: OrderDetail) -> Bool {
-        guard let method = paymentMethod else { return false }
-        let statusAllowsPayment = order.status == .accepted || order.status == .modifiedByStore
-        let needsPayment = order.paymentStatus != .completed
-        let methodType = method.method.lowercased()
-        return statusAllowsPayment && needsPayment && ["wallet", "stripe"].contains(methodType)
+        OrderPermissionPolicy.canInitiateInAppPayment(
+            status: order.status,
+            paymentStatus: order.paymentStatus,
+            paymentMethodType: paymentMethod?.method
+        )
     }
 
     private func handleWalletPaymentResult(_ attempt: PaymentAttemptModel) {
@@ -281,7 +284,9 @@ final class OrderDetailViewModel: ObservableObject {
         }
     }
 
-    private func resolvePaymentMethod(from methods: [PaymentMethodModel], code: String) -> PaymentMethodModel? {
+    private func resolvePaymentMethod(from methods: [PaymentMethodModel], code: String)
+        -> PaymentMethodModel?
+    {
         let normalized = code.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
 
         if let exact = methods.first(where: { $0.code.lowercased() == normalized }) {
@@ -304,7 +309,7 @@ final class OrderDetailViewModel: ObservableObject {
     }
 
     // MARK: - Formatting Helpers
-    
+
     func formatCurrency(_ amount: Double) -> String {
         return String(format: "$%.2f", amount)
     }
@@ -314,29 +319,30 @@ final class OrderDetailViewModel: ObservableObject {
         formatter.dateFormat = "HH:mm"
         return formatter.string(from: date)
     }
-    
+
     func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd MMM, HH:mm"
         formatter.locale = Locale(identifier: "es")
         return formatter.string(from: date)
     }
-    
+
     // MARK: - Computed Properties
-    
+
     var canAcceptModifications: Bool {
-        order?.status == .modifiedByStore
+        guard let status = order?.status else { return false }
+        return OrderPermissionPolicy.canAcceptModifications(status: status)
     }
-    
+
     var canCancelOrder: Bool {
         order?.canCancel ?? false
     }
-    
+
     var showDeliveryPerson: Bool {
         guard let status = order?.status else { return false }
-        return status == .onTheWay || status == .readyForPickup
+        return OrderPermissionPolicy.canShowTracking(status: status)
     }
-    
+
     var showTimeline: Bool {
         !(order?.timeline.isEmpty ?? true)
     }
