@@ -1,46 +1,68 @@
-import SwiftUI
 import MapKit
+import SwiftUI
+
+private enum StoreMapDisplayMode: String, CaseIterable {
+    case map = "Mapa"
+    case list = "Listado"
+}
 
 struct StoreMapView: View {
     @StateObject private var viewModel = StoreMapViewModel()
+    @StateObject private var listViewModel = StoreListViewModel()
     @State private var selectedStore: StoreWithCoordinates? = nil
     @State private var navigationDestination: StoreMapDestination? = nil
     @State private var pendingDestination: StoreMapDestination? = nil
     @State private var selectedStoreGradient: ExtractedGradient? = nil
-    
+    @State private var displayMode: StoreMapDisplayMode = .map
+
     @State private var mapRegion = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 23.1345, longitude: -82.3589),
         span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
     )
-    
+
     var body: some View {
         NavigationStack {
-            mapContent
-                .ignoresSafeArea()
-                .overlay {
-                    if viewModel.isLoading {
-                        loadingState
+            VStack(spacing: 0) {
+                displayModePicker
+
+                Group {
+                    switch displayMode {
+                    case .map:
+                        mapContent
+                            .overlay {
+                                if viewModel.isLoading {
+                                    loadingState
+                                }
+                            }
+                    case .list:
+                        listContent
                     }
                 }
-                .navigationTitle("Lugares")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .navigationTitle("Lugares")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
             .navigationDestination(item: $navigationDestination) { destination in
                 switch destination {
                 case .detail(let store):
                     StoreDetailView(store: store.toStore())
                 case .products(let branchId, let branchName, let gradient):
-                    ProductListView(branchId: branchId, branchName: branchName, storeGradient: gradient)
+                    ProductListView(
+                        branchId: branchId, branchName: branchName, storeGradient: gradient)
                 }
             }
-            .sheet(item: $selectedStore, onDismiss: {
-                if let destination = pendingDestination {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        navigationDestination = destination
-                        pendingDestination = nil
+            .sheet(
+                item: $selectedStore,
+                onDismiss: {
+                    if let destination = pendingDestination {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            navigationDestination = destination
+                            pendingDestination = nil
+                        }
                     }
                 }
-            }) { store in
+            ) { store in
                 StoreMapOptionsModal(
                     store: store,
                     onViewProfile: {
@@ -62,11 +84,23 @@ struct StoreMapView: View {
             }
             .onAppear {
                 viewModel.loadStores()
+                listViewModel.loadStores()
                 updateMapRegionFromUserLocation()
             }
         }
     }
-    
+
+    private var displayModePicker: some View {
+        Picker("Vista", selection: $displayMode) {
+            ForEach(StoreMapDisplayMode.allCases, id: \.self) { mode in
+                Text(mode.rawValue).tag(mode)
+            }
+        }
+        .pickerStyle(.segmented)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+    }
+
     // MARK: - Map Content
     private var mapContent: some View {
         Map(
@@ -82,7 +116,7 @@ struct StoreMapView: View {
                             Circle()
                                 .fill(Color.llegoPrimary)
                                 .frame(width: 50, height: 50)
-                            
+
                             CachedAsyncImage(
                                 url: URL(string: store.logoUrl),
                                 cacheKey: "store_map_\(store.id)",
@@ -97,7 +131,9 @@ struct StoreMapView: View {
                                     ZStack {
                                         Color.gray.opacity(0.2)
                                         ProgressView()
-                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                            .progressViewStyle(
+                                                CircularProgressViewStyle(tint: .white)
+                                            )
                                             .scaleEffect(0.7)
                                     }
                                     .frame(width: 42, height: 42)
@@ -113,18 +149,18 @@ struct StoreMapView: View {
                             )
                         }
                         .shadow(color: Color.llegoPrimary.opacity(0.4), radius: 8, x: 0, y: 4)
-                        
+
                         PinTriangle()
                             .fill(Color.llegoPrimary)
                             .frame(width: 16, height: 12)
                             .offset(y: -1)
-                        
+
                         Ellipse()
                             .fill(
                                 RadialGradient(
                                     gradient: Gradient(colors: [
                                         Color.black.opacity(0.25),
-                                        Color.black.opacity(0)
+                                        Color.black.opacity(0),
                                     ]),
                                     center: .center,
                                     startRadius: 0,
@@ -138,8 +174,64 @@ struct StoreMapView: View {
                 .buttonStyle(PlainButtonStyle())
             }
         }
+        .ignoresSafeArea(.container, edges: .bottom)
     }
-    
+
+    private var listContent: some View {
+        Group {
+            if listViewModel.isLoading {
+                loadingState
+            } else if listViewModel.stores.isEmpty {
+                ContentUnavailableView(
+                    "No hay tiendas disponibles",
+                    systemImage: "storefront"
+                )
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 24) {
+                        ForEach(listViewModel.stores) { store in
+                            StoreProductsCard(
+                                store: store,
+                                products: listViewModel.products(for: store.id),
+                                isLoadingProducts: listViewModel.isLoadingProductsFor(
+                                    storeId: store.id),
+                                onStoreTap: { gradient in
+                                    selectedStore = store
+                                    selectedStoreGradient = gradient
+                                },
+                                onProductTap: { _, gradient in
+                                    navigationDestination = .products(
+                                        branchId: store.id,
+                                        branchName: store.name,
+                                        gradient: gradient
+                                    )
+                                },
+                                onFavoriteTap: { product in
+                                    FavoritesManager.shared.toggleFavorite(productId: product.id)
+                                },
+                                onBodyTap: {
+                                    navigationDestination = .detail(store)
+                                }
+                            )
+                            .onAppear {
+                                listViewModel.loadMoreIfNeeded(currentStore: store)
+                            }
+                        }
+
+                        if listViewModel.isLoadingMore {
+                            ProgressView()
+                                .tint(.llegoPrimary)
+                                .padding(.vertical, 8)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 24)
+                }
+            }
+        }
+    }
+
     // MARK: - Loading State
     private var loadingState: some View {
         VStack(spacing: 20) {
@@ -153,7 +245,7 @@ struct StoreMapView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.ultraThinMaterial)
     }
-    
+
     // MARK: - Helpers
     private func updateMapRegionFromUserLocation() {
         if let location = UserLocationManager.shared.userLocation {
@@ -169,7 +261,7 @@ struct StoreMapView: View {
 enum StoreMapDestination: Identifiable, Hashable {
     case detail(StoreWithCoordinates)
     case products(branchId: String, branchName: String, gradient: ExtractedGradient?)
-    
+
     var id: String {
         switch self {
         case .detail(let store):
@@ -178,11 +270,11 @@ enum StoreMapDestination: Identifiable, Hashable {
             return "products-\(branchId)"
         }
     }
-    
+
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
-    
+
     static func == (lhs: StoreMapDestination, rhs: StoreMapDestination) -> Bool {
         lhs.id == rhs.id
     }
@@ -193,9 +285,9 @@ private struct StoreMapOptionsModal: View {
     let store: StoreWithCoordinates
     let onViewProfile: () -> Void
     let onViewProducts: () -> Void
-    
+
     @State private var isAnimated = false
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Header con imagen
@@ -228,7 +320,7 @@ private struct StoreMapOptionsModal: View {
                             colors: [
                                 Color.clear,
                                 Color(.systemBackground).opacity(0.3),
-                                Color(.systemBackground)
+                                Color(.systemBackground),
                             ],
                             startPoint: .top,
                             endPoint: .bottom
@@ -236,7 +328,7 @@ private struct StoreMapOptionsModal: View {
                     )
                 }
                 .frame(height: 180)
-                
+
                 CachedAsyncImage(
                     url: URL(string: store.logoUrl),
                     cacheKey: "store_modal_\(store.id)",
@@ -268,16 +360,16 @@ private struct StoreMapOptionsModal: View {
                 .scaleEffect(isAnimated ? 1.0 : 0.8)
                 .opacity(isAnimated ? 1 : 0)
             }
-            
+
             Spacer().frame(height: 56)
-            
+
             // Info
             VStack(spacing: 8) {
                 Text(store.name)
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
-                
+
                 if let address = store.address {
                     HStack(spacing: 6) {
                         Image(systemName: "location.fill")
@@ -292,9 +384,9 @@ private struct StoreMapOptionsModal: View {
             .padding(.horizontal, 24)
             .opacity(isAnimated ? 1 : 0)
             .offset(y: isAnimated ? 0 : 10)
-            
+
             Spacer().frame(height: 20)
-            
+
             // Pills
             HStack(spacing: 16) {
                 if let rating = store.rating {
@@ -305,14 +397,14 @@ private struct StoreMapOptionsModal: View {
                         label: "Rating"
                     )
                 }
-                
+
                 InfoPill(
                     icon: "clock.fill",
                     iconColor: .llegoAccent,
                     value: "\(store.etaMinutes)",
                     label: "min"
                 )
-                
+
                 InfoPill(
                     icon: "checkmark.circle.fill",
                     iconColor: .green,
@@ -323,9 +415,9 @@ private struct StoreMapOptionsModal: View {
             .padding(.horizontal, 24)
             .opacity(isAnimated ? 1 : 0)
             .offset(y: isAnimated ? 0 : 15)
-            
+
             Spacer().frame(height: 28)
-            
+
             // Botones
             VStack(spacing: 12) {
                 Button(action: onViewProducts) {
@@ -349,7 +441,7 @@ private struct StoreMapOptionsModal: View {
                     .shadow(color: Color.llegoPrimary.opacity(0.3), radius: 8, x: 0, y: 4)
                 }
                 .buttonStyle(ScaleButtonStyle())
-                
+
                 Button(action: onViewProfile) {
                     HStack(spacing: 10) {
                         Image(systemName: "storefront")
@@ -368,7 +460,7 @@ private struct StoreMapOptionsModal: View {
             .padding(.horizontal, 20)
             .opacity(isAnimated ? 1 : 0)
             .offset(y: isAnimated ? 0 : 20)
-            
+
             Spacer().frame(height: 16)
         }
         .background(Color(.systemBackground))

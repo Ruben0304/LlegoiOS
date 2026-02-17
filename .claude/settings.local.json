@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/suncar/projects/**)",
+      "Bash(cat:*)",
+      "Bash(./apollo-ios-cli generate:*)",
+      "Bash(xcodebuild:*)",
+      "Bash(find:*)",
+      "Bash(npx:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

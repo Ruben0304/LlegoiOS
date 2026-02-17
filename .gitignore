@@ -93,3 +93,6 @@ iOSInjectionProject/
 # API Keys and Secrets
 LlegoiOS/network/Secrets.swift
 LlegoiOS/network/StripeSecrets.swift
+
+# Private planning docs
+PLAN_SALIDA_PRODUCCION_PRIVADO.md
