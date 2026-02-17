@@ -84,6 +84,8 @@ type Query {
   orderStats(fromDate: DateTime!, toDate: DateTime!, jwt: String!, branchId: String = null): OrderStatsType!
   "Estimar precio de envío antes de crear el pedido. Usa la ubicación guardada del usuario autenticado."
   estimateDeliveryFee(branchId: String!, jwt: String!, subtotal: Float! = 0): DeliveryFeeEstimateType!
+  "Estadísticas del dashboard: ingresos, pedidos completados/rechazados y productos más vendidos por período (today, week, month)"
+  dashboardStats(businessId: String!, period: DashboardPeriod!, jwt: String!): DashboardStatsType!
   "Get business type configurations (supports incremental sync)"
   businessTypeConfigs(lastSyncAt: DateTime = null): [BusinessTypeConfigType!]!
   "Obtener todos los métodos de pago disponibles"
@@ -158,6 +160,8 @@ type Query {
   searchTutorials(query: String!): [TutorialType!]!
   "Get tutorials by tags"
   tutorialsByTags(tags: [String!]!): [TutorialType!]!
+  "Buscar transferencias pendientes por transfer_id y/o teléfono"
+  findPendingTransfers(jwt: String!, transferId: String = null, phone: String = null): [ShortcutTransferType!]!
   "Saludo de ejemplo"
   hello(jwt: String = null): String!
   "Saluda por nombre"
@@ -197,8 +201,7 @@ type BusinessType {
   globalRating: Float!
   avatar: String
   description: String
-  socialMedia: JSON
-  tags: [String!]!
+  tags: [String!]
   isActive: Boolean!
   createdAt: DateTime!
   "Presigned URL for the business avatar"
@@ -211,8 +214,7 @@ type BusinessWithBranchesType {
   globalRating: Float!
   avatar: String
   description: String
-  socialMedia: JSON
-  tags: [String!]!
+  tags: [String!]
   isActive: Boolean!
   createdAt: DateTime!
   branches: [BranchType!]!
@@ -230,11 +232,11 @@ type BranchType {
   phone: String!
   schedule: JSON!
   managerIds: [String!]!
-  status: String!
+  isActive: Boolean!
+  status: String
   avatar: String
   coverImage: String
-  deliveryRadius: Float
-  facilities: [String!]!
+  socialMedia: JSON
   tipos: [BranchTipo!]!
   paymentMethodIds: [String!]!
   useAppMessaging: Boolean!
@@ -242,6 +244,7 @@ type BranchType {
   accounts: [TransferAccountType!]!
   qrPayments: [QrPaymentType!]!
   phones: [TransferPhoneType!]!
+  deliveryRadius: Float
   createdAt: DateTime!
   wallet: WalletBalanceType!
   walletStatus: String!
@@ -357,11 +360,11 @@ type ScoredBranchType {
   phone: String!
   schedule: JSON!
   managerIds: [String!]!
-  status: String!
+  isActive: Boolean!
+  status: String
   avatar: String
   coverImage: String
-  deliveryRadius: Float
-  facilities: [String!]!
+  socialMedia: JSON
   tipos: [BranchTipo!]!
   paymentMethodIds: [String!]!
   useAppMessaging: Boolean!
@@ -369,6 +372,7 @@ type ScoredBranchType {
   accounts: [TransferAccountType!]!
   qrPayments: [QrPaymentType!]!
   phones: [TransferPhoneType!]!
+  deliveryRadius: Float
   createdAt: DateTime!
   score: Float!
   distanceM: Float
@@ -409,11 +413,11 @@ type NearbyBranchType {
   phone: String!
   schedule: JSON!
   managerIds: [String!]!
-  status: String!
+  isActive: Boolean!
+  status: String
   avatar: String
   coverImage: String
-  deliveryRadius: Float
-  facilities: [String!]!
+  socialMedia: JSON
   tipos: [BranchTipo!]!
   paymentMethodIds: [String!]!
   useAppMessaging: Boolean!
@@ -421,6 +425,7 @@ type NearbyBranchType {
   accounts: [TransferAccountType!]!
   qrPayments: [QrPaymentType!]!
   phones: [TransferPhoneType!]!
+  deliveryRadius: Float
   createdAt: DateTime!
   distanceM: Float!
   wallet: WalletBalanceType!
@@ -770,6 +775,19 @@ type DeliveryFeeEstimateType {
   branchId: String!
   branchName: String!
 }
+type DashboardStatsType {
+  totalRevenue: Float!
+  completedOrders: Int!
+  cancelledOrders: Int!
+  topProducts: [TopProductType!]!
+}
+type TopProductType {
+  productId: String!
+  name: String!
+  imageUrl: String!
+  totalQuantity: Int!
+  totalRevenue: Float!
+}
 type BusinessTypeConfigType {
   id: String!
   key: String!
@@ -840,6 +858,8 @@ type PaymentAttemptType {
   stripePaymentIntentId: String
   "Stripe client secret for UI"
   stripeClientSecret: String
+  "User indicated their transfer sends SMS (enables Shortcut auto-confirm)"
+  sendsSmsNotification: Boolean!
   "Proof/receipt URL"
   proofUrl: String
   "When customer confirmed"
@@ -1093,6 +1113,24 @@ type TutorialType {
   "Presigned URL for the tutorial thumbnail"
   thumbnailUrlSigned: String
 }
+type ShortcutTransferType {
+  "Transfer record ID"
+  id: String!
+  "Bank transfer ID from SMS"
+  transferId: String!
+  "Transfer amount"
+  amount: Float!
+  "Phone that received the SMS"
+  phone: String
+  "Transfer date from SMS"
+  date: DateTime
+  "Whether this transfer has been used"
+  activated: Boolean!
+  "When it was activated"
+  activatedAt: DateTime
+  "When the record was created"
+  createdAt: DateTime!
+}
 type Mutation {
   "Register a new user"
   register(input: RegisterInput!, jwt: String = null): AuthResponse!
@@ -1118,6 +1156,8 @@ type Mutation {
   updateBusiness(businessId: String!, input: UpdateBusinessInput!, jwt: String = null): BusinessType!
   "Registrar múltiples negocios con sus sucursales en una sola operación"
   registerMultipleBusinesses(businessesInput: [RegisterBusinessWithBranchesInput!]!, jwt: String = null): [BusinessType!]!
+  "Eliminar un negocio y todas sus sucursales"
+  deleteBusiness(businessId: String!, jwt: String = null): Boolean!
   "Crear una nueva sucursal"
   createBranch(input: CreateBranchInput!, jwt: String = null): BranchType!
   "Actualizar una sucursal"
@@ -1185,7 +1225,7 @@ type Mutation {
   "Validar una imagen de transferencia bancaria usando Gemini OCR"
   validatePaymentImage(file: Upload!, jwt: String = null): PaymentType!
   "Iniciar un pago para un pedido"
-  initiatePayment(orderId: String!, paymentMethodId: String!, jwt: String!, includeDeliveryFee: Boolean! = true): InitiatePaymentResult!
+  initiatePayment(orderId: String!, paymentMethodId: String!, jwt: String!, includeDeliveryFee: Boolean! = true, sendsSmsNotification: Boolean! = false): InitiatePaymentResult!
   "Confirmar que el cliente envió el pago (para métodos manuales)"
   confirmPaymentSent(paymentAttemptId: String!, proofUrl: String!, jwt: String!): PaymentAttemptType!
   "Negocio confirma que recibió el pago"
@@ -1196,6 +1236,8 @@ type Mutation {
   disputePayment(paymentAttemptId: String!, reason: String!, jwt: String!): PaymentAttemptType!
   "Solicitar reembolso de un pago"
   requestRefund(paymentAttemptId: String!, reason: String!, jwt: String!): PaymentAttemptType!
+  "Confirmar automáticamente un pago por transferencia usando el sistema de Shortcut Transfers. Busca por el teléfono del perfil del usuario; si no hay coincidencia, el cliente puede proveer el ID de transferencia."
+  confirmTransferByShortcut(paymentAttemptId: String!, jwt: String!, transferId: String = null): PaymentAttemptType!
   "Cancelar un intento de pago pendiente"
   cancelPayment(paymentAttemptId: String!, jwt: String!): PaymentAttemptType!
   "Transferir dinero a otro usuario o sucursal"
@@ -1396,6 +1438,11 @@ enum DeliveryRequestStatusEnum {
   ACCEPTED
   REJECTED
 }
+enum DashboardPeriod {
+  TODAY
+  WEEK
+  MONTH
+}
 enum PaymentAttemptStatusEnum {
   PENDING
   PROCESSING
@@ -1487,7 +1534,6 @@ input CreateBusinessInput {
   name: String!
   avatar: String = null
   description: String = null
-  socialMedia: JSON = null
   tags: [String!] = null
 }
 input RegisterBranchInput {
@@ -1501,8 +1547,7 @@ input RegisterBranchInput {
   managerIds: [String!] = null
   avatar: String = null
   coverImage: String = null
-  deliveryRadius: Float = null
-  facilities: [String!] = null
+  socialMedia: JSON = null
   accounts: [TransferAccountInput!] = null
   qrPayments: [QrPaymentInput!] = null
   phones: [TransferPhoneInput!] = null
@@ -1528,7 +1573,6 @@ input TransferPhoneInput {
 input UpdateBusinessInput {
   name: String = null
   description: String = null
-  socialMedia: JSON = null
   tags: [String!] = null
   isActive: Boolean = null
   avatar: String = null
@@ -1549,8 +1593,7 @@ input CreateBranchInput {
   managerIds: [String!] = null
   avatar: String = null
   coverImage: String = null
-  deliveryRadius: Float = null
-  facilities: [String!] = null
+  socialMedia: JSON = null
   useAppMessaging: Boolean! = true
   vehicles: [BranchVehicle!] = null
   accounts: [TransferAccountInput!] = null
@@ -1563,9 +1606,8 @@ input UpdateBranchInput {
   coordinates: CoordinatesInput = null
   phone: String = null
   schedule: JSON = null
-  status: String = null
-  deliveryRadius: Float = null
-  facilities: [String!] = null
+  isActive: Boolean = null
+  socialMedia: JSON = null
   managerIds: [String!] = null
   avatar: String = null
   coverImage: String = null

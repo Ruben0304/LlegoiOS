@@ -9,31 +9,35 @@ public extension LlegoAPI {
     public static let operationName: String = "InitiatePayment"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"mutation InitiatePayment($orderId: String!, $paymentMethodId: String!, $jwt: String!, $includeDeliveryFee: Boolean!) { initiatePayment( orderId: $orderId paymentMethodId: $paymentMethodId jwt: $jwt includeDeliveryFee: $includeDeliveryFee ) { __typename paymentAttempt { __typename id orderId paymentMethodId subtotal deliveryFee includesDeliveryFee taxAmount discountAmount commissionAmount totalAmount currency status stripePaymentIntentId stripeClientSecret proofUrl customerConfirmedAt businessConfirmedAt disputeReason deliveryPersonConfirmedAt deliveryPersonId walletTransactionId businessWalletTransactionId commissionTransactionId } instructions } }"#
+        #"mutation InitiatePayment($orderId: String!, $paymentMethodId: String!, $jwt: String!, $includeDeliveryFee: Boolean!, $sendsSmsNotification: Boolean!) { initiatePayment( orderId: $orderId paymentMethodId: $paymentMethodId jwt: $jwt includeDeliveryFee: $includeDeliveryFee sendsSmsNotification: $sendsSmsNotification ) { __typename paymentAttempt { __typename id orderId paymentMethodId subtotal deliveryFee includesDeliveryFee taxAmount discountAmount commissionAmount totalAmount currency status stripePaymentIntentId stripeClientSecret sendsSmsNotification proofUrl customerConfirmedAt businessConfirmedAt disputeReason deliveryPersonConfirmedAt deliveryPersonId walletTransactionId businessWalletTransactionId commissionTransactionId } instructions } }"#
       ))
 
     public var orderId: String
     public var paymentMethodId: String
     public var jwt: String
     public var includeDeliveryFee: Bool
+    public var sendsSmsNotification: Bool
 
     public init(
       orderId: String,
       paymentMethodId: String,
       jwt: String,
-      includeDeliveryFee: Bool
+      includeDeliveryFee: Bool,
+      sendsSmsNotification: Bool
     ) {
       self.orderId = orderId
       self.paymentMethodId = paymentMethodId
       self.jwt = jwt
       self.includeDeliveryFee = includeDeliveryFee
+      self.sendsSmsNotification = sendsSmsNotification
     }
 
     @_spi(Unsafe) public var __variables: Variables? { [
       "orderId": orderId,
       "paymentMethodId": paymentMethodId,
       "jwt": jwt,
-      "includeDeliveryFee": includeDeliveryFee
+      "includeDeliveryFee": includeDeliveryFee,
+      "sendsSmsNotification": sendsSmsNotification
     ] }
 
     public struct Data: LlegoAPI.SelectionSet {
@@ -46,7 +50,8 @@ public extension LlegoAPI {
           "orderId": .variable("orderId"),
           "paymentMethodId": .variable("paymentMethodId"),
           "jwt": .variable("jwt"),
-          "includeDeliveryFee": .variable("includeDeliveryFee")
+          "includeDeliveryFee": .variable("includeDeliveryFee"),
+          "sendsSmsNotification": .variable("sendsSmsNotification")
         ]),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
@@ -102,6 +107,7 @@ public extension LlegoAPI {
             .field("status", GraphQLEnum<LlegoAPI.PaymentAttemptStatusEnum>.self),
             .field("stripePaymentIntentId", String?.self),
             .field("stripeClientSecret", String?.self),
+            .field("sendsSmsNotification", Bool.self),
             .field("proofUrl", String?.self),
             .field("customerConfirmedAt", LlegoAPI.DateTime?.self),
             .field("businessConfirmedAt", LlegoAPI.DateTime?.self),
@@ -144,6 +150,8 @@ public extension LlegoAPI {
           public var stripePaymentIntentId: String? { __data["stripePaymentIntentId"] }
           /// Stripe client secret for UI
           public var stripeClientSecret: String? { __data["stripeClientSecret"] }
+          /// User indicated their transfer sends SMS (enables Shortcut auto-confirm)
+          public var sendsSmsNotification: Bool { __data["sendsSmsNotification"] }
           /// Proof/receipt URL
           public var proofUrl: String? { __data["proofUrl"] }
           /// When customer confirmed

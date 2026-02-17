@@ -235,7 +235,7 @@ public extension LlegoAPI {
               .field("address", String?.self),
               .field("coordinates", Coordinates.self),
               .field("phone", String.self),
-              .field("status", String.self),
+              .field("status", String?.self),
               .field("avatarUrl", String?.self),
               .field("coverUrl", String?.self),
               .field("deliveryRadius", Double?.self),
@@ -251,7 +251,7 @@ public extension LlegoAPI {
             public var address: String? { __data["address"] }
             public var coordinates: Coordinates { __data["coordinates"] }
             public var phone: String { __data["phone"] }
-            public var status: String { __data["status"] }
+            public var status: String? { __data["status"] }
             /// Presigned URL for the branch avatar (inherits from business if not set)
             public var avatarUrl: String? { __data["avatarUrl"] }
             /// Presigned URL for the branch cover image

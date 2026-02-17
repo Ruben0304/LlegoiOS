@@ -1,5 +1,13 @@
-query GetPaymentAttempt($id: String!, $jwt: String!) {
-  paymentAttempt(id: $id, jwt: $jwt) {
+mutation ConfirmTransferByShortcut(
+  $paymentAttemptId: String!
+  $jwt: String!
+  $transferId: String
+) {
+  confirmTransferByShortcut(
+    paymentAttemptId: $paymentAttemptId
+    jwt: $jwt
+    transferId: $transferId
+  ) {
     id
     orderId
     paymentMethodId
@@ -12,8 +20,6 @@ query GetPaymentAttempt($id: String!, $jwt: String!) {
     totalAmount
     currency
     status
-    stripePaymentIntentId
-    stripeClientSecret
     sendsSmsNotification
     proofUrl
     customerConfirmedAt

@@ -48,6 +48,9 @@ struct CartView: View {
     @State private var showPaymentLinkSheet = false
     @State private var showBankTransferSheet = false
     @State private var showOrderConfirmation = false
+    @State private var showTransferSmsSheet = false
+    @State private var pendingTransferPaymentMethodId: String?
+    @State private var preInitiatedPaymentResult: InitiatePaymentResultModel?
     private let paymentRepository = PaymentRepository()
 
     // MARK: - Ad Discount States
@@ -316,15 +319,64 @@ struct CartView: View {
                     totalAmount: viewModel.formattedTotal,
                     onConfirm: { _ in
                         showBankTransferSheet = false
-                        // Crear pedido real con transferencia bancaria
-                        createOrderWithPaymentMethod("bank_transfer")
+                        if let preResult = preInitiatedPaymentResult {
+                            // Ya hay un paymentAttempt creado (viene del flujo Transfermóvil No-SMS)
+                            // Confirmar directamente con confirmPaymentSent usando proofUrl vacío por ahora
+                            // TODO: pasar la proofUrl real desde BankTransferSheetView
+                            viewModel.confirmPaymentSent(
+                                paymentAttemptId: preResult.paymentAttempt.id,
+                                proofUrl: ""
+                            ) { result in
+                                Task { @MainActor in
+                                    preInitiatedPaymentResult = nil
+                                    switch result {
+                                    case .success:
+                                        viewModel.clearCart()
+                                        showOrderConfirmation = true
+                                    case .failure(let error):
+                                        paymentAlertMessage = error.localizedDescription
+                                        showPaymentAlert = true
+                                    }
+                                }
+                            }
+                        } else {
+                            // Flujo normal: crear pedido con bank_transfer
+                            preInitiatedPaymentResult = nil
+                            createOrderWithPaymentMethod("bank_transfer")
+                        }
                     },
                     onDismiss: {
                         showBankTransferSheet = false
+                        preInitiatedPaymentResult = nil
                     }
                 )
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $showTransferSmsSheet) {
+                if let methodId = pendingTransferPaymentMethodId {
+                    TransferSmsConfirmationView(
+                        cartViewModel: viewModel,
+                        paymentMethodId: methodId,
+                        totalAmount: viewModel.formattedTotal,
+                        onPaymentConfirmed: { _ in
+                            showTransferSmsSheet = false
+                            viewModel.clearCart()
+                            showOrderConfirmation = true
+                        },
+                        onGoToManualFlow: { paymentResult in
+                            preInitiatedPaymentResult = paymentResult
+                            showTransferSmsSheet = false
+                            // Abrir sheet de transferencia manual con el attempt ya creado
+                            showBankTransferSheet = true
+                        },
+                        onDismiss: {
+                            showTransferSmsSheet = false
+                        }
+                    )
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+                }
             }
             .alert("Estado del Pago", isPresented: $showPaymentAlert) {
                 Button("OK", role: .cancel) { }
@@ -566,19 +618,28 @@ struct CartView: View {
     }
 
     private func executePaymentProcessing(paymentMethod: PaymentMethod) {
-        // Si el método de pago es factura internacional, generar payment link
-        if paymentMethod.id == "invoice_international" {
+        // Buscar el modelo backend para saber el method real
+        let backendMethod = viewModel.paymentMethods.first { $0.id == paymentMethod.id }
+
+        // Transfermóvil CUP → flujo con pregunta de SMS
+        if backendMethod?.method.lowercased() == "transfermovil" ||
+            (backendMethod?.method.lowercased() == "transfer" && paymentMethod.currency.uppercased() == "CUP") {
+            pendingTransferPaymentMethodId = paymentMethod.id
+            showTransferSmsSheet = true
+        }
+        // Factura internacional → generar payment link
+        else if paymentMethod.id == "invoice_international" {
             generatePaymentLink()
         }
-        // Si el método de pago es transferencia bancaria, mostrar sheet
+        // Transferencia bancaria manual → sheet de foto
         else if paymentMethod.id == "bank_transfer" {
             showBankTransferSheet = true
         }
-        // Si el método de pago es tarjeta de crédito, usar Stripe
+        // Tarjeta de crédito → Stripe
         else if paymentMethod.id == "credit_card" {
             initiateStripePayment()
         } else {
-            // Para otros métodos de pago (Efectivo, QvaPay, etc.) crear pedido real
+            // Efectivo, wallet, QvaPay, etc.
             createOrderWithPaymentMethod(paymentMethod.id)
         }
     }

@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetBranchDetail"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetBranchDetail($id: String!) { branch(id: $id) { __typename id businessId name address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius facilities createdAt } }"#
+        #"query GetBranchDetail($id: String!) { branch(id: $id) { __typename id businessId name address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius createdAt } }"#
       ))
 
     public var id: String
@@ -51,11 +51,10 @@ public extension LlegoAPI {
           .field("address", String?.self),
           .field("coordinates", Coordinates.self),
           .field("phone", String.self),
-          .field("status", String.self),
+          .field("status", String?.self),
           .field("avatarUrl", String?.self),
           .field("coverUrl", String?.self),
           .field("deliveryRadius", Double?.self),
-          .field("facilities", [String].self),
           .field("createdAt", LlegoAPI.DateTime.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
@@ -68,13 +67,12 @@ public extension LlegoAPI {
         public var address: String? { __data["address"] }
         public var coordinates: Coordinates { __data["coordinates"] }
         public var phone: String { __data["phone"] }
-        public var status: String { __data["status"] }
+        public var status: String? { __data["status"] }
         /// Presigned URL for the branch avatar (inherits from business if not set)
         public var avatarUrl: String? { __data["avatarUrl"] }
         /// Presigned URL for the branch cover image
         public var coverUrl: String? { __data["coverUrl"] }
         public var deliveryRadius: Double? { __data["deliveryRadius"] }
-        public var facilities: [String] { __data["facilities"] }
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
 
         /// Branch.Coordinates

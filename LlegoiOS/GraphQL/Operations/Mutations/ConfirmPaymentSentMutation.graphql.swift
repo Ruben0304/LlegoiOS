@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "ConfirmPaymentSent"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"mutation ConfirmPaymentSent($paymentAttemptId: String!, $proofUrl: String!, $jwt: String!) { confirmPaymentSent( paymentAttemptId: $paymentAttemptId proofUrl: $proofUrl jwt: $jwt ) { __typename id orderId paymentMethodId subtotal deliveryFee includesDeliveryFee taxAmount discountAmount commissionAmount totalAmount currency status proofUrl customerConfirmedAt businessConfirmedAt } }"#
+        #"mutation ConfirmPaymentSent($paymentAttemptId: String!, $proofUrl: String!, $jwt: String!) { confirmPaymentSent( paymentAttemptId: $paymentAttemptId proofUrl: $proofUrl jwt: $jwt ) { __typename id orderId paymentMethodId subtotal deliveryFee includesDeliveryFee taxAmount discountAmount commissionAmount totalAmount currency status sendsSmsNotification proofUrl customerConfirmedAt businessConfirmedAt } }"#
       ))
 
     public var paymentAttemptId: String
@@ -73,6 +73,7 @@ public extension LlegoAPI {
           .field("totalAmount", Double.self),
           .field("currency", String.self),
           .field("status", GraphQLEnum<LlegoAPI.PaymentAttemptStatusEnum>.self),
+          .field("sendsSmsNotification", Bool.self),
           .field("proofUrl", String?.self),
           .field("customerConfirmedAt", LlegoAPI.DateTime?.self),
           .field("businessConfirmedAt", LlegoAPI.DateTime?.self),
@@ -105,6 +106,8 @@ public extension LlegoAPI {
         public var currency: String { __data["currency"] }
         /// Current status
         public var status: GraphQLEnum<LlegoAPI.PaymentAttemptStatusEnum> { __data["status"] }
+        /// User indicated their transfer sends SMS (enables Shortcut auto-confirm)
+        public var sendsSmsNotification: Bool { __data["sendsSmsNotification"] }
         /// Proof/receipt URL
         public var proofUrl: String? { __data["proofUrl"] }
         /// When customer confirmed

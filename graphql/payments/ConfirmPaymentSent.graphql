@@ -20,6 +20,7 @@ mutation ConfirmPaymentSent(
     totalAmount
     currency
     status
+    sendsSmsNotification
     proofUrl
     customerConfirmedAt
     businessConfirmedAt

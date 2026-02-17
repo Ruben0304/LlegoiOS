@@ -28,6 +28,11 @@ class CartViewModel: ObservableObject {
     @Published var currentPaymentAttempt: PaymentAttemptModel?
     @Published var isInitiatingPayment: Bool = false
 
+    // Shortcut polling
+    @Published var isPollingShortcut: Bool = false
+    @Published var shortcutPollingError: String?
+    private var pollingTask: Task<Void, Never>?
+
     // Delivery Fee Estimation
     @Published var deliveryFeeEstimate: DeliveryFeeEstimate?
     @Published var isLoadingDeliveryFee: Bool = false
@@ -288,6 +293,7 @@ class CartViewModel: ObservableObject {
     /// Crear pedido y luego iniciar el pago
     func createOrderAndInitiatePayment(
         paymentMethodId: String,
+        sendsSmsNotification: Bool = false,
         comments: String? = nil,
         completion: @escaping @Sendable (Result<(CreatedOrder, InitiatePaymentResultModel), Error>) -> Void
     ) {
@@ -355,7 +361,8 @@ class CartViewModel: ObservableObject {
                     do {
                         let paymentResult = try await self.initiatePaymentForOrder(
                             orderId: order.id,
-                            paymentMethodId: paymentMethodId
+                            paymentMethodId: paymentMethodId,
+                            sendsSmsNotification: sendsSmsNotification
                         )
 
                         await MainActor.run {
@@ -388,7 +395,8 @@ class CartViewModel: ObservableObject {
 
     private func initiatePaymentForOrder(
         orderId: String,
-        paymentMethodId: String
+        paymentMethodId: String,
+        sendsSmsNotification: Bool = false
     ) async throws -> InitiatePaymentResultModel {
         guard let jwt = await authManager.getAccessToken() else {
             throw NSError(domain: "CartViewModel", code: -4, userInfo: [NSLocalizedDescriptionKey: "No hay sesión activa"])
@@ -403,7 +411,8 @@ class CartViewModel: ObservableObject {
                 orderId: orderId,
                 paymentMethodId: paymentMethodId,
                 jwt: jwt,
-                includeDeliveryFee: true
+                includeDeliveryFee: true,
+                sendsSmsNotification: sendsSmsNotification
             )
 
             await MainActor.run {
@@ -418,6 +427,86 @@ class CartViewModel: ObservableObject {
             }
             throw error
         }
+    }
+
+    // MARK: - Confirm Transfer By Shortcut (con polling)
+
+    /// Llama a confirmTransferByShortcut una vez. El polling lo gestiona startShortcutPolling.
+    func confirmTransferByShortcut(
+        paymentAttemptId: String,
+        transferId: String? = nil,
+        completion: @escaping @Sendable (Result<PaymentAttemptModel, Error>) -> Void
+    ) {
+        Task {
+            guard let jwt = await authManager.getAccessToken() else {
+                let error = NSError(domain: "CartViewModel", code: -5, userInfo: [NSLocalizedDescriptionKey: "No hay sesión activa"])
+                completion(.failure(error))
+                return
+            }
+
+            do {
+                let attempt = try await paymentRepository.confirmTransferByShortcut(
+                    paymentAttemptId: paymentAttemptId,
+                    jwt: jwt,
+                    transferId: transferId
+                )
+                await MainActor.run {
+                    self.currentPaymentAttempt = attempt
+                }
+                completion(.success(attempt))
+            } catch {
+                completion(.failure(error))
+            }
+        }
+    }
+
+    /// Inicia polling cada 5 segundos llamando a confirmTransferByShortcut.
+    /// Detiene al recibir status "confirmed" o "completed", o cuando se cancela.
+    func startShortcutPolling(
+        paymentAttemptId: String,
+        onSuccess: @escaping @Sendable (PaymentAttemptModel) -> Void,
+        onError: @escaping @Sendable (Error) -> Void
+    ) {
+        stopShortcutPolling()
+        isPollingShortcut = true
+        shortcutPollingError = nil
+
+        pollingTask = Task {
+            while !Task.isCancelled {
+                guard let jwt = await authManager.getAccessToken() else { break }
+                do {
+                    let attempt = try await paymentRepository.confirmTransferByShortcut(
+                        paymentAttemptId: paymentAttemptId,
+                        jwt: jwt,
+                        transferId: nil
+                    )
+                    await MainActor.run {
+                        self.currentPaymentAttempt = attempt
+                    }
+                    let status = attempt.status.lowercased()
+                    if status == "confirmed" || status == "completed" || status == "customer_confirmed" {
+                        await MainActor.run {
+                            self.isPollingShortcut = false
+                        }
+                        onSuccess(attempt)
+                        return
+                    }
+                } catch {
+                    // El backend aún no encontró la transferencia — seguimos intentando
+                    print("⏳ Shortcut poll: \(error.localizedDescription)")
+                }
+                try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 segundos
+            }
+            await MainActor.run {
+                self.isPollingShortcut = false
+            }
+        }
+    }
+
+    func stopShortcutPolling() {
+        pollingTask?.cancel()
+        pollingTask = nil
+        isPollingShortcut = false
     }
 
     // MARK: - Confirm Payment Sent (for manual methods)

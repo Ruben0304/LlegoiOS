@@ -187,7 +187,7 @@ public extension LlegoAPI {
               .field("name", String.self),
               .field("address", String?.self),
               .field("phone", String.self),
-              .field("status", String.self),
+              .field("status", String?.self),
               .field("tipos", [GraphQLEnum<LlegoAPI.BranchTipo>].self),
               .field("avatarUrl", String?.self),
               .field("coordinates", Coordinates.self),
@@ -200,7 +200,7 @@ public extension LlegoAPI {
             public var name: String { __data["name"] }
             public var address: String? { __data["address"] }
             public var phone: String { __data["phone"] }
-            public var status: String { __data["status"] }
+            public var status: String? { __data["status"] }
             public var tipos: [GraphQLEnum<LlegoAPI.BranchTipo>] { __data["tipos"] }
             /// Presigned URL for the branch avatar (inherits from business if not set)
             public var avatarUrl: String? { __data["avatarUrl"] }

@@ -13,7 +13,6 @@ query GetBranchDetail($id: String!) {
     avatarUrl
     coverUrl
     deliveryRadius
-    facilities
     createdAt
   }
 }

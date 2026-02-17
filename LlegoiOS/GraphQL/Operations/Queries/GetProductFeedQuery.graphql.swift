@@ -157,7 +157,7 @@ public extension LlegoAPI {
               .field("coverUrl", String?.self),
               .field("address", String?.self),
               .field("distanceKm", Double?.self),
-              .field("status", String.self),
+              .field("status", String?.self),
             ] }
             @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
               GetProductFeedQuery.Data.Branches.Edge.Node.self
@@ -173,7 +173,7 @@ public extension LlegoAPI {
             public var address: String? { __data["address"] }
             /// Distance in kilometers from user
             public var distanceKm: Double? { __data["distanceKm"] }
-            public var status: String { __data["status"] }
+            public var status: String? { __data["status"] }
           }
         }
       }

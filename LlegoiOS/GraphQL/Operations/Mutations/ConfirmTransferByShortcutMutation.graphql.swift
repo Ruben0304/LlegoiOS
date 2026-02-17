@@ -5,51 +5,56 @@
 @_spi(Execution) @_spi(Unsafe) import ApolloAPI
 
 public extension LlegoAPI {
-  struct GetPaymentAttemptQuery: GraphQLQuery {
-    public static let operationName: String = "GetPaymentAttempt"
+  struct ConfirmTransferByShortcutMutation: GraphQLMutation {
+    public static let operationName: String = "ConfirmTransferByShortcut"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetPaymentAttempt($id: String!, $jwt: String!) { paymentAttempt(id: $id, jwt: $jwt) { __typename id orderId paymentMethodId subtotal deliveryFee includesDeliveryFee taxAmount discountAmount commissionAmount totalAmount currency status stripePaymentIntentId stripeClientSecret sendsSmsNotification proofUrl customerConfirmedAt businessConfirmedAt disputeReason deliveryPersonConfirmedAt deliveryPersonId walletTransactionId businessWalletTransactionId commissionTransactionId } }"#
+        #"mutation ConfirmTransferByShortcut($paymentAttemptId: String!, $jwt: String!, $transferId: String) { confirmTransferByShortcut( paymentAttemptId: $paymentAttemptId jwt: $jwt transferId: $transferId ) { __typename id orderId paymentMethodId subtotal deliveryFee includesDeliveryFee taxAmount discountAmount commissionAmount totalAmount currency status sendsSmsNotification proofUrl customerConfirmedAt businessConfirmedAt disputeReason deliveryPersonConfirmedAt deliveryPersonId walletTransactionId businessWalletTransactionId commissionTransactionId } }"#
       ))
 
-    public var id: String
+    public var paymentAttemptId: String
     public var jwt: String
+    public var transferId: GraphQLNullable<String>
 
     public init(
-      id: String,
-      jwt: String
+      paymentAttemptId: String,
+      jwt: String,
+      transferId: GraphQLNullable<String>
     ) {
-      self.id = id
+      self.paymentAttemptId = paymentAttemptId
       self.jwt = jwt
+      self.transferId = transferId
     }
 
     @_spi(Unsafe) public var __variables: Variables? { [
-      "id": id,
-      "jwt": jwt
+      "paymentAttemptId": paymentAttemptId,
+      "jwt": jwt,
+      "transferId": transferId
     ] }
 
     public struct Data: LlegoAPI.SelectionSet {
       @_spi(Unsafe) public let __data: DataDict
       @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
 
-      @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.Query }
+      @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.Mutation }
       @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
-        .field("paymentAttempt", PaymentAttempt?.self, arguments: [
-          "id": .variable("id"),
-          "jwt": .variable("jwt")
+        .field("confirmTransferByShortcut", ConfirmTransferByShortcut.self, arguments: [
+          "paymentAttemptId": .variable("paymentAttemptId"),
+          "jwt": .variable("jwt"),
+          "transferId": .variable("transferId")
         ]),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
-        GetPaymentAttemptQuery.Data.self
+        ConfirmTransferByShortcutMutation.Data.self
       ] }
 
-      /// Obtener intento de pago por ID
-      public var paymentAttempt: PaymentAttempt? { __data["paymentAttempt"] }
+      /// Confirmar automáticamente un pago por transferencia usando el sistema de Shortcut Transfers. Busca por el teléfono del perfil del usuario; si no hay coincidencia, el cliente puede proveer el ID de transferencia.
+      public var confirmTransferByShortcut: ConfirmTransferByShortcut { __data["confirmTransferByShortcut"] }
 
-      /// PaymentAttempt
+      /// ConfirmTransferByShortcut
       ///
       /// Parent Type: `PaymentAttemptType`
-      public struct PaymentAttempt: LlegoAPI.SelectionSet {
+      public struct ConfirmTransferByShortcut: LlegoAPI.SelectionSet {
         @_spi(Unsafe) public let __data: DataDict
         @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
 
@@ -68,8 +73,6 @@ public extension LlegoAPI {
           .field("totalAmount", Double.self),
           .field("currency", String.self),
           .field("status", GraphQLEnum<LlegoAPI.PaymentAttemptStatusEnum>.self),
-          .field("stripePaymentIntentId", String?.self),
-          .field("stripeClientSecret", String?.self),
           .field("sendsSmsNotification", Bool.self),
           .field("proofUrl", String?.self),
           .field("customerConfirmedAt", LlegoAPI.DateTime?.self),
@@ -82,7 +85,7 @@ public extension LlegoAPI {
           .field("commissionTransactionId", String?.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
-          GetPaymentAttemptQuery.Data.PaymentAttempt.self
+          ConfirmTransferByShortcutMutation.Data.ConfirmTransferByShortcut.self
         ] }
 
         /// Payment attempt ID
@@ -109,10 +112,6 @@ public extension LlegoAPI {
         public var currency: String { __data["currency"] }
         /// Current status
         public var status: GraphQLEnum<LlegoAPI.PaymentAttemptStatusEnum> { __data["status"] }
-        /// Stripe Payment Intent ID
-        public var stripePaymentIntentId: String? { __data["stripePaymentIntentId"] }
-        /// Stripe client secret for UI
-        public var stripeClientSecret: String? { __data["stripeClientSecret"] }
         /// User indicated their transfer sends SMS (enables Shortcut auto-confirm)
         public var sendsSmsNotification: Bool { __data["sendsSmsNotification"] }
         /// Proof/receipt URL

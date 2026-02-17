@@ -37,6 +37,7 @@ struct PaymentAttemptModel: Identifiable, Sendable {
     let status: String
     let stripePaymentIntentId: String?
     let stripeClientSecret: String?
+    let sendsSmsNotification: Bool
     let proofUrl: String?
     let customerConfirmedAt: String?
     let businessConfirmedAt: String?

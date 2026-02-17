@@ -6,7 +6,10 @@
       "Bash(./apollo-ios-cli generate:*)",
       "Bash(xcodebuild:*)",
       "Bash(find:*)",
-      "Bash(npx:*)"
+      "Bash(npx:*)",
+      "Bash(python3:*)",
+      "Bash(curl:*)",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "ask": []
