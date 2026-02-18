@@ -22,27 +22,42 @@ struct StoreMapView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                displayModePicker
-
-                Group {
-                    switch displayMode {
-                    case .map:
-                        mapContent
-                            .overlay {
-                                if viewModel.isLoading {
-                                    loadingState
-                                }
+            Group {
+                switch displayMode {
+                case .map:
+                    mapContent
+                        .overlay {
+                            if viewModel.isLoading {
+                                loadingState
                             }
-                    case .list:
-                        listContent
-                    }
+                        }
+                case .list:
+                    listContent
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .navigationTitle("Lugares")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
+                        Button {
+                            withAnimation { displayMode = .map }
+                        } label: {
+                            Label("Mapa", systemImage: "map")
+                        }
+                        Button {
+                            withAnimation { displayMode = .list }
+                        } label: {
+                            Label("Listado", systemImage: "list.bullet")
+                        }
+                    } label: {
+                        Text("Ver como")
+                            .foregroundColor(.llegoPrimary)
+                    }
+                }
+            }
             .navigationDestination(item: $navigationDestination) { destination in
                 switch destination {
                 case .detail(let store):
@@ -88,17 +103,6 @@ struct StoreMapView: View {
                 updateMapRegionFromUserLocation()
             }
         }
-    }
-
-    private var displayModePicker: some View {
-        Picker("Vista", selection: $displayMode) {
-            ForEach(StoreMapDisplayMode.allCases, id: \.self) { mode in
-                Text(mode.rawValue).tag(mode)
-            }
-        }
-        .pickerStyle(.segmented)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
     }
 
     // MARK: - Map Content
@@ -174,7 +178,7 @@ struct StoreMapView: View {
                 .buttonStyle(PlainButtonStyle())
             }
         }
-        .ignoresSafeArea(.container, edges: .bottom)
+        .ignoresSafeArea()
     }
 
     private var listContent: some View {

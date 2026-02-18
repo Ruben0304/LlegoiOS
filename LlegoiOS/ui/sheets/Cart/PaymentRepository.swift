@@ -107,54 +107,38 @@ class PaymentRepository {
         includeDeliveryFee: Bool = true,
         sendsSmsNotification: Bool = false
     ) async throws -> InitiatePaymentResultModel {
-        return try await withCheckedThrowingContinuation { continuation in
-            let mutation = LlegoAPI.InitiatePaymentMutation(
-                orderId: orderId,
-                paymentMethodId: paymentMethodId,
-                jwt: jwt,
-                includeDeliveryFee: includeDeliveryFee,
-                sendsSmsNotification: sendsSmsNotification
+        let mutation = LlegoAPI.InitiatePaymentMutation(
+            orderId: orderId,
+            paymentMethodId: paymentMethodId,
+            jwt: jwt,
+            includeDeliveryFee: includeDeliveryFee,
+            sendsSmsNotification: sendsSmsNotification
+        )
+
+        let graphQLResult = try await apolloClient.perform(mutation: mutation)
+
+        if let errors = graphQLResult.errors {
+            print("❌ GraphQL Errors (initiate payment):")
+            errors.forEach { print("  - \($0.localizedDescription)") }
+            throw NSError(
+                domain: "GraphQL",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: errors.first?.localizedDescription ?? "Error al iniciar pago"]
             )
-
-            apolloClient.perform(mutation: mutation) { result in
-                switch result {
-                case .success(let graphQLResult):
-                    if let errors = graphQLResult.errors {
-                        print("❌ GraphQL Errors (initiate payment):")
-                        errors.forEach { print("  - \($0.localizedDescription)") }
-                        continuation.resume(throwing: NSError(
-                            domain: "GraphQL",
-                            code: -1,
-                            userInfo: [NSLocalizedDescriptionKey: errors.first?.localizedDescription ?? "Error al iniciar pago"]
-                        ))
-                        return
-                    }
-
-                    guard let data = graphQLResult.data?.initiatePayment else {
-                        print("⚠️ Initiate payment devolvió nil")
-                        continuation.resume(throwing: NSError(
-                            domain: "GraphQL",
-                            code: -2,
-                            userInfo: [NSLocalizedDescriptionKey: "No se recibió respuesta del servidor"]
-                        ))
-                        return
-                    }
-
-                    let paymentAttempt = self.mapPaymentAttempt(data.paymentAttempt)
-                    let result = InitiatePaymentResultModel(
-                        paymentAttempt: paymentAttempt,
-                        instructions: data.instructions
-                    )
-
-                    print("✅ Payment initiated: \(paymentAttempt.id), sendsSms: \(paymentAttempt.sendsSmsNotification)")
-                    continuation.resume(returning: result)
-
-                case .failure(let error):
-                    print("❌ Error initiating payment: \(error.localizedDescription)")
-                    continuation.resume(throwing: error)
-                }
-            }
         }
+
+        guard let data = graphQLResult.data?.initiatePayment else {
+            print("⚠️ Initiate payment devolvió nil")
+            throw NSError(
+                domain: "GraphQL",
+                code: -2,
+                userInfo: [NSLocalizedDescriptionKey: "No se recibió respuesta del servidor"]
+            )
+        }
+
+        let paymentAttempt = mapPaymentAttempt(data.paymentAttempt)
+        print("✅ Payment initiated: \(paymentAttempt.id), sendsSms: \(paymentAttempt.sendsSmsNotification)")
+        return InitiatePaymentResultModel(paymentAttempt: paymentAttempt, instructions: data.instructions)
     }
 
     // MARK: - Confirm Payment Sent
@@ -164,47 +148,36 @@ class PaymentRepository {
         proofUrl: String,
         jwt: String
     ) async throws -> PaymentAttemptModel {
-        return try await withCheckedThrowingContinuation { continuation in
-            let mutation = LlegoAPI.ConfirmPaymentSentMutation(
-                paymentAttemptId: paymentAttemptId,
-                proofUrl: proofUrl,
-                jwt: jwt
+        let mutation = LlegoAPI.ConfirmPaymentSentMutation(
+            paymentAttemptId: paymentAttemptId,
+            proofUrl: proofUrl,
+            jwt: jwt
+        )
+
+        let graphQLResult = try await apolloClient.perform(mutation: mutation)
+
+        if let errors = graphQLResult.errors {
+            print("❌ GraphQL Errors (confirm payment sent):")
+            errors.forEach { print("  - \($0.localizedDescription)") }
+            throw NSError(
+                domain: "GraphQL",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: errors.first?.localizedDescription ?? "Error al confirmar pago"]
             )
-
-            apolloClient.perform(mutation: mutation) { result in
-                switch result {
-                case .success(let graphQLResult):
-                    if let errors = graphQLResult.errors {
-                        print("❌ GraphQL Errors (confirm payment sent):")
-                        errors.forEach { print("  - \($0.localizedDescription)") }
-                        continuation.resume(throwing: NSError(
-                            domain: "GraphQL",
-                            code: -1,
-                            userInfo: [NSLocalizedDescriptionKey: errors.first?.localizedDescription ?? "Error al confirmar pago"]
-                        ))
-                        return
-                    }
-
-                    guard let data = graphQLResult.data?.confirmPaymentSent else {
-                        print("⚠️ Confirm payment sent devolvió nil")
-                        continuation.resume(throwing: NSError(
-                            domain: "GraphQL",
-                            code: -2,
-                            userInfo: [NSLocalizedDescriptionKey: "No se recibió respuesta del servidor"]
-                        ))
-                        return
-                    }
-
-                    let paymentAttempt = self.mapConfirmPaymentSent(data)
-                    print("✅ Payment confirmed: \(paymentAttempt.id)")
-                    continuation.resume(returning: paymentAttempt)
-
-                case .failure(let error):
-                    print("❌ Error confirming payment: \(error.localizedDescription)")
-                    continuation.resume(throwing: error)
-                }
-            }
         }
+
+        guard let data = graphQLResult.data?.confirmPaymentSent else {
+            print("⚠️ Confirm payment sent devolvió nil")
+            throw NSError(
+                domain: "GraphQL",
+                code: -2,
+                userInfo: [NSLocalizedDescriptionKey: "No se recibió respuesta del servidor"]
+            )
+        }
+
+        let paymentAttempt = mapConfirmPaymentSent(data)
+        print("✅ Payment confirmed: \(paymentAttempt.id)")
+        return paymentAttempt
     }
 
     // MARK: - Confirm Transfer By Shortcut
@@ -214,47 +187,36 @@ class PaymentRepository {
         jwt: String,
         transferId: String? = nil
     ) async throws -> PaymentAttemptModel {
-        return try await withCheckedThrowingContinuation { continuation in
-            let mutation = LlegoAPI.ConfirmTransferByShortcutMutation(
-                paymentAttemptId: paymentAttemptId,
-                jwt: jwt,
-                transferId: transferId.map { .some($0) } ?? .none
+        let mutation = LlegoAPI.ConfirmTransferByShortcutMutation(
+            paymentAttemptId: paymentAttemptId,
+            jwt: jwt,
+            transferId: transferId.map { .some($0) } ?? .none
+        )
+
+        let graphQLResult = try await apolloClient.perform(mutation: mutation)
+
+        if let errors = graphQLResult.errors {
+            print("❌ GraphQL Errors (confirm transfer by shortcut):")
+            errors.forEach { print("  - \($0.localizedDescription)") }
+            throw NSError(
+                domain: "GraphQL",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: errors.first?.localizedDescription ?? "Transferencia no encontrada aún"]
             )
-
-            apolloClient.perform(mutation: mutation) { result in
-                switch result {
-                case .success(let graphQLResult):
-                    if let errors = graphQLResult.errors {
-                        print("❌ GraphQL Errors (confirm transfer by shortcut):")
-                        errors.forEach { print("  - \($0.localizedDescription)") }
-                        continuation.resume(throwing: NSError(
-                            domain: "GraphQL",
-                            code: -1,
-                            userInfo: [NSLocalizedDescriptionKey: errors.first?.localizedDescription ?? "Transferencia no encontrada aún"]
-                        ))
-                        return
-                    }
-
-                    guard let data = graphQLResult.data?.confirmTransferByShortcut else {
-                        print("⚠️ confirmTransferByShortcut devolvió nil")
-                        continuation.resume(throwing: NSError(
-                            domain: "GraphQL",
-                            code: -2,
-                            userInfo: [NSLocalizedDescriptionKey: "No se recibió respuesta del servidor"]
-                        ))
-                        return
-                    }
-
-                    let paymentAttempt = self.mapConfirmShortcut(data)
-                    print("✅ Transfer confirmed by shortcut: \(paymentAttempt.id), status: \(paymentAttempt.status)")
-                    continuation.resume(returning: paymentAttempt)
-
-                case .failure(let error):
-                    print("❌ Error confirming transfer by shortcut: \(error.localizedDescription)")
-                    continuation.resume(throwing: error)
-                }
-            }
         }
+
+        guard let data = graphQLResult.data?.confirmTransferByShortcut else {
+            print("⚠️ confirmTransferByShortcut devolvió nil")
+            throw NSError(
+                domain: "GraphQL",
+                code: -2,
+                userInfo: [NSLocalizedDescriptionKey: "No se recibió respuesta del servidor"]
+            )
+        }
+
+        let paymentAttempt = mapConfirmShortcut(data)
+        print("✅ Transfer confirmed by shortcut: \(paymentAttempt.id), status: \(paymentAttempt.status)")
+        return paymentAttempt
     }
 
     // MARK: - Get Payment Attempt
@@ -263,10 +225,10 @@ class PaymentRepository {
         id: String,
         jwt: String
     ) async throws -> PaymentAttemptModel {
-        return try await withCheckedThrowingContinuation { continuation in
+        return try await withCheckedThrowingContinuation { [apolloClient] continuation in
             let query = LlegoAPI.GetPaymentAttemptQuery(id: id, jwt: jwt)
 
-            apolloClient.fetch(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
+            apolloClient.fetch(query: query, cachePolicy: .fetchIgnoringCacheData, resultHandler: { result in
                 switch result {
                 case .success(let graphQLResult):
                     if let errors = graphQLResult.errors {
@@ -290,7 +252,26 @@ class PaymentRepository {
                         return
                     }
 
-                    let paymentAttempt = self.mapGetPaymentAttempt(data)
+                    let paymentAttempt = PaymentAttemptModel(
+                        id: data.id,
+                        orderId: data.orderId,
+                        paymentMethodId: data.paymentMethodId,
+                        subtotal: data.subtotal,
+                        deliveryFee: data.deliveryFee,
+                        includesDeliveryFee: data.includesDeliveryFee,
+                        taxAmount: data.taxAmount,
+                        discountAmount: data.discountAmount,
+                        commissionAmount: data.commissionAmount,
+                        totalAmount: data.totalAmount,
+                        currency: data.currency,
+                        status: data.status.rawValue,
+                        stripePaymentIntentId: data.stripePaymentIntentId,
+                        stripeClientSecret: data.stripeClientSecret,
+                        sendsSmsNotification: data.sendsSmsNotification,
+                        proofUrl: data.proofUrl,
+                        customerConfirmedAt: data.customerConfirmedAt,
+                        businessConfirmedAt: data.businessConfirmedAt
+                    )
                     print("✅ Payment attempt fetched: \(paymentAttempt.id)")
                     continuation.resume(returning: paymentAttempt)
 
@@ -298,7 +279,7 @@ class PaymentRepository {
                     print("❌ Error fetching payment attempt: \(error.localizedDescription)")
                     continuation.resume(throwing: error)
                 }
-            }
+            })
         }
     }
 }

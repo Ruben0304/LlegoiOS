@@ -158,22 +158,38 @@ struct CartView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     .safeAreaInset(edge: .bottom) {
                         VStack(spacing: 10) {
-//                            HStack(spacing: 6) {
-//                                Image(systemName: "lock.shield.fill")
-//                                    .font(.system(size: 11, weight: .medium))
-//                                    .foregroundColor(.llegoAccent)
-//
-//                                Text("Pago seguro y protegido")
-//                                    .font(.system(size: 11, weight: .medium))
-//                                    .foregroundColor(.secondary.opacity(0.8))
-//                            }
+                            // Banner: múltiples tiendas en el carrito
+                            if viewModel.hasMultipleBranches {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(.orange)
+                                    Text("Solo puedes pedir a una tienda a la vez. Elimina productos de otras tiendas para continuar.")
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.primary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 10)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .fill(Color.orange.opacity(0.12))
+                                )
+                            }
 
                             HStack(spacing: 10) {
                                 Button(action: {
-                                    showPaymentMethodPicker = true
+                                    if !viewModel.hasMultipleBranches {
+                                        showPaymentMethodPicker = true
+                                    }
                                 }) {
                                     HStack(spacing: 6) {
-                                        if let method = selectedPaymentMethod {
+                                        if viewModel.hasMultipleBranches {
+                                            Image(systemName: "creditcard")
+                                                .font(.system(size: 15, weight: .semibold))
+                                            Text("Método")
+                                                .font(.system(size: 14, weight: .semibold))
+                                        } else if let method = selectedPaymentMethod {
                                             switch method.imageType {
                                             case .systemIcon(let iconName):
                                                 Image(systemName: iconName)
@@ -206,6 +222,8 @@ struct CartView: View {
                                 }
                                 .buttonStyle(.glassProminent)
                                 .tint(.black)
+                                .disabled(viewModel.hasMultipleBranches)
+                                .opacity(viewModel.hasMultipleBranches ? 0.45 : 1.0)
 
                                 Button(action: {
                                     processPayment()
@@ -215,7 +233,7 @@ struct CartView: View {
                                             Text("Enviar factura")
                                                 .font(.system(size: 14, weight: .bold, design: .rounded))
                                         } else {
-                                            Text("Pagar")
+                                            Text("Pedir")
                                                 .font(.system(size: 16, weight: .bold, design: .rounded))
                                             Text(viewModel.formattedTotal)
                                                 .font(.system(size: 14, weight: .bold, design: .rounded))
@@ -226,6 +244,8 @@ struct CartView: View {
                                 }
                                 .buttonStyle(.glassProminent)
                                 .tint(.llegoPrimary)
+                                .disabled(viewModel.hasMultipleBranches)
+                                .opacity(viewModel.hasMultipleBranches ? 0.45 : 1.0)
                             }
                         }
                         .padding(12)
@@ -618,30 +638,42 @@ struct CartView: View {
     }
 
     private func executePaymentProcessing(paymentMethod: PaymentMethod) {
-        // Buscar el modelo backend para saber el method real
         let backendMethod = viewModel.paymentMethods.first { $0.id == paymentMethod.id }
 
-        // Transfermóvil CUP → flujo con pregunta de SMS
-        if backendMethod?.method.lowercased() == "transfermovil" ||
-            (backendMethod?.method.lowercased() == "transfer" && paymentMethod.currency.uppercased() == "CUP") {
-            pendingTransferPaymentMethodId = paymentMethod.id
-            showTransferSmsSheet = true
+        // Wallet → verificar saldo antes de crear el pedido
+        if backendMethod?.method.lowercased() == "wallet", let method = backendMethod {
+            isLoadingPayment = true
+            Task {
+                do {
+                    let (hasSufficient, available) = try await viewModel.checkWalletBalance(
+                        for: method,
+                        requiredAmount: viewModel.total,
+                        selectedCurrency: selectedCurrency.rawValue
+                    )
+                    await MainActor.run {
+                        isLoadingPayment = false
+                        if hasSufficient {
+                            createOrderWithPaymentMethod(paymentMethod.id)
+                        } else {
+                            let currencyLabel = selectedCurrency.rawValue
+                            paymentAlertMessage = "Saldo insuficiente en tu wallet. Tienes \(String(format: "%.2f", available)) \(currencyLabel) y el pedido requiere \(String(format: "%.2f", viewModel.total)) \(currencyLabel)."
+                            showPaymentAlert = true
+                        }
+                    }
+                } catch {
+                    await MainActor.run {
+                        isLoadingPayment = false
+                        paymentAlertMessage = "No se pudo verificar el saldo: \(error.localizedDescription)"
+                        showPaymentAlert = true
+                    }
+                }
+            }
+            return
         }
-        // Factura internacional → generar payment link
-        else if paymentMethod.id == "invoice_international" {
-            generatePaymentLink()
-        }
-        // Transferencia bancaria manual → sheet de foto
-        else if paymentMethod.id == "bank_transfer" {
-            showBankTransferSheet = true
-        }
-        // Tarjeta de crédito → Stripe
-        else if paymentMethod.id == "credit_card" {
-            initiateStripePayment()
-        } else {
-            // Efectivo, wallet, QvaPay, etc.
-            createOrderWithPaymentMethod(paymentMethod.id)
-        }
+
+        // Todos los demás métodos: solo crear el pedido.
+        // El pago se completa desde la pantalla de detalle del pedido.
+        createOrderWithPaymentMethod(paymentMethod.id)
     }
 
     // MARK: - Create Order
@@ -1040,6 +1072,9 @@ struct CartView: View {
                     .stroke(Color.llegoPrimary.opacity(0.2), lineWidth: 1)
             )
 
+            // Métodos de pago aceptados por este negocio
+            paymentMethodsInfoBanner
+
             // Incentivo para ver anuncios (solo si no ha visto)
             if !viewModel.hasWatchedAds {
                 HStack(spacing: 8) {
@@ -1156,7 +1191,94 @@ struct CartView: View {
         }
     }
 
+    // MARK: - Payment Methods Info Banner
 
+    private var paymentMethodsInfoBanner: some View {
+        Group {
+            if viewModel.isLoadingPaymentMethods {
+                HStack(spacing: 10) {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                    Text("Cargando métodos de pago...")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(14)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color.gray.opacity(0.06))
+                )
+            } else if !availablePaymentMethods.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "creditcard.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.llegoPrimary)
+                        Text("Este negocio acepta")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.llegoPrimary)
+                    }
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(availablePaymentMethods, id: \.id) { method in
+                                HStack(spacing: 5) {
+                                    switch method.imageType {
+                                    case .systemIcon(let iconName):
+                                        Image(systemName: iconName)
+                                            .font(.system(size: 11, weight: .semibold))
+                                            .foregroundColor(method.color)
+                                    case .assetImage(let imageName):
+                                        Image(imageName)
+                                            .resizable()
+                                            .scaledToFit()
+                                            .frame(width: 13, height: 13)
+                                    case .url:
+                                        Image(systemName: "creditcard")
+                                            .font(.system(size: 11, weight: .semibold))
+                                            .foregroundColor(method.color)
+                                    }
+                                    Text(method.name)
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundColor(.primary)
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(
+                                    Capsule()
+                                        .fill(method.color.opacity(0.1))
+                                        .overlay(
+                                            Capsule()
+                                                .stroke(method.color.opacity(0.25), lineWidth: 1)
+                                        )
+                                )
+                            }
+                        }
+                    }
+
+                    HStack(spacing: 4) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(.secondary.opacity(0.6))
+                        Text("Otros negocios pueden ofrecer métodos adicionales.")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.secondary.opacity(0.6))
+                            .italic()
+                    }
+                }
+                .padding(14)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color.llegoPrimary.opacity(0.04))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(Color.llegoPrimary.opacity(0.1), lineWidth: 1)
+                        )
+                )
+            }
+        }
+    }
 
 }
 
@@ -1268,7 +1390,7 @@ struct CartItemCard: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Imagen del producto
+            // Imagen del producto (carga asíncrona después de los datos)
             CachedAsyncImage(
                 url: URL(string: item.imageUrl),
                 content: { image in
@@ -1277,15 +1399,16 @@ struct CartItemCard: View {
                         .aspectRatio(contentMode: .fill)
                 },
                 placeholder: {
-                    ProgressView()
+                    ZStack {
+                        Color.gray.opacity(0.10)
+                        ProgressView()
+                            .tint(Color.gray.opacity(0.6))
+                            .scaleEffect(0.85)
+                    }
                 }
             )
             .frame(width: 70, height: 70)
             .clipShape(RoundedRectangle(cornerRadius: 14))
-            .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(.thinMaterial)
-            )
 
             // Información del producto
             VStack(alignment: .leading, spacing: 5) {

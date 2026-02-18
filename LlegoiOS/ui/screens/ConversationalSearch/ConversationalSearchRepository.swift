@@ -252,7 +252,7 @@ final class ConversationalSearchRepository {
                                 name: branch.name,
                                 address: branch.address ?? "",
                                 phone: branch.phone,
-                                status: branch.status,
+                                status: branch.status ?? "",
                                 avatarUrl: branch.avatarUrl,
                                 coordinates: AIChatCoordinates(
                                     type: branch.coordinates.type,

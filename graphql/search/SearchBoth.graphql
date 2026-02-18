@@ -1,0 +1,49 @@
+query SearchBoth(
+  $query: String!
+  $firstProducts: Int! = 10
+  $firstBranches: Int! = 8
+  $useVectorSearch: Boolean
+  $jwt: String
+) {
+  searchProducts(
+    query: $query
+    first: $firstProducts
+    useVectorSearch: $useVectorSearch
+    jwt: $jwt
+  ) {
+    edges {
+      node {
+        id
+        name
+        price
+        currency
+        imageUrl
+        business {
+          id
+          name
+          avatarUrl
+        }
+      }
+    }
+  }
+  searchBranches(
+    query: $query
+    first: $firstBranches
+    useVectorSearch: $useVectorSearch
+    jwt: $jwt
+  ) {
+    edges {
+      node {
+        id
+        name
+        avatarUrl
+        address
+        coordinates {
+          type
+          coordinates
+        }
+        deliveryRadius
+      }
+    }
+  }
+}

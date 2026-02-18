@@ -63,12 +63,15 @@ class PaymentMethodManager: ObservableObject {
     private init() {}
     
     // MARK: - Fetch Payment Methods
-    func fetchPaymentMethods() async throws -> [PaymentMethodModel] {
+    func fetchPaymentMethods(branchId: String? = nil) async throws -> [PaymentMethodModel] {
         return try await withCheckedThrowingContinuation { continuation in
             Task { @MainActor in
                 let jwt = authManager.getAccessToken()
-                
-                let query = LlegoAPI.GetPaymentMethodsQuery(jwt: jwt.map { .some($0) } ?? .none)
+
+                let query = LlegoAPI.GetPaymentMethodsQuery(
+                    jwt: jwt.map { .some($0) } ?? .none,
+                    branchId: branchId.map { .some($0) } ?? .none
+                )
                 
                 apolloClient.fetch(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
                     switch result {

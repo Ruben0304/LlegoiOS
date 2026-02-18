@@ -418,22 +418,7 @@ struct ProductFeedView: View {
 
     // MARK: - Loading State
     private var loadingState: some View {
-        ZStack {
-            CircularLoadingIndicator(
-                color: gradientManager.currentAccentColor,
-                lineWidth: 6,
-                size: 440
-            )
-            .frame(width: 640, height: 640)
-            .offset(y: -85)
-
-            Text("Cargando...")
-                .font(.system(size: 22, weight: .semibold, design: .rounded))
-                .foregroundColor(Color.adaptiveOnSurface(colorScheme))
-                .offset(y: 30)
-        }
-        .frame(maxWidth: .infinity, alignment: .center)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        FullLoadingView(color: gradientManager.currentAccentColor)
     }
 
     // MARK: - Empty State

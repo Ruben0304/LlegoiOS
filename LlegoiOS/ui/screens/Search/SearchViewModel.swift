@@ -24,7 +24,7 @@ class SearchViewModel: ObservableObject {
     @Published var products: [Product] = []
     @Published var stores: [StoreWithCoordinates] = []
     @Published var storeProducts: [String: [ProductGraphQL]] = [:]
-    @Published var selectedCategory: SearchCategory = .products
+    @Published var selectedCategory: SearchCategory = .both
 
     private let searchRepository = SearchRepository()
     private let productRepository = ProductListRepository()
@@ -68,6 +68,9 @@ class SearchViewModel: ObservableObject {
         case .stores:
             print("🔍 SearchViewModel - Loading initial stores...")
             loadInitialStores()
+        case .both:
+            // En modo "Ambos" sin búsqueda activa no pre-cargamos nada
+            state = .idle
         }
     }
     
@@ -174,6 +177,25 @@ class SearchViewModel: ObservableObject {
         case .stores:
             print("🔍 SearchViewModel - Searching stores...")
             searchStores(query: query)
+        case .both:
+            print("🔍 SearchViewModel - Searching both (single query)...")
+            searchBoth(query: query)
+        }
+    }
+
+    private func searchBoth(query: String) {
+        searchRepository.searchBoth(query: query) { [weak self] result in
+            Task { @MainActor in
+                guard let self = self else { return }
+                switch result {
+                case .success(let (products, stores)):
+                    self.products = products
+                    self.stores = stores
+                    self.state = (products.isEmpty && stores.isEmpty) ? .empty : .success
+                case .failure(let error):
+                    self.state = .error(error.localizedDescription)
+                }
+            }
         }
     }
     

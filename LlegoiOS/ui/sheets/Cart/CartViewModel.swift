@@ -43,11 +43,21 @@ class CartViewModel: ObservableObject {
     private let createOrderRepository = CreateOrderRepository()
     private let paymentRepository = PaymentRepository()
     private let paymentMethodManager = PaymentMethodManager.shared
+    private let walletRepository = WalletRepository()
     private let authManager = AuthManager.shared
 
     // Store branchId from cart products
     private var cartBranchId: String?
     private var cartProducts: [CartProductGraphQL] = []
+
+    // MARK: - Multi-branch detection
+    var uniqueBranchIds: Set<String> {
+        Set(cartProducts.map { $0.branchId })
+    }
+
+    var hasMultipleBranches: Bool {
+        uniqueBranchIds.count > 1
+    }
 
     // MARK: - Service Fee Constants
     private let standardServiceFeeRate: Double = 0.15 // 15%
@@ -260,18 +270,24 @@ class CartViewModel: ObservableObject {
     }
 
     func loadPaymentMethods() {
+        // Si hay productos de múltiples branches, no cargar métodos de pago
+        guard !hasMultipleBranches else {
+            paymentMethods = []
+            print("⚠️ Múltiples branches en carrito – métodos de pago deshabilitados")
+            return
+        }
+
         Task {
             isLoadingPaymentMethods = true
 
             do {
-                let methods = try await paymentMethodManager.fetchPaymentMethods()
+                let methods = try await paymentMethodManager.fetchPaymentMethods(branchId: cartBranchId)
                 await MainActor.run {
-                    // Filter active methods and sort by display order
                     self.paymentMethods = methods
                         .filter { $0.isActive }
                         .sorted { $0.displayOrder < $1.displayOrder }
                     self.isLoadingPaymentMethods = false
-                    print("✅ Loaded \(self.paymentMethods.count) payment methods")
+                    print("✅ Loaded \(self.paymentMethods.count) payment methods for branch \(self.cartBranchId ?? "all")")
                 }
             } catch {
                 await MainActor.run {
@@ -662,6 +678,31 @@ class CartViewModel: ObservableObject {
 
     private func formatPriceWithCurrency(_ price: Double, currency: String) -> String {
         return String(format: "%.2f %@", price, currency)
+    }
+
+    // MARK: - Wallet Balance Check
+
+    /// Verifica si el usuario tiene saldo suficiente en wallet para cubrir el total.
+    /// - Parameters:
+    ///   - method: El método de pago wallet seleccionado.
+    ///   - requiredAmount: Monto a comparar (total del carrito).
+    ///   - selectedCurrency: Moneda activa en el selector del carrito.
+    /// - Returns: Tupla con si tiene saldo y el balance actual.
+    func checkWalletBalance(
+        for method: PaymentMethodModel,
+        requiredAmount: Double,
+        selectedCurrency: String
+    ) async throws -> (hasSufficientBalance: Bool, available: Double) {
+        guard let jwt = await authManager.getAccessToken() else {
+            throw NSError(
+                domain: "CartViewModel",
+                code: -6,
+                userInfo: [NSLocalizedDescriptionKey: "No hay sesión activa"]
+            )
+        }
+        let balance = try await walletRepository.fetchWalletBalance(jwt: jwt)
+        let available = selectedCurrency.uppercased() == "USD" ? balance.usd : balance.local
+        return (available >= requiredAmount, available)
     }
 }
 

@@ -88,8 +88,8 @@ type Query {
   dashboardStats(businessId: String!, period: DashboardPeriod!, jwt: String!): DashboardStatsType!
   "Get business type configurations (supports incremental sync)"
   businessTypeConfigs(lastSyncAt: DateTime = null): [BusinessTypeConfigType!]!
-  "Obtener todos los métodos de pago disponibles"
-  paymentMethods(jwt: String = null): [PaymentMethodType!]!
+  "Obtener todos los métodos de pago disponibles. Si se provee branchId, retorna solo los aceptados por ese branch."
+  paymentMethods(branchId: String = null, jwt: String = null): [PaymentMethodType!]!
   "Obtener método de pago por ID"
   paymentMethod(id: String!, jwt: String = null): PaymentMethodType
   "Obtener métodos de pago por moneda"

@@ -1,5 +1,5 @@
-query GetPaymentMethods($jwt: String) {
-  paymentMethods(jwt: $jwt) {
+query GetPaymentMethods($jwt: String, $branchId: String) {
+  paymentMethods(jwt: $jwt, branchId: $branchId) {
     id
     name
     code

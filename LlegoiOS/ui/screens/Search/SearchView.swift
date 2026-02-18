@@ -30,11 +30,6 @@ struct SearchView: View {
 
                 ScrollView {
                     VStack(spacing: 0) {
-                        // Selector de categoría
-                        categoryPicker
-                            .padding(.horizontal, 16)
-                            .padding(.top, 8)
-
                         // Contenido según estado y categoría
                         switch viewModel.state {
                         case .idle:
@@ -58,6 +53,30 @@ struct SearchView: View {
                 )
             }
             .navigationTitle("Buscar")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Menu {
+                        Button {
+                            withAnimation { viewModel.selectedCategory = .products }
+                        } label: {
+                            Label("Productos", systemImage: "bag")
+                        }
+                        Button {
+                            withAnimation { viewModel.selectedCategory = .stores }
+                        } label: {
+                            Label("Negocios", systemImage: "storefront")
+                        }
+                        Button {
+                            withAnimation { viewModel.selectedCategory = .both }
+                        } label: {
+                            Label("Ambos", systemImage: "square.grid.2x2")
+                        }
+                    } label: {
+                        Text(categoryLabel)
+                            .foregroundColor(.llegoPrimary)
+                    }
+                }
+            }
             .onSubmit(of: .search) {
                 // Solo buscar cuando se presiona "Buscar"
                 print("🔍 SearchView - onSubmit triggered with query: '\(searchText)'")
@@ -131,6 +150,23 @@ struct SearchView: View {
 
     }
 
+    // MARK: - Category Menu Helpers
+    private var categoryLabel: String {
+        switch viewModel.selectedCategory {
+        case .products: return "Productos"
+        case .stores: return "Negocios"
+        case .both: return "Ambos"
+        }
+    }
+
+    private var categoryIcon: String {
+        switch viewModel.selectedCategory {
+        case .products: return "bag.fill"
+        case .stores: return "storefront.fill"
+        case .both: return "square.grid.2x2.fill"
+        }
+    }
+
     // MARK: - Search Gradient Background
     private var searchGradientBackground: some View {
         let palette = gradientManager.getCurrentGradientPalette()
@@ -154,19 +190,6 @@ struct SearchView: View {
         }
     }
 
-    // MARK: - Category Picker
-    private var categoryPicker: some View {
-        Picker("Categoría", selection: $viewModel.selectedCategory) {
-            ForEach(SearchCategory.allCases, id: \.self) { category in
-                Text(category.rawValue)
-                    .tag(category)
-            }
-        }
-        .pickerStyle(.segmented)
-        .controlSize(.large)
-        .padding(.bottom, 16)
-    }
-
     // MARK: - Initial Content (datos sin búsqueda)
     private var initialContent: some View {
         Group {
@@ -175,19 +198,28 @@ struct SearchView: View {
                 productsGrid
             case .stores:
                 storesGrid
+            case .both:
+                bothEmptyPrompt
             }
         }
     }
 
-    // MARK: - Loading Content
-    private var loadingContent: some View {
-        CircularLoadingIndicator(
-            color: gradientManager.currentAccentColor,
-            lineWidth: 6,
-            size: 60
-        )
+    private var bothEmptyPrompt: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 40, weight: .ultraLight))
+                .foregroundColor(.secondary.opacity(0.4))
+            Text("Busca productos y negocios a la vez")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.secondary)
+        }
         .frame(maxWidth: .infinity)
         .padding(.top, 60)
+    }
+
+    // MARK: - Loading Content
+    private var loadingContent: some View {
+        FullLoadingView(color: gradientManager.currentAccentColor)
     }
 
     // MARK: - Results Content
@@ -198,6 +230,52 @@ struct SearchView: View {
                 productsGrid
             case .stores:
                 storesGrid
+            case .both:
+                bothContent
+            }
+        }
+    }
+
+    // MARK: - Both Content (negocios circular arriba + productos abajo)
+    private var bothContent: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Negocios – scroll horizontal circular
+            if !viewModel.stores.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Negocios")
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 16)
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 20) {
+                            ForEach(viewModel.stores) { store in
+                                Button {
+                                    selectedStore = store
+                                } label: {
+                                    SearchStoreCircleCard(store: store)
+                                }
+                                .buttonStyle(.plain)
+                                .padding(.vertical, 8)
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                    }
+                }
+                .padding(.bottom, 8)
+            }
+
+            // Productos – grid vertical
+            if !viewModel.products.isEmpty {
+                Text("Productos")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
+
+                productsGrid
             }
         }
     }
@@ -325,6 +403,52 @@ struct SearchView: View {
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 32)
         .padding(.top, 60)
+    }
+}
+
+// MARK: - Search Store Circle Card
+private struct SearchStoreCircleCard: View {
+    let store: StoreWithCoordinates
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        VStack(spacing: 10) {
+            ZStack {
+                Circle()
+                    .fill(Color.cardBackground(colorScheme))
+                    .frame(width: 80, height: 80)
+                    .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.15), radius: 8, x: 0, y: 4)
+
+                if !store.logoUrl.isEmpty {
+                    CachedAsyncImage(
+                        url: URL(string: store.logoUrl),
+                        cacheKey: "search_store_\(store.id)",
+                        content: { image in
+                            image.resizable().scaledToFill()
+                        },
+                        placeholder: { Circle().fill(Color.gray.opacity(0.2)) },
+                        failure: {
+                            Image(systemName: "storefront")
+                                .font(.system(size: 28))
+                                .foregroundColor(.gray)
+                        }
+                    )
+                    .frame(width: 70, height: 70)
+                    .clipShape(Circle())
+                } else {
+                    Image(systemName: "storefront")
+                        .font(.system(size: 28))
+                        .foregroundColor(.llegoPrimary)
+                }
+            }
+
+            Text(store.name)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.primary)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .frame(width: 80, height: 30, alignment: .top)
+        }
     }
 }
 

@@ -4,4 +4,5 @@ import Foundation
 enum SearchCategory: String, CaseIterable {
     case products = "Productos"
     case stores = "Negocios"
+    case both = "Ambos"
 }

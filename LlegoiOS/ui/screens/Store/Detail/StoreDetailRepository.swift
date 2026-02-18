@@ -38,11 +38,11 @@ class StoreDetailRepository {
                         coordinates: branch.coordinates.coordinates
                     ),
                     phone: branch.phone,
-                    status: branch.status,
+                    status: branch.status ?? "",
                     avatarUrl: branch.avatarUrl,
                     coverUrl: branch.coverUrl,
                     deliveryRadius: branch.deliveryRadius,
-                    facilities: branch.facilities,
+                    facilities: nil, // Not available in query
                     createdAt: branch.createdAt,
                     socialMedia: nil // Will be loaded separately
                 )
@@ -83,7 +83,7 @@ class StoreDetailRepository {
                 let businessDetail = BusinessDetailGraphQL(
                     id: business.id,
                     name: business.name,
-                    socialMedia: Self.parseSocialMedia(business.socialMedia),
+                    socialMedia: nil, // Not available in query
                     avatarUrl: business.avatarUrl,
                     coverUrl: business.avatarUrl
                 )
@@ -146,7 +146,7 @@ class StoreDetailRepository {
                             coordinates: edge.node.coordinates.coordinates
                         ),
                         phone: edge.node.phone,
-                        status: edge.node.status,
+                        status: edge.node.status ?? "",
                         avatarUrl: edge.node.avatarUrl,
                         coverUrl: edge.node.coverUrl,
                         deliveryRadius: edge.node.deliveryRadius,

@@ -9,16 +9,24 @@ public extension LlegoAPI {
     public static let operationName: String = "GetPaymentMethods"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetPaymentMethods($jwt: String) { paymentMethods(jwt: $jwt) { __typename id name code currency method commissionPercent deliveryFeePercent isRefundable requiresProof requiresBusinessConfirmation expirationMinutes isActive displayOrder iconUrl instructions } }"#
+        #"query GetPaymentMethods($jwt: String, $branchId: String) { paymentMethods(jwt: $jwt, branchId: $branchId) { __typename id name code currency method commissionPercent deliveryFeePercent isRefundable requiresProof requiresBusinessConfirmation expirationMinutes isActive displayOrder iconUrl instructions } }"#
       ))
 
     public var jwt: GraphQLNullable<String>
+    public var branchId: GraphQLNullable<String>
 
-    public init(jwt: GraphQLNullable<String>) {
+    public init(
+      jwt: GraphQLNullable<String>,
+      branchId: GraphQLNullable<String>
+    ) {
       self.jwt = jwt
+      self.branchId = branchId
     }
 
-    @_spi(Unsafe) public var __variables: Variables? { ["jwt": jwt] }
+    @_spi(Unsafe) public var __variables: Variables? { [
+      "jwt": jwt,
+      "branchId": branchId
+    ] }
 
     public struct Data: LlegoAPI.SelectionSet {
       @_spi(Unsafe) public let __data: DataDict
@@ -26,13 +34,16 @@ public extension LlegoAPI {
 
       @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.Query }
       @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
-        .field("paymentMethods", [PaymentMethod].self, arguments: ["jwt": .variable("jwt")]),
+        .field("paymentMethods", [PaymentMethod].self, arguments: [
+          "jwt": .variable("jwt"),
+          "branchId": .variable("branchId")
+        ]),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
         GetPaymentMethodsQuery.Data.self
       ] }
 
-      /// Obtener todos los métodos de pago disponibles
+      /// Obtener todos los métodos de pago disponibles. Si se provee branchId, retorna solo los aceptados por ese branch.
       public var paymentMethods: [PaymentMethod] { __data["paymentMethods"] }
 
       /// PaymentMethod

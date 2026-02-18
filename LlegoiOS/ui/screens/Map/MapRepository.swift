@@ -63,7 +63,7 @@ class MapRepository {
                                 coordinates: edge.node.coordinates.coordinates
                             ),
                             phone: edge.node.phone,
-                            status: edge.node.status,
+                            status: edge.node.status ?? "",
                             avatarUrl: edge.node.avatarUrl,
                             coverUrl: edge.node.coverUrl,
                             deliveryRadius: edge.node.deliveryRadius,

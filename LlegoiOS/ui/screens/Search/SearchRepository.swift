@@ -103,6 +103,78 @@ class SearchRepository {
         }
     }
 
+    // MARK: - Search Both (productos + negocios en una sola llamada)
+    @MainActor
+    func searchBoth(
+        query: String,
+        completion: @escaping @Sendable (Result<([Product], [StoreWithCoordinates]), Error>) -> Void
+    ) {
+        let jwt = AuthManager.shared.getAccessToken()
+
+        let searchQuery = LlegoAPI.SearchBothQuery(
+            query: query,
+            firstProducts: 10,
+            firstBranches: 8,
+            useVectorSearch: .some(true),
+            jwt: jwt.map { .some($0) } ?? .none
+        )
+
+        apolloClient.fetch(query: searchQuery, cachePolicy: .fetchIgnoringCacheData) { result in
+            switch result {
+            case .success(let graphQLResult):
+                if let errors = graphQLResult.errors, !errors.isEmpty {
+                    completion(.failure(NSError(
+                        domain: "GraphQL", code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: errors.first?.message ?? "Error desconocido"]
+                    )))
+                    return
+                }
+
+                guard let data = graphQLResult.data else {
+                    completion(.success(([], [])))
+                    return
+                }
+
+                let products = data.searchProducts.edges.map { edge -> Product in
+                    let node = edge.node
+                    let priceFormatted = String(format: "%.2f %@", node.price, node.currency)
+                    return Product(
+                        id: node.id,
+                        name: node.name,
+                        shop: node.business?.name ?? "",
+                        shopLogoUrl: node.business?.avatarUrl ?? "",
+                        weight: "",
+                        price: priceFormatted,
+                        imageUrl: node.imageUrl
+                    )
+                }
+
+                let stores = data.searchBranches.edges.map { edge -> StoreWithCoordinates in
+                    let node = edge.node
+                    let etaMinutes = node.deliveryRadius.map { Int($0 * 5 + 10) } ?? 30
+                    return StoreWithCoordinates(
+                        id: node.id,
+                        name: node.name,
+                        etaMinutes: etaMinutes,
+                        logoUrl: node.avatarUrl ?? "",
+                        bannerUrl: "",
+                        address: node.address,
+                        rating: nil,
+                        coordinate: CLLocationCoordinate2D(
+                            latitude: node.coordinates.coordinates.count > 1 ? node.coordinates.coordinates[1] : 0,
+                            longitude: node.coordinates.coordinates.count > 0 ? node.coordinates.coordinates[0] : 0
+                        )
+                    )
+                }
+
+                completion(.success((products, stores)))
+
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
     // MARK: - Search Branches/Stores (con productos anidados)
     @MainActor
     func searchBranches(
