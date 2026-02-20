@@ -28,6 +28,11 @@ mutation CreateOrder($input: CreateOrderInput!, $jwt: String!) {
       street
       city
       reference
+      addressType
+      buildingName
+      floor
+      apartment
+      deliveryInstructions
     }
     branch {
       id

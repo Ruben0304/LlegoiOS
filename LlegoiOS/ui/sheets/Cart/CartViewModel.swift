@@ -46,6 +46,10 @@ class CartViewModel: ObservableObject {
     private let walletRepository = WalletRepository()
     private let authManager = AuthManager.shared
 
+    // Default Address
+    @Published var defaultAddress: SavedAddress?
+    @Published var selectedAddress: SavedAddress?
+
     // Store branchId from cart products
     private var cartBranchId: String?
     private var cartProducts: [CartProductGraphQL] = []
@@ -228,6 +232,15 @@ class CartViewModel: ObservableObject {
                         // Estimar envío usando el branchId del primer producto
                         self.fetchDeliveryFeeEstimate(branchId: branchId)
                     }
+
+                    // Check for default saved address
+                    if let user = self.authManager.currentUser, let defaultId = user.defaultAddressId, let addresses = user.savedAddresses {
+                        if let defaultAddr = addresses.first(where: { $0.id == defaultId }) {
+                            self.defaultAddress = defaultAddr
+                            self.selectedAddress = defaultAddr
+                        }
+                    }
+
                     self.state = .success
 
                     // Load payment methods after cart is loaded
@@ -342,13 +355,34 @@ class CartViewModel: ObservableObject {
         }
 
         // Build delivery address
-        let deliveryAddress = DeliveryAddressInput(
-            street: locationManager.userAddress,
-            city: nil,
-            reference: nil,
-            latitude: userLocation.latitude,
-            longitude: userLocation.longitude
-        )
+        let deliveryAddress: DeliveryAddressInput
+        if let selected = selectedAddress {
+            deliveryAddress = DeliveryAddressInput(
+                street: selected.street,
+                city: selected.city,
+                reference: selected.reference,
+                latitude: selected.latitude,
+                longitude: selected.longitude,
+                addressType: selected.addressType,
+                buildingName: selected.buildingName,
+                floor: selected.floor,
+                apartment: selected.apartment,
+                deliveryInstructions: selected.deliveryInstructions
+            )
+        } else {
+            deliveryAddress = DeliveryAddressInput(
+                street: locationManager.userAddress,
+                city: nil,
+                reference: nil,
+                latitude: userLocation.latitude,
+                longitude: userLocation.longitude,
+                addressType: nil,
+                buildingName: nil,
+                floor: nil,
+                apartment: nil,
+                deliveryInstructions: nil
+            )
+        }
 
         print("🛒 Creating order with new payment flow...")
         print("   Branch: \(branchId)")
@@ -595,13 +629,34 @@ class CartViewModel: ObservableObject {
         }
 
         // Build delivery address
-        let deliveryAddress = DeliveryAddressInput(
-            street: locationManager.userAddress,
-            city: nil,
-            reference: nil,
-            latitude: userLocation.latitude,
-            longitude: userLocation.longitude
-        )
+        let deliveryAddress: DeliveryAddressInput
+        if let selected = selectedAddress {
+            deliveryAddress = DeliveryAddressInput(
+                street: selected.street,
+                city: selected.city,
+                reference: selected.reference,
+                latitude: selected.latitude,
+                longitude: selected.longitude,
+                addressType: selected.addressType,
+                buildingName: selected.buildingName,
+                floor: selected.floor,
+                apartment: selected.apartment,
+                deliveryInstructions: selected.deliveryInstructions
+            )
+        } else {
+            deliveryAddress = DeliveryAddressInput(
+                street: locationManager.userAddress,
+                city: nil,
+                reference: nil,
+                latitude: userLocation.latitude,
+                longitude: userLocation.longitude,
+                addressType: nil,
+                buildingName: nil,
+                floor: nil,
+                apartment: nil,
+                deliveryInstructions: nil
+            )
+        }
 
         print("🛒 Creating order...")
         print("   Branch: \(branchId)")

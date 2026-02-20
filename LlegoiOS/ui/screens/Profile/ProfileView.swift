@@ -186,7 +186,10 @@ struct ProfileView: View {
                             // Información de ubicación compacta
                             compactLocationSection
 
-                            customerLevelSection
+                            savedAddressesSection
+
+                            // TODO: Reactivar en post-MVP (Cliente Oro / niveles)
+                            // customerLevelSection
 
                             if !viewModel.isRefreshingProfile {
                                 walletQuickAccessSection
@@ -223,9 +226,10 @@ struct ProfileView: View {
                         dismiss()
                     })
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    customerLevelToolbarItem
-                }
+                // TODO: Reactivar en post-MVP (Cliente Oro / niveles)
+                // ToolbarItem(placement: .navigationBarTrailing) {
+                //     customerLevelToolbarItem
+                // }
                 ToolbarSpacer(.fixed,placement:.navigationBarTrailing)
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
@@ -588,6 +592,42 @@ struct ProfileView: View {
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.gray)
                         .lineLimit(2)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.gray.opacity(0.6))
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.white)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    private var savedAddressesSection: some View {
+        NavigationLink(destination: SavedAddressesView(isSelectingDeliveryAddress: false, onSelectAddress: nil)) {
+            HStack(spacing: 12) {
+                Image(systemName: "list.bullet.rectangle.portrait")
+                    .font(.system(size: 20, weight: .regular))
+                    .foregroundColor(.gray)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Mis direcciones")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.llegoPrimary)
+
+                    Text("Gestiona tus lugares de entrega")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.gray)
                 }
 
                 Spacer()

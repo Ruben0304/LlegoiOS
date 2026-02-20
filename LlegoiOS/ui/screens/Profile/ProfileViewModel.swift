@@ -348,7 +348,9 @@ class ProfileViewModel: ObservableObject {
                     role: user.role,
                     appleUserId: user.appleUserId,
                     avatar: response.avatar,
-                    avatarUrl: response.avatarUrl
+                    avatarUrl: response.avatarUrl,
+                    savedAddresses: user.savedAddresses,
+                    defaultAddressId: user.defaultAddressId
                 )
                 
                 currentUser = updatedUser
@@ -407,7 +409,9 @@ class ProfileViewModel: ObservableObject {
                     role: user.role,
                     appleUserId: user.appleUserId,
                     avatar: user.avatar,
-                    avatarUrl: user.avatarUrl
+                    avatarUrl: user.avatarUrl,
+                    savedAddresses: user.savedAddresses,
+                    defaultAddressId: user.defaultAddressId
                 )
                 
                 currentUser = newUser

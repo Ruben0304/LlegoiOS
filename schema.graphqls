@@ -187,12 +187,28 @@ type UserType {
   isPro: Boolean!
   location: JSON
   aiConsultasLimit: JSON
+  savedAddresses: [SavedAddressType!]!
+  defaultAddressId: String
   "URL firmada del avatar del usuario"
   avatarUrl: String
 }
 type WalletBalanceType {
   local: Float!
   usd: Float!
+}
+type SavedAddressType {
+  id: String!
+  label: String!
+  street: String!
+  city: String
+  reference: String
+  addressType: String!
+  buildingName: String
+  floor: String
+  apartment: String
+  deliveryInstructions: String
+  latitude: Float!
+  longitude: Float!
 }
 type BusinessType {
   id: String!
@@ -694,6 +710,11 @@ type DeliveryAddressType {
   street: String!
   city: String
   reference: String
+  addressType: AddressTypeEnum!
+  buildingName: String
+  floor: String
+  apartment: String
+  deliveryInstructions: String
   "Delivery coordinates"
   coordinates: CoordinatesType!
 }
@@ -1150,6 +1171,14 @@ type Mutation {
   deleteUser(jwt: String = null): Boolean!
   "Actualizar ubicación del usuario"
   updateLocation(input: UpdateLocationInput!, jwt: String = null): UserType!
+  "Guardar una nueva dirección de entrega en el perfil"
+  addSavedAddress(input: SavedAddressInput!, jwt: String = null): UserType!
+  "Editar una dirección guardada en el perfil"
+  updateSavedAddress(input: UpdateSavedAddressInput!, jwt: String = null): UserType!
+  "Eliminar una dirección guardada del perfil"
+  removeSavedAddress(addressId: String!, jwt: String = null): UserType!
+  "Establecer la dirección de entrega por defecto"
+  setDefaultAddress(addressId: String!, jwt: String = null): UserType!
   "Registrar un nuevo negocio con al menos una sucursal"
   registerBusiness(businessInput: CreateBusinessInput!, branchesInput: [RegisterBranchInput!]!, jwt: String = null): BusinessType!
   "Actualizar un negocio"
@@ -1421,6 +1450,12 @@ enum DiscountTypeEnum {
   LEVEL
   PROMO
 }
+enum AddressTypeEnum {
+  HOUSE
+  APARTMENT
+  OFFICE
+  OTHER
+}
 enum OrderActorEnum {
   CUSTOMER
   BUSINESS
@@ -1487,6 +1522,12 @@ enum AppTarget {
   MERCHANT
   BOTH
 }
+enum AddressTypeInput {
+  HOUSE
+  APARTMENT
+  OFFICE
+  OTHER
+}
 enum DevicePlatformEnum {
   IOS
   ANDROID
@@ -1529,6 +1570,35 @@ input AddBranchToUserInput {
 input UpdateLocationInput {
   longitude: Float!
   latitude: Float!
+}
+input SavedAddressInput {
+  label: String!
+  street: String!
+  latitude: Float!
+  longitude: Float!
+  city: String = null
+  reference: String = null
+  addressType: String! = "house"
+  buildingName: String = null
+  floor: String = null
+  apartment: String = null
+  deliveryInstructions: String = null
+  setAsDefault: Boolean! = false
+}
+input UpdateSavedAddressInput {
+  addressId: String!
+  label: String = null
+  street: String = null
+  latitude: Float = null
+  longitude: Float = null
+  city: String = null
+  reference: String = null
+  addressType: String = null
+  buildingName: String = null
+  floor: String = null
+  apartment: String = null
+  deliveryInstructions: String = null
+  setAsDefault: Boolean = null
 }
 input CreateBusinessInput {
   name: String!
@@ -1659,6 +1729,11 @@ input DeliveryAddressInput {
   longitude: Float!
   city: String = null
   reference: String = null
+  addressType: AddressTypeInput! = HOUSE
+  buildingName: String = null
+  floor: String = null
+  apartment: String = null
+  deliveryInstructions: String = null
 }
 input AddOrderCommentInput {
   orderId: String!

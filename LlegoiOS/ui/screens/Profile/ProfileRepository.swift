@@ -43,7 +43,9 @@ class ProfileRepository {
                         role: data.user.role,
                         appleUserId: nil,
                         avatar: nil,
-                        avatarUrl: nil
+                        avatarUrl: nil,
+                        savedAddresses: nil,
+                        defaultAddressId: nil
                     )
 
                     let session = AuthSession(
@@ -107,7 +109,9 @@ class ProfileRepository {
                         role: data.user.role,
                         appleUserId: nil,
                         avatar: nil,
-                        avatarUrl: nil
+                        avatarUrl: nil,
+                        savedAddresses: nil,
+                        defaultAddressId: nil
                     )
 
                     let session = AuthSession(
@@ -170,7 +174,9 @@ class ProfileRepository {
                         role: data.user.role,
                         appleUserId: nil,
                         avatar: nil,
-                        avatarUrl: nil
+                        avatarUrl: nil,
+                        savedAddresses: nil,
+                        defaultAddressId: nil
                     )
 
                     let session = AuthSession(
@@ -233,7 +239,9 @@ class ProfileRepository {
                         role: data.user.role,
                         appleUserId: nil,
                         avatar: nil,
-                        avatarUrl: nil
+                        avatarUrl: nil,
+                        savedAddresses: nil,
+                        defaultAddressId: nil
                     )
 
                     let session = AuthSession(
@@ -290,7 +298,24 @@ class ProfileRepository {
                         role: data.role,
                         appleUserId: data.providerUserId,
                         avatar: data.avatar,
-                        avatarUrl: data.avatarUrl
+                        avatarUrl: data.avatarUrl,
+                        savedAddresses: data.savedAddresses.map { addr in
+                            SavedAddress(
+                                id: addr.id,
+                                label: addr.label,
+                                street: addr.street,
+                                city: addr.city,
+                                reference: addr.reference,
+                                addressType: addr.addressType,
+                                buildingName: addr.buildingName,
+                                floor: addr.floor,
+                                apartment: addr.apartment,
+                                deliveryInstructions: addr.deliveryInstructions,
+                                latitude: addr.latitude,
+                                longitude: addr.longitude
+                            )
+                        },
+                        defaultAddressId: data.defaultAddressId
                     )
                     continuation.resume(returning: user)
 
@@ -346,7 +371,9 @@ class ProfileRepository {
                         role: "user", // El mutation no devuelve role, usar default
                         appleUserId: nil,
                         avatar: data.avatar,
-                        avatarUrl: data.avatarUrl
+                        avatarUrl: data.avatarUrl,
+                        savedAddresses: nil, // Update mutation doesn't fetch them
+                        defaultAddressId: nil
                     )
 
                     print("✅ Usuario actualizado: \(user.username)")

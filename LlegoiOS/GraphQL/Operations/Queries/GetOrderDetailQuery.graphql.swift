@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetOrderDetail"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetOrderDetail($id: String!, $jwt: String!) { order(id: $id, jwt: $jwt) { __typename id orderNumber status subtotal deliveryFee total currency paymentMethod paymentStatus createdAt updatedAt lastStatusAt isEditable canCancel estimatedDeliveryTime estimatedMinutesRemaining items { __typename productId name price quantity imageUrl wasModifiedByStore lineTotal } discounts { __typename id title amount type } deliveryAddress { __typename street city reference coordinates { __typename type coordinates } } deliveryPerson { __typename id name phone rating vehicleType vehiclePlate profileImageUrl isOnline } timeline { __typename status timestamp message actor } comments { __typename id author message timestamp } branch { __typename id name address phone avatarUrl coordinates { __typename type coordinates } } business { __typename id name avatarUrl } } }"#
+        #"query GetOrderDetail($id: String!, $jwt: String!) { order(id: $id, jwt: $jwt) { __typename id orderNumber status subtotal deliveryFee total currency paymentMethod paymentStatus createdAt updatedAt lastStatusAt isEditable canCancel estimatedDeliveryTime estimatedMinutesRemaining items { __typename productId name price quantity imageUrl wasModifiedByStore lineTotal } discounts { __typename id title amount type } deliveryAddress { __typename street city reference addressType buildingName floor apartment deliveryInstructions coordinates { __typename type coordinates } } deliveryPerson { __typename id name phone rating vehicleType vehiclePlate profileImageUrl isOnline } timeline { __typename status timestamp message actor } comments { __typename id author message timestamp } branch { __typename id name address phone avatarUrl coordinates { __typename type coordinates } } business { __typename id name avatarUrl } } }"#
       ))
 
     public var id: String
@@ -191,6 +191,11 @@ public extension LlegoAPI {
             .field("street", String.self),
             .field("city", String?.self),
             .field("reference", String?.self),
+            .field("addressType", GraphQLEnum<LlegoAPI.AddressTypeEnum>.self),
+            .field("buildingName", String?.self),
+            .field("floor", String?.self),
+            .field("apartment", String?.self),
+            .field("deliveryInstructions", String?.self),
             .field("coordinates", Coordinates.self),
           ] }
           @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
@@ -200,6 +205,11 @@ public extension LlegoAPI {
           public var street: String { __data["street"] }
           public var city: String? { __data["city"] }
           public var reference: String? { __data["reference"] }
+          public var addressType: GraphQLEnum<LlegoAPI.AddressTypeEnum> { __data["addressType"] }
+          public var buildingName: String? { __data["buildingName"] }
+          public var floor: String? { __data["floor"] }
+          public var apartment: String? { __data["apartment"] }
+          public var deliveryInstructions: String? { __data["deliveryInstructions"] }
           /// Delivery coordinates
           public var coordinates: Coordinates { __data["coordinates"] }
 

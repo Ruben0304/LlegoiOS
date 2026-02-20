@@ -1,15 +1,6 @@
-query Me($jwt: String!) {
-  me(jwt: $jwt) {
+mutation UpdateSavedAddress($input: UpdateSavedAddressInput!, $jwt: String!) {
+  updateSavedAddress(input: $input, jwt: $jwt) {
     id
-    name
-    email
-    username
-    phone
-    role
-    createdAt
-    providerUserId
-    avatar
-    avatarUrl
     savedAddresses {
       id
       label

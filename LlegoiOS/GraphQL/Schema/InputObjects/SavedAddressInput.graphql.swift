@@ -4,7 +4,7 @@
 @_spi(Internal) @_spi(Unsafe) import ApolloAPI
 
 public extension LlegoAPI {
-  struct DeliveryAddressInput: InputObject {
+  struct SavedAddressInput: InputObject {
     @_spi(Unsafe) public private(set) var __data: InputDict
 
     @_spi(Unsafe) public init(_ data: InputDict) {
@@ -12,18 +12,21 @@ public extension LlegoAPI {
     }
 
     public init(
+      label: String,
       street: String,
       latitude: Double,
       longitude: Double,
       city: GraphQLNullable<String> = nil,
       reference: GraphQLNullable<String> = nil,
-      addressType: GraphQLEnum<AddressTypeInput>? = nil,
+      addressType: String? = nil,
       buildingName: GraphQLNullable<String> = nil,
       floor: GraphQLNullable<String> = nil,
       apartment: GraphQLNullable<String> = nil,
-      deliveryInstructions: GraphQLNullable<String> = nil
+      deliveryInstructions: GraphQLNullable<String> = nil,
+      setAsDefault: Bool? = nil
     ) {
       __data = InputDict([
+        "label": label,
         "street": street,
         "latitude": latitude,
         "longitude": longitude,
@@ -33,8 +36,14 @@ public extension LlegoAPI {
         "buildingName": buildingName,
         "floor": floor,
         "apartment": apartment,
-        "deliveryInstructions": deliveryInstructions
+        "deliveryInstructions": deliveryInstructions,
+        "setAsDefault": setAsDefault ?? GraphQLNullable.none
       ])
+    }
+
+    public var label: String {
+      get { __data["label"] }
+      set { __data["label"] = newValue }
     }
 
     public var street: String {
@@ -62,7 +71,7 @@ public extension LlegoAPI {
       set { __data["reference"] = newValue }
     }
 
-    public var addressType: GraphQLEnum<AddressTypeInput>? {
+    public var addressType: String? {
       get { __data["addressType"] }
       set { __data["addressType"] = newValue }
     }
@@ -85,6 +94,11 @@ public extension LlegoAPI {
     public var deliveryInstructions: GraphQLNullable<String> {
       get { __data["deliveryInstructions"] }
       set { __data["deliveryInstructions"] = newValue }
+    }
+
+    public var setAsDefault: Bool? {
+      get { __data["setAsDefault"] }
+      set { __data["setAsDefault"] = newValue }
     }
   }
 

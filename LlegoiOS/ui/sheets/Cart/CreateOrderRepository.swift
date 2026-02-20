@@ -36,7 +36,12 @@ final class CreateOrderRepository {
                 latitude: deliveryAddress.latitude,
                 longitude: deliveryAddress.longitude,
                 city: deliveryAddress.city.map { .some($0) } ?? .none,
-                reference: deliveryAddress.reference.map { .some($0) } ?? .none
+                reference: deliveryAddress.reference.map { .some($0) } ?? .none,
+                addressType: deliveryAddress.addressType.flatMap { LlegoAPI.AddressTypeInput(rawValue: $0) }.map { .some(GraphQLEnum($0)) } ?? .none,
+                buildingName: deliveryAddress.buildingName.map { .some($0) } ?? .none,
+                floor: deliveryAddress.floor.map { .some($0) } ?? .none,
+                apartment: deliveryAddress.apartment.map { .some($0) } ?? .none,
+                deliveryInstructions: deliveryAddress.deliveryInstructions.map { .some($0) } ?? .none
             )
             
             // Build create order input
@@ -157,6 +162,11 @@ struct DeliveryAddressInput {
     let reference: String?
     let latitude: Double
     let longitude: Double
+    var addressType: String? = nil
+    var buildingName: String? = nil
+    var floor: String? = nil
+    var apartment: String? = nil
+    var deliveryInstructions: String? = nil
 }
 
 // MARK: - Result Models

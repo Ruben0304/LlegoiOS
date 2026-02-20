@@ -79,6 +79,11 @@ struct OrderDeliveryAddress {
     let city: String?
     let reference: String?
     let coordinates: CLLocationCoordinate2D?
+    let addressType: String?
+    let buildingName: String?
+    let floor: String?
+    let apartment: String?
+    let deliveryInstructions: String?
     
     var fullAddress: String {
         var parts = [street]

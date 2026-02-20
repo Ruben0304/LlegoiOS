@@ -194,7 +194,15 @@ final class OrderDetailRepository {
             street: order.deliveryAddress.street,
             city: order.deliveryAddress.city,
             reference: order.deliveryAddress.reference,
-            coordinates: deliveryCoordinate
+            coordinates: deliveryCoordinate,
+            addressType: {
+                if case .case(let value) = order.deliveryAddress.addressType { return value.rawValue }
+                return nil
+            }(),
+            buildingName: order.deliveryAddress.buildingName,
+            floor: order.deliveryAddress.floor,
+            apartment: order.deliveryAddress.apartment,
+            deliveryInstructions: order.deliveryAddress.deliveryInstructions
         )
         
         let deliveryPerson: OrderDeliveryPerson? = order.deliveryPerson.map { dp in

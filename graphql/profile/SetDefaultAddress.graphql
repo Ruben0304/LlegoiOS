@@ -1,0 +1,6 @@
+mutation SetDefaultAddress($addressId: String!, $jwt: String!) {
+  setDefaultAddress(addressId: $addressId, jwt: $jwt) {
+    id
+    defaultAddressId
+  }
+}

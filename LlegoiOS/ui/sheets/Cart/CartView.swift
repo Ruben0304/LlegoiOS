@@ -55,6 +55,7 @@ struct CartView: View {
 
     // MARK: - Ad Discount States
     @State private var showAdView = false
+    @State private var showAddressPicker = false
 
     // MARK: - Computed Properties
 
@@ -146,6 +147,10 @@ struct CartView: View {
                                 ))
                                 .animation(.easeInOut(duration: 0.3).delay(Double(index) * 0.05), value: viewModel.cartItems.count)
                             }
+
+                            // Sección de dirección
+                            deliveryAddressSection
+                                .padding(.top, 8)
 
                             // Resumen de precios
                             priceBreakdown
@@ -397,6 +402,13 @@ struct CartView: View {
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
                 }
+            }
+            .sheet(isPresented: $showAddressPicker) {
+                SavedAddressesView(isSelectingDeliveryAddress: true) { address in
+                    viewModel.selectedAddress = address
+                }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
             }
             .alert("Estado del Pago", isPresented: $showPaymentAlert) {
                 Button("OK", role: .cancel) { }
@@ -991,6 +1003,70 @@ struct CartView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var deliveryAddressSection: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Text("Dirección de Entrega")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(.primary)
+                Spacer()
+                Button(action: {
+                    showAddressPicker = true
+                }) {
+                    Text(viewModel.selectedAddress != nil ? "Cambiar" : "Seleccionar")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.llegoAccent)
+                }
+            }
+
+            if let selected = viewModel.selectedAddress {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "mappin.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.llegoAccent)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(selected.label.isEmpty ? "Dirección" : selected.label)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.primary)
+
+                        Text(selected.street)
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                            .lineLimit(2)
+                    }
+                    Spacer()
+                }
+                .padding(12)
+                .background(Color.white)
+                .cornerRadius(12)
+                .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+            } else {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "mappin.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.gray)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Dirección actual")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.primary)
+
+                        Text(UserLocationManager.shared.userAddress)
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                            .lineLimit(2)
+                    }
+                    Spacer()
+                }
+                .padding(12)
+                .background(Color.white)
+                .cornerRadius(12)
+                .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+            }
+        }
     }
 
     private var priceBreakdown: some View {

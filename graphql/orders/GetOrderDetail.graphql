@@ -35,6 +35,11 @@ query GetOrderDetail($id: String!, $jwt: String!) {
       street
       city
       reference
+      addressType
+      buildingName
+      floor
+      apartment
+      deliveryInstructions
       coordinates {
         type
         coordinates

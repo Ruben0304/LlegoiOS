@@ -12,10 +12,28 @@ struct User: Codable, Sendable {
     let appleUserId: String?
     let avatar: String?
     let avatarUrl: String?
+    let savedAddresses: [SavedAddress]?
+    let defaultAddressId: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, email, fullName, username, phone, role, appleUserId, avatar, avatarUrl
+        case id, email, fullName, username, phone, role, appleUserId, avatar, avatarUrl, savedAddresses, defaultAddressId
     }
+}
+
+// MARK: - Saved Address
+struct SavedAddress: Codable, Sendable, Identifiable {
+    let id: String
+    let label: String
+    let street: String
+    let city: String?
+    let reference: String?
+    let addressType: String
+    let buildingName: String?
+    let floor: String?
+    let apartment: String?
+    let deliveryInstructions: String?
+    let latitude: Double
+    let longitude: Double
 }
 
 // MARK: - Auth Session

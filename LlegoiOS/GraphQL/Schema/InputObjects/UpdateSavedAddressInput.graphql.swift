@@ -4,7 +4,7 @@
 @_spi(Internal) @_spi(Unsafe) import ApolloAPI
 
 public extension LlegoAPI {
-  struct DeliveryAddressInput: InputObject {
+  struct UpdateSavedAddressInput: InputObject {
     @_spi(Unsafe) public private(set) var __data: InputDict
 
     @_spi(Unsafe) public init(_ data: InputDict) {
@@ -12,42 +12,58 @@ public extension LlegoAPI {
     }
 
     public init(
-      street: String,
-      latitude: Double,
-      longitude: Double,
+      addressId: String,
+      label: GraphQLNullable<String> = nil,
+      street: GraphQLNullable<String> = nil,
+      latitude: GraphQLNullable<Double> = nil,
+      longitude: GraphQLNullable<Double> = nil,
       city: GraphQLNullable<String> = nil,
       reference: GraphQLNullable<String> = nil,
-      addressType: GraphQLEnum<AddressTypeInput>? = nil,
+      addressType: GraphQLNullable<String> = nil,
       buildingName: GraphQLNullable<String> = nil,
       floor: GraphQLNullable<String> = nil,
       apartment: GraphQLNullable<String> = nil,
-      deliveryInstructions: GraphQLNullable<String> = nil
+      deliveryInstructions: GraphQLNullable<String> = nil,
+      setAsDefault: GraphQLNullable<Bool> = nil
     ) {
       __data = InputDict([
+        "addressId": addressId,
+        "label": label,
         "street": street,
         "latitude": latitude,
         "longitude": longitude,
         "city": city,
         "reference": reference,
-        "addressType": addressType ?? GraphQLNullable.none,
+        "addressType": addressType,
         "buildingName": buildingName,
         "floor": floor,
         "apartment": apartment,
-        "deliveryInstructions": deliveryInstructions
+        "deliveryInstructions": deliveryInstructions,
+        "setAsDefault": setAsDefault
       ])
     }
 
-    public var street: String {
+    public var addressId: String {
+      get { __data["addressId"] }
+      set { __data["addressId"] = newValue }
+    }
+
+    public var label: GraphQLNullable<String> {
+      get { __data["label"] }
+      set { __data["label"] = newValue }
+    }
+
+    public var street: GraphQLNullable<String> {
       get { __data["street"] }
       set { __data["street"] = newValue }
     }
 
-    public var latitude: Double {
+    public var latitude: GraphQLNullable<Double> {
       get { __data["latitude"] }
       set { __data["latitude"] = newValue }
     }
 
-    public var longitude: Double {
+    public var longitude: GraphQLNullable<Double> {
       get { __data["longitude"] }
       set { __data["longitude"] = newValue }
     }
@@ -62,7 +78,7 @@ public extension LlegoAPI {
       set { __data["reference"] = newValue }
     }
 
-    public var addressType: GraphQLEnum<AddressTypeInput>? {
+    public var addressType: GraphQLNullable<String> {
       get { __data["addressType"] }
       set { __data["addressType"] = newValue }
     }
@@ -85,6 +101,11 @@ public extension LlegoAPI {
     public var deliveryInstructions: GraphQLNullable<String> {
       get { __data["deliveryInstructions"] }
       set { __data["deliveryInstructions"] = newValue }
+    }
+
+    public var setAsDefault: GraphQLNullable<Bool> {
+      get { __data["setAsDefault"] }
+      set { __data["setAsDefault"] = newValue }
     }
   }
 

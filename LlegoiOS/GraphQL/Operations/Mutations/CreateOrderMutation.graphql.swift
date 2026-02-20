@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "CreateOrder"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"mutation CreateOrder($input: CreateOrderInput!, $jwt: String!) { createOrder(input: $input, jwt: $jwt) { __typename id orderNumber status subtotal deliveryFee total currency paymentMethod paymentStatus createdAt items { __typename productId name price quantity imageUrl lineTotal } discounts { __typename id title amount type } deliveryAddress { __typename street city reference } branch { __typename id name avatarUrl } business { __typename id name } } }"#
+        #"mutation CreateOrder($input: CreateOrderInput!, $jwt: String!) { createOrder(input: $input, jwt: $jwt) { __typename id orderNumber status subtotal deliveryFee total currency paymentMethod paymentStatus createdAt items { __typename productId name price quantity imageUrl lineTotal } discounts { __typename id title amount type } deliveryAddress { __typename street city reference addressType buildingName floor apartment deliveryInstructions } branch { __typename id name avatarUrl } business { __typename id name } } }"#
       ))
 
     public var input: CreateOrderInput
@@ -165,6 +165,11 @@ public extension LlegoAPI {
             .field("street", String.self),
             .field("city", String?.self),
             .field("reference", String?.self),
+            .field("addressType", GraphQLEnum<LlegoAPI.AddressTypeEnum>.self),
+            .field("buildingName", String?.self),
+            .field("floor", String?.self),
+            .field("apartment", String?.self),
+            .field("deliveryInstructions", String?.self),
           ] }
           @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
             CreateOrderMutation.Data.CreateOrder.DeliveryAddress.self
@@ -173,6 +178,11 @@ public extension LlegoAPI {
           public var street: String { __data["street"] }
           public var city: String? { __data["city"] }
           public var reference: String? { __data["reference"] }
+          public var addressType: GraphQLEnum<LlegoAPI.AddressTypeEnum> { __data["addressType"] }
+          public var buildingName: String? { __data["buildingName"] }
+          public var floor: String? { __data["floor"] }
+          public var apartment: String? { __data["apartment"] }
+          public var deliveryInstructions: String? { __data["deliveryInstructions"] }
         }
 
         /// CreateOrder.Branch
