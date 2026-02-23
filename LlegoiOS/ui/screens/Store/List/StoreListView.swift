@@ -11,6 +11,7 @@ enum ShopViewMode {
 enum NavigationDestination: Identifiable, Hashable {
     case detail(StoreWithCoordinates)
     case shop(branchId: String, branchName: String, storeGradient: ExtractedGradient?)
+    case productDetail(productId: String)
     case home
 
     var id: String {
@@ -19,6 +20,8 @@ enum NavigationDestination: Identifiable, Hashable {
             return "detail-\(store.id)"
         case .shop(let branchId, _, _):
             return "shop-\(branchId)"
+        case .productDetail(let productId):
+            return "productDetail-\(productId)"
         case .home:
             return "home"
         }
@@ -126,11 +129,7 @@ struct StoreListView: View {
                                             },
                                             onProductTap: { product, gradient in
                                                 // Navigate to product detail
-                                                navigationDestination = .shop(
-                                                    branchId: store.id,
-                                                    branchName: store.name,
-                                                    storeGradient: gradient
-                                                )
+                                                navigationDestination = .productDetail(productId: product.id)
                                             },
                                             onFavoriteTap: { product in
                                                 // Toggle favorite - handled by card's internal FavoritesManager
@@ -169,11 +168,7 @@ struct StoreListView: View {
                                         },
                                         onProductTap: { product, gradient in
                                             // Navigate to product detail
-                                            navigationDestination = .shop(
-                                                branchId: store.id,
-                                                branchName: store.name,
-                                                storeGradient: gradient
-                                            )
+                                            navigationDestination = .productDetail(productId: product.id)
                                         },
                                         onFavoriteTap: { product in
                                             // Toggle favorite - handled by card's internal FavoritesManager
@@ -285,6 +280,8 @@ struct StoreListView: View {
                     StoreDetailView(store: store.toStore())
                 case .shop(let branchId, let branchName, let storeGradient):
                     ProductListView(branchId: branchId, branchName: branchName, storeGradient: storeGradient)
+                case .productDetail(let productId):
+                    ProductDetailView(productId: productId)
                 case .home:
                     HomeView()
                 }
@@ -415,6 +412,7 @@ struct StoreWithCoordinates: Identifiable {
     let bannerUrl: String
     let address: String?
     let rating: Double?
+    let description: String?
     let coordinate: CLLocationCoordinate2D
 
     func toStore() -> Store {

@@ -140,9 +140,16 @@ private struct StoreProductsCardFront: View {
                 .padding(.horizontal, 12)
                 .padding(.top, 12)
                 .padding(.bottom, 10)
+                .zIndex(1)
 
             // Products Grid
             productsContent
+
+            // Description and Details Button
+            storeDescriptionSection
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+                .padding(.bottom, 12)
         }
         .background(
             ZStack {
@@ -237,7 +244,7 @@ private struct StoreProductsCardFront: View {
                     ProductFullCoverCard(
                         product: product,
                         isFavorite: favoritesManager.isFavorite(productId: product.id),
-                        onTap: { },
+                        onTap: { onProductTap(product, storeGradient) },
                         onFavoriteTap: { onFavoriteTap(product) }
                     )
                 }
@@ -259,6 +266,40 @@ private struct StoreProductsCardFront: View {
                     self.storeGradient = gradient
                     self.onGradientExtracted?(gradient)
                 }
+            }
+        }
+    }
+
+    // MARK: - Store Description Section
+    private var storeDescriptionSection: some View {
+        HStack(spacing: 12) {
+            // Description (left side)
+            if let description = store.description {
+                Text(description)
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundColor(.white.opacity(0.85))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer()
+
+            // Details Button (right side)
+            HStack(spacing: 7) {
+                Text("Ver detalles")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white)
+
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.white)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .glassEffect(.clear)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                onStoreTap(storeGradient)
             }
         }
     }
@@ -343,27 +384,27 @@ private struct StoreProductsCardFront: View {
 
             Spacer()
 
-            // Flip Button (Custom Tap Gesture)
-            Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
-                .font(.system(size: 14, weight: .bold))
-                .frame(width: 36, height: 36)
-                .foregroundColor(.white)
-                .glassEffect(.clear)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    onFlip()
-                }
+            // Flip Button
+            Button(action: { onFlip() }) {
+                Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
+                    .font(.system(size: 14, weight: .bold))
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+                    .foregroundColor(.white)
+            }
+            .glassEffect(.clear)
+            .buttonStyle(.borderless)
 
-            // Options Button (Custom Tap Gesture)
-            Image(systemName: "ellipsis")
-                .font(.system(size: 16, weight: .bold))
-                .frame(width: 36, height: 36)
-                .foregroundColor(.white)
-                .glassEffect(.clear)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    onStoreTap(storeGradient)
-                }
+            // Options Button
+            Button(action: { onStoreTap(storeGradient) }) {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 16, weight: .bold))
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+                    .foregroundColor(.white)
+            }
+            .glassEffect(.clear)
+            .buttonStyle(.borderless)
         }
     }
 

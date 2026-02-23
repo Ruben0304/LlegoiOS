@@ -19,6 +19,11 @@ struct AddressFormView: View {
         center: CLLocationCoordinate2D(latitude: 23.1136, longitude: -82.3666),
         span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
     )
+    @State private var mapPosition: MapCameraPosition = .region(MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: 23.1136, longitude: -82.3666),
+        span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+    ))
+    @State private var selectedCoordinate: CLLocationCoordinate2D?
 
     let onSave: (LlegoAPI.SavedAddressInput, Bool) -> Void
 
@@ -53,9 +58,32 @@ struct AddressFormView: View {
                 }
 
                 Section(header: Text("Ubicación en el Mapa")) {
-                    Map(coordinateRegion: $region)
+                    VStack(alignment: .leading, spacing: 8) {
+                        MapReader { proxy in
+                            Map(position: $mapPosition) {
+                                if let coordinate = selectedCoordinate {
+                                    Annotation("", coordinate: coordinate) {
+                                        Image(systemName: "mappin.circle.fill")
+                                            .font(.system(size: 34))
+                                            .foregroundColor(.red)
+                                    }
+                                }
+                            }
+                            .mapStyle(.standard(pointsOfInterest: .excludingAll))
+                            .onTapGesture { position in
+                                if let coordinate = proxy.convert(position, from: .local) {
+                                    selectedCoordinate = coordinate
+                                    region.center = coordinate
+                                }
+                            }
+                        }
                         .frame(height: 200)
                         .cornerRadius(12)
+
+                        Text("Toca el mapa para seleccionar la ubicación exacta")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
                 
                 Section {

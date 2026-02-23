@@ -118,6 +118,7 @@ class SearchViewModel: ObservableObject {
                             bannerUrl: branch.coverUrl ?? self.defaultBannerUrl,
                             address: branch.address,
                             rating: nil,
+                            description: "Descripción de la tienda que estará disponible próximamente",
                             coordinate: CLLocationCoordinate2D(
                                 latitude: branch.coordinates.latitude,
                                 longitude: branch.coordinates.longitude

@@ -516,7 +516,7 @@ struct ProductGraphQL: Identifiable, Sendable {
         switch currency.uppercased() {
         case "USD": symbol = ""
         case "EUR": symbol = "€"
-        case "CUP": symbol = "₱"
+        case "CUP": symbol = "CUP"
         default: symbol = currency
         }
         return String(format: "%.2f \(symbol == "" ? "US$" : symbol)", price)

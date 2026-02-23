@@ -160,6 +160,7 @@ class SearchRepository {
                         bannerUrl: "",
                         address: node.address,
                         rating: nil,
+                        description: "Descripción de la tienda que estará disponible próximamente",
                         coordinate: CLLocationCoordinate2D(
                             latitude: node.coordinates.coordinates.count > 1 ? node.coordinates.coordinates[1] : 0,
                             longitude: node.coordinates.coordinates.count > 0 ? node.coordinates.coordinates[0] : 0
@@ -274,6 +275,7 @@ class SearchRepository {
                         bannerUrl: node.coverUrl ?? "",
                         address: node.address ?? "",
                         rating: nil,
+                        description: "Descripción de la tienda que estará disponible próximamente",
                         coordinate: CLLocationCoordinate2D(
                             latitude: node.coordinates.coordinates[1],
                             longitude: node.coordinates.coordinates[0]
