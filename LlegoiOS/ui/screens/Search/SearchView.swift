@@ -114,6 +114,8 @@ struct SearchView: View {
                     ProductListView(branchId: branchId, branchName: branchName, storeGradient: storeGradient)
                 case .home:
                     HomeView()
+                case .productDetail(productId: let productId):
+                    HomeView()
                 }
             }
             .sheet(item: $selectedStore, onDismiss: {
