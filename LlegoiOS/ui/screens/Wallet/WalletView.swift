@@ -726,25 +726,25 @@ struct LocalRechargeSheet: View {
                                     )
                                 }
 
-                                // Stripe Button
+                                // Stripe Button (Deshabilitado - Próximamente)
                                 Button(action: {
-                                    viewModel.rechargeAmount = sanitizedAmount
-                                    viewModel.processStripeRecharge(for: selectedCurrency)
+                                    // No hacer nada - botón deshabilitado
                                 }) {
                                     HStack {
                                         Image(systemName: "creditcard.fill")
                                             .font(.system(size: 18))
-                                        Text("Pagar con Tarjeta (Stripe)")
+                                        Text("Stripe próximamente")
                                             .font(.system(size: 17, weight: .semibold))
                                     }
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.white.opacity(0.6))
                                     .frame(maxWidth: .infinity)
                                     .padding()
                                     .background(
                                         RoundedRectangle(cornerRadius: 14)
-                                            .fill(Color.llegoPrimary)
+                                            .fill(Color.gray.opacity(0.4))
                                     )
                                 }
+                                .disabled(true)
 
                                 // Manual Test Button
                                 Button(action: {
@@ -996,7 +996,7 @@ struct ForeignRechargeSheet: View {
                         InfoCard(
                             icon: "creditcard.fill",
                             title: "Pago seguro",
-                            description: "Procesado por Stripe con encriptación bancaria"
+                            description: "Stripe próximamente disponible"
                         )
                         
                         InfoCard(

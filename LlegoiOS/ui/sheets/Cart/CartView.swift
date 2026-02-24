@@ -1727,7 +1727,7 @@ struct PaymentLinkSheetView: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 InstructionRow(number: "1", text: "Copia el link de pago")
                                 InstructionRow(number: "2", text: "Envíalo por WhatsApp, email o mensaje")
-                                InstructionRow(number: "3", text: "La persona paga de forma segura con Stripe")
+                                InstructionRow(number: "3", text: "La persona paga de forma segura (Stripe próximamente)")
                                 InstructionRow(number: "4", text: "Recibirás una notificación cuando se complete el pago")
                             }
                         }

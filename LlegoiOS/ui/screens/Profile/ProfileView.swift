@@ -970,7 +970,7 @@ struct ProfileView: View {
             }
 
             Button(action: {
-                showingPaymentMethods = true
+                // No hacer nada - deshabilitado
             }) {
                 HStack(spacing: 16) {
                     // Ícono de tarjeta
@@ -979,8 +979,8 @@ struct ProfileView: View {
                             .fill(
                                 LinearGradient(
                                     gradient: Gradient(colors: [
-                                        Color.llegoPrimary,
-                                        Color.llegoPrimary.opacity(0.8)
+                                        Color.gray.opacity(0.5),
+                                        Color.gray.opacity(0.4)
                                     ]),
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
@@ -990,55 +990,33 @@ struct ProfileView: View {
 
                         Image(systemName: "creditcard.fill")
                             .font(.system(size: 24, weight: .semibold))
-                            .foregroundColor(.white)
+                            .foregroundColor(.white.opacity(0.7))
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 8) {
-                            Text("Visa")
+                            Text("Stripe próximamente")
                                 .font(.system(size: 16, weight: .bold, design: .rounded))
-                                .foregroundColor(.llegoPrimary)
-
-                            // Badge de preferido
-                            Text("PREFERIDA")
-                                .font(.system(size: 9, weight: .heavy))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(
-                                    Capsule()
-                                        .fill(Color.llegoAccent)
-                                )
+                                .foregroundColor(.secondary)
                         }
 
-                        HStack(spacing: 4) {
-                            Text("•••• •••• •••• 4532")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(.gray)
-
-                            Text("•")
-                                .foregroundColor(.gray.opacity(0.5))
-
-                            Text("Vence 08/26")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.gray.opacity(0.8))
-                        }
+                        Text("Tarjetas de crédito/débito próximamente disponibles")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary.opacity(0.7))
                     }
 
                     Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.gray.opacity(0.5))
                 }
                 .padding(18)
                 .background(
                     RoundedRectangle(cornerRadius: 18)
                         .fill(Color.white)
-                        .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 4)
+                        .shadow(color: Color.black.opacity(0.03), radius: 12, x: 0, y: 4)
                 )
+                .opacity(0.6)
             }
             .buttonStyle(PlainButtonStyle())
+            .disabled(true)
         }
     }
 

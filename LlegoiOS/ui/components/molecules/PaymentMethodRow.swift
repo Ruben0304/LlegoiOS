@@ -11,10 +11,16 @@ struct PaymentMethodRow: View {
     @State private var didAppear = false
 
     var body: some View {
-        Button(action: onTap) {
+        Button(action: {
+            // Solo ejecutar acción si el método está habilitado
+            if method.isEnabled {
+                onTap()
+            }
+        }) {
             rowContent
         }
         .buttonStyle(PlainButtonStyle())
+        .disabled(!method.isEnabled) // Deshabilitar si no está habilitado
         .opacity(didAppear ? 1 : 0)
         .offset(y: didAppear ? 0 : 12)
         .scaleEffect(didAppear ? 1 : 0.98)
@@ -28,7 +34,7 @@ struct PaymentMethodRow: View {
     private var iconView: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.primary.opacity(0.05))
+                .fill(Color.primary.opacity(method.isEnabled ? 0.05 : 0.02))
                 .frame(width: 54, height: 54)
 
             switch method.imageType {
@@ -36,17 +42,19 @@ struct PaymentMethodRow: View {
                 Image(systemName: iconName)
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(.primary)
-                    .opacity(0.8)
+                    .opacity(method.isEnabled ? 0.8 : 0.3)
             case .assetImage(let imageName):
                 Image(imageName)
                     .resizable()
                     .scaledToFit()
                     .frame(width: 30, height: 30)
+                    .opacity(method.isEnabled ? 1.0 : 0.3)
             case .url(_):
                 Image("imageName")
                     .resizable()
                     .scaledToFit()
                     .frame(width: 30, height: 30)
+                    .opacity(method.isEnabled ? 1.0 : 0.3)
             }
         }
     }
@@ -90,13 +98,13 @@ struct PaymentMethodRow: View {
             HStack(spacing: 8) {
                 Text(method.name)
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundColor(.primary)
+                    .foregroundColor(method.isEnabled ? .primary : .secondary)
                 badgeView
             }
 
             Text(method.description)
                 .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.secondary)
+                .foregroundColor(method.isEnabled ? .secondary : .secondary.opacity(0.6))
                 .lineLimit(2)
 
             currencyChip
@@ -108,22 +116,25 @@ struct PaymentMethodRow: View {
             iconView
             infoView
             Spacer()
-            Image(systemName: "chevron.forward")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(.secondary)
-                .opacity(0.6)
+            if method.isEnabled {
+                Image(systemName: "chevron.forward")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.secondary)
+                    .opacity(0.6)
+            }
         }
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(.ultraThinMaterial)
-                .shadow(color: Color.black.opacity(0.04), radius: 12, x: 0, y: 6)
+                .shadow(color: Color.black.opacity(method.isEnabled ? 0.04 : 0.02), radius: 12, x: 0, y: 6)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(isSelected ? Color.llegoPrimary : Color.primary.opacity(0.06), lineWidth: isSelected ? 1.6 : 1)
+                .stroke(isSelected ? Color.llegoPrimary : Color.primary.opacity(method.isEnabled ? 0.06 : 0.03), lineWidth: isSelected ? 1.6 : 1)
         )
         .scaleEffect(isSelected ? 1.01 : 1.0)
+        .opacity(method.isEnabled ? 1.0 : 0.5)
         .contentShape(Rectangle())
     }
 }

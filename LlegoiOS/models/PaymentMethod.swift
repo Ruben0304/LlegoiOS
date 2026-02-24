@@ -14,6 +14,7 @@ struct PaymentMethod: Identifiable, Equatable {
     let imageType: ImageType
     let color: Color
     let currency: String
+    let isEnabled: Bool // Indica si el método de pago es interactuable
 
     // Computed property para compatibilidad con código existente
     var icon: String {
@@ -36,16 +37,33 @@ struct PaymentMethod: Identifiable, Equatable {
         // Map method type to icon and color
         let (imageType, color) = iconAndColor(for: model.method, code: model.code, iconUrl: model.iconUrl)
         
-        // Use instructions as description if available
-        let description = model.instructions ?? defaultDescription(for: model.method)
+        // Check if it's Stripe
+        let isStripe = model.method.lowercased() == "stripe" || model.method.lowercased() == "card"
+        
+        // Use instructions as description if available, except for Stripe
+        let description: String
+        if isStripe {
+            description = "Próximamente disponible"
+        } else {
+            description = model.instructions ?? defaultDescription(for: model.method)
+        }
+        
+        // Modify name for Stripe
+        let name: String
+        if isStripe {
+            name = "Stripe próximamente"
+        } else {
+            name = model.name
+        }
         
         return PaymentMethod(
             id: model.id,
-            name: model.name,
+            name: name,
             description: description,
             imageType: imageType,
             color: color,
-            currency: model.currency
+            currency: model.currency,
+            isEnabled: !isStripe // Stripe está deshabilitado
         )
     }
     
@@ -88,7 +106,7 @@ struct PaymentMethod: Identifiable, Equatable {
         case "transfer", "transfermovil":
             return "Transferencia bancaria"
         case "stripe", "card":
-            return "Visa/Mastercard"
+            return "Próximamente disponible"
         case "cash":
             return "Pago al recibir"
         default:
