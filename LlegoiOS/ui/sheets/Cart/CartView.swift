@@ -56,6 +56,12 @@ struct CartView: View {
     // MARK: - Ad Discount States
     @State private var showAdView = false
     @State private var showAddressPicker = false
+    @State private var showDeliveryAddressAlert = false
+    @State private var pendingPaymentAfterAddressSelection = false
+
+    // MARK: - Fly-to-cart Animation
+    @State private var flyingParticles: [FlyingParticle] = []
+    @State private var cartItemsCardFrame: CGRect = .zero
 
     // MARK: - Computed Properties
 
@@ -80,6 +86,9 @@ struct CartView: View {
                 cartGradientBackground
                     .ignoresSafeArea()
                     .animation(.easeInOut(duration: 0.8), value: gradientManager.currentCategoryIndex)
+
+                // Flying particles overlay for add-to-cart animation
+                flyingParticlesOverlay
 
                 if case .loading = viewModel.state {
                     VStack(spacing: 20) {
@@ -122,154 +131,67 @@ struct CartView: View {
                 else {
                     ScrollView(.vertical, showsIndicators: false) {
                         VStack(spacing: 12) {
-                            ForEach(Array(viewModel.cartItems.enumerated()), id: \.element.id) { index, item in
-                                CartItemCard(
-                                    item: item,
-                                    onIncrement: {
-                                        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                                            viewModel.incrementQuantity(productId: item.id)
-                                        }
-                                    },
-                                    onDecrement: {
-                                        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                                            viewModel.decrementQuantity(productId: item.id)
-                                        }
-                                    },
-                                    onRemove: {
-                                        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                                            viewModel.removeFromCart(productId: item.id)
+                            // Tarjeta única con todos los items del carrito
+                            VStack(spacing: 0) {
+                                ForEach(Array(viewModel.cartItems.enumerated()), id: \.element.id) { index, item in
+                                    VStack(spacing: 0) {
+                                        CartItemCard(
+                                            item: item,
+                                            onIncrement: {
+                                                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                                                    viewModel.incrementQuantity(productId: item.id)
+                                                }
+                                            },
+                                            onDecrement: {
+                                                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                                                    viewModel.decrementQuantity(productId: item.id)
+                                                }
+                                            },
+                                            onRemove: {
+                                                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                                                    viewModel.removeFromCart(productId: item.id)
+                                                }
+                                            }
+                                        )
+                                        .transition(.asymmetric(
+                                            insertion: .scale.combined(with: .opacity),
+                                            removal: .scale.combined(with: .opacity)
+                                        ))
+                                        .animation(.easeInOut(duration: 0.3).delay(Double(index) * 0.05), value: viewModel.cartItems.count)
+
+                                        if index < viewModel.cartItems.count - 1 {
+                                            Divider()
+                                                .padding(.horizontal, 12)
                                         }
                                     }
-                                )
-                                .transition(.asymmetric(
-                                    insertion: .scale.combined(with: .opacity),
-                                    removal: .scale.combined(with: .opacity)
-                                ))
-                                .animation(.easeInOut(duration: 0.3).delay(Double(index) * 0.05), value: viewModel.cartItems.count)
+                                }
                             }
+                            .background(
+                                GeometryReader { geo in
+                                    Color.white
+                                        .onAppear {
+                                            cartItemsCardFrame = geo.frame(in: .global)
+                                        }
+                                        .onChange(of: viewModel.cartItems.count) { _ in
+                                            cartItemsCardFrame = geo.frame(in: .global)
+                                        }
+                                }
+                            )
+                            .cornerRadius(16)
+                            .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
 
-                            // Sección de dirección
-                            deliveryAddressSection
-                                .padding(.top, 8)
+                            if viewModel.hasMultipleBranches {
+                                multipleBranchesBanner
+                            }
 
                             // Resumen de precios
                             priceBreakdown
-                                .padding(.top, 8)
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
-                        .padding(.bottom, 110)
+                        .padding(.bottom, 24)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                    .safeAreaInset(edge: .bottom) {
-                        VStack(spacing: 10) {
-                            // Banner: múltiples tiendas en el carrito
-                            if viewModel.hasMultipleBranches {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                        .font(.system(size: 13, weight: .semibold))
-                                        .foregroundColor(.orange)
-                                    Text("Solo puedes pedir a una tienda a la vez. Elimina productos de otras tiendas para continuar.")
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundColor(.primary)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 10)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                        .fill(Color.orange.opacity(0.12))
-                                )
-                            }
-
-                            HStack(spacing: 10) {
-                                Button(action: {
-                                    if !viewModel.hasMultipleBranches {
-                                        showPaymentMethodPicker = true
-                                    }
-                                }) {
-                                    HStack(spacing: 6) {
-                                        if viewModel.hasMultipleBranches {
-                                            Image(systemName: "creditcard")
-                                                .font(.system(size: 15, weight: .semibold))
-                                            Text("Método")
-                                                .font(.system(size: 14, weight: .semibold))
-                                        } else if let method = selectedPaymentMethod {
-                                            switch method.imageType {
-                                            case .systemIcon(let iconName):
-                                                Image(systemName: iconName)
-                                                    .font(.system(size: 13, weight: .semibold))
-                                            case .assetImage(let imageName):
-                                                Image(imageName)
-                                                    .resizable()
-                                                    .scaledToFit()
-                                                    .frame(width: 18, height: 18)
-                                            case .url:
-                                                Image(systemName: "creditcard")
-                                                    .font(.system(size: 13, weight: .semibold))
-                                            }
-
-                                            VStack(alignment: .leading, spacing: 1) {
-                                                Text("Pagar con")
-                                                    .font(.system(size: 12, weight: .medium))
-                                                Text(method.name)
-                                                    .font(.system(size: 13, weight: .bold))
-                                            }
-                                        } else {
-                                            Image(systemName: "creditcard")
-                                                .font(.system(size: 15, weight: .semibold))
-                                            Text("Método")
-                                                .font(.system(size: 14, weight: .semibold))
-                                        }
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 44)
-                                }
-                                .buttonStyle(.glassProminent)
-                                .tint(gradientManager.currentAccentColor)
-                                .disabled(viewModel.hasMultipleBranches)
-                                .opacity(viewModel.hasMultipleBranches ? 0.45 : 1.0)
-
-                                Button(action: {
-                                    processPayment()
-                                }) {
-                                    HStack(spacing: 6) {
-                                        if selectedPaymentMethod?.id == "invoice_international" {
-                                            Text("Enviar factura")
-                                                .font(.system(size: 14, weight: .bold, design: .rounded))
-                                        } else {
-                                            Text("Pedir")
-                                                .font(.system(size: 16, weight: .bold, design: .rounded))
-                                            Text(viewModel.formattedTotal)
-                                                .font(.system(size: 14, weight: .bold, design: .rounded))
-                                        }
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 44)
-                                }
-                                .buttonStyle(.glassProminent)
-                                .tint(gradientManager.currentAccentColor)
-                                .disabled(viewModel.hasMultipleBranches)
-                                .opacity(viewModel.hasMultipleBranches ? 0.45 : 1.0)
-                            }
-                        }
-                        .padding(12)
-//                        .background(
-//                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-//                                .fill(Color.white)
-//                                .shadow(color: Color.black.opacity(0.08), radius: 14, x: 0, y: 8)
-//                        )
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 12)
-                    }
-
-                    NavigationLink(
-                        destination: PlansAndPricingView(),
-                        isActive: $navigateToPlans
-                    ) {
-                        EmptyView()
-                    }
-                    .hidden()
                 }
             }
             .navigationTitle("Carrito")
@@ -280,9 +202,6 @@ struct CartView: View {
                         Image(systemName: "xmark")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(gradientManager.currentAccentColor)
-                            .frame(width: 32, height: 32)
-                            .background(gradientManager.currentAccentColor.opacity(0.08))
-                            .clipShape(Circle())
                     }
                 }
 
@@ -294,21 +213,11 @@ struct CartView: View {
                                     selectedCurrency = currency
                                 }
                             }) {
-                                HStack {
-                                    Text(currency.flag)
-                                        .font(.system(size: 20))
+                                if selectedCurrency == currency {
+                                    Label(currency.rawValue, systemImage: "checkmark")
+                                } else {
                                     Text(currency.rawValue)
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(.primary)
-                                    Spacer()
-                                    if selectedCurrency == currency {
-                                        Image(systemName: "checkmark")
-                                            .font(.system(size: 14, weight: .bold))
-                                            .foregroundColor(gradientManager.currentAccentColor)
-                                    }
                                 }
-                                .frame(minWidth: 120, maxWidth: .infinity)
-                                .padding(.horizontal, 8)
                             }
                         }
                     } label: {
@@ -324,6 +233,18 @@ struct CartView: View {
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
+                    }
+                }
+
+                if !viewModel.cartItems.isEmpty {
+                    ToolbarItem(placement: .bottomBar) {
+                        bottomPaymentMethodAction
+                    }
+
+                    ToolbarSpacer(.fixed, placement: .bottomBar)
+
+                    ToolbarItem(placement: .bottomBar) {
+                        bottomPlaceOrderAction
                     }
                 }
             }
@@ -413,9 +334,31 @@ struct CartView: View {
             .sheet(isPresented: $showAddressPicker) {
                 SavedAddressesView(isSelectingDeliveryAddress: true) { address in
                     viewModel.selectedAddress = address
+                    if pendingPaymentAfterAddressSelection {
+                        pendingPaymentAfterAddressSelection = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                            processPayment()
+                        }
+                    }
                 }
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+            }
+            .confirmationDialog(
+                "Dirección de entrega",
+                isPresented: $showDeliveryAddressAlert,
+                titleVisibility: .visible
+            ) {
+                Button("Esta dirección") {
+                    processPayment()
+                }
+                Button("Otra dirección") {
+                    pendingPaymentAfterAddressSelection = true
+                    showAddressPicker = true
+                }
+                Button("Cancelar", role: .cancel) { }
+            } message: {
+                Text(deliveryAddressAlertMessage)
             }
             .alert("Estado del Pago", isPresented: $showPaymentAlert) {
                 Button("OK", role: .cancel) { }
@@ -456,6 +399,9 @@ struct CartView: View {
                     deliveryLocation: "Calle 23 #456, Vedado, La Habana", //TODO: Usar ubicación real del usuario
                     selectedPaymentMethod: selectedPaymentMethod?.name ?? "Método de Pago"
                 )
+            }
+            .navigationDestination(isPresented: $navigateToPlans) {
+                PlansAndPricingView()
             }
         }
 
@@ -957,80 +903,145 @@ struct CartView: View {
         }
     }
 
+    // MARK: - Flying Particles Overlay
+    private var flyingParticlesOverlay: some View {
+        GeometryReader { geo in
+            let containerOrigin = geo.frame(in: .global).origin
+            ZStack {
+                ForEach(flyingParticles) { particle in
+                    // Convert global positions to local container coordinates
+                    let localParticle = FlyingParticle(
+                        id: particle.id,
+                        imageUrl: particle.imageUrl,
+                        source: CGPoint(
+                            x: particle.source.x - containerOrigin.x,
+                            y: particle.source.y - containerOrigin.y
+                        ),
+                        destination: CGPoint(
+                            x: particle.destination.x - containerOrigin.x,
+                            y: particle.destination.y - containerOrigin.y
+                        )
+                    )
+                    FlyingParticleView(particle: localParticle) {
+                        flyingParticles.removeAll { $0.id == particle.id }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .allowsHitTesting(false)
+        .zIndex(999)
+    }
+
     // MARK: - Suggested Products Section
     private var suggestedProductsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(gradientManager.currentAccentColor)
-                    .frame(width: 32, height: 32)
-                    .background(Circle().fill(gradientManager.currentAccentColor.opacity(0.12)))
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack(alignment: .top, spacing: 10) {
+                // Icono IA
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(red: 0.36, green: 0.18, blue: 0.90), Color(red: 0.55, green: 0.22, blue: 0.98)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 34, height: 34)
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.white)
+                }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Recomendado para ti")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(.primary)
-
-                    if viewModel.isLoadingSuggestions {
-                        Text("Analizando productos...")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.secondary)
-                    } else if !viewModel.suggestedProducts.isEmpty {
-                        Text("\(viewModel.suggestedProducts.count) productos complementarios")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.secondary)
+                    HStack(spacing: 6) {
+                        Text("Recomendado para ti")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.primary)
+                        if viewModel.isLoadingSuggestions {
+                            ProgressView()
+                                .scaleEffect(0.65)
+                                .tint(.secondary)
+                        }
                     }
+                    Text("Seleccionado con Inteligencia Artificial")
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundColor(Color(red: 0.45, green: 0.22, blue: 0.90))
                 }
 
                 Spacer()
             }
+            .padding(.horizontal, 14)
+            .padding(.top, 14)
+            .padding(.bottom, 12)
 
             if viewModel.isLoadingSuggestions {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(0..<3, id: \.self) { _ in
-                            VStack(alignment: .leading, spacing: 8) {
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.gray.opacity(0.15))
-                                    .frame(width: 100, height: 100)
+                    HStack(spacing: 10) {
+                        ForEach(0..<4, id: \.self) { _ in
+                            VStack(alignment: .leading, spacing: 0) {
+                                RoundedRectangle(cornerRadius: 0)
+                                    .fill(Color(.systemGray5))
+                                    .frame(width: 140, height: 140)
                                     .shimmer()
-
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(Color.gray.opacity(0.15))
-                                    .frame(width: 80, height: 12)
-                                    .shimmer()
-
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(Color.gray.opacity(0.15))
-                                    .frame(width: 60, height: 10)
-                                    .shimmer()
+                                VStack(alignment: .leading, spacing: 6) {
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(Color(.systemGray5))
+                                        .frame(height: 11)
+                                        .shimmer()
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(Color(.systemGray5))
+                                        .frame(width: 60, height: 13)
+                                        .shimmer()
+                                }
+                                .padding(10)
                             }
+                            .frame(width: 140)
+                            .background(Color.white)
+                            .cornerRadius(10)
+                            .shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 2)
                         }
                     }
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 14)
                 }
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
+                    HStack(spacing: 10) {
                         ForEach(viewModel.suggestedProducts) { product in
-                            ProductCard(
+                            RecommendedProductCard(
                                 product: product,
-                                count: .constant(0),
-                                onIncrement: {
-                                    CartManager.shared.addToCart(productId: product.id, quantity: 1)
-                                    viewModel.loadCart()
+                                onAdd: { buttonFrame in
+                                    // Optimistic UI update — no backend reload
+                                    viewModel.optimisticallyAdd(product: product)
                                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                                },
-                                onDecrement: {},
-                                onProductTap: {}
+
+                                    // Launch fly-to-cart animation
+                                    let destination = CGPoint(
+                                        x: cartItemsCardFrame.midX,
+                                        y: cartItemsCardFrame.minY + 28
+                                    )
+                                    let source = CGPoint(
+                                        x: buttonFrame.midX,
+                                        y: buttonFrame.midY
+                                    )
+                                    let particle = FlyingParticle(
+                                        id: UUID(),
+                                        imageUrl: product.imageUrl,
+                                        source: source,
+                                        destination: destination
+                                    )
+                                    flyingParticles.append(particle)
+                                }
                             )
-                            .frame(width: 180)
                         }
                     }
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 14)
                 }
             }
         }
-        .padding(12)
         .background(Color.white)
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
@@ -1089,262 +1100,250 @@ struct CartView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var deliveryAddressSection: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Text("Dirección de Entrega")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(.primary)
-                Spacer()
-                Button(action: {
-                    showAddressPicker = true
-                }) {
-                    Text(viewModel.selectedAddress != nil ? "Cambiar" : "Seleccionar")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(gradientManager.currentAccentColor)
-                }
-            }
-
-            if let selected = viewModel.selectedAddress {
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: "mappin.circle.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(gradientManager.currentAccentColor)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(selected.label.isEmpty ? "Dirección" : selected.label)
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.primary)
-
-                        Text(selected.street)
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-                            .lineLimit(2)
-                    }
-                    Spacer()
-                }
-                .padding(12)
-                .background(Color.white)
-                .cornerRadius(12)
-                .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
-            } else {
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: "mappin.circle.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(.gray)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Dirección actual")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.primary)
-
-                        Text(UserLocationManager.shared.userAddress)
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-                            .lineLimit(2)
-                    }
-                    Spacer()
-                }
-                .padding(12)
-                .background(Color.white)
-                .cornerRadius(12)
-                .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
-            }
+    private var multipleBranchesBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.orange)
+            Text("Solo puedes pedir a una tienda a la vez. Elimina productos de otras tiendas para continuar.")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.primary)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.orange.opacity(0.12))
+        )
+    }
+
+    private var bottomPaymentMethodAction: some View {
+        Button(action: {
+            if !viewModel.hasMultipleBranches {
+                showPaymentMethodPicker = true
+            }
+        }) {
+            HStack(spacing: 6) {
+                if let method = selectedPaymentMethod {
+                    switch method.imageType {
+                    case .systemIcon(let iconName):
+                        Image(systemName: iconName)
+                            .font(.system(size: 13, weight: .semibold))
+                    case .assetImage(let imageName):
+                        Image(imageName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 18, height: 18)
+                    case .url:
+                        Image(systemName: "creditcard")
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Pagar con")
+                            .font(.system(size: 12, weight: .medium))
+                        Text(method.name)
+                            .font(.system(size: 13, weight: .bold))
+                            .lineLimit(1)
+                    }
+                } else {
+                    Image(systemName: "creditcard")
+                        .font(.system(size: 15, weight: .semibold))
+                    Text("Método")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+            }
+            .frame(minWidth: 140)
+            .frame(height: 52)
+        }
+        .buttonStyle(.glassProminent)
+        .tint(.black)
+        .disabled(viewModel.hasMultipleBranches)
+        .opacity(viewModel.hasMultipleBranches ? 0.45 : 1.0)
+    }
+
+    private var bottomPlaceOrderAction: some View {
+        Button(action: {
+            if !viewModel.hasMultipleBranches {
+                showDeliveryAddressAlert = true
+            }
+        }) {
+            HStack(spacing: 6) {
+                if selectedPaymentMethod?.id == "invoice_international" {
+                    Text("Enviar factura")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                } else {
+                    Text("Pedir")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                    Text(viewModel.formattedTotal)
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                }
+            }
+            .frame(minWidth: 150)
+            .frame(height: 52)
+        }
+        .buttonStyle(.glassProminent)
+        .tint(gradientManager.currentAccentColor)
+        .disabled(viewModel.hasMultipleBranches)
+        .opacity(viewModel.hasMultipleBranches ? 0.45 : 1.0)
+    }
+
+    private var deliveryAddressAlertMessage: String {
+        if let selected = viewModel.selectedAddress {
+            let title = selected.label.isEmpty ? "Dirección guardada" : selected.label
+            return "\(title): \(selected.street)\n\n¿Deseas continuar con esta dirección o elegir otra?"
+        }
+        return "Dirección actual: \(UserLocationManager.shared.userAddress)\n\n¿Deseas continuar con esta dirección o elegir otra?"
     }
 
     private var priceBreakdown: some View {
         VStack(spacing: 12) {
-            // Subtotal
-            HStack {
-                Text("Subtotal")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.secondary)
+            // Tarjeta única: Subtotal + Cargo de servicio + Envío + Total
+            VStack(spacing: 0) {
+                // Subtotal
+                priceRow(
+                    label: "Subtotal",
+                    value: viewModel.formattedSubtotal,
+                    labelWeight: .regular,
+                    valueWeight: .medium
+                )
 
-                Spacer()
+                priceDivider
 
-                Text(viewModel.formattedSubtotal)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundColor(.primary)
+                // Cargo de servicio
+                serviceFeeInline
+
+                priceDivider
+
+                // Envío
+                HStack {
+                    Text("Envío")
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundColor(.secondary)
+                    if !viewModel.deliveryFeeDescription.isEmpty {
+                        Text("· \(viewModel.deliveryFeeDescription)")
+                            .font(.system(size: 13, weight: .regular))
+                            .foregroundColor(viewModel.deliveryFeeError != nil && viewModel.deliveryFeeEstimate == nil ? .red : Color(.tertiaryLabel))
+                            .lineLimit(1)
+                    }
+                    Spacer()
+                    if viewModel.isLoadingDeliveryFee {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                            .scaleEffect(0.75)
+                    } else {
+                        Text(viewModel.formattedDeliveryFee)
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .foregroundColor(.primary)
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 13)
+
+                priceDivider
+
+                // Total
+                HStack {
+                    Text("Total")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Text(viewModel.formattedTotal)
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
             }
-            .padding(12)
             .background(Color.white)
             .cornerRadius(16)
             .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
 
-            // Cargo de servicio con opción de descuento
-            serviceFeeSection
+            // Incentivo para ver anuncios (solo si no ha visto)
+            if !viewModel.hasWatchedAds {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Ahorra viendo una promoción")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.primary)
+                        Text("\(viewModel.formattedTotalWithDiscount) · ahorras \(viewModel.formattedPotentialSavings)")
+                            .font(.system(size: 13, weight: .regular))
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    Button(action: { showAdView = true }) {
+                        Text("Ver")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(Capsule().fill(Color(.systemGreen)))
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .background(Color.white)
+                .cornerRadius(16)
+                .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+            }
 
             // Productos recomendados por IA
             if !viewModel.suggestedProducts.isEmpty || viewModel.isLoadingSuggestions {
                 suggestedProductsSection
             }
-
-            // Envío
-            HStack(spacing: 12) {
-                Image(systemName: "truck.box.fill")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(gradientManager.currentAccentColor)
-                    .frame(width: 32, height: 32)
-                    .background(Circle().fill(gradientManager.currentAccentColor.opacity(0.12)))
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Envío")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(.primary)
-
-                    Text(viewModel.deliveryFeeDescription)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(viewModel.deliveryFeeError != nil && viewModel.deliveryFeeEstimate == nil ? .red : .secondary)
-                }
-
-                Spacer()
-
-                if viewModel.isLoadingDeliveryFee {
-                    ProgressView()
-                        .progressViewStyle(CircularProgressViewStyle())
-                        .scaleEffect(0.8)
-                } else {
-                    Text(viewModel.formattedDeliveryFee)
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundColor(.primary)
-                }
-            }
-            .padding(12)
-            .background(Color.white)
-            .cornerRadius(16)
-            .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
-
-            // Total
-            HStack {
-                Text("Total")
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundColor(.primary)
-
-                Spacer()
-
-                Text(viewModel.formattedTotal)
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundColor(.llegoPrimary)
-            }
-            .padding(14)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.llegoPrimary.opacity(0.08))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.llegoPrimary.opacity(0.2), lineWidth: 1)
-            )
-
-            // Incentivo para ver anuncios (solo si no ha visto)
-            if !viewModel.hasWatchedAds {
-                HStack(spacing: 8) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Viendo promoción")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.secondary)
-
-                        Text(viewModel.formattedTotalWithDiscount)
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
-                            .foregroundColor(.green)
-                        +
-                        Text(" (-\(viewModel.formattedPotentialSavings))")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(.green.opacity(0.7))
-                    }
-
-                    Spacer()
-
-                    Button(action: {
-                        showAdView = true
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "play.fill")
-                                .font(.system(size: 10, weight: .bold))
-                            Text("Ver y ahorrar")
-                                .font(.system(size: 12, weight: .semibold))
-                        }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                    }
-                    .buttonStyle(.glassProminent)
-                    .tint(.green)
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.green.opacity(0.06))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.green.opacity(0.15), lineWidth: 1)
-                        )
-                )
-            }
         }
     }
 
-    // MARK: - Service Fee Section
-    private var serviceFeeSection: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "percent")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(viewModel.hasWatchedAds ? .green : .orange)
-                .frame(width: 32, height: 32)
-                .background(Circle().fill((viewModel.hasWatchedAds ? Color.green : Color.orange).opacity(0.12)))
-
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text("Cargo de servicio")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundColor(.primary)
-
-                    Text("\(viewModel.serviceFeePercentage)%")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(
-                            Capsule()
-                                .fill(viewModel.hasWatchedAds ? Color.green : Color.orange)
-                        )
-                }
-
-                if viewModel.hasWatchedAds {
-                    HStack(spacing: 4) {
-                        Image(systemName: "checkmark.seal.fill")
-                            .font(.system(size: 10))
-                        Text("Descuento aplicado")
-                            .font(.system(size: 11, weight: .medium))
-                    }
-                    .foregroundColor(.green)
-                } else {
-                    Text("Comisión por el servicio")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
-                }
-            }
-
+    private func priceRow(label: String, value: String, labelWeight: Font.Weight, valueWeight: Font.Weight) -> some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 14, weight: labelWeight))
+                .foregroundColor(.secondary)
             Spacer()
+            Text(value)
+                .font(.system(size: 14, weight: valueWeight, design: .rounded))
+                .foregroundColor(.primary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 13)
+    }
 
+    private var priceDivider: some View {
+        Rectangle()
+            .fill(Color(.separator).opacity(0.5))
+            .frame(height: 0.5)
+            .padding(.horizontal, 16)
+    }
+
+    // MARK: - Service Fee Inline (dentro de la tarjeta de precios)
+    private var serviceFeeInline: some View {
+        HStack {
+            HStack(spacing: 6) {
+                Text("Cargo de servicio")
+                    .font(.system(size: 14, weight: .regular))
+                    .foregroundColor(.secondary)
+                Text("\(viewModel.serviceFeePercentage)%")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(Color(.tertiaryLabel))
+            }
+            Spacer()
             VStack(alignment: .trailing, spacing: 2) {
                 Text(viewModel.formattedServiceFee)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
-
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundColor(viewModel.hasWatchedAds ? Color(.systemGreen) : .primary)
                 if viewModel.hasWatchedAds {
                     Text("-\(viewModel.formattedAdSavings)")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(.green)
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundColor(Color(.systemGreen))
                 }
             }
         }
-        .padding(12)
-        .background(Color.white)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 13)
         .fullScreenCover(isPresented: $showAdView) {
             AdWatcherView(onComplete: {
                 viewModel.activateAdDiscount()
@@ -1548,29 +1547,36 @@ struct CartItemCard: View {
     let onDecrement: () -> Void
     let onRemove: () -> Void
 
+    @ObservedObject private var gradientManager = GradientStateManager.shared
     @State private var showDeleteConfirmation = false
 
     var body: some View {
         HStack(spacing: 12) {
-            // Imagen del producto (carga asíncrona después de los datos)
-            CachedAsyncImage(
-                url: URL(string: item.imageUrl),
-                content: { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                },
-                placeholder: {
-                    ZStack {
-                        Color.gray.opacity(0.10)
+            // Imagen del producto circular
+            ZStack {
+                Circle()
+                    .fill(Color(.systemGray5))
+                    .frame(width: 56, height: 56)
+
+                CachedAsyncImage(
+                    url: URL(string: item.imageUrl),
+                    content: { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 56, height: 56)
+                            .clipShape(Circle())
+                    },
+                    placeholder: {
                         ProgressView()
                             .tint(Color.gray.opacity(0.6))
                             .scaleEffect(0.85)
+                            .frame(width: 56, height: 56)
                     }
-                }
-            )
-            .frame(width: 70, height: 70)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
+                )
+            }
+            .frame(width: 56, height: 56)
+            .overlay(Circle().stroke(Color(.systemGray4), lineWidth: 1))
 
             // Información del producto
             VStack(alignment: .leading, spacing: 5) {
@@ -1660,9 +1666,182 @@ struct CartItemCard: View {
             }
         }
         .padding(12)
+    }
+}
+
+// MARK: - Flying Particle Model & View
+
+struct FlyingParticle: Identifiable {
+    let id: UUID
+    let imageUrl: String
+    let source: CGPoint
+    let destination: CGPoint
+}
+
+struct FlyingParticleView: View {
+    let particle: FlyingParticle
+    let onComplete: () -> Void
+
+    @State private var progress: CGFloat = 0
+    @State private var scale: CGFloat = 1.0
+    @State private var opacity: Double = 1.0
+
+    var body: some View {
+        let pos = currentPosition(progress: progress)
+
+        ZStack {
+            Circle()
+                .fill(Color.white)
+                .frame(width: 44, height: 44)
+                .shadow(color: Color.black.opacity(0.18), radius: 6, x: 0, y: 3)
+
+            CachedAsyncImage(
+                url: URL(string: particle.imageUrl),
+                content: { image in
+                    image.resizable().scaledToFill()
+                        .frame(width: 40, height: 40)
+                        .clipShape(Circle())
+                },
+                placeholder: {
+                    Circle()
+                        .fill(Color(.systemGray5))
+                        .frame(width: 40, height: 40)
+                },
+                failure: {
+                    Image(systemName: "cart.fill")
+                        .font(.system(size: 18))
+                        .foregroundColor(.gray)
+                        .frame(width: 40, height: 40)
+                }
+            )
+            .frame(width: 40, height: 40)
+        }
+        .scaleEffect(scale)
+        .opacity(opacity)
+        .position(pos)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 0.55)) {
+                progress = 1.0
+            }
+            withAnimation(.easeIn(duration: 0.15).delay(0.40)) {
+                scale = 0.4
+                opacity = 0
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.60) {
+                onComplete()
+            }
+        }
+    }
+
+    /// Computes a quadratic bezier arc between source and destination.
+    private func currentPosition(progress: CGFloat) -> CGPoint {
+        let dx = particle.destination.x - particle.source.x
+        let dy = particle.destination.y - particle.source.y
+        // Control point: slightly left and upward relative to the midpoint
+        let control = CGPoint(
+            x: particle.source.x + dx * 0.3 - 60,
+            y: particle.source.y + dy * 0.3 - abs(dy) * 0.6 - 80
+        )
+        let t = progress
+        let mt = 1 - t
+        let x = mt*mt*particle.source.x + 2*mt*t*control.x + t*t*particle.destination.x
+        let y = mt*mt*particle.source.y + 2*mt*t*control.y + t*t*particle.destination.y
+        return CGPoint(x: x, y: y)
+    }
+}
+
+// MARK: - Recommended Product Card
+struct RecommendedProductCard: View {
+    let product: Product
+    let onAdd: (CGRect) -> Void
+
+    @State private var added = false
+    @State private var buttonFrame: CGRect = .zero
+    @ObservedObject private var gradientManager = GradientStateManager.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Imagen cuadrada
+            ZStack(alignment: .bottomTrailing) {
+                CachedAsyncImage(
+                    url: URL(string: product.imageUrl),
+                    cacheKey: "product_\(product.id)",
+                    content: { image in
+                        image
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 148, height: 148)
+                            .clipped()
+                    },
+                    placeholder: {
+                        Rectangle()
+                            .fill(Color(.systemGray6))
+                            .frame(width: 148, height: 148)
+                    },
+                    failure: {
+                        Rectangle()
+                            .fill(Color(.systemGray6))
+                            .frame(width: 148, height: 148)
+                            .overlay(
+                                Image(systemName: "photo")
+                                    .font(.system(size: 28))
+                                    .foregroundColor(Color(.systemGray3))
+                            )
+                    }
+                )
+                .frame(width: 148, height: 148)
+
+                // Botón añadir (esquina inferior derecha sobre la imagen)
+                Button(action: {
+                    guard !added else { return }
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { added = true }
+                    onAdd(buttonFrame)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        withAnimation { added = false }
+                    }
+                }) {
+                    Image(systemName: added ? "checkmark" : "plus")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 32, height: 32)
+                        .background(
+                            Circle()
+                                .fill(added ? Color(.systemGreen) : Color(.label))
+                        )
+                        .background(
+                            GeometryReader { geo in
+                                Color.clear
+                                    .onAppear {
+                                        buttonFrame = geo.frame(in: .global)
+                                    }
+                            }
+                        )
+                }
+                .buttonStyle(.plain)
+                .padding(8)
+                .scaleEffect(added ? 1.1 : 1.0)
+                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: added)
+            }
+
+            // Info
+            VStack(alignment: .leading, spacing: 3) {
+                Text(product.name)
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(product.price)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.primary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+        }
+        .frame(width: 148)
         .background(Color.white)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+        .cornerRadius(10)
+        .shadow(color: Color.black.opacity(0.07), radius: 6, x: 0, y: 2)
     }
 }
 
@@ -1671,6 +1850,7 @@ struct PaymentLinkSheetView: View {
     let paymentLink: String
     let onDismiss: () -> Void
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var gradientManager = GradientStateManager.shared
     @State private var showCopiedMessage = false
 
     private var copyButtonGradient: LinearGradient {
@@ -1851,6 +2031,7 @@ struct BankTransferSheetView: View {
     let onDismiss: () -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var gradientManager = GradientStateManager.shared
     @State private var editableAmount: String
     @State private var transferId: String = ""
     @State private var selectedImage: UIImage?

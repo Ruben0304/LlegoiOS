@@ -11,6 +11,7 @@ struct StoreDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var region: MKCoordinateRegion
     @State private var selectedProductId: String?
+    @State private var selectedComboId: String?
 
     // Default images - Empty strings to trigger AsyncImage failure -> shows generic assets
     private let defaultLogoUrl = ""
@@ -449,6 +450,11 @@ struct StoreDetailView: View {
                                     }
                                 }
 
+                                // Combos Section
+                                if viewModel.isLoadingCombos || !viewModel.branchCombos.isEmpty {
+                                    combosSection(store: store)
+                                }
+
                                 // Products Section - Show branch products
                                 if viewModel.isLoadingProducts || !viewModel.branchProducts.isEmpty {
                                     VStack(alignment: .leading, spacing: 16) {
@@ -557,7 +563,74 @@ struct StoreDetailView: View {
             .fullScreenCover(item: $selectedProductId) { productId in
                 ProductDetailView(productId: productId)
             }
+            .fullScreenCover(item: $selectedComboId) { comboId in
+                ComboDetailView(comboId: comboId)
+            }
         }
+    }
+
+    // MARK: - Combos Section
+
+    @ViewBuilder
+    private func combosSection(store: Store) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Combos especiales")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(.black)
+
+                    if !viewModel.branchCombos.isEmpty {
+                        Text("\(viewModel.branchCombos.count) \(viewModel.branchCombos.count == 1 ? "combo disponible" : "combos disponibles")")
+                            .font(.system(size: 13, weight: .regular))
+                            .foregroundColor(.secondary)
+                    }
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+
+            if viewModel.isLoadingCombos {
+                HStack {
+                    Spacer()
+                    ProgressView().padding()
+                    Spacer()
+                }
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 16) {
+                        ForEach(viewModel.branchCombos) { combo in
+                            ComboCard(
+                                combo: Combo(
+                                    id: combo.id,
+                                    name: combo.name,
+                                    description: combo.description,
+                                    imageUrl: combo.imageUrl,
+                                    shop: combo.branchName,
+                                    shopLogoUrl: combo.branchLogoUrl ?? "",
+                                    basePrice: combo.basePrice,
+                                    finalPrice: combo.finalPrice,
+                                    savings: combo.savings,
+                                    currency: combo.currency,
+                                    discountType: combo.discountType,
+                                    discountValue: combo.discountValue,
+                                    slotCount: combo.slots.count,
+                                    representativeImageUrls: combo.representativeProducts.map { $0.imageUrl }
+                                ),
+                                onTap: {
+                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                    selectedComboId = combo.id
+                                }
+                            )
+                            .frame(width: 220)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 4)
+                }
+            }
+        }
+        .padding(.bottom, 8)
     }
 
     // MARK: - Helper Methods

@@ -9,6 +9,7 @@ struct ProductFeedView: View {
     @State private var showFavoritesSheet = false
     @State private var selectedTutorial: Tutorial? = nil
     @State private var selectedProductId: String?
+    @State private var selectedComboId: String?
     @State private var showCart = false
     @Environment(\.colorScheme) private var colorScheme
 
@@ -96,6 +97,9 @@ struct ProductFeedView: View {
             .fullScreenCover(item: $selectedProductId) { productId in
                 ProductDetailView(productId: productId)
             }
+            .fullScreenCover(item: $selectedComboId) { comboId in
+                ComboDetailView(comboId: comboId)
+            }
             .fullScreenCover(isPresented: $showCart) {
                 CartView()
             }
@@ -150,6 +154,11 @@ struct ProductFeedView: View {
                 // Stores section (loaded separately) - forced as 3rd main section
                 if !viewModel.filteredStores.isEmpty {
                     storesSection
+                }
+
+                // Combos section
+                if !viewModel.combos.isEmpty {
+                    combosSection
                 }
 
                 // Remaining dynamic sections
@@ -369,6 +378,42 @@ struct ProductFeedView: View {
                     }
                 }
                 .padding(.horizontal, 20)
+            }
+        }
+        .padding(.vertical, 10)
+    }
+
+    // MARK: - Combos Section
+    private var combosSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Combos especiales")
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                    Text("Personaliza tu pedido")
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 16) {
+                    ForEach(viewModel.combos) { feedCombo in
+                        ComboCard(
+                            combo: feedCombo.toCombo(),
+                            onTap: {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                selectedComboId = feedCombo.id
+                            }
+                        )
+                        .frame(width: 230)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 4)
             }
         }
         .padding(.vertical, 10)

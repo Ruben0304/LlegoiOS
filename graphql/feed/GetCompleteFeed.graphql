@@ -91,4 +91,33 @@ query GetCompleteFeed(
     order
     tags
   }
+
+  # 5. Combos destacados
+  allCombos(availableOnly: true) {
+    id
+    branchId
+    name
+    description
+    imageUrl
+    currency
+    availability
+    discountType
+    discountValue
+    basePrice
+    finalPrice
+    savings
+    representativeProducts {
+      id
+      name
+      imageUrl
+    }
+    slots {
+      id
+    }
+    branch {
+      id
+      name
+      avatarUrl
+    }
+  }
 }

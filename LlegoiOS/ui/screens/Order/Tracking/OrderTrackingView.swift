@@ -33,7 +33,7 @@ struct OrderTrackingView: View {
         .onAppear {
             updateMapRegion()
         }
-        .onChange(of: viewModel.currentDeliveryLocation) { _ in
+        .onReceive(viewModel.$currentDeliveryLocation) { _ in
             updateMapRegion()
         }
     }

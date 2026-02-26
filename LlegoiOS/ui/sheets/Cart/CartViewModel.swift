@@ -58,8 +58,10 @@ class CartViewModel: ObservableObject {
     @Published var suggestedProducts: [Product] = []
     @Published var isLoadingSuggestions: Bool = false
     @Published var suggestionsError: String?
+    private let recommendationsManager = CartRecommendationsManager.shared
     private let recommendationEngine = RecommendationEngine.shared
     private let aiPreferenceManager = AIPreferenceManager.shared
+    private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Multi-branch detection
     var uniqueBranchIds: Set<String> {
@@ -73,6 +75,10 @@ class CartViewModel: ObservableObject {
     // MARK: - Service Fee Constants
     private let standardServiceFeeRate: Double = 0.15 // 15%
     private let discountedServiceFeeRate: Double = 0.10 // 10% con descuento
+
+    init() {
+        bindGlobalRecommendations()
+    }
 
     // MARK: - Computed Properties
 
@@ -253,7 +259,7 @@ class CartViewModel: ObservableObject {
                     // Load payment methods after cart is loaded
                     self.loadPaymentMethods()
 
-                    // Load AI suggestions if Apple Intelligence is available
+                    // Refrescar estado de sugerencias globales
                     self.loadAISuggestions()
 
                 case .failure(let error):
@@ -265,28 +271,73 @@ class CartViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Optimistic Add from Recommendations
+
+    /// Adds a product to cartItems immediately without waiting for a backend reload.
+    /// Calls CartManager to persist the mutation in the background.
+    func optimisticallyAdd(product: Product) {
+        // Convert Product.price (String) to Double
+        let priceValue: Double
+        let clean = product.price
+            .replacingOccurrences(of: "$", with: "")
+            .replacingOccurrences(of: ",", with: ".")
+            .trimmingCharacters(in: .whitespaces)
+        priceValue = Double(clean) ?? 0.0
+
+        // Check if item already exists in cart and increment instead
+        if let index = cartItems.firstIndex(where: { $0.id == product.id }) {
+            cartItems[index].quantity += 1
+        } else {
+            let newItem = CartItem(
+                id: product.id,
+                name: product.name,
+                shop: product.shop,
+                weight: product.weight,
+                price: priceValue,
+                imageUrl: product.imageUrl,
+                quantity: 1,
+                availability: true
+            )
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                cartItems.append(newItem)
+            }
+        }
+
+        // Persist via CartManager (fires backend mutation in background)
+        CartManager.shared.addToCart(productId: product.id, quantity: 1)
+    }
+
     // MARK: - AI Suggestions
 
     /// Obtener sugerencias de productos usando la estrategia seleccionada por el usuario
     func loadAISuggestions() {
-        // Verificar que hay productos en el carrito
-        guard !cartProducts.isEmpty else {
-            print("⚠️ No hay productos en el carrito para sugerencias")
-            return
-        }
+        // El manager global se encarga de recargar solo cuando cambia el carrito.
+        suggestedProducts = recommendationsManager.suggestedProducts
+        isLoadingSuggestions = recommendationsManager.isLoading
+        suggestionsError = recommendationsManager.errorMessage
+    }
 
-        isLoadingSuggestions = true
-        suggestionsError = nil
+    private func bindGlobalRecommendations() {
+        recommendationsManager.$suggestedProducts
+            .receive(on: RunLoop.main)
+            .sink { [weak self] products in
+                self?.suggestedProducts = products
+            }
+            .store(in: &cancellables)
 
-        let selectedEngine = aiPreferenceManager.selectedEngine
-        print("🎯 [CartViewModel] Engine seleccionado: \(selectedEngine.displayName)")
+        recommendationsManager.$isLoading
+            .receive(on: RunLoop.main)
+            .sink { [weak self] isLoading in
+                self?.isLoadingSuggestions = isLoading
+            }
+            .store(in: &cancellables)
 
-        switch selectedEngine {
-        case .appleIntelligence:
-            loadSuggestionsFromAppleIntelligence()
-        case .llegoCloud:
-            loadSuggestionsFromLlegoCloud()
-        }
+        recommendationsManager.$errorMessage
+            .receive(on: RunLoop.main)
+            .sink { [weak self] message in
+                self?.suggestionsError = message
+            }
+            .store(in: &cancellables)
     }
 
     /// Cargar sugerencias usando Apple Intelligence (local)

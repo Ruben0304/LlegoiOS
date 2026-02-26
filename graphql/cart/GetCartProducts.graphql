@@ -9,7 +9,7 @@ query GetCartProducts($first: Int! = 100, $after: String, $ids: [String!]!) {
         weight
         price
         currency
-        image
+        imageUrl
         availability
         createdAt
         business {

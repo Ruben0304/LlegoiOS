@@ -11,6 +11,9 @@ struct iOSApp: App {
         // El warning de concurrencia es un falso positivo - solo se ejecuta una vez al inicio
         let key = "pk_live_51SaOijR1ZUqDQNdsxozHByR3YnLCmBn6yegicHThwyfzAJRJadg5o4pZEB6pwuaFaJr7LPFbqmpDagwUdfdGzRg200S9EKBDYL"
         StripeAPI.defaultPublishableKey = key
+
+        // Inicializa el manager global de recomendaciones para escuchar cambios del carrito.
+        _ = CartRecommendationsManager.shared
     }
     
     var body: some Scene {

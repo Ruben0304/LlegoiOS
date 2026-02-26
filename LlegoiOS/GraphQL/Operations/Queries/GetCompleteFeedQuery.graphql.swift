@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetCompleteFeed"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetCompleteFeed($jwt: String, $first: Int, $sections: [String!], $branchTipo: String!, $branchTipoEnum: BranchTipo, $radiusKm: Float, $categoryId: String) { getFeed( jwt: $jwt first: $first sections: $sections branchTipo: $branchTipo productCategoryId: $categoryId ) { __typename sections { __typename sectionId title description totalCount products { __typename id name price currency imageUrl branchId categoryId branch { __typename name address tipos } categoryName availability score description } } sectionDiagnostics { __typename sectionId title status reason totalBeforeDedup totalAfterDedup } timestamp } productCategories(branchType: $branchTipo) { __typename id name iconIos } branches( first: 15 tipo: $branchTipoEnum radiusKm: $radiusKm productCategoryId: $categoryId ) { __typename edges { __typename node { __typename id businessId name avatarUrl coverUrl address distanceKm } } } activeTutorials { __typename id title description videoUrl videoUrlSigned duration appTarget thumbnailUrl thumbnailUrlSigned order tags } }"#
+        #"query GetCompleteFeed($jwt: String, $first: Int, $sections: [String!], $branchTipo: String!, $branchTipoEnum: BranchTipo, $radiusKm: Float, $categoryId: String) { getFeed( jwt: $jwt first: $first sections: $sections branchTipo: $branchTipo productCategoryId: $categoryId ) { __typename sections { __typename sectionId title description totalCount products { __typename id name price currency imageUrl branchId categoryId branch { __typename name address tipos } categoryName availability score description } } sectionDiagnostics { __typename sectionId title status reason totalBeforeDedup totalAfterDedup } timestamp } productCategories(branchType: $branchTipo) { __typename id name iconIos } branches( first: 15 tipo: $branchTipoEnum radiusKm: $radiusKm productCategoryId: $categoryId ) { __typename edges { __typename node { __typename id businessId name avatarUrl coverUrl address distanceKm } } } activeTutorials { __typename id title description videoUrl videoUrlSigned duration appTarget thumbnailUrl thumbnailUrlSigned order tags } allCombos(availableOnly: true) { __typename id branchId name description imageUrl currency availability discountType discountValue basePrice finalPrice savings representativeProducts { __typename id name imageUrl } slots { __typename id } branch { __typename id name avatarUrl } } }"#
       ))
 
     public var jwt: GraphQLNullable<String>
@@ -69,6 +69,7 @@ public extension LlegoAPI {
           "productCategoryId": .variable("categoryId")
         ]),
         .field("activeTutorials", [ActiveTutorial].self),
+        .field("allCombos", [AllCombo].self, arguments: ["availableOnly": true]),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
         GetCompleteFeedQuery.Data.self
@@ -82,6 +83,8 @@ public extension LlegoAPI {
       public var branches: Branches { __data["branches"] }
       /// Get active tutorials only
       public var activeTutorials: [ActiveTutorial] { __data["activeTutorials"] }
+      /// Obtener todos los combos
+      public var allCombos: [AllCombo] { __data["allCombos"] }
 
       /// GetFeed
       ///
@@ -363,6 +366,126 @@ public extension LlegoAPI {
         public var thumbnailUrlSigned: String? { __data["thumbnailUrlSigned"] }
         public var order: Int { __data["order"] }
         public var tags: [String] { __data["tags"] }
+      }
+
+      /// AllCombo
+      ///
+      /// Parent Type: `ComboType`
+      public struct AllCombo: LlegoAPI.SelectionSet {
+        @_spi(Unsafe) public let __data: DataDict
+        @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+        @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.ComboType }
+        @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+          .field("__typename", String.self),
+          .field("id", String.self),
+          .field("branchId", String.self),
+          .field("name", String.self),
+          .field("description", String.self),
+          .field("imageUrl", String?.self),
+          .field("currency", String.self),
+          .field("availability", Bool.self),
+          .field("discountType", GraphQLEnum<LlegoAPI.DiscountType>.self),
+          .field("discountValue", Double.self),
+          .field("basePrice", Double.self),
+          .field("finalPrice", Double.self),
+          .field("savings", Double.self),
+          .field("representativeProducts", [RepresentativeProduct].self),
+          .field("slots", [Slot].self),
+          .field("branch", Branch?.self),
+        ] }
+        @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+          GetCompleteFeedQuery.Data.AllCombo.self
+        ] }
+
+        public var id: String { __data["id"] }
+        public var branchId: String { __data["branchId"] }
+        public var name: String { __data["name"] }
+        public var description: String { __data["description"] }
+        /// Presigned URL for combo image (optional)
+        public var imageUrl: String? { __data["imageUrl"] }
+        public var currency: String { __data["currency"] }
+        public var availability: Bool { __data["availability"] }
+        public var discountType: GraphQLEnum<LlegoAPI.DiscountType> { __data["discountType"] }
+        public var discountValue: Double { __data["discountValue"] }
+        /// Base price with default selections (before discount)
+        public var basePrice: Double { __data["basePrice"] }
+        /// Final price with discount applied
+        public var finalPrice: Double { __data["finalPrice"] }
+        /// Amount saved with discount
+        public var savings: Double { __data["savings"] }
+        /// Representative products for frontend composition (one per slot)
+        public var representativeProducts: [RepresentativeProduct] { __data["representativeProducts"] }
+        public var slots: [Slot] { __data["slots"] }
+        /// Branch associated with this combo
+        public var branch: Branch? { __data["branch"] }
+
+        /// AllCombo.RepresentativeProduct
+        ///
+        /// Parent Type: `ProductType`
+        public struct RepresentativeProduct: LlegoAPI.SelectionSet {
+          @_spi(Unsafe) public let __data: DataDict
+          @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+          @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.ProductType }
+          @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+            .field("__typename", String.self),
+            .field("id", String.self),
+            .field("name", String.self),
+            .field("imageUrl", String.self),
+          ] }
+          @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+            GetCompleteFeedQuery.Data.AllCombo.RepresentativeProduct.self
+          ] }
+
+          public var id: String { __data["id"] }
+          public var name: String { __data["name"] }
+          /// Presigned URL for the product image
+          public var imageUrl: String { __data["imageUrl"] }
+        }
+
+        /// AllCombo.Slot
+        ///
+        /// Parent Type: `ComboSlotType`
+        public struct Slot: LlegoAPI.SelectionSet {
+          @_spi(Unsafe) public let __data: DataDict
+          @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+          @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.ComboSlotType }
+          @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+            .field("__typename", String.self),
+            .field("id", String.self),
+          ] }
+          @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+            GetCompleteFeedQuery.Data.AllCombo.Slot.self
+          ] }
+
+          public var id: String { __data["id"] }
+        }
+
+        /// AllCombo.Branch
+        ///
+        /// Parent Type: `BranchType`
+        public struct Branch: LlegoAPI.SelectionSet {
+          @_spi(Unsafe) public let __data: DataDict
+          @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+          @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.BranchType }
+          @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+            .field("__typename", String.self),
+            .field("id", String.self),
+            .field("name", String.self),
+            .field("avatarUrl", String?.self),
+          ] }
+          @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+            GetCompleteFeedQuery.Data.AllCombo.Branch.self
+          ] }
+
+          public var id: String { __data["id"] }
+          public var name: String { __data["name"] }
+          /// Presigned URL for the branch avatar (inherits from business if not set)
+          public var avatarUrl: String? { __data["avatarUrl"] }
+        }
       }
     }
   }

@@ -40,6 +40,10 @@ public extension LlegoAPI {
       case "BusinessType": return LlegoAPI.Objects.BusinessType
       case "BusinessTypeConfigType": return LlegoAPI.Objects.BusinessTypeConfigType
       case "CameraConfigType": return LlegoAPI.Objects.CameraConfigType
+      case "ComboModifierType": return LlegoAPI.Objects.ComboModifierType
+      case "ComboOptionType": return LlegoAPI.Objects.ComboOptionType
+      case "ComboSlotType": return LlegoAPI.Objects.ComboSlotType
+      case "ComboType": return LlegoAPI.Objects.ComboType
       case "CoordinatesType": return LlegoAPI.Objects.CoordinatesType
       case "DeliveryAddressType": return LlegoAPI.Objects.DeliveryAddressType
       case "DeliveryFeeEstimateType": return LlegoAPI.Objects.DeliveryFeeEstimateType

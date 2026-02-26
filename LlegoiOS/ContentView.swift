@@ -14,15 +14,17 @@ struct ComposeView: UIViewControllerRepresentable {
 
 struct ContentView: View {
     @State private var selectedTab = 0
-    // Fuerza mostrar onboarding en cada arranque de la app.
-    @State private var showOnboarding = true
+    @State private var showOnboarding = OnboardingHelper.shouldShowOnboardingOnLaunch
     @State private var isOnboardingCompleted = false
 
     var body: some View {
         if showOnboarding {
             OnboardingView(isOnboardingCompleted: $isOnboardingCompleted)
                 .preferredColorScheme(.dark)  // Onboarding con fondo oscuro premium
-                .onChange(of: isOnboardingCompleted) { completed in
+                .onAppear {
+                    OnboardingHelper.markOnboardingShown()
+                }
+                .onChange(of: isOnboardingCompleted) { _, completed in
                     if completed {
                         OnboardingHelper.completeOnboarding()
                         showOnboarding = false
@@ -184,7 +186,7 @@ struct MainAppView: View {
                 }
             }
         }
-        .onChange(of: hasActiveOrder) { isActive in
+        .onChange(of: hasActiveOrder) { _, isActive in
             if !isActive {
                 showTrackingFullScreen = false
             }

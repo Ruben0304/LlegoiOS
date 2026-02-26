@@ -42,6 +42,9 @@ class ProductFeedViewModel: ObservableObject {
     // Real tutorials from backend (activeTutorials query)
     @Published var tutorials: [Tutorial] = []
 
+    // Combos from backend
+    @Published var combos: [FeedCombo] = []
+
     // MARK: - Private Properties
     private var hasLoaded: Bool = false
     private let repository = ProductFeedRepository()
@@ -93,11 +96,12 @@ class ProductFeedViewModel: ObservableObject {
             )
 
             switch result {
-            case .success(let (feedResponse, categories, stores, tutorials)):
+            case .success(let (feedResponse, categories, stores, tutorials, combos)):
                 self.feedSections = feedResponse.sections
                 self.categories = categories
                 self.stores = stores
                 self.tutorials = tutorials
+                self.combos = combos
                 self.promotions = Promotion.samples  // TODO: Replace with API data
 
                 let summary = feedResponse.sections

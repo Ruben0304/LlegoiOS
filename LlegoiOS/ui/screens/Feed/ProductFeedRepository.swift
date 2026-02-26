@@ -189,6 +189,45 @@ struct FeedSectionDiagnostic: Sendable {
     let totalAfterDedup: Int?
 }
 
+// MARK: - Feed Combo Model
+
+struct FeedCombo: Identifiable, Hashable, Sendable {
+    let id: String
+    let branchId: String
+    let name: String
+    let description: String
+    let imageUrl: String?
+    let currency: String
+    let discountType: String
+    let discountValue: Double
+    let basePrice: Double
+    let finalPrice: Double
+    let savings: Double
+    let branchName: String
+    let branchLogoUrl: String?
+    let representativeImageUrls: [String]
+    let slotCount: Int
+
+    func toCombo() -> Combo {
+        Combo(
+            id: id,
+            name: name,
+            description: description,
+            imageUrl: imageUrl,
+            shop: branchName,
+            shopLogoUrl: branchLogoUrl ?? "",
+            basePrice: basePrice,
+            finalPrice: finalPrice,
+            savings: savings,
+            currency: currency,
+            discountType: discountType,
+            discountValue: discountValue,
+            slotCount: slotCount,
+            representativeImageUrls: representativeImageUrls
+        )
+    }
+}
+
 // MARK: - Legacy Feed Data (for backward compatibility with categories/stores)
 
 struct FeedData: Sendable {
@@ -219,9 +258,9 @@ class ProductFeedRepository {
 
     // MARK: - Complete Feed API (Single Query Optimization)
 
-    /// Fetch complete feed data (feed sections, categories, stores, tutorials) in a single GraphQL query
+    /// Fetch complete feed data (feed sections, categories, stores, tutorials, combos) in a single GraphQL query
     func fetchCompleteFeed(first: Int = 10, radiusKm: Double? = nil, categoryId: String? = nil)
-        async -> Result<(FeedResponse, [FeedCategory], [FeedStore], [Tutorial]), Error>
+        async -> Result<(FeedResponse, [FeedCategory], [FeedStore], [Tutorial], [FeedCombo]), Error>
     {
         let jwt = AuthManager.shared.getAccessToken()
         let branchTypeRaw = BranchTypeManager.shared.selectedType.rawValue
@@ -346,8 +385,30 @@ class ProductFeedRepository {
                                 )
                             }
 
+                        // Parse combos
+                        let combos = data.allCombos.map { combo -> FeedCombo in
+                            FeedCombo(
+                                id: combo.id,
+                                branchId: combo.branchId,
+                                name: combo.name,
+                                description: combo.description,
+                                imageUrl: combo.imageUrl,
+                                currency: combo.currency,
+                                discountType: combo.discountType.rawValue,
+                                discountValue: combo.discountValue,
+                                basePrice: combo.basePrice,
+                                finalPrice: combo.finalPrice,
+                                savings: combo.savings,
+                                branchName: combo.branch?.name ?? "",
+                                branchLogoUrl: combo.branch?.avatarUrl,
+                                representativeImageUrls: combo.representativeProducts.map { $0.imageUrl },
+                                slotCount: combo.slots.count
+                            )
+                        }
+                        print("🎁 [Feed] Loaded \(combos.count) combos")
+
                         continuation.resume(
-                            returning: .success((feedResponse, categories, stores, tutorials)))
+                            returning: .success((feedResponse, categories, stores, tutorials, combos)))
                     } else if let errors = graphQLResult.errors, !errors.isEmpty {
                         continuation.resume(
                             returning: .failure(

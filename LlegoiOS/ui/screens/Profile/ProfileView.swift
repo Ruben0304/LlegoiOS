@@ -1,13 +1,6 @@
 import SwiftUI
 import MapKit
 
-// Extension to make CLLocationCoordinate2D conform to Equatable
-extension CLLocationCoordinate2D: Equatable {
-    public static func == (lhs: CLLocationCoordinate2D, rhs: CLLocationCoordinate2D) -> Bool {
-        return lhs.latitude == rhs.latitude && lhs.longitude == rhs.longitude
-    }
-}
-
 struct ProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = ProfileViewModel()
@@ -18,6 +11,7 @@ struct ProfileView: View {
     @State private var showingPaymentMethods = false
     @State private var showingWallet = false
     @State private var navigateToPlansAndPricing = false
+    @State private var showOnboardingResetConfirmation = false
     @State private var cachedProfile: ProfileLocalCache.Snapshot? = ProfileLocalCache.load()
     @State private var didTriggerRefresh = false
     @State private var showingImagePicker = false
@@ -67,14 +61,14 @@ struct ProfileView: View {
                 }
             }
         }
-        .onChange(of: userLocationManager.userLocation) { newLocation in
+        .onReceive(userLocationManager.$userLocation) { newLocation in
             if let location = newLocation {
                 withAnimation {
                     region.center = location
                 }
             }
         }
-        .onChange(of: selectedImage) { image in
+        .onChange(of: selectedImage) { _, image in
             if let image = image {
                 Task {
                     await viewModel.uploadAvatar(image: image)
@@ -207,6 +201,9 @@ struct ProfileView: View {
                                 // Tutoriales
                                 tutorialsSection
 
+                                // Repetir onboarding en próximo inicio
+                                onboardingSection
+
                                 // Notificaciones
                                 notificationsSection
 
@@ -267,6 +264,11 @@ struct ProfileView: View {
         }
         .sheet(isPresented: $viewModel.showEditUsernameSheet) {
             EditUsernameSheet(viewModel: viewModel)
+        }
+        .alert("Onboarding activado", isPresented: $showOnboardingResetConfirmation) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Se mostrará al volver a abrir la app.")
         }
     }
 
@@ -361,7 +363,8 @@ struct ProfileView: View {
     private var futuristicProfileHeader: some View {
         ZStack(alignment: .bottom) {
             // Mapa como portada de fondo
-            Map(coordinateRegion: .constant(region), interactionModes: [])
+            Map(position: .constant(.region(region)), interactionModes: []) {
+            }
                 .frame(height: 380)
                 .opacity(0.6) // Opacidad base del mapa
                 .overlay(
@@ -1194,6 +1197,46 @@ struct ProfileView: View {
                 .buttonStyle(PlainButtonStyle())
             }
         }
+    }
+
+    // MARK: - Onboarding Section
+    private var onboardingSection: some View {
+        Button(action: {
+            OnboardingHelper.showOnboardingNextLaunch()
+            showOnboardingResetConfirmation = true
+        }) {
+            HStack(spacing: 12) {
+                Image(systemName: "sparkles.rectangle.stack")
+                    .font(.system(size: 18, weight: .regular))
+                    .foregroundColor(.gray)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Volver a ver onboarding")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.llegoPrimary)
+
+                    Text("Se mostrará al próximo inicio")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.gray)
+                }
+
+                Spacer()
+
+                Image(systemName: "arrow.counterclockwise")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.gray.opacity(0.6))
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.white)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 
     // MARK: - Notifications Section

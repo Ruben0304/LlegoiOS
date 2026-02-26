@@ -42,7 +42,7 @@ class ComboDetailRepository {
                     branchName: combo.branch?.name ?? "Tienda",
                     branchLogoUrl: combo.branch?.avatarUrl,
                     representativeProducts: combo.representativeProducts.map {
-                        ComboRepresentativeProductGraphQL(id: $0.id, name: $0.name, imageUrl: $0.imageUrl ?? "")
+                        ComboRepresentativeProductGraphQL(id: $0.id, name: $0.name, imageUrl: $0.imageUrl)
                     },
                     slots: combo.slots.map { slot in
                         ComboSlotGraphQL(
@@ -118,7 +118,7 @@ class ComboDetailRepository {
                         branchName: combo.branch?.name ?? "Tienda",
                         branchLogoUrl: combo.branch?.avatarUrl,
                         representativeProducts: combo.representativeProducts.map {
-                            ComboRepresentativeProductGraphQL(id: $0.id, name: $0.name, imageUrl: $0.imageUrl ?? "")
+                            ComboRepresentativeProductGraphQL(id: $0.id, name: $0.name, imageUrl: $0.imageUrl)
                         },
                         slots: combo.slots.map { slot in
                             ComboSlotGraphQL(

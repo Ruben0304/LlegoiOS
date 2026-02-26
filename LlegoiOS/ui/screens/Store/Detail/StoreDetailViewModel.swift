@@ -19,8 +19,10 @@ class StoreDetailViewModel: ObservableObject {
     @Published var businessDetail: BusinessDetailGraphQL?
     @Published var siblingBranches: [BranchGraphQL] = []
     @Published var branchProducts: [StoreProductGraphQL] = []
+    @Published var branchCombos: [ComboDetailGraphQL] = []
     @Published var isLoadingSiblings: Bool = false
     @Published var isLoadingProducts: Bool = false
+    @Published var isLoadingCombos: Bool = false
 
     // MARK: - Computed Properties
     var isLoading: Bool {
@@ -48,6 +50,7 @@ class StoreDetailViewModel: ObservableObject {
 
     // MARK: - Dependencies
     private let repository = StoreDetailRepository()
+    private let comboRepository = ComboDetailRepository()
 
     // Default images - Empty strings to trigger AsyncImage failure -> shows generic assets
     private let defaultLogoUrl = ""
@@ -71,6 +74,7 @@ class StoreDetailViewModel: ObservableObject {
                     self.loadBusinessDetail(businessId: detail.businessId)
                     self.loadSiblingBranches(businessId: detail.businessId, currentBranchId: id)
                     self.loadBranchProducts(branchId: id)
+                    self.loadBranchCombos(branchId: id)
 
                 case .failure(let error):
                     let message = "Error al cargar detalles: \(error.localizedDescription)"
@@ -141,6 +145,28 @@ class StoreDetailViewModel: ObservableObject {
                     print("⚠️ StoreDetailViewModel: Failed to load branch products: \(error.localizedDescription)")
                     // Don't fail the whole view if products fail
                     self.branchProducts = []
+                }
+            }
+        }
+    }
+
+    func loadBranchCombos(branchId: String) {
+        isLoadingCombos = true
+
+        comboRepository.fetchCombosByBranch(branchId: branchId) { [weak self] result in
+            guard let self = self else { return }
+
+            Task { @MainActor in
+                self.isLoadingCombos = false
+
+                switch result {
+                case .success(let combos):
+                    self.branchCombos = combos
+                    print("✅ StoreDetailViewModel: Loaded \(combos.count) combos for branch")
+
+                case .failure(let error):
+                    print("⚠️ StoreDetailViewModel: Failed to load combos: \(error.localizedDescription)")
+                    self.branchCombos = []
                 }
             }
         }

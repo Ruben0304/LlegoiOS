@@ -27,7 +27,7 @@ final class CartRecommendationsManager: ObservableObject {
 
     func refreshNow() {
         let signature = Self.signature(for: cartManager.localItems)
-        handleCartSignatureChange(signature)
+        refreshIfNeeded(for: signature)
     }
 
     private func observeCartChanges() {
@@ -42,19 +42,12 @@ final class CartRecommendationsManager: ObservableObject {
     private func bootstrapIfNeeded() {
         let signature = Self.signature(for: cartManager.localItems)
         currentCartSignature = signature
-
-        if signature.isEmpty {
-            clearPersistedRecommendations(signature: signature)
-            return
-        }
-
-        let persistedSignature = userDefaults.string(forKey: cachedSignatureKey) ?? ""
-        if persistedSignature != signature || suggestedProducts.isEmpty {
-            handleCartSignatureChange(signature)
-        }
+        refreshIfNeeded(for: signature)
     }
 
     private func handleCartSignatureChange(_ signature: String) {
+        // Solo limpiar/recargar si realmente cambió el contenido del carrito.
+        guard signature != currentCartSignature else { return }
         currentCartSignature = signature
 
         // Al cambiar el carrito, se limpia el caché y luego se recarga en background.
@@ -64,6 +57,25 @@ final class CartRecommendationsManager: ObservableObject {
             return
         }
 
+        startBackgroundLoad(for: signature)
+    }
+
+    private func refreshIfNeeded(for signature: String) {
+        if signature.isEmpty {
+            clearPersistedRecommendations(signature: signature)
+            return
+        }
+
+        let persistedSignature = userDefaults.string(forKey: cachedSignatureKey) ?? ""
+        if persistedSignature == signature, !suggestedProducts.isEmpty {
+            return
+        }
+
+        if isLoading, currentCartSignature == signature {
+            return
+        }
+
+        currentCartSignature = signature
         startBackgroundLoad(for: signature)
     }
 
@@ -134,9 +146,10 @@ final class CartRecommendationsManager: ObservableObject {
     }
 
     private static func signature(for items: [CartItemLocal]) -> String {
+        // Solo los IDs ordenados — cambios de cantidad no disparan nuevas recomendaciones
         items
-            .sorted { $0.productId < $1.productId }
-            .map { "\($0.productId):\($0.quantity)" }
+            .map(\.productId)
+            .sorted()
             .joined(separator: "|")
     }
 }

@@ -65,7 +65,7 @@ class CartRepository {
                         weight: edge.node.weight,
                         price: edge.node.price,
                         currency: edge.node.currency,
-                        image: edge.node.image,
+                        image: edge.node.imageUrl,
                         availability: edge.node.availability,
                         quantity: localItem.quantity,
                         businessName: edge.node.business?.name ?? "Tienda"

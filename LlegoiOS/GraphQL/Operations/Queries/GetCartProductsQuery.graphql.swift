@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetCartProducts"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetCartProducts($first: Int! = 100, $after: String, $ids: [String!]!) { products(first: $first, after: $after, ids: $ids) { __typename edges { __typename node { __typename id branchId name description weight price currency image availability createdAt business { __typename id name } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
+        #"query GetCartProducts($first: Int! = 100, $after: String, $ids: [String!]!) { products(first: $first, after: $after, ids: $ids) { __typename edges { __typename node { __typename id branchId name description weight price currency imageUrl availability createdAt business { __typename id name } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
       ))
 
     public var first: Int32
@@ -108,7 +108,7 @@ public extension LlegoAPI {
               .field("weight", String.self),
               .field("price", Double.self),
               .field("currency", String.self),
-              .field("image", String.self),
+              .field("imageUrl", String.self),
               .field("availability", Bool.self),
               .field("createdAt", LlegoAPI.DateTime.self),
               .field("business", Business?.self),
@@ -124,7 +124,8 @@ public extension LlegoAPI {
             public var weight: String { __data["weight"] }
             public var price: Double { __data["price"] }
             public var currency: String { __data["currency"] }
-            public var image: String { __data["image"] }
+            /// Presigned URL for the product image
+            public var imageUrl: String { __data["imageUrl"] }
             public var availability: Bool { __data["availability"] }
             public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
             /// Business associated with this product (through branch)

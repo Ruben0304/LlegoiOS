@@ -117,7 +117,7 @@ struct RadiusMapView: View {
                 region.center = userLocation
             }
         }
-        .onChange(of: userLocationManager.userLocation) { newLocation in
+        .onReceive(userLocationManager.$userLocation) { newLocation in
             if let location = newLocation {
                 withAnimation(.easeInOut(duration: 0.3)) {
                     region.center = location

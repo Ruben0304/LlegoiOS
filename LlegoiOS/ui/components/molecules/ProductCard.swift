@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 
-struct Product: Identifiable, Hashable {
+struct Product: Identifiable, Hashable, Codable, Sendable {
     let id: String // ID real de GraphQL
     let name: String
     let shop: String
@@ -30,9 +30,14 @@ struct ProductCard: View {
     let onDecrement: () -> Void
     var onAddToCartAnimation: ((String, CGPoint) -> Void)? = nil
     var onProductTap: (() -> Void)? = nil
+    var showsFavoriteButton: Bool = true
+    var showAddToCartButton: Bool = false
+    var onQuickAddToCart: (() -> Void)? = nil
 
     @ObservedObject private var favoritesManager = FavoritesManager.shared
+    @ObservedObject private var gradientManager = GradientStateManager.shared
     @State private var favoritePulse = false
+    @State private var quickAddPulse = false
     @State private var isPressed = false
     
     private static let titleUIFont = UIFont.systemFont(ofSize: 17, weight: .semibold)
@@ -42,9 +47,15 @@ struct ProductCard: View {
         ZStack(alignment: .topTrailing) {
             cardContainer
 
-            favoriteButton
-                .padding(.top, 16)
-                .padding(.trailing, 16)
+            if showsFavoriteButton {
+                favoriteButton
+                    .padding(.top, 16)
+                    .padding(.trailing, 16)
+            } else if showAddToCartButton {
+                addToCartButton
+                    .padding(.top, 16)
+                    .padding(.trailing, 16)
+            }
         }
     }
 
@@ -202,6 +213,30 @@ struct ProductCard: View {
         .buttonStyle(.plain)
         .padding(8)
     }
+
+    private var addToCartButton: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.6)) {
+                quickAddPulse = true
+            }
+            onQuickAddToCart?()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                    quickAddPulse = false
+                }
+            }
+        } label: {
+            Image(systemName: quickAddPulse ? "checkmark.circle.fill" : "cart.badge.plus")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(gradientManager.currentAccentColor)
+                .frame(width: 38, height: 38)
+                .scaleEffect(quickAddPulse ? 1.12 : 1.0)
+                .animation(.spring(response: 0.28, dampingFraction: 0.6), value: quickAddPulse)
+        }
+        .buttonStyle(.glass)
+        .padding(8)
+    }
 }
 
 private struct OptionalTapModifier: ViewModifier {
@@ -222,7 +257,7 @@ private struct PressableButtonStyle: ButtonStyle {
     
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .onChange(of: configuration.isPressed) { pressed in
+            .onChange(of: configuration.isPressed) { _, pressed in
                 isPressed = pressed
             }
     }
