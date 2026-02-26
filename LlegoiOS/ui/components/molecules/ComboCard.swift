@@ -170,13 +170,13 @@ struct ComboCard: View {
             if let imageUrl = combo.imageUrl, !imageUrl.isEmpty {
                 // Single full cover image
                 singleImage(url: imageUrl, cacheKey: "combo_\(combo.id)")
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             } else {
-                // Multi-image collage (Uber Eats style)
+                // Floating circles over white card background — no clip
                 comboCollageImage
             }
         }
         .frame(height: 150)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
     private func singleImage(url: String, cacheKey: String) -> some View {
@@ -199,45 +199,45 @@ struct ComboCard: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// Collage of up to 4 representative product images, similar to Uber Eats bundle UI
+    /// Floating circular images style, similar to Uber Eats bundle UI
     @ViewBuilder
     private var comboCollageImage: some View {
-        let images = Array(combo.representativeImageUrls.prefix(4))
+        let images = Array(combo.representativeImageUrls.prefix(3))
 
         if images.isEmpty {
             comboFallbackImage
         } else if images.count == 1 {
             singleImage(url: images[0], cacheKey: "combo_rep_\(combo.id)_0")
-        } else if images.count == 2 {
-            HStack(spacing: 2) {
-                ForEach(Array(images.enumerated()), id: \.offset) { idx, url in
-                    collageCell(url: url, idx: idx)
-                }
-            }
-        } else if images.count == 3 {
-            HStack(spacing: 2) {
-                collageCell(url: images[0], idx: 0)
-                VStack(spacing: 2) {
-                    collageCell(url: images[1], idx: 1)
-                    collageCell(url: images[2], idx: 2)
-                }
-            }
         } else {
-            // 4-image grid
-            VStack(spacing: 2) {
-                HStack(spacing: 2) {
-                    collageCell(url: images[0], idx: 0)
-                    collageCell(url: images[1], idx: 1)
-                }
-                HStack(spacing: 2) {
-                    collageCell(url: images[2], idx: 2)
-                    collageCell(url: images[3], idx: 3)
+            floatingCirclesLayout(images: images)
+        }
+    }
+
+    /// Three (or two) circular product images floating over the card's white background
+    private func floatingCirclesLayout(images: [String]) -> some View {
+        GeometryReader { geo in
+            ZStack {
+                let circleSize: CGFloat = geo.size.height * 0.52
+                let overlap: CGFloat = circleSize * 0.32
+                let count = CGFloat(images.count)
+                let totalWidth = circleSize * count - overlap * (count - 1)
+                let startX = (geo.size.width - totalWidth) / 2 + circleSize / 2
+
+                ForEach(Array(images.enumerated()), id: \.offset) { idx, url in
+                    let xOffset = startX + CGFloat(idx) * (circleSize - overlap)
+                    // Slight vertical stagger for depth
+                    let yOffset = geo.size.height / 2 + (idx == 1 ? 4 : 0)
+
+                    circleCell(url: url, idx: idx, size: circleSize)
+                        .position(x: xOffset, y: yOffset)
+                        // Later circles drawn on top via zIndex
+                        .zIndex(Double(images.count - idx))
                 }
             }
         }
     }
 
-    private func collageCell(url: String, idx: Int) -> some View {
+    private func circleCell(url: String, idx: Int, size: CGFloat) -> some View {
         CachedAsyncImage(
             url: URL(string: url),
             cacheKey: "combo_rep_\(combo.id)_\(idx)",
@@ -251,8 +251,10 @@ struct ComboCard: View {
                 Color(red: 240/255, green: 242/255, blue: 246/255)
             }
         )
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .clipped()
+        .frame(width: size, height: size)
+        .clipShape(Circle())
+        .overlay(Circle().stroke(Color.white, lineWidth: 3))
+        .shadow(color: .black.opacity(0.14), radius: 8, x: 0, y: 4)
     }
 
     private var comboFallbackImage: some View {

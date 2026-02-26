@@ -185,50 +185,49 @@ struct ComboDetailView: View {
         }
     }
 
-    /// Mosaic of representative product images for the hero area
+    /// Floating circular images over a gradient background for the hero area
     private func comboHeroFallback(combo: ComboDetailGraphQL) -> some View {
-        let images = Array(combo.representativeProducts.prefix(4))
+        let images = Array(combo.representativeProducts.prefix(3))
         return GeometryReader { geo in
-            if images.isEmpty {
-                ZStack {
-                    Color(red: 240/255, green: 242/255, blue: 246/255)
+            ZStack {
+                // Soft gradient background
+                LinearGradient(
+                    colors: [
+                        Color.llegoAccent.opacity(0.22),
+                        Color.llegoPrimary.opacity(0.12)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+
+                if images.isEmpty {
                     Image(systemName: "square.stack.3d.up.fill")
                         .font(.system(size: 60))
-                        .foregroundColor(.gray.opacity(0.3))
-                }
-            } else if images.count == 1 {
-                heroCell(url: images[0].imageUrl, idx: 0)
-                    .frame(width: geo.size.width, height: geo.size.height)
-            } else if images.count == 2 {
-                HStack(spacing: 3) {
+                        .foregroundColor(.white.opacity(0.5))
+                } else if images.count == 1 {
+                    heroCircleCell(url: images[0].imageUrl, idx: 0, size: geo.size.height * 0.70)
+                        .position(x: geo.size.width / 2, y: geo.size.height / 2)
+                } else {
+                    let circleSize: CGFloat = geo.size.height * 0.64
+                    let overlap: CGFloat = circleSize * 0.28
+                    let count = CGFloat(images.count)
+                    let totalWidth = circleSize * count - overlap * (count - 1)
+                    let startX = (geo.size.width - totalWidth) / 2 + circleSize / 2
+
                     ForEach(Array(images.enumerated()), id: \.offset) { idx, prod in
-                        heroCell(url: prod.imageUrl, idx: idx)
-                    }
-                }
-            } else if images.count == 3 {
-                HStack(spacing: 3) {
-                    heroCell(url: images[0].imageUrl, idx: 0)
-                    VStack(spacing: 3) {
-                        heroCell(url: images[1].imageUrl, idx: 1)
-                        heroCell(url: images[2].imageUrl, idx: 2)
-                    }
-                }
-            } else {
-                VStack(spacing: 3) {
-                    HStack(spacing: 3) {
-                        heroCell(url: images[0].imageUrl, idx: 0)
-                        heroCell(url: images[1].imageUrl, idx: 1)
-                    }
-                    HStack(spacing: 3) {
-                        heroCell(url: images[2].imageUrl, idx: 2)
-                        heroCell(url: images[3].imageUrl, idx: 3)
+                        let xOffset = startX + CGFloat(idx) * (circleSize - overlap)
+                        let yOffset = geo.size.height / 2 + (idx == 1 ? 10 : 0)
+
+                        heroCircleCell(url: prod.imageUrl, idx: idx, size: circleSize)
+                            .position(x: xOffset, y: yOffset)
+                            .zIndex(Double(images.count - idx))
                     }
                 }
             }
         }
     }
 
-    private func heroCell(url: String, idx: Int) -> some View {
+    private func heroCircleCell(url: String, idx: Int, size: CGFloat) -> some View {
         CachedAsyncImage(
             url: URL(string: url),
             cacheKey: "combo_hero_prod_\(comboId)_\(idx)",
@@ -236,8 +235,10 @@ struct ComboDetailView: View {
             placeholder: { Color(red: 240/255, green: 242/255, blue: 246/255) },
             failure: { Color(red: 240/255, green: 242/255, blue: 246/255) }
         )
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .clipped()
+        .frame(width: size, height: size)
+        .clipShape(Circle())
+        .overlay(Circle().stroke(Color.white, lineWidth: 4))
+        .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 6)
     }
 
     // MARK: - Header
