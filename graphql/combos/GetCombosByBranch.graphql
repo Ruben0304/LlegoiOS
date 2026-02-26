@@ -1,0 +1,52 @@
+query GetCombosByBranch($branchId: String!, $availableOnly: Boolean! = true) {
+  combosByBranch(branchId: $branchId, availableOnly: $availableOnly) {
+    id
+    branchId
+    name
+    description
+    imageUrl
+    currency
+    availability
+    discountType
+    discountValue
+    basePrice
+    finalPrice
+    savings
+    representativeProducts {
+      id
+      name
+      imageUrl
+    }
+    slots {
+      id
+      name
+      description
+      minSelections
+      maxSelections
+      isRequired
+      displayOrder
+      options {
+        productId
+        isDefault
+        priceAdjustment
+        product {
+          id
+          name
+          imageUrl
+          price
+          currency
+        }
+        availableModifiers {
+          name
+          priceAdjustment
+        }
+      }
+    }
+    branch {
+      id
+      name
+      avatarUrl
+    }
+    createdAt
+  }
+}
