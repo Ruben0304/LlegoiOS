@@ -12,7 +12,6 @@ struct ProductListView: View {
     @State private var productCounts: [String: Int] = [:]
     @State private var showFiltersSheet = false
     @State private var showFavoritesSheet = false
-    @State private var showCartSheet = false
     @State private var animationDelay: Double = 0
     @FocusState private var isSearchFocused: Bool
     @State private var isSearchPresented: Bool = false
@@ -141,21 +140,6 @@ struct ProductListView: View {
                     .navigationViewStyle(StackNavigationViewStyle())
                 }
             }
-            .sheet(isPresented: $showCartSheet) {
-                if #available(iOS 16.0, *) {
-                    NavigationView {
-                        CartView()
-                    }
-                    .navigationViewStyle(StackNavigationViewStyle())
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
-                } else {
-                    NavigationView {
-                        CartView()
-                    }
-                    .navigationViewStyle(StackNavigationViewStyle())
-                }
-            }
             .navigationTitle(branchName ?? "15.40$")
             .navigationBarTitleDisplayMode(.inline)
             .searchable(
@@ -212,9 +196,7 @@ struct ProductListView: View {
                     ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
 
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button(action: {
-                            showCartSheet = true
-                        }) {
+                        NavigationLink(destination: CartView()) {
                             Image(systemName: "cart")
                                 .font(.system(size: 16, weight: .semibold))
                                 .frame(width: 30, height: 30)

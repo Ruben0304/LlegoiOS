@@ -1,0 +1,19 @@
+query GetProductRecommendations($productIds: [String!]!, $limit: Int!, $jwt: String) {
+  productRecommendations(productIds: $productIds, limit: $limit, jwt: $jwt) {
+    reasoning
+    recommendations {
+      productId
+      productName
+      reasoning
+      product {
+        id
+        name
+        description
+        price
+        currency
+        image
+        availability
+      }
+    }
+  }
+}

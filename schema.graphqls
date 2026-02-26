@@ -7,7 +7,6 @@ schema {
 scalar DateTime
 "The `JSON` scalar type represents JSON values as specified by [ECMA-404](https://ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf)."
 scalar JSON
-"Represents a file upload."
 scalar Upload
 type Query {
   "Lista de usuarios (requiere rol admin o manager)"
@@ -44,6 +43,8 @@ type Query {
   product(id: String!, jwt: String = null): ProductType
   "Buscar productos con scoring por cercanía (paginado)"
   searchProducts(query: String!, first: Int = null, after: String = null, useVectorSearch: Boolean! = true, branchTipo: BranchTipo = null, categoryId: String = null, radiusKm: Float = null, jwt: String = null): ProductConnection!
+  "Obtener recomendaciones de productos complementarios basadas en items del carrito"
+  productRecommendations(productIds: [String!]!, limit: Int! = 5, jwt: String = null): ProductRecommendationsResponseType
   "Lista de categorías con subcategorías"
   categories(jwt: String = null): [CategoryType!]!
   "Obtener categoría por ID"
@@ -52,6 +53,12 @@ type Query {
   productCategories(branchType: String = null): [ProductCategoryType!]!
   "Get product category by ID"
   productCategory(id: String!): ProductCategoryType
+  "Obtener un combo por ID"
+  combo(comboId: String!): ComboType
+  "Obtener todos los combos de una sucursal"
+  combosByBranch(branchId: String!, availableOnly: Boolean! = true): [ComboType!]!
+  "Obtener todos los combos"
+  allCombos(availableOnly: Boolean! = false): [ComboType!]!
   "Semantic vector search across products, branches, or businesses. Returns enriched results from Qdrant + MongoDB."
   semanticSearch(query: String!, collection: SemanticSearchCollection!, limit: Int! = 10, jwt: String = null): SemanticSearchResultType!
   "Send a message to the AI assistant and get a response with RAG"
@@ -492,6 +499,17 @@ type ScoredProductType {
   "Business associated with this product (through branch)"
   business: BusinessType
 }
+type ProductRecommendationsResponseType {
+  recommendations: [ProductRecommendationType!]!
+  reasoning: String!
+}
+type ProductRecommendationType {
+  productId: String!
+  productName: String!
+  reasoning: String!
+  "Full product details"
+  product: ProductType
+}
 type CategoryType {
   id: String!
   name: String!
@@ -502,6 +520,55 @@ type CategoryType {
 type SubcategoryType {
   name: String!
   imageUrl: String!
+}
+type ComboType {
+  id: String!
+  branchId: String!
+  name: String!
+  description: String!
+  image: String
+  slots: [ComboSlotType!]!
+  discountType: DiscountType!
+  discountValue: Float!
+  currency: String!
+  availability: Boolean!
+  categoryId: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  "Presigned URL for combo image (optional)"
+  imageUrl: String
+  "Representative products for frontend composition (one per slot)"
+  representativeProducts: [ProductType!]!
+  "Base price with default selections (before discount)"
+  basePrice: Float!
+  "Final price with discount applied"
+  finalPrice: Float!
+  "Amount saved with discount"
+  savings: Float!
+  "Branch associated with this combo"
+  branch: BranchType
+}
+type ComboSlotType {
+  id: String!
+  name: String!
+  description: String
+  options: [ComboOptionType!]!
+  minSelections: Int!
+  maxSelections: Int!
+  isRequired: Boolean!
+  displayOrder: Int!
+}
+type ComboOptionType {
+  productId: String!
+  isDefault: Boolean!
+  priceAdjustment: Float!
+  availableModifiers: [ComboModifierType!]!
+  "Product details"
+  product: ProductType
+}
+type ComboModifierType {
+  name: String!
+  priceAdjustment: Float!
 }
 type SemanticSearchResultType {
   "Collection that was searched: products, branches, or businesses"
@@ -1199,6 +1266,14 @@ type Mutation {
   updateProduct(productId: String!, input: UpdateProductInput!, jwt: String = null): ProductType!
   "Eliminar un producto"
   deleteProduct(productId: String!, jwt: String = null): Boolean!
+  "Crear un nuevo combo"
+  createCombo(input: CreateComboInput!, jwt: String = null): ComboType!
+  "Actualizar un combo existente"
+  updateCombo(input: UpdateComboInput!, jwt: String = null): ComboType!
+  "Eliminar un combo"
+  deleteCombo(comboId: String!, jwt: String = null): Boolean!
+  "Cambiar disponibilidad de un combo"
+  toggleComboAvailability(comboId: String!, availability: Boolean!, jwt: String = null): ComboType!
   "Crear nuevo pedido"
   createOrder(input: CreateOrderInput!, jwt: String!): OrderType!
   "Aceptar modificaciones de la tienda"
@@ -1423,6 +1498,11 @@ enum BranchVehicle {
   CARRO
   CAMIONETA
   CAMINANDO
+}
+enum DiscountType {
+  NONE
+  PERCENTAGE
+  FIXED
 }
 enum SemanticSearchCollection {
   PRODUCTS
@@ -1709,6 +1789,46 @@ input UpdateProductInput {
   availability: Boolean = null
   categoryId: String = null
   image: String = null
+}
+input CreateComboInput {
+  branchId: String!
+  name: String!
+  description: String!
+  image: String = null
+  slots: [ComboSlotInput!]!
+  discountType: DiscountType! = NONE
+  discountValue: Float! = 0
+  categoryId: String = null
+}
+input ComboSlotInput {
+  name: String!
+  description: String = null
+  options: [ComboOptionInput!]!
+  minSelections: Int! = 1
+  maxSelections: Int! = 1
+  isRequired: Boolean! = true
+  displayOrder: Int! = 0
+}
+input ComboOptionInput {
+  productId: String!
+  isDefault: Boolean! = false
+  priceAdjustment: Float! = 0
+  availableModifiers: [ComboModifierInput!]! = []
+}
+input ComboModifierInput {
+  name: String!
+  priceAdjustment: Float! = 0
+}
+input UpdateComboInput {
+  comboId: String!
+  name: String = null
+  description: String = null
+  image: String = null
+  slots: [ComboSlotInput!] = null
+  discountType: DiscountType = null
+  discountValue: Float = null
+  availability: Boolean = null
+  categoryId: String = null
 }
 input CreateOrderInput {
   branchId: String!

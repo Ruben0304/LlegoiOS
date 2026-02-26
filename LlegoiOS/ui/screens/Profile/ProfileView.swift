@@ -12,6 +12,7 @@ struct ProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = ProfileViewModel()
     @ObservedObject private var userLocationManager = UserLocationManager.shared
+    @ObservedObject private var aiPreferenceManager = AIPreferenceManager.shared
     @State private var showingLocationPicker = false
     @State private var showingEditName = false
     @State private var showingPaymentMethods = false
@@ -199,6 +200,9 @@ struct ProfileView: View {
                                 
                                 // Modelos 3D descargados
                                 DownloadedModelsSection()
+
+                                // Preferencia de AI para recomendaciones
+                                aiPreferenceSection
 
                                 // Tutoriales
                                 tutorialsSection
@@ -1017,6 +1021,113 @@ struct ProfileView: View {
             }
             .buttonStyle(PlainButtonStyle())
             .disabled(true)
+        }
+    }
+
+    // MARK: - AI Preference Section
+    private var aiPreferenceSection: some View {
+        VStack(spacing: 12) {
+            // Selector de estrategia de AI
+            VStack(spacing: 16) {
+                // Header
+                HStack(spacing: 12) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 18, weight: .regular))
+                        .foregroundColor(.llegoAccent)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Motor de Recomendaciones")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.llegoPrimary)
+
+                        Text("Elige cómo obtener sugerencias")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.gray)
+                    }
+
+                    Spacer()
+                }
+
+                // Opciones
+                ForEach(AIRecommendationEngine.allCases, id: \.self) { engine in
+                    Button(action: {
+                        aiPreferenceManager.selectedEngine = engine
+                    }) {
+                        HStack(spacing: 12) {
+                            Image(systemName: engine.icon)
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(aiPreferenceManager.selectedEngine == engine ? .llegoAccent : .gray)
+                                .frame(width: 24)
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(engine.displayName)
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundColor(.primary)
+
+                                Text(engine.description)
+                                    .font(.system(size: 12, weight: .regular))
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.leading)
+                            }
+
+                            Spacer()
+
+                            if aiPreferenceManager.selectedEngine == engine {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundColor(.llegoAccent)
+                            } else {
+                                Image(systemName: "circle")
+                                    .font(.system(size: 20, weight: .regular))
+                                    .foregroundColor(.gray.opacity(0.3))
+                            }
+                        }
+                        .padding(12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(aiPreferenceManager.selectedEngine == engine ? Color.llegoAccent.opacity(0.08) : Color.clear)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(
+                                    aiPreferenceManager.selectedEngine == engine ? Color.llegoAccent.opacity(0.3) : Color.black.opacity(0.06),
+                                    lineWidth: 1
+                                )
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+
+                // Estado de Apple Intelligence
+                if aiPreferenceManager.selectedEngine == .appleIntelligence {
+                    let status = aiPreferenceManager.getAppleIntelligenceStatus()
+                    HStack(spacing: 8) {
+                        Image(systemName: status.isAvailable ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(status.isAvailable ? .green : .orange)
+
+                        Text(status.message)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+
+                        Spacer()
+                    }
+                    .padding(10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(status.isAvailable ? Color.green.opacity(0.1) : Color.orange.opacity(0.1))
+                    )
+                }
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.white)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
+            )
         }
     }
 

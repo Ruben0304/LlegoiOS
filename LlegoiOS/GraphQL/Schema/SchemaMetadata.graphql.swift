@@ -69,6 +69,8 @@ public extension LlegoAPI {
       case "ProductCategoryType": return LlegoAPI.Objects.ProductCategoryType
       case "ProductConnection": return LlegoAPI.Objects.ProductConnection
       case "ProductEdge": return LlegoAPI.Objects.ProductEdge
+      case "ProductRecommendationType": return LlegoAPI.Objects.ProductRecommendationType
+      case "ProductRecommendationsResponseType": return LlegoAPI.Objects.ProductRecommendationsResponseType
       case "ProductSuggestionType": return LlegoAPI.Objects.ProductSuggestionType
       case "ProductType": return LlegoAPI.Objects.ProductType
       case "Query": return LlegoAPI.Objects.Query

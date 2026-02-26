@@ -7,7 +7,6 @@ struct ProductFeedView: View {
     @StateObject private var cartManager = CartManager.shared
     @StateObject private var gradientManager = GradientStateManager.shared
     @State private var showFavoritesSheet = false
-    @State private var showCartSheet = false
     @State private var selectedTutorial: Tutorial? = nil
     @State private var selectedProductId: String?
     @Environment(\.colorScheme) private var colorScheme
@@ -64,7 +63,7 @@ struct ProductFeedView: View {
 
                 // Botón de carrito
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showCartSheet = true }) {
+                    NavigationLink(destination: CartView()) {
                         Image(systemName: "cart")
                             .font(.system(size: 16, weight: .semibold))
                     }
@@ -77,12 +76,6 @@ struct ProductFeedView: View {
                     )
                     .accessibilityLabel("Carrito")
                 }
-            }
-            .sheet(isPresented: $showCartSheet) {
-                NavigationView { CartView() }
-                    .navigationViewStyle(StackNavigationViewStyle())
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $showFavoritesSheet) {
                 NavigationView { FavoritesView() }

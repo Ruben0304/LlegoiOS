@@ -54,6 +54,13 @@ class CartViewModel: ObservableObject {
     private var cartBranchId: String?
     private var cartProducts: [CartProductGraphQL] = []
 
+    // MARK: - AI Suggestions
+    @Published var suggestedProducts: [Product] = []
+    @Published var isLoadingSuggestions: Bool = false
+    @Published var suggestionsError: String?
+    private let recommendationEngine = RecommendationEngine.shared
+    private let aiPreferenceManager = AIPreferenceManager.shared
+
     // MARK: - Multi-branch detection
     var uniqueBranchIds: Set<String> {
         Set(cartProducts.map { $0.branchId })
@@ -246,12 +253,177 @@ class CartViewModel: ObservableObject {
                     // Load payment methods after cart is loaded
                     self.loadPaymentMethods()
 
+                    // Load AI suggestions if Apple Intelligence is available
+                    self.loadAISuggestions()
+
                 case .failure(let error):
                     self.errorMessage = "Error al cargar el carrito: \(error.localizedDescription)"
                     self.state = .error(self.errorMessage!)
                     print("❌ Error loading cart: \(error)")
                 }
             }
+        }
+    }
+
+    // MARK: - AI Suggestions
+
+    /// Obtener sugerencias de productos usando la estrategia seleccionada por el usuario
+    func loadAISuggestions() {
+        // Verificar que hay productos en el carrito
+        guard !cartProducts.isEmpty else {
+            print("⚠️ No hay productos en el carrito para sugerencias")
+            return
+        }
+
+        isLoadingSuggestions = true
+        suggestionsError = nil
+
+        let selectedEngine = aiPreferenceManager.selectedEngine
+        print("🎯 [CartViewModel] Engine seleccionado: \(selectedEngine.displayName)")
+
+        switch selectedEngine {
+        case .appleIntelligence:
+            loadSuggestionsFromAppleIntelligence()
+        case .llegoCloud:
+            loadSuggestionsFromLlegoCloud()
+        }
+    }
+
+    /// Cargar sugerencias usando Apple Intelligence (local)
+    private func loadSuggestionsFromAppleIntelligence() {
+        // Verificar disponibilidad de Apple Intelligence
+        guard recommendationEngine.isAvailable() else {
+            let status = recommendationEngine.getAvailabilityStatus()
+            print("⚠️ \(status.message)")
+            suggestionsError = status.message
+            isLoadingSuggestions = false
+            return
+        }
+
+        // Verificar que hay un branchId
+        guard let branchId = cartBranchId else {
+            print("⚠️ No hay branchId para sugerencias")
+            isLoadingSuggestions = false
+            return
+        }
+
+        // Obtener todos los productos del branch
+        repository.fetchAllBranchProducts(branchId: branchId) { [weak self] result in
+            guard let self = self else { return }
+
+            Task { @MainActor in
+                switch result {
+                case .success(let branchProducts):
+                    // Enviar a Apple Intelligence local
+                    await self.getSuggestionsFromAppleIntelligence(
+                        cartProducts: self.cartProducts,
+                        branchProducts: branchProducts
+                    )
+
+                case .failure(let error):
+                    self.isLoadingSuggestions = false
+                    self.suggestionsError = "No se pudieron cargar productos"
+                    print("❌ Error fetching branch products: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    /// Cargar sugerencias usando la API de Llego Cloud
+    private func loadSuggestionsFromLlegoCloud() {
+        // Verificar que hay productos válidos
+        guard !cartProducts.isEmpty else {
+            print("⚠️ [CartViewModel] No hay productos en el carrito")
+            isLoadingSuggestions = false
+            return
+        }
+
+        let productIds = cartProducts.map { $0.id }
+        let productNames = cartProducts.map { $0.name }
+
+        print("🌐 [CartViewModel] ========================================")
+        print("🌐 [CartViewModel] Obteniendo recomendaciones desde Llego Cloud")
+        print("🌐 [CartViewModel] Cantidad de productos: \(productIds.count)")
+        print("🌐 [CartViewModel] Product IDs: \(productIds)")
+        print("🌐 [CartViewModel] Product Names: \(productNames)")
+
+        // Detectar si hay múltiples branches
+        if hasMultipleBranches {
+            print("⚠️ [CartViewModel] ADVERTENCIA: Carrito con múltiples branches: \(uniqueBranchIds)")
+            print("⚠️ [CartViewModel] Esto puede afectar las recomendaciones")
+        } else if let branchId = cartBranchId {
+            print("✅ [CartViewModel] Branch único: \(branchId)")
+        }
+
+        print("🌐 [CartViewModel] ========================================")
+
+        repository.fetchCloudRecommendations(productIds: productIds, limit: 6) { [weak self] result in
+            guard let self = self else { return }
+
+            Task { @MainActor in
+                switch result {
+                case .success(let recommendations):
+                    print("🌐 [CartViewModel] Backend retornó \(recommendations.count) recomendaciones")
+
+                    // Filtrar productos que ya están en el carrito
+                    let cartProductIds = Set(self.cartProducts.map { $0.id })
+                    self.suggestedProducts = recommendations.filter { !cartProductIds.contains($0.id) }
+
+                    self.isLoadingSuggestions = false
+
+                    if self.suggestedProducts.isEmpty {
+                        print("⚠️ [CartViewModel] No hay recomendaciones después de filtrar")
+                        self.suggestionsError = "No hay recomendaciones disponibles para estos productos"
+                    } else {
+                        print("✅ [CartViewModel] Loaded \(self.suggestedProducts.count) cloud recommendations")
+                    }
+
+                case .failure(let error):
+                    self.isLoadingSuggestions = false
+                    self.suggestionsError = "No se pudieron cargar recomendaciones de la nube"
+                    print("❌ [CartViewModel] Error loading cloud recommendations: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    /// Enviar productos a Apple Intelligence local para obtener sugerencias
+    private func getSuggestionsFromAppleIntelligence(
+        cartProducts: [CartProductGraphQL],
+        branchProducts: [ProductGraphQL]
+    ) async {
+        do {
+            // Preparar nombres de productos del carrito
+            let cartItemNames = cartProducts.map { $0.name }
+
+            // Preparar catálogo con ID y nombre
+            let catalog = branchProducts.map { (id: $0.id, name: $0.name) }
+
+            // Obtener recomendaciones del engine
+            let recommendedIds = try await recommendationEngine.getRecommendations(
+                cartItems: cartItemNames,
+                catalog: catalog
+            )
+
+            print("🤖 AI sugirió \(recommendedIds.count) productos: \(recommendedIds)")
+
+            // Filtrar productos por IDs recomendados
+            let filteredProducts = repository.filterProductsByIds(
+                productIds: recommendedIds,
+                allProducts: branchProducts
+            )
+
+            // Filtrar productos que ya están en el carrito
+            let cartProductIds = Set(cartProducts.map { $0.id })
+            suggestedProducts = filteredProducts.filter { !cartProductIds.contains($0.id) }
+
+            isLoadingSuggestions = false
+            print("✅ Loaded \(suggestedProducts.count) suggested products")
+
+        } catch {
+            isLoadingSuggestions = false
+            suggestionsError = "No se pudieron cargar sugerencias"
+            print("❌ Error loading AI suggestions: \(error.localizedDescription)")
         }
     }
 

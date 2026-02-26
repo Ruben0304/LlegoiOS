@@ -151,6 +151,187 @@ class CartRepository {
         }
     }
 
+    // MARK: - AI Suggestions
+
+    /// Obtener todos los productos de un branch para enviar a Apple Intelligence
+    func fetchAllBranchProducts(
+        branchId: String,
+        completion: @escaping @Sendable (Result<[ProductGraphQL], Error>) -> Void
+    ) {
+        let client = apolloClient
+
+        Task { @MainActor in
+            let jwt = authManager.getAccessToken()
+            let branchType = BranchTypeManager.shared.selectedType.rawValue
+
+            print("🔍 CartRepository: Fetching all products for branch: \(branchId)")
+
+            let query = LlegoAPI.GetProductsQuery(
+                first: Int32(100), // Obtener hasta 100 productos
+                after: .none,
+                branchId: .some(branchId),
+                categoryId: .none,
+                availableOnly: .some(true), // Solo productos disponibles
+                branchTipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) } ?? .none,
+                radiusKm: .none,
+                jwt: jwt.map { .some($0) } ?? .none
+            )
+
+            client.fetch(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
+                switch result {
+                case .success(let graphQLResult):
+                    if let errors = graphQLResult.errors {
+                        print("❌ GraphQL Errors fetching branch products:")
+                        errors.forEach { print("  - \($0.localizedDescription)") }
+                        completion(.failure(NSError(
+                            domain: "CartRepository",
+                            code: -1,
+                            userInfo: [NSLocalizedDescriptionKey: "Error obteniendo productos"]
+                        )))
+                        return
+                    }
+
+                    guard let data = graphQLResult.data else {
+                        completion(.success([]))
+                        return
+                    }
+
+                    let products = data.products.edges.map { edge in
+                        ProductGraphQL(
+                            id: edge.node.id,
+                            branchId: edge.node.branchId,
+                            name: edge.node.name,
+                            price: edge.node.price,
+                            currency: edge.node.currency,
+                            imageUrl: edge.node.imageUrl,
+                            availability: edge.node.availability,
+                            createdAt: edge.node.createdAt,
+                            businessName: edge.node.business?.name ?? "Tienda",
+                            distanceKm: edge.node.distanceKm,
+                            categoryId: edge.node.categoryId,
+                            categoryName: edge.node.category?.name
+                        )
+                    }
+
+                    print("✅ Fetched \(products.count) products from branch")
+                    completion(.success(products))
+
+                case .failure(let error):
+                    print("❌ Error fetching branch products: \(error.localizedDescription)")
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+
+    /// Filtrar productos por IDs devueltos por Apple Intelligence
+    func filterProductsByIds(
+        productIds: [String],
+        allProducts: [ProductGraphQL]
+    ) -> [Product] {
+        let productsDict = Dictionary(uniqueKeysWithValues: allProducts.map { ($0.id, $0) })
+
+        return productIds.compactMap { id in
+            guard let product = productsDict[id] else { return nil }
+            return Product(
+                id: product.id,
+                name: product.name,
+                shop: product.businessName,
+                shopLogoUrl: "",
+                weight: product.currency,
+                price: "\(product.currency) \(product.price)",
+                imageUrl: product.imageUrl
+            )
+        }
+    }
+
+    // MARK: - Cloud AI Recommendations
+
+    /// Obtener recomendaciones de productos desde la API de Llego en la nube
+    /// - Parameters:
+    ///   - productIds: IDs de los productos en el carrito
+    ///   - limit: Número máximo de recomendaciones (default: 6)
+    ///   - completion: Callback con el resultado
+    func fetchCloudRecommendations(
+        productIds: [String],
+        limit: Int = 6,
+        completion: @escaping @Sendable (Result<[Product], Error>) -> Void
+    ) {
+        let client = apolloClient
+
+        Task { @MainActor in
+            let jwt = authManager.getAccessToken()
+
+            print("🌐 [CartRepository] Obteniendo recomendaciones desde Llego Cloud")
+            print("🌐 [CartRepository] Product IDs: \(productIds)")
+            print("🌐 [CartRepository] Limit: \(limit)")
+
+            let query = LlegoAPI.GetProductRecommendationsQuery(
+                productIds: productIds,
+                limit: Int32(limit),
+                jwt: jwt.map { .some($0) } ?? .none
+            )
+
+            client.fetch(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
+                switch result {
+                case .success(let graphQLResult):
+                    if let errors = graphQLResult.errors {
+                        print("❌ [CartRepository] GraphQL Errors fetching recommendations:")
+                        errors.forEach { print("  - \($0.localizedDescription)") }
+                        completion(.failure(NSError(
+                            domain: "CartRepository",
+                            code: -1,
+                            userInfo: [NSLocalizedDescriptionKey: "Error obteniendo recomendaciones"]
+                        )))
+                        return
+                    }
+
+                    guard let data = graphQLResult.data else {
+                        print("⚠️ [CartRepository] No data in recommendations response")
+                        completion(.success([]))
+                        return
+                    }
+
+                    guard let productRecommendations = data.productRecommendations else {
+                        print("⚠️ [CartRepository] No productRecommendations in response")
+                        completion(.success([]))
+                        return
+                    }
+
+                    let recommendations = productRecommendations.recommendations
+
+                    print("✅ [CartRepository] Reasoning: \(productRecommendations.reasoning)")
+                    print("✅ [CartRepository] Received \(recommendations.count) recommendations")
+
+                    // Mapear recomendaciones a Product
+                    let products = recommendations.compactMap { rec -> Product? in
+                        guard let product = rec.product else {
+                            print("⚠️ [CartRepository] Recommendation without product: \(rec.productId)")
+                            return nil
+                        }
+
+                        return Product(
+                            id: product.id,
+                            name: product.name,
+                            shop: "Tienda", // El producto no incluye info de branch en el schema
+                            shopLogoUrl: "",
+                            weight: product.currency,
+                            price: "\(product.currency) \(product.price)",
+                            imageUrl: product.image ?? ""
+                        )
+                    }
+
+                    print("✅ [CartRepository] Mapped \(products.count) products from recommendations")
+                    completion(.success(products))
+
+                case .failure(let error):
+                    print("❌ [CartRepository] Error fetching cloud recommendations: \(error.localizedDescription)")
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+
     // MARK: - Payment Validation
 
     /// Validar imagen de transferencia bancaria usando OCR (Gemini)

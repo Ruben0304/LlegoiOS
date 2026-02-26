@@ -15,7 +15,6 @@ struct ProductDetailView: View {
     @State private var quantity: Int = 1
     @State private var selectedVariantIndex: Int = 0
     @State private var showAddedToCartFeedback = false
-    @State private var showCartSheet = false
     @State private var selectedSimilarProductId: String?
 
     // Variantes calculadas dinámicamente usando el precio real del producto
@@ -110,7 +109,7 @@ struct ProductDetailView: View {
                 ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showCartSheet = true }) {
+                    NavigationLink(destination: CartView()) {
                         Image(systemName: "cart")
                             .foregroundColor(gradientManager.currentAccentColor)
                     }
@@ -133,12 +132,6 @@ struct ProductDetailView: View {
                     addToCartButton
                 }
 
-            }
-            .sheet(isPresented: $showCartSheet) {
-                NavigationView { CartView() }
-                    .navigationViewStyle(StackNavigationViewStyle())
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
             }
             .onAppear {
                 viewModel.loadProductDetail(id: productId)

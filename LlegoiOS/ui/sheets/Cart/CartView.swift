@@ -29,8 +29,8 @@ enum Currency: String, CaseIterable {
 }
 
 struct CartView: View {
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = CartViewModel()
     @StateObject private var gradientManager = GradientStateManager.shared
     @State private var selectedCurrency: Currency = .CUP
@@ -148,6 +148,12 @@ struct CartView: View {
                                 .animation(.easeInOut(duration: 0.3).delay(Double(index) * 0.05), value: viewModel.cartItems.count)
                             }
 
+                            // Sección de productos sugeridos
+                            if !viewModel.suggestedProducts.isEmpty {
+                                suggestedProductsSection
+                                    .padding(.top, 16)
+                            }
+
                             // Sección de dirección
                             deliveryAddressSection
                                 .padding(.top, 8)
@@ -248,7 +254,7 @@ struct CartView: View {
                                     .frame(height: 44)
                                 }
                                 .buttonStyle(.glassProminent)
-                                .tint(.llegoPrimary)
+                                .tint(gradientManager.currentAccentColor)
                                 .disabled(viewModel.hasMultipleBranches)
                                 .opacity(viewModel.hasMultipleBranches ? 0.45 : 1.0)
                             }
@@ -273,14 +279,8 @@ struct CartView: View {
                 }
             }
             .navigationTitle("Carrito")
-            .navigationBarBackButtonHidden(true)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    CloseButton(action: {
-                        dismiss()
-                    })
-                }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
@@ -300,9 +300,11 @@ struct CartView: View {
                                     if selectedCurrency == currency {
                                         Image(systemName: "checkmark")
                                             .font(.system(size: 14, weight: .bold))
-                                            .foregroundColor(.llegoAccent)
+                                            .foregroundColor(gradientManager.currentAccentColor)
                                     }
                                 }
+                                .frame(minWidth: 120, maxWidth: .infinity)
+                                .padding(.horizontal, 8)
                             }
                         }
                     } label: {
@@ -311,12 +313,13 @@ struct CartView: View {
                                 .font(.system(size: 18))
                             Text(selectedCurrency.rawValue)
                                 .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(.llegoPrimary)
+                                .foregroundColor(gradientManager.currentAccentColor)
                             Image(systemName: "chevron.down")
                                 .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.llegoPrimary)
+                                .foregroundColor(gradientManager.currentAccentColor)
                         }
-                        .frame(width: 85, height: 40)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
                     }
                 }
             }
@@ -426,7 +429,7 @@ struct CartView: View {
                                 .frame(width: 150, height: 150)
                             ProgressView()
                                 .progressViewStyle(.circular)
-                                .tint(.llegoPrimary)
+                                .tint(gradientManager.currentAccentColor)
                             Text("Preparando pago...")
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(.primary)
@@ -950,7 +953,64 @@ struct CartView: View {
         }
     }
 
+    // MARK: - Suggested Products Section
+    private var suggestedProductsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(gradientManager.currentAccentColor)
 
+                Text("Productos que podrías necesitar")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(.primary)
+
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+
+            if viewModel.isLoadingSuggestions {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                        .tint(gradientManager.currentAccentColor)
+                    Spacer()
+                }
+                .padding(.vertical, 40)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(viewModel.suggestedProducts) { product in
+                            ProductCard(
+                                product: product,
+                                count: .constant(0),
+                                onIncrement: {
+                                    // Agregar al carrito
+                                    CartManager.shared.addToCart(productId: product.id, quantity: 1)
+                                    viewModel.loadCart()
+
+                                    // Haptic feedback
+                                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                                },
+                                onDecrement: {},
+                                onProductTap: {
+                                    // Navegar a detalle del producto
+                                    // TODO: Implementar navegación si es necesario
+                                }
+                            )
+                            .frame(width: 180)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                }
+            }
+        }
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.white.opacity(0.5))
+        )
+    }
 
     private var emptyCartView: some View {
         VStack(spacing: 24) {
@@ -1090,6 +1150,9 @@ struct CartView: View {
 
             // Cargo de servicio con opción de descuento
             serviceFeeSection
+
+            // Productos recomendados por IA
+            aiRecommendationsSection
 
             // Envío
             HStack(spacing: 12) {
