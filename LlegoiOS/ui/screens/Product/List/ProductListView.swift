@@ -16,6 +16,7 @@ struct ProductListView: View {
     @FocusState private var isSearchFocused: Bool
     @State private var isSearchPresented: Bool = false
     @State private var selectedProductId: String?
+    @State private var showCart = false
 
     // Parámetros opcionales para filtrado inicial
     let initialCategory: String?
@@ -196,7 +197,9 @@ struct ProductListView: View {
                     ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
 
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        NavigationLink(destination: CartView()) {
+                        Button(action: {
+                            showCart = true
+                        }) {
                             Image(systemName: "cart")
                                 .font(.system(size: 16, weight: .semibold))
                                 .frame(width: 30, height: 30)
@@ -224,6 +227,9 @@ struct ProductListView: View {
             }
             .fullScreenCover(item: $selectedProductId) { productId in
                 ProductDetailView(productId: productId)
+            }
+            .fullScreenCover(isPresented: $showCart) {
+                CartView()
             }
         }
     }

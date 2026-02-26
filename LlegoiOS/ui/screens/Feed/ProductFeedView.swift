@@ -9,6 +9,7 @@ struct ProductFeedView: View {
     @State private var showFavoritesSheet = false
     @State private var selectedTutorial: Tutorial? = nil
     @State private var selectedProductId: String?
+    @State private var showCart = false
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -63,7 +64,9 @@ struct ProductFeedView: View {
 
                 // Botón de carrito
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: CartView()) {
+                    Button(action: {
+                        showCart = true
+                    }) {
                         Image(systemName: "cart")
                             .font(.system(size: 16, weight: .semibold))
                     }
@@ -92,6 +95,9 @@ struct ProductFeedView: View {
             }
             .fullScreenCover(item: $selectedProductId) { productId in
                 ProductDetailView(productId: productId)
+            }
+            .fullScreenCover(isPresented: $showCart) {
+                CartView()
             }
             .onAppear { viewModel.loadFeed() }
         }

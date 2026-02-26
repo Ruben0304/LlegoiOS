@@ -109,7 +109,7 @@ struct CartView: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, 30)
                         .padding(.vertical, 12)
-                        .background(Color.llegoAccent)
+                        .background(gradientManager.currentAccentColor)
                         .cornerRadius(12)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -146,12 +146,6 @@ struct CartView: View {
                                     removal: .scale.combined(with: .opacity)
                                 ))
                                 .animation(.easeInOut(duration: 0.3).delay(Double(index) * 0.05), value: viewModel.cartItems.count)
-                            }
-
-                            // Sección de productos sugeridos
-                            if !viewModel.suggestedProducts.isEmpty {
-                                suggestedProductsSection
-                                    .padding(.top, 16)
                             }
 
                             // Sección de dirección
@@ -232,7 +226,7 @@ struct CartView: View {
                                     .frame(height: 44)
                                 }
                                 .buttonStyle(.glassProminent)
-                                .tint(.black)
+                                .tint(gradientManager.currentAccentColor)
                                 .disabled(viewModel.hasMultipleBranches)
                                 .opacity(viewModel.hasMultipleBranches ? 0.45 : 1.0)
 
@@ -281,6 +275,16 @@ struct CartView: View {
             .navigationTitle("Carrito")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(gradientManager.currentAccentColor)
+                            .frame(width: 32, height: 32)
+                            .background(gradientManager.currentAccentColor.opacity(0.08))
+                            .clipShape(Circle())
+                    }
+                }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
@@ -500,7 +504,7 @@ struct CartView: View {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 12, weight: .bold))
                     }
-                    .foregroundColor(.llegoAccent)
+                    .foregroundColor(gradientManager.currentAccentColor)
                 }
             }
 
@@ -956,27 +960,55 @@ struct CartView: View {
     // MARK: - Suggested Products Section
     private var suggestedProductsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
+            HStack(spacing: 8) {
                 Image(systemName: "sparkles")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(gradientManager.currentAccentColor)
+                    .frame(width: 32, height: 32)
+                    .background(Circle().fill(gradientManager.currentAccentColor.opacity(0.12)))
 
-                Text("Productos que podrías necesitar")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(.primary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Recomendado para ti")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(.primary)
+
+                    if viewModel.isLoadingSuggestions {
+                        Text("Analizando productos...")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.secondary)
+                    } else if !viewModel.suggestedProducts.isEmpty {
+                        Text("\(viewModel.suggestedProducts.count) productos complementarios")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
+                }
 
                 Spacer()
             }
-            .padding(.horizontal, 16)
 
             if viewModel.isLoadingSuggestions {
-                HStack {
-                    Spacer()
-                    ProgressView()
-                        .tint(gradientManager.currentAccentColor)
-                    Spacer()
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(0..<3, id: \.self) { _ in
+                            VStack(alignment: .leading, spacing: 8) {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.gray.opacity(0.15))
+                                    .frame(width: 100, height: 100)
+                                    .shimmer()
+
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.gray.opacity(0.15))
+                                    .frame(width: 80, height: 12)
+                                    .shimmer()
+
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(Color.gray.opacity(0.15))
+                                    .frame(width: 60, height: 10)
+                                    .shimmer()
+                            }
+                        }
+                    }
                 }
-                .padding(.vertical, 40)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
@@ -985,31 +1017,23 @@ struct CartView: View {
                                 product: product,
                                 count: .constant(0),
                                 onIncrement: {
-                                    // Agregar al carrito
                                     CartManager.shared.addToCart(productId: product.id, quantity: 1)
                                     viewModel.loadCart()
-
-                                    // Haptic feedback
                                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                                 },
                                 onDecrement: {},
-                                onProductTap: {
-                                    // Navegar a detalle del producto
-                                    // TODO: Implementar navegación si es necesario
-                                }
+                                onProductTap: {}
                             )
                             .frame(width: 180)
                         }
                     }
-                    .padding(.horizontal, 16)
                 }
             }
         }
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.white.opacity(0.5))
-        )
+        .padding(12)
+        .background(Color.white)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
     }
 
     private var emptyCartView: some View {
@@ -1077,7 +1101,7 @@ struct CartView: View {
                 }) {
                     Text(viewModel.selectedAddress != nil ? "Cambiar" : "Seleccionar")
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.llegoAccent)
+                        .foregroundColor(gradientManager.currentAccentColor)
                 }
             }
 
@@ -1085,7 +1109,7 @@ struct CartView: View {
                 HStack(alignment: .top, spacing: 12) {
                     Image(systemName: "mappin.circle.fill")
                         .font(.system(size: 24))
-                        .foregroundColor(.llegoAccent)
+                        .foregroundColor(gradientManager.currentAccentColor)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(selected.label.isEmpty ? "Dirección" : selected.label)
@@ -1152,15 +1176,17 @@ struct CartView: View {
             serviceFeeSection
 
             // Productos recomendados por IA
-            aiRecommendationsSection
+            if !viewModel.suggestedProducts.isEmpty || viewModel.isLoadingSuggestions {
+                suggestedProductsSection
+            }
 
             // Envío
             HStack(spacing: 12) {
                 Image(systemName: "truck.box.fill")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.llegoAccent)
+                    .foregroundColor(gradientManager.currentAccentColor)
                     .frame(width: 32, height: 32)
-                    .background(Circle().fill(Color.llegoAccent.opacity(0.12)))
+                    .background(Circle().fill(gradientManager.currentAccentColor.opacity(0.12)))
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Envío")
@@ -1210,9 +1236,6 @@ struct CartView: View {
                 RoundedRectangle(cornerRadius: 16)
                     .stroke(Color.llegoPrimary.opacity(0.2), lineWidth: 1)
             )
-
-            // Métodos de pago aceptados por este negocio
-            paymentMethodsInfoBanner
 
             // Incentivo para ver anuncios (solo si no ha visto)
             if !viewModel.hasWatchedAds {
@@ -1567,7 +1590,7 @@ struct CartItemCard: View {
 
                     Text(item.weight)
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.llegoAccent)
+                        .foregroundColor(gradientManager.currentAccentColor)
                 }
 
                 // Precio y total
@@ -1653,11 +1676,11 @@ struct PaymentLinkSheetView: View {
     private var copyButtonGradient: LinearGradient {
         let colors: [Color]
         if showCopiedMessage {
-            colors = [Color.llegoAccent, Color.llegoAccent]
+            colors = [gradientManager.currentAccentColor, gradientManager.currentAccentColor]
         } else {
             colors = [
                 Color.llegoPrimary,
-                Color.llegoAccent
+                gradientManager.currentAccentColor
             ]
         }
         return LinearGradient(
@@ -1682,7 +1705,7 @@ struct PaymentLinkSheetView: View {
                                     LinearGradient(
                                         gradient: Gradient(colors: [
                                             Color.llegoPrimary.opacity(0.15),
-                                            Color.llegoAccent.opacity(0.1)
+                                            gradientManager.currentAccentColor.opacity(0.1)
                                         ]),
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
@@ -1696,7 +1719,7 @@ struct PaymentLinkSheetView: View {
                                     LinearGradient(
                                         gradient: Gradient(colors: [
                                             Color.llegoPrimary,
-                                            Color.llegoAccent
+                                            gradientManager.currentAccentColor
                                         ]),
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
@@ -1895,13 +1918,13 @@ struct BankTransferSheetView: View {
                     Spacer()
                     ZStack {
                         Circle()
-                            .fill(Color.llegoAccent)
+                            .fill(gradientManager.currentAccentColor)
                             .frame(width: 40, height: 40)
                         Image(systemName: "checkmark")
                             .font(.system(size: 20, weight: .bold))
                             .foregroundColor(.white)
                     }
-                    .shadow(color: Color.llegoAccent.opacity(0.5), radius: 8, x: 0, y: 4)
+                    .shadow(color: gradientManager.currentAccentColor.opacity(0.5), radius: 8, x: 0, y: 4)
                     .padding()
                 }
                 Spacer()
@@ -1983,9 +2006,9 @@ struct BankTransferSheetView: View {
                                 }) {
                                     Image(systemName: "doc.on.doc.fill")
                                         .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(.llegoAccent)
+                                        .foregroundColor(gradientManager.currentAccentColor)
                                         .padding(8)
-                                        .background(Circle().fill(Color.llegoAccent.opacity(0.15)))
+                                        .background(Circle().fill(gradientManager.currentAccentColor.opacity(0.15)))
                                 }
                             }
 
@@ -2015,7 +2038,7 @@ struct BankTransferSheetView: View {
                             HStack {
                                 Image(systemName: "dollarsign.circle.fill")
                                     .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.llegoAccent)
+                                    .foregroundColor(gradientManager.currentAccentColor)
 
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Monto a Transferir")
@@ -2026,17 +2049,17 @@ struct BankTransferSheetView: View {
                                             TextField("0.00", text: $editableAmount)
                                                 .font(.system(size: 20, weight: .bold, design: .rounded))
                                                 .keyboardType(.decimalPad)
-                                                .foregroundColor(.llegoAccent)
+                                                .foregroundColor(gradientManager.currentAccentColor)
                                                 .multilineTextAlignment(.leading)
 
                                             Text("CUP")
                                                 .font(.system(size: 14, weight: .semibold))
-                                                .foregroundColor(.llegoAccent.opacity(0.85))
+                                                .foregroundColor(gradientManager.currentAccentColor.opacity(0.85))
                                         }
                                     } else {
                                         Text(totalAmount)
                                             .font(.system(size: 20, weight: .bold, design: .rounded))
-                                            .foregroundColor(.llegoAccent)
+                                            .foregroundColor(gradientManager.currentAccentColor)
                                     }
                                 }
 
@@ -2074,7 +2097,7 @@ struct BankTransferSheetView: View {
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 12)
                                                 .stroke(
-                                                    transferId.isEmpty ? Color.gray.opacity(0.3) : Color.llegoAccent,
+                                                    transferId.isEmpty ? Color.gray.opacity(0.3) : gradientManager.currentAccentColor,
                                                     lineWidth: 1.5
                                                 )
                                         )
@@ -2104,12 +2127,12 @@ struct BankTransferSheetView: View {
                                         Text("Verificado")
                                             .font(.system(size: 12, weight: .semibold))
                                     }
-                                    .foregroundColor(.llegoAccent)
+                                    .foregroundColor(gradientManager.currentAccentColor)
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 4)
                                     .background(
                                         Capsule()
-                                            .fill(Color.llegoAccent.opacity(0.15))
+                                            .fill(gradientManager.currentAccentColor.opacity(0.15))
                                     )
                                 }
                             }
@@ -2217,7 +2240,7 @@ struct BankTransferSheetView: View {
                             .background(
                                 LinearGradient(
                                     gradient: Gradient(colors: [
-                                        Color.llegoAccent,
+                                        gradientManager.currentAccentColor,
                                         Color.llegoPrimary
                                     ]),
                                     startPoint: .leading,
@@ -2226,7 +2249,7 @@ struct BankTransferSheetView: View {
                             )
                             .cornerRadius(16)
                             .shadow(
-                                color: validationState == .validated ? Color.llegoAccent.opacity(0.4) : Color.gray.opacity(0.2),
+                                color: validationState == .validated ? gradientManager.currentAccentColor.opacity(0.4) : Color.gray.opacity(0.2),
                                 radius: 12,
                                 x: 0,
                                 y: 6
@@ -2306,7 +2329,7 @@ struct BankTransferSheetView: View {
     private func strokeColorForValidationState() -> Color {
         switch validationState {
         case .validated:
-            return Color.llegoAccent
+            return gradientManager.currentAccentColor
         case .failed:
             return Color.red
         default:
@@ -2319,11 +2342,11 @@ struct BankTransferSheetView: View {
             HStack(spacing: 8) {
                 Image(systemName: result.matched ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(result.matched ? .llegoAccent : .red)
+                    .foregroundColor(result.matched ? gradientManager.currentAccentColor : .red)
 
                 Text(result.matched ? "Transferencia validada" : "Verifica el identificador")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(result.matched ? .llegoAccent : .red)
+                    .foregroundColor(result.matched ? gradientManager.currentAccentColor : .red)
 
                 Spacer()
             }
@@ -2368,7 +2391,7 @@ struct BankTransferSheetView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(
-                    result.matched ? Color.llegoAccent.opacity(0.4) : Color.red.opacity(0.4),
+                    result.matched ? gradientManager.currentAccentColor.opacity(0.4) : Color.red.opacity(0.4),
                     lineWidth: 1.5
                 )
         )

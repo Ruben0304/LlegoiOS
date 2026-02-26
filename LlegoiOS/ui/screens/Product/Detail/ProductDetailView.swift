@@ -16,6 +16,7 @@ struct ProductDetailView: View {
     @State private var selectedVariantIndex: Int = 0
     @State private var showAddedToCartFeedback = false
     @State private var selectedSimilarProductId: String?
+    @State private var showCart = false
 
     // Variantes calculadas dinámicamente usando el precio real del producto
     private var variants: [ProductVariant] {
@@ -109,7 +110,9 @@ struct ProductDetailView: View {
                 ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: CartView()) {
+                    Button(action: {
+                        showCart = true
+                    }) {
                         Image(systemName: "cart")
                             .foregroundColor(gradientManager.currentAccentColor)
                     }
@@ -143,6 +146,9 @@ struct ProductDetailView: View {
             }
             .fullScreenCover(item: $selectedSimilarProductId) { productId in
                 ProductDetailView(productId: productId)
+            }
+            .fullScreenCover(isPresented: $showCart) {
+                CartView()
             }
         }
     }
