@@ -345,7 +345,7 @@ struct OnboardingParticlesView: View {
                     animateParticles = true
                 }
             }
-            .onChange(of: currentPage) { _ in
+            .onChange(of: currentPage) { _, _ in
                 withAnimation(.easeInOut(duration: 0.5)) {
                     animateParticles = false
                 }
@@ -1127,7 +1127,7 @@ struct OnboardingBottomPanel: View {
                 )
                 .ignoresSafeArea(edges: .bottom)
         )
-        .onChange(of: currentPage) { _ in
+        .onChange(of: currentPage) { _, _ in
             buttonScale = 1.0
             shimmerOffset = -1.0
         }

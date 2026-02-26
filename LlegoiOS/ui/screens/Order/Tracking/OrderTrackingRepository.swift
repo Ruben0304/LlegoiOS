@@ -22,7 +22,7 @@ final class OrderTrackingRepository {
             
             let query = LlegoAPI.GetOrderTrackingQuery(orderId: orderId, jwt: jwt)
             
-            client.fetch(query: query, cachePolicy: .fetchIgnoringCacheData) { [weak self] result in
+            client.fetchCompat(query: query, cachePolicy: .fetchIgnoringCacheData) { [weak self] result in
                 Task { @MainActor in
                     guard let self = self else { return }
                     

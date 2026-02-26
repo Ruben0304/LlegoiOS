@@ -69,9 +69,11 @@ struct LiveOrderTrackingView: View {
     var body: some View {
         ZStack(alignment: .top) {
             // Mapa limpio a pantalla completa
-            Map(coordinateRegion: $region, annotationItems: mapAnnotations) { item in
-                MapAnnotation(coordinate: item.coordinate) {
-                    annotationView(for: item)
+            Map(position: mapPositionBinding) {
+                ForEach(mapAnnotations) { item in
+                    Annotation("", coordinate: item.coordinate) {
+                        annotationView(for: item)
+                    }
                 }
             }
             .ignoresSafeArea()
@@ -104,7 +106,7 @@ struct LiveOrderTrackingView: View {
             captureUrlsOnce()
             fitMapToRoute()
         }
-        .onChange(of: orderManager.currentOrder?.id) { _ in
+        .onChange(of: orderManager.currentOrder?.id) { _, _ in
             storeUIImage = nil
             userAvatarUIImage = nil
             storeImageUrl = nil
@@ -112,22 +114,22 @@ struct LiveOrderTrackingView: View {
             didCaptureUrls = false
             captureUrlsOnce()
         }
-        .onChange(of: orderManager.currentOrder?.storeImageUrl) { _ in
+        .onChange(of: orderManager.currentOrder?.storeImageUrl) { _, _ in
             storeUIImage = nil
             storeImageUrl = nil
             didCaptureUrls = false
             captureUrlsOnce()
         }
-        .onChange(of: orderManager.currentOrder?.userAvatarUrl) { _ in
+        .onChange(of: orderManager.currentOrder?.userAvatarUrl) { _, _ in
             userAvatarUIImage = nil
             userAvatarUrl = nil
             didCaptureUrls = false
             captureUrlsOnce()
         }
-        .onChange(of: orderManager.driverLocation?.latitude) { _ in
+        .onChange(of: orderManager.driverLocation?.latitude) { _, _ in
             centerOnDriver()
         }
-        .onChange(of: orderManager.driverLocation?.longitude) { _ in
+        .onChange(of: orderManager.driverLocation?.longitude) { _, _ in
             centerOnDriver()
         }
     }
@@ -348,6 +350,15 @@ struct LiveOrderTrackingView: View {
         withAnimation(.easeInOut(duration: 0.5)) {
             region.center = driver
         }
+    }
+
+    private var mapPositionBinding: Binding<MapCameraPosition> {
+        Binding(
+            get: { .region(region) },
+            set: { newPosition in
+                _ = newPosition
+            }
+        )
     }
 }
 

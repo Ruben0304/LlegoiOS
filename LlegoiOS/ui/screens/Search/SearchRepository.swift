@@ -44,8 +44,8 @@ class SearchRepository {
             jwt: jwt.map { .some($0) } ?? .none
         )
 
-        print("🚀 SearchRepository - Calling apolloClient.fetch() for products...")
-        apolloClient.fetch(query: searchQuery, cachePolicy: .fetchIgnoringCacheData) { result in
+        print("🚀 SearchRepository - Calling apolloClient.fetchCompat() for products...")
+        apolloClient.fetchCompat(query: searchQuery, cachePolicy: .fetchIgnoringCacheData) { result in
             print("📡 SearchRepository - Apollo fetch callback received for products")
 
             switch result {
@@ -119,7 +119,7 @@ class SearchRepository {
             jwt: jwt.map { .some($0) } ?? .none
         )
 
-        apolloClient.fetch(query: searchQuery, cachePolicy: .fetchIgnoringCacheData) { result in
+        apolloClient.fetchCompat(query: searchQuery, cachePolicy: .fetchIgnoringCacheData) { result in
             switch result {
             case .success(let graphQLResult):
                 if let errors = graphQLResult.errors, !errors.isEmpty {
@@ -205,8 +205,8 @@ class SearchRepository {
             jwt: jwt.map { .some($0) } ?? .none
         )
 
-        print("🚀 SearchRepository - Calling apolloClient.fetch() for branches...")
-        apolloClient.fetch(query: searchQuery, cachePolicy: .fetchIgnoringCacheData) { result in
+        print("🚀 SearchRepository - Calling apolloClient.fetchCompat() for branches...")
+        apolloClient.fetchCompat(query: searchQuery, cachePolicy: .fetchIgnoringCacheData) { result in
             print("📡 SearchRepository - Apollo fetch callback received for branches")
 
             switch result {

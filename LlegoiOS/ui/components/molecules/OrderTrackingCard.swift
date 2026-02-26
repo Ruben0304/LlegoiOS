@@ -124,7 +124,7 @@ struct OrderTrackingCard: View {
         .onAppear {
             captureUrlsOnce()
         }
-        .onChange(of: orderManager.currentOrder?.id) { _ in
+        .onChange(of: orderManager.currentOrder?.id) { _, _ in
             // Si cambia de pedido, recapturar URLs
             storeUIImage = nil
             userAvatarUIImage = nil
@@ -133,13 +133,13 @@ struct OrderTrackingCard: View {
             didCaptureUrls = false
             captureUrlsOnce()
         }
-        .onChange(of: orderManager.currentOrder?.storeImageUrl) { _ in
+        .onChange(of: orderManager.currentOrder?.storeImageUrl) { _, _ in
             storeUIImage = nil
             storeImageUrl = nil
             didCaptureUrls = false
             captureUrlsOnce()
         }
-        .onChange(of: orderManager.currentOrder?.userAvatarUrl) { _ in
+        .onChange(of: orderManager.currentOrder?.userAvatarUrl) { _, _ in
             userAvatarUIImage = nil
             userAvatarUrl = nil
             didCaptureUrls = false

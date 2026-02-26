@@ -9,7 +9,7 @@ class AppUpdateRepository {
         return try await withCheckedThrowingContinuation { continuation in
             let query = LlegoAPI.GetAppConfigQuery()
 
-            apolloClient.fetch(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
+            apolloClient.fetchCompat(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
                 switch result {
                 case .success(let graphQLResult):
                     if let errors = graphQLResult.errors {

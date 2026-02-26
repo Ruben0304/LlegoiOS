@@ -21,7 +21,7 @@ struct RadiusMapView: View {
     var body: some View {
         ZStack {
             // Mapa interactivo
-            Map(coordinateRegion: $region, interactionModes: [.pan, .zoom])
+            Map(position: mapPositionBinding, interactionModes: [.pan, .zoom])
                 .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
@@ -168,6 +168,15 @@ struct RadiusMapView: View {
                 )
         )
         .id(radiusKm) // Forzar recreación cuando cambia el radio
+    }
+
+    private var mapPositionBinding: Binding<MapCameraPosition> {
+        Binding(
+            get: { .region(region) },
+            set: { newPosition in
+                _ = newPosition
+            }
+        )
     }
 }
 

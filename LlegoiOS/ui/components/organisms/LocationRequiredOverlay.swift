@@ -135,26 +135,31 @@ struct LocationRequiredOverlay: View {
     }
     
     private func reverseGeocode(_ coordinate: CLLocationCoordinate2D) {
-        let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
-        let geocoder = CLGeocoder()
-        
         Task {
-            do {
-                let placemarks = try await geocoder.reverseGeocodeLocation(location)
-                if let placemark = placemarks.first {
-                    var components: [String] = []
-                    if let name = placemark.name { components.append(name) }
-                    else if let thoroughfare = placemark.thoroughfare { components.append(thoroughfare) }
-                    if let locality = placemark.locality { components.append(locality) }
-                    
-                    await MainActor.run {
-                        addressText = components.isEmpty ? "Ubicación seleccionada" : components.joined(separator: ", ")
+            let resolvedAddress = await Task.detached(priority: .userInitiated) { () -> String in
+                let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+                guard let request = MKReverseGeocodingRequest(location: location) else {
+                    return "Ubicación seleccionada"
+                }
+
+                do {
+                    let mapItems = try await request.mapItems
+                    if let mapItem = mapItems.first {
+                        var components: [String] = []
+                        if let name = mapItem.name, !name.isEmpty { components.append(name) }
+                        if let locality = mapItem.placemark.locality, !locality.isEmpty { components.append(locality) }
+                        if !components.isEmpty {
+                            return components.joined(separator: ", ")
+                        }
                     }
+                    return "Ubicación seleccionada"
+                } catch {
+                    return "Ubicación seleccionada"
                 }
-            } catch {
-                await MainActor.run {
-                    addressText = "Ubicación seleccionada"
-                }
+            }.value
+
+            await MainActor.run {
+                addressText = resolvedAddress
             }
         }
     }

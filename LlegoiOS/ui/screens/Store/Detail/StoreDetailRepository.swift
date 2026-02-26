@@ -6,7 +6,7 @@ class StoreDetailRepository {
 
     // Fetch complete branch/store details by ID
     func fetchBranchDetail(id: String, completion: @escaping @Sendable (Result<BranchDetailGraphQL, Error>) -> Void) {
-        apolloClient.fetch(
+        apolloClient.fetchCompat(
             query: LlegoAPI.GetBranchDetailQuery(id: id),
             cachePolicy: .returnCacheDataAndFetch
         ) { result in
@@ -59,7 +59,7 @@ class StoreDetailRepository {
 
     // Fetch business details including social media
     func fetchBusinessDetail(id: String, completion: @escaping @Sendable (Result<BusinessDetailGraphQL, Error>) -> Void) {
-        apolloClient.fetch(
+        apolloClient.fetchCompat(
             query: LlegoAPI.GetBusinessDetailQuery(id: id),
             cachePolicy: .returnCacheDataAndFetch
         ) { result in
@@ -106,7 +106,7 @@ class StoreDetailRepository {
             let jwt = AuthManager.shared.getAccessToken()
             let branchType = BranchTypeManager.shared.selectedType.rawValue
             
-            client.fetch(
+            client.fetchCompat(
                 query: LlegoAPI.GetBranchesQuery(
                     first: 100,
                     after: .none,
@@ -174,7 +174,7 @@ class StoreDetailRepository {
             let jwt = AuthManager.shared.getAccessToken()
             let branchType = BranchTypeManager.shared.selectedType.rawValue
             
-            client.fetch(
+            client.fetchCompat(
                 query: LlegoAPI.GetProductsQuery(
                     first: Int32(limit),
                     after: .none,

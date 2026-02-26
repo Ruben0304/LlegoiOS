@@ -6,7 +6,7 @@ class ProductDetailRepository {
 
     // Fetch complete product details by ID
     func fetchProductDetail(id: String, completion: @escaping @Sendable (Result<ProductDetailGraphQL, Error>) -> Void) {
-        apolloClient.fetch(
+        apolloClient.fetchCompat(
             query: LlegoAPI.GetProductDetailQuery(id: id),
             cachePolicy: .returnCacheDataAndFetch
         ) { result in

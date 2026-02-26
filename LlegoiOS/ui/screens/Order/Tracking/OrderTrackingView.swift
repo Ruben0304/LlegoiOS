@@ -15,9 +15,11 @@ struct OrderTrackingView: View {
     var body: some View {
         ZStack {
             // Map
-            Map(coordinateRegion: $region, annotationItems: mapAnnotations) { item in
-                MapAnnotation(coordinate: item.coordinate) {
-                    annotationView(for: item)
+            Map(position: mapPositionBinding) {
+                ForEach(mapAnnotations) { item in
+                    Annotation("", coordinate: item.coordinate) {
+                        annotationView(for: item)
+                    }
                 }
             }
             .ignoresSafeArea(edges: .top)
@@ -86,6 +88,15 @@ struct OrderTrackingView: View {
         region = MKCoordinateRegion(
             center: center,
             span: MKCoordinateSpan(latitudeDelta: max(latDelta, 0.01), longitudeDelta: max(lonDelta, 0.01))
+        )
+    }
+
+    private var mapPositionBinding: Binding<MapCameraPosition> {
+        Binding(
+            get: { .region(region) },
+            set: { newPosition in
+                _ = newPosition
+            }
         )
     }
 
@@ -158,7 +169,7 @@ struct OrderTrackingView: View {
                                         .foregroundColor(.yellow)
                                     Text(deliveryPerson.formattedRating)
                                         .font(.caption)
-                                    Text("• \(deliveryPerson.vehicleType)")
+                                    Text("• \(deliveryPerson.vehicleType ?? "")")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }

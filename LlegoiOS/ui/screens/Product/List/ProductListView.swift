@@ -153,7 +153,7 @@ struct ProductListView: View {
                 // Execute search only when user submits (presses Enter/Search button)
                 activeViewModel.executeSearch()
             }
-            .onChange(of: activeViewModel.searchQuery) { newValue in
+            .onChange(of: activeViewModel.searchQuery) { _, newValue in
                 // Clear results when user clears search
                 if newValue.isEmpty {
                     activeViewModel.executeSearch()
@@ -332,7 +332,7 @@ struct ProductListView: View {
         .onAppear {
             animationDelay = Double(activeViewModel.filteredProducts.count) * 0.1 + 0.1
         }
-        .onChange(of: activeViewModel.filteredProducts.count) { _ in
+        .onChange(of: activeViewModel.filteredProducts.count) { _, _ in
             animationDelay = 0
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                 animationDelay = Double(activeViewModel.filteredProducts.count) * 0.1 + 0.1

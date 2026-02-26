@@ -52,7 +52,7 @@ class TutorialsViewModel: ObservableObject {
         await withCheckedContinuation { continuation in
             let query = LlegoAPI.GetActiveTutorialsQuery()
 
-            ApolloClientManager.shared.apollo.fetch(query: query, cachePolicy: .fetchIgnoringCacheCompletely) { result in
+            ApolloClientManager.shared.apollo.fetchCompat(query: query, cachePolicy: .fetchIgnoringCacheCompletely) { result in
                 switch result {
                 case .success(let graphQLResult):
                     if let data = graphQLResult.data {

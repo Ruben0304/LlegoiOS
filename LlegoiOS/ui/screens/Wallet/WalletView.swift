@@ -1122,7 +1122,7 @@ struct WalletTransferSheet: View {
                                         .fill(Color(.systemGray6))
                                 )
                                 .focused($focusedField, equals: .username)
-                                .onChange(of: viewModel.transferUsername) { newValue in
+                                .onChange(of: viewModel.transferUsername) { _, newValue in
                                     viewModel.searchUsers(query: newValue)
                                 }
                             
@@ -1321,7 +1321,7 @@ struct WalletTransferSheet: View {
             .onAppear {
                 focusedField = .username
             }
-            .onChange(of: viewModel.transferAmount) { _ in
+            .onChange(of: viewModel.transferAmount) { _, _ in
                 viewModel.sanitizeTransferAmount()
             }
         }

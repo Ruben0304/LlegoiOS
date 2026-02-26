@@ -139,7 +139,7 @@ struct ProductDetailView: View {
             .onAppear {
                 viewModel.loadProductDetail(id: productId)
             }
-            .onChange(of: viewModel.productDetail) { detail in
+            .onChange(of: viewModel.productDetail) { _, detail in
                 if detail != nil {
                     startEntranceAnimations()
                 }

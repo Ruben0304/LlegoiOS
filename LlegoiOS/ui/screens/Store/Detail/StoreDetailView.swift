@@ -362,8 +362,8 @@ struct StoreDetailView: View {
                                     if viewModel.hasCoordinates,
                                        let coordinates = viewModel.branchDetail?.coordinates {
                                         // Show map with coordinates
-                                        Map(coordinateRegion: $region, annotationItems: [MapLocation(coordinate: CLLocationCoordinate2D(latitude: coordinates.latitude, longitude: coordinates.longitude))]) { location in
-                                            MapMarker(coordinate: location.coordinate, tint: .llegoPrimary)
+                                        Map(position: mapPositionBinding) {
+                                            Marker("", coordinate: CLLocationCoordinate2D(latitude: coordinates.latitude, longitude: coordinates.longitude))
                                         }
                                         .frame(height: 200)
                                         .cornerRadius(16)
@@ -505,7 +505,7 @@ struct StoreDetailView: View {
                                                             product: Product(
                                                                 id: product.id,
                                                                 name: product.name,
-                                                                shop: store.name ?? "Tienda",
+                                                                shop: store.name,
                                                                 weight: "",
                                                                 price: formatPrice(price: product.price, currency: product.currency),
                                                                 imageUrl: product.imageUrl
@@ -567,6 +567,15 @@ struct StoreDetailView: View {
                 ComboDetailView(comboId: comboId)
             }
         }
+    }
+
+    private var mapPositionBinding: Binding<MapCameraPosition> {
+        Binding(
+            get: { .region(region) },
+            set: { newPosition in
+                _ = newPosition
+            }
+        )
     }
 
     // MARK: - Combos Section
@@ -686,12 +695,6 @@ struct SocialButton: View {
             .shadow(color: (color ?? Color.pink).opacity(0.3), radius: 8, x: 0, y: 4)
         }
     }
-}
-
-// Helper struct for map annotations
-struct MapLocation: Identifiable {
-    let id = UUID()
-    let coordinate: CLLocationCoordinate2D
 }
 
 // New Card Design for Sibling Branches

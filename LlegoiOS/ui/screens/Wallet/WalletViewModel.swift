@@ -298,7 +298,7 @@ class WalletViewModel: NSObject, ObservableObject {
     private func createPaymentRequest(amount: Double, currency: WalletCurrency) -> PKPaymentRequest {
         let request = PKPaymentRequest()
         request.merchantIdentifier = merchantID
-        request.merchantCapabilities = .capability3DS
+        request.merchantCapabilities = .threeDSecure
         request.countryCode = "US"
         request.currencyCode = currency.currencyCode
         request.supportedNetworks = supportedNetworks

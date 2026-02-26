@@ -37,10 +37,10 @@ class ProductListRepository {
 
         // Usar política de caché diferente si hay branchId específico
         // Para evitar mostrar datos incorrectos del caché
-        let cachePolicy: CachePolicy_v1 =
+        let cachePolicy: ApolloCompatCachePolicy =
             branchId != nil ? .fetchIgnoringCacheData : .returnCacheDataAndFetch
 
-        apolloClient.fetch(query: query, cachePolicy: cachePolicy) {
+        apolloClient.fetchCompat(query: query, cachePolicy: cachePolicy) {
             [apolloClient = self.apolloClient] result in
             switch result {
             case .success(let graphQLResult):
@@ -111,7 +111,7 @@ class ProductListRepository {
                     print("🔄 Sin conexión - Intentando cargar productos desde caché...")
 
                     // Intentar cargar SOLO desde caché (sin red)
-                    apolloClient.fetch(query: query, cachePolicy: .returnCacheDataDontFetch) {
+                    apolloClient.fetchCompat(query: query, cachePolicy: .returnCacheDataDontFetch) {
                         cacheResult in
                         switch cacheResult {
                         case .success(let graphQLResult):
@@ -194,7 +194,7 @@ class ProductListRepository {
             jwt: jwt.map { .some($0) } ?? .none
         )
 
-        apolloClient.fetch(query: searchQuery, cachePolicy: .fetchIgnoringCacheData) {
+        apolloClient.fetchCompat(query: searchQuery, cachePolicy: .fetchIgnoringCacheData) {
             [apolloClient = self.apolloClient] result in
             switch result {
             case .success(let graphQLResult):
@@ -246,7 +246,7 @@ class ProductListRepository {
                             jwt: jwt.map { .some($0) } ?? .none
                         )
 
-                        apolloClient.fetch(
+                        apolloClient.fetchCompat(
                             query: textSearchQuery, cachePolicy: .fetchIgnoringCacheData
                         ) { fallbackResult in
                             switch fallbackResult {
@@ -415,7 +415,7 @@ class ProductListRepository {
         let query = LlegoAPI.GetProductCategoriesQuery(
             branchType: branchType.map { .some($0) } ?? .none)
 
-        apolloClient.fetch(query: query, cachePolicy: .returnCacheDataAndFetch) { result in
+        apolloClient.fetchCompat(query: query, cachePolicy: .returnCacheDataAndFetch) { result in
             switch result {
             case .success(let graphQLResult):
                 if let errors = graphQLResult.errors {

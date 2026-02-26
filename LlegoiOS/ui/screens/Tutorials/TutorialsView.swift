@@ -336,7 +336,7 @@ struct VideoPlayerView: View {
         .onAppear {
             startPlayback()
         }
-        .onChange(of: downloadManager.status(for: tutorial.id)) { _ in
+        .onChange(of: downloadManager.status(for: tutorial.id)) { _, _ in
             swapToDownloadedFileIfNeeded()
         }
         .onDisappear {

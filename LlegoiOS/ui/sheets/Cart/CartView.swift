@@ -172,7 +172,7 @@ struct CartView: View {
                                         .onAppear {
                                             cartItemsCardFrame = geo.frame(in: .global)
                                         }
-                                        .onChange(of: viewModel.cartItems.count) { _ in
+                                        .onChange(of: viewModel.cartItems.count) { _, _ in
                                             cartItemsCardFrame = geo.frame(in: .global)
                                         }
                                 }

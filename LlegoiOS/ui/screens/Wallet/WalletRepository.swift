@@ -50,7 +50,7 @@ class WalletRepository {
         return try await withCheckedThrowingContinuation { continuation in
             let query = LlegoAPI.MyWalletBalanceQuery(jwt: jwt)
 
-            apolloClient.fetch(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
+            apolloClient.fetchCompat(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
                 switch result {
                 case .success(let graphQLResult):
                     if let errors = graphQLResult.errors {
@@ -101,7 +101,7 @@ class WalletRepository {
                 currency: currency.map { .some($0) } ?? .none
             )
 
-            apolloClient.fetch(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
+            apolloClient.fetchCompat(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
                 switch result {
                 case .success(let graphQLResult):
                     if let errors = graphQLResult.errors {
@@ -185,7 +185,7 @@ class WalletRepository {
             )
             let mutation = LlegoAPI.DepositMoneyMutation(jwt: jwt, input: input)
 
-            apolloClient.perform(mutation: mutation) { result in
+            apolloClient.performCompat(mutation: mutation) { result in
                 switch result {
                 case .success(let graphQLResult):
                     if let errors = graphQLResult.errors {
@@ -249,7 +249,7 @@ class WalletRepository {
             )
             let mutation = LlegoAPI.TransferMoneyMutation(jwt: jwt, input: input)
 
-            apolloClient.perform(mutation: mutation) { result in
+            apolloClient.performCompat(mutation: mutation) { result in
                 switch result {
                 case .success(let graphQLResult):
                     if let errors = graphQLResult.errors {

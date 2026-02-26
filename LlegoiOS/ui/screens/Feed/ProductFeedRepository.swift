@@ -280,7 +280,7 @@ class ProductFeedRepository {
                 categoryId: categoryId.map { .some($0) } ?? .none
             )
 
-            ApolloClientManager.shared.apollo.fetch(
+            ApolloClientManager.shared.apollo.fetchCompat(
                 query: query, cachePolicy: .fetchIgnoringCacheCompletely
             ) { result in
                 switch result {
@@ -457,7 +457,7 @@ class ProductFeedRepository {
                 productCategoryId: categoryId.map { .some($0) } ?? .none
             )
 
-            ApolloClientManager.shared.apollo.fetch(
+            ApolloClientManager.shared.apollo.fetchCompat(
                 query: query, cachePolicy: .fetchIgnoringCacheCompletely
             ) { result in
                 switch result {
@@ -606,7 +606,7 @@ class ProductFeedRepository {
         let query = LlegoAPI.GetProductCategoriesQuery(branchType: .some(branchType))
 
         return await withCheckedContinuation { continuation in
-            ApolloClientManager.shared.apollo.fetch(
+            ApolloClientManager.shared.apollo.fetchCompat(
                 query: query, cachePolicy: .fetchIgnoringCacheCompletely
             ) { result in
                 var cats: [FeedCategory] = []
@@ -644,7 +644,7 @@ class ProductFeedRepository {
         )
 
         return await withCheckedContinuation { continuation in
-            ApolloClientManager.shared.apollo.fetch(
+            ApolloClientManager.shared.apollo.fetchCompat(
                 query: query, cachePolicy: .fetchIgnoringCacheCompletely
             ) { result in
                 var stores: [FeedStore] = []
@@ -687,7 +687,7 @@ class ProductFeedRepository {
         )
 
         return await withCheckedContinuation { continuation in
-            ApolloClientManager.shared.apollo.fetch(
+            ApolloClientManager.shared.apollo.fetchCompat(
                 query: query, cachePolicy: .fetchIgnoringCacheCompletely
             ) { result in
                 var products: [FeedProduct] = []

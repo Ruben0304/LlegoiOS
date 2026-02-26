@@ -33,7 +33,7 @@ class StoreListRepository {
                 productsLimit: .some(4)
             )
 
-            client.fetch(query: query, cachePolicy: .returnCacheDataAndFetch) { result in
+            client.fetchCompat(query: query, cachePolicy: .returnCacheDataAndFetch) { result in
                 switch result {
                 case .success(let graphQLResult):
                     if let errors = graphQLResult.errors {
@@ -118,7 +118,7 @@ class StoreListRepository {
                         print("🔄 Sin conexión - Intentando cargar branches desde caché...")
 
                         // Intentar cargar SOLO desde caché (sin red)
-                        client.fetch(query: query, cachePolicy: .returnCacheDataDontFetch) {
+                        client.fetchCompat(query: query, cachePolicy: .returnCacheDataDontFetch) {
                             cacheResult in
                             switch cacheResult {
                             case .success(let graphQLResult):
@@ -217,7 +217,7 @@ class StoreListRepository {
                 jwt: jwt.map { .some($0) } ?? .none
             )
 
-            client.fetch(query: query, cachePolicy: .returnCacheDataAndFetch) { result in
+            client.fetchCompat(query: query, cachePolicy: .returnCacheDataAndFetch) { result in
                 switch result {
                 case .success(let graphQLResult):
                     if let errors = graphQLResult.errors {
@@ -269,7 +269,7 @@ class StoreListRepository {
                         )
 
                         // Intentar cargar SOLO desde caché (sin red)
-                        client.fetch(query: query, cachePolicy: .returnCacheDataDontFetch) {
+                        client.fetchCompat(query: query, cachePolicy: .returnCacheDataDontFetch) {
                             cacheResult in
                             switch cacheResult {
                             case .success(let graphQLResult):
@@ -337,7 +337,7 @@ class StoreListRepository {
                 jwt: jwt.map { .some($0) } ?? .none
             )
 
-            client.fetch(query: searchQuery, cachePolicy: .fetchIgnoringCacheData) { result in
+            client.fetchCompat(query: searchQuery, cachePolicy: .fetchIgnoringCacheData) { result in
                 switch result {
                 case .success(let graphQLResult):
                     if let errors = graphQLResult.errors {
@@ -388,7 +388,7 @@ class StoreListRepository {
                                 jwt: jwt.map { .some($0) } ?? .none
                             )
 
-                            client.fetch(
+                            client.fetchCompat(
                                 query: textSearchQuery, cachePolicy: .fetchIgnoringCacheData
                             ) { fallbackResult in
                                 switch fallbackResult {

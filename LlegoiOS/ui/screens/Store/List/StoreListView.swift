@@ -248,7 +248,7 @@ struct StoreListView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
-            .onChange(of: isSearchFocused) { focused in
+            .onChange(of: isSearchFocused) { _, focused in
                 if !focused {
                     // Limpiar resultados al cerrar
                     isSearchLoading = false
@@ -256,7 +256,7 @@ struct StoreListView: View {
                     searchDebounceTask?.cancel()
                 }
             }
-            .onChange(of: searchText) { newValue in
+            .onChange(of: searchText) { _, newValue in
                 // Cancelar búsqueda anterior
                 searchDebounceTask?.cancel()
 
@@ -464,15 +464,17 @@ private struct RadialShopMapView: View {
 
             ZStack {
                 // Mapa rectangular con máscara radial condicional
-                Map(coordinateRegion: $region, annotationItems: shopPins) { pin in
-                    MapAnnotation(coordinate: pin.coordinate) {
-                        ShopMapPinView(
-                            pin: pin,
-                            action: {
-                                print("\(pin.type.label) seleccionado")
-                                resetInactivityTimer()
-                            }
-                        )
+                Map(position: mapPositionBinding) {
+                    ForEach(shopPins) { pin in
+                        Annotation("", coordinate: pin.coordinate) {
+                            ShopMapPinView(
+                                pin: pin,
+                                action: {
+                                    print("\(pin.type.label) seleccionado")
+                                    resetInactivityTimer()
+                                }
+                            )
+                        }
                     }
                 }
                 .frame(width: width, height: height)
@@ -557,6 +559,15 @@ private struct RadialShopMapView: View {
         inactivityTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { _ in
             collapseMap()
         }
+    }
+
+    private var mapPositionBinding: Binding<MapCameraPosition> {
+        Binding(
+            get: { .region(region) },
+            set: { newPosition in
+                _ = newPosition
+            }
+        )
     }
 }
 
@@ -853,15 +864,13 @@ private struct FullScreenMapView: View {
     let onStoreSelected: (StoreWithCoordinates) -> Void
 
     var body: some View {
-        Map(
-            coordinateRegion: $mapRegion,
-            annotationItems: stores
-        ) { store in
-            MapAnnotation(coordinate: store.coordinate) {
-                Button(action: {
-                    onStoreSelected(store)
-                }) {
-                    VStack(spacing: 0) {
+        Map(position: mapPositionBinding) {
+            ForEach(stores) { store in
+                Annotation("", coordinate: store.coordinate) {
+                    Button(action: {
+                        onStoreSelected(store)
+                    }) {
+                        VStack(spacing: 0) {
                         // Pin head con logo
                         ZStack {
                             Circle()
@@ -920,11 +929,21 @@ private struct FullScreenMapView: View {
                             )
                             .frame(width: 30, height: 8)
                             .offset(y: 4)
+                        }
                     }
+                    .buttonStyle(PlainButtonStyle())
                 }
-                .buttonStyle(PlainButtonStyle())
             }
         }
+    }
+
+    private var mapPositionBinding: Binding<MapCameraPosition> {
+        Binding(
+            get: { .region(mapRegion) },
+            set: { newPosition in
+                _ = newPosition
+            }
+        )
     }
 }
 

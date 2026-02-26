@@ -82,7 +82,7 @@ struct SearchView: View {
                 print("🔍 SearchView - onSubmit triggered with query: '\(searchText)'")
                 viewModel.search(query: searchText)
             }
-            .onChange(of: searchText) { newValue in
+            .onChange(of: searchText) { _, newValue in
                 print("🔍 SearchView - searchText changed to: '\(newValue)'")
                 // Limpiar resultados si se borra el texto
                 if newValue.isEmpty {
@@ -90,7 +90,7 @@ struct SearchView: View {
                     viewModel.clearSearch()
                 }
             }
-            .onChange(of: viewModel.selectedCategory) { newCategory in
+            .onChange(of: viewModel.selectedCategory) { _, newCategory in
                 print("🔍 SearchView - selectedCategory changed to: \(newCategory)")
                 // Recargar datos iniciales al cambiar categoría
                 if searchText.isEmpty {

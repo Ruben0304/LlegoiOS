@@ -97,7 +97,7 @@ final class PushNotificationManager: NSObject, ObservableObject {
             jwt: jwt.map { .some($0) } ?? .null
         )
         
-        apolloClient.perform(mutation: mutation) { [weak self] result in
+        apolloClient.performCompat(mutation: mutation) { [weak self] result in
             Task { @MainActor [weak self] in
                 switch result {
                 case .success(let graphQLResult):

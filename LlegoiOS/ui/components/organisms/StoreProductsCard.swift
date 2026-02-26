@@ -325,7 +325,7 @@ private struct StoreProductsCardFront: View {
                              // Trigger a state change to force re-evaluation if view recycles
                          }
                     }
-                    .onChange(of: extractedGradient) { newGradient in
+                    .onChange(of: extractedGradient) { _, newGradient in
                         withAnimation(.easeOut(duration: 0.5)) {
                             onGradientExtracted?(newGradient)
                         }
@@ -476,13 +476,6 @@ private struct StoreProductsCardFront: View {
     }
 }
 
-// MARK: - Store Annotation for Map
-private struct StoreAnnotation: Identifiable {
-    let id: String
-    let coordinate: CLLocationCoordinate2D
-    let store: StoreWithCoordinates
-}
-
 // MARK: - Back Side (Full Map View)
 private struct StoreProductsCardBack: View {
     let store: StoreWithCoordinates
@@ -529,9 +522,9 @@ private struct StoreProductsCardBack: View {
     var body: some View {
         ZStack {
             // Full screen map
-            Map(coordinateRegion: $mapRegion, annotationItems: [StoreAnnotation(id: store.id, coordinate: effectiveCoordinate, store: store)]) { annotation in
-                MapAnnotation(coordinate: annotation.coordinate) {
-                    StoreMapPin(store: annotation.store, isPulsing: isPulsing)
+            Map(position: mapPositionBinding) {
+                Annotation("", coordinate: effectiveCoordinate) {
+                    StoreMapPin(store: store, isPulsing: isPulsing)
                 }
             }
             .disabled(true)
@@ -558,10 +551,20 @@ private struct StoreProductsCardBack: View {
         }
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .onAppear {
+            mapRegion.center = effectiveCoordinate
             withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
                 isPulsing = true
             }
         }
+    }
+
+    private var mapPositionBinding: Binding<MapCameraPosition> {
+        Binding(
+            get: { .region(mapRegion) },
+            set: { newPosition in
+                _ = newPosition
+            }
+        )
     }
 }
 

@@ -81,7 +81,7 @@ struct PlansAndPricingView: View {
         .onAppear {
             print("🍎 Apple Pay Status: \(paymentManager.getApplePayStatus())")
         }
-        .onChange(of: paymentManager.paymentStatus) { status in
+        .onChange(of: paymentManager.paymentStatus) { _, status in
             switch status {
             case .success:
                 showPaymentSuccess = true

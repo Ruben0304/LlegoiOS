@@ -5,7 +5,7 @@ class ComboDetailRepository {
     private let apolloClient = ApolloClientManager.shared.apollo
 
     func fetchComboDetail(id: String, completion: @escaping @Sendable (Result<ComboDetailGraphQL, Error>) -> Void) {
-        apolloClient.fetch(
+        apolloClient.fetchCompat(
             query: LlegoAPI.GetComboDetailQuery(comboId: id),
             cachePolicy: .returnCacheDataAndFetch
         ) { result in
@@ -83,7 +83,7 @@ class ComboDetailRepository {
     }
 
     func fetchCombosByBranch(branchId: String, completion: @escaping @Sendable (Result<[ComboDetailGraphQL], Error>) -> Void) {
-        apolloClient.fetch(
+        apolloClient.fetchCompat(
             query: LlegoAPI.GetCombosByBranchQuery(branchId: branchId),
             cachePolicy: .returnCacheDataAndFetch
         ) { result in

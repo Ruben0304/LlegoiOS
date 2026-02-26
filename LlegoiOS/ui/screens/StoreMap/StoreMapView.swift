@@ -107,15 +107,13 @@ struct StoreMapView: View {
 
     // MARK: - Map Content
     private var mapContent: some View {
-        Map(
-            coordinateRegion: $mapRegion,
-            annotationItems: viewModel.stores
-        ) { store in
-            MapAnnotation(coordinate: store.coordinate) {
-                Button(action: {
-                    selectedStore = store
-                }) {
-                    VStack(spacing: 0) {
+        Map(position: mapPositionBinding) {
+            ForEach(viewModel.stores) { store in
+                Annotation("", coordinate: store.coordinate) {
+                    Button(action: {
+                        selectedStore = store
+                    }) {
+                        VStack(spacing: 0) {
                         ZStack {
                             Circle()
                                 .fill(Color.llegoPrimary)
@@ -173,9 +171,10 @@ struct StoreMapView: View {
                             )
                             .frame(width: 30, height: 8)
                             .offset(y: 4)
+                        }
                     }
+                    .buttonStyle(PlainButtonStyle())
                 }
-                .buttonStyle(PlainButtonStyle())
             }
         }
         .ignoresSafeArea()
@@ -258,6 +257,15 @@ struct StoreMapView: View {
                 span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
             )
         }
+    }
+
+    private var mapPositionBinding: Binding<MapCameraPosition> {
+        Binding(
+            get: { .region(mapRegion) },
+            set: { newPosition in
+                _ = newPosition
+            }
+        )
     }
 }
 

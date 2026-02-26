@@ -37,7 +37,7 @@ struct FavoritesView: View {
             .onAppear {
                 viewModel.loadFavorites()
             }
-            .onChange(of: favoritesManager.favoriteItemCount) { _ in
+            .onChange(of: favoritesManager.favoriteItemCount) { _, _ in
                 viewModel.loadFavorites()
             }
         }

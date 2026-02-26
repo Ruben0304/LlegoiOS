@@ -22,7 +22,7 @@ final class OrderDetailRepository {
             
             let query = LlegoAPI.GetOrderDetailQuery(id: id, jwt: jwt)
             
-            client.fetch(query: query, cachePolicy: .fetchIgnoringCacheData) { [weak self] result in
+            client.fetchCompat(query: query, cachePolicy: .fetchIgnoringCacheData) { [weak self] result in
                 Task { @MainActor in
                     guard let self = self else { return }
                     
@@ -67,7 +67,7 @@ final class OrderDetailRepository {
             
             let mutation = LlegoAPI.AcceptOrderModificationsMutation(orderId: orderId, jwt: jwt)
             
-            client.perform(mutation: mutation) { [weak self] result in
+            client.performCompat(mutation: mutation) { [weak self] result in
                 Task { @MainActor in
                     switch result {
                     case .success(let graphQLResult):
@@ -106,7 +106,7 @@ final class OrderDetailRepository {
                 jwt: jwt
             )
             
-            client.perform(mutation: mutation) { [weak self] result in
+            client.performCompat(mutation: mutation) { [weak self] result in
                 Task { @MainActor in
                     switch result {
                     case .success(let graphQLResult):
@@ -142,7 +142,7 @@ final class OrderDetailRepository {
             let input = LlegoAPI.AddOrderCommentInput(orderId: orderId, message: message)
             let mutation = LlegoAPI.AddOrderCommentMutation(input: input, jwt: jwt)
             
-            client.perform(mutation: mutation) { result in
+            client.performCompat(mutation: mutation) { result in
                 Task { @MainActor in
                     switch result {
                     case .success(let graphQLResult):

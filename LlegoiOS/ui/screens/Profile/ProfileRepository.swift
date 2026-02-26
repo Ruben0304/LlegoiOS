@@ -10,7 +10,7 @@ class ProfileRepository {
             let input = LlegoAPI.LoginInput(email: email, password: password)
             let mutation = LlegoAPI.LoginMutation(input: input)
 
-            apolloClient.perform(mutation: mutation) { result in
+            apolloClient.performCompat(mutation: mutation) { result in
                 switch result {
                 case .success(let graphQLResult):
                     if let errors = graphQLResult.errors {
@@ -76,7 +76,7 @@ class ProfileRepository {
             )
             let mutation = LlegoAPI.RegisterMutation(input: input)
 
-            apolloClient.perform(mutation: mutation) { result in
+            apolloClient.performCompat(mutation: mutation) { result in
                 switch result {
                 case .success(let graphQLResult):
                     if let errors = graphQLResult.errors {
@@ -141,7 +141,7 @@ class ProfileRepository {
             )
             let mutation = LlegoAPI.LoginWithGoogleMutation(input: input)
 
-            apolloClient.perform(mutation: mutation) { result in
+            apolloClient.performCompat(mutation: mutation) { result in
                 switch result {
                 case .success(let graphQLResult):
                     if let errors = graphQLResult.errors {
@@ -206,7 +206,7 @@ class ProfileRepository {
             )
             let mutation = LlegoAPI.LoginWithAppleMutation(input: input)
 
-            apolloClient.perform(mutation: mutation) { result in
+            apolloClient.performCompat(mutation: mutation) { result in
                 switch result {
                 case .success(let graphQLResult):
                     if let errors = graphQLResult.errors {
@@ -265,7 +265,7 @@ class ProfileRepository {
     func fetchCurrentUser(jwt: String) async throws -> User {
         return try await withCheckedThrowingContinuation { continuation in
             let query = LlegoAPI.MeQuery(jwt: jwt)
-            apolloClient.fetch(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
+            apolloClient.fetchCompat(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
                 switch result {
                 case .success(let graphQLResult):
                     if let errors = graphQLResult.errors {
@@ -338,7 +338,7 @@ class ProfileRepository {
             )
             let mutation = LlegoAPI.UpdateUserMutation(input: input, jwt: jwt)
 
-            apolloClient.perform(mutation: mutation) { result in
+            apolloClient.performCompat(mutation: mutation) { result in
                 switch result {
                 case .success(let graphQLResult):
                     if let errors = graphQLResult.errors {
@@ -392,7 +392,7 @@ class ProfileRepository {
         return try await withCheckedThrowingContinuation { continuation in
             let searchQuery = LlegoAPI.SearchUsersQuery(query: query, jwt: jwt)
             
-            apolloClient.fetch(query: searchQuery, cachePolicy: .fetchIgnoringCacheData) { result in
+            apolloClient.fetchCompat(query: searchQuery, cachePolicy: .fetchIgnoringCacheData) { result in
                 switch result {
                 case .success(let graphQLResult):
                     if let errors = graphQLResult.errors {

@@ -57,7 +57,7 @@ final class CreateOrderRepository {
             
             let mutation = LlegoAPI.CreateOrderMutation(input: input, jwt: jwt)
             
-            client.perform(mutation: mutation) { [weak self] result in
+            client.performCompat(mutation: mutation) { [weak self] result in
                 Task { @MainActor in
                     guard let self = self else { return }
                     

@@ -273,7 +273,7 @@ private extension BusinessTypeConfigManager {
             let lastSync = getLastSyncDate()
             let query = LlegoAPI.GetBusinessTypeConfigsQuery(lastSyncAt: lastSync.map { .some($0) } ?? .none)
             
-            apolloClient.fetch(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
+            apolloClient.fetchCompat(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
                 switch result {
                 case .success(let graphQLResult):
                     guard let data = graphQLResult.data else {

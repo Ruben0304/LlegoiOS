@@ -59,7 +59,7 @@ struct LoginView: View {
     // Altura esperada del título completo para evitar saltos de layout
     // Usamos el ancho de pantalla menos los paddings horizontales del header (24 + 24)
     private var expectedTitleHeight: CGFloat {
-        let availableWidth = UIScreen.main.bounds.width - 48
+        let availableWidth = (UIScreen.screens.first?.bounds.width ?? 390) - 48
         // Medimos el alto del texto completo con la misma fuente y lineSpacing
         let label = UILabel()
         label.numberOfLines = 0
@@ -136,13 +136,13 @@ struct LoginView: View {
                 }
             }
         }
-        .onChange(of: selectedTab) { _ in
+        .onChange(of: selectedTab) { _, _ in
             focusedLoginField = nil
             focusedRegisterField = nil
             showLoginPassword = false
             showRegisterPassword = false
         }
-        .onChange(of: viewModel.state) { newState in
+        .onChange(of: viewModel.state) { _, newState in
             if case .authenticated = newState {
                 onAuthenticated?()
             }

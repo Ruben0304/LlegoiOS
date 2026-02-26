@@ -83,7 +83,7 @@ final class ConversationalSearchRepository {
 
             print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
-            client.fetch(
+            client.fetchCompat(
                 query: LlegoAPI.AIChatQuery(
                     message: message,
                     deviceId: deviceIdInput,

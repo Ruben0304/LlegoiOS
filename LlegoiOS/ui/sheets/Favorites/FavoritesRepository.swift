@@ -21,7 +21,7 @@ class FavoritesRepository {
         let productIds = localItems.map { $0.productId }
         print("🔎 Querying GraphQL for favorite IDs: \(productIds)")
 
-        apolloClient.fetch(
+        apolloClient.fetchCompat(
             query: LlegoAPI.GetCartProductsQuery(
                 first: Int32(100),
                 after: .none,

@@ -29,7 +29,7 @@ class CartRepository {
         let productIds = localItems.map { $0.productId }
         print("🔎 Querying GraphQL for product IDs: \(productIds)")
 
-        apolloClient.fetch(
+        apolloClient.fetchCompat(
             query: LlegoAPI.GetCartProductsQuery(
                 first: Int32(100),
                 after: .none,
@@ -101,7 +101,7 @@ class CartRepository {
 
             print("🚚 CartRepository: Estimating delivery fee for branch \(branchId)...")
 
-            client.fetch(
+            client.fetchCompat(
                 query: LlegoAPI.EstimateDeliveryFeeQuery(
                     branchId: branchId,
                     jwt: jwt
@@ -177,7 +177,7 @@ class CartRepository {
                 jwt: jwt.map { .some($0) } ?? .none
             )
 
-            client.fetch(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
+            client.fetchCompat(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
                 switch result {
                 case .success(let graphQLResult):
                     if let errors = graphQLResult.errors {
@@ -272,7 +272,7 @@ class CartRepository {
                 jwt: jwt.map { .some($0) } ?? .none
             )
 
-            client.fetch(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
+            client.fetchCompat(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
                 switch result {
                 case .success(let graphQLResult):
                     if let errors = graphQLResult.errors {

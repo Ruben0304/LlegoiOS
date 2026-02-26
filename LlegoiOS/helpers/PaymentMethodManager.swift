@@ -73,7 +73,7 @@ class PaymentMethodManager: ObservableObject {
                     branchId: branchId.map { .some($0) } ?? .none
                 )
                 
-                apolloClient.fetch(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
+                apolloClient.fetchCompat(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
                     switch result {
                     case .success(let graphQLResult):
                         if let errors = graphQLResult.errors {

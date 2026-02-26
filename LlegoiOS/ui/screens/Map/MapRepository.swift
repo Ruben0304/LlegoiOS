@@ -28,7 +28,7 @@ class MapRepository {
                 jwt: jwt.map { .some($0) } ?? .none
             )
 
-            client.fetch(query: query, cachePolicy: .returnCacheDataAndFetch) { result in
+            client.fetchCompat(query: query, cachePolicy: .returnCacheDataAndFetch) { result in
                 switch result {
                 case .success(let graphQLResult):
                     if let errors = graphQLResult.errors {
