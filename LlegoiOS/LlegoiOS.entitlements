@@ -14,8 +14,9 @@
 		<string>applinks:www.llego.app</string>
 	</array>
 	<key>com.apple.developer.in-app-payments</key>
-	<array/>
-	<key>com.apple.developer.foundation-models</key>
-	<true/>
+	<array>
+		<string>merchant.com.llego.ios</string>
+		<string>merchant.com.llego.multiplatform</string>
+	</array>
 </dict>
 </plist>

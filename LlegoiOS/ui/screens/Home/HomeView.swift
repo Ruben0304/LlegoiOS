@@ -13,12 +13,7 @@ struct HomeView: View {
     // Business type config manager (dynamic types)
     @StateObject private var configManager = BusinessTypeConfigManager.shared
 
-    // Cart manager
-    @StateObject private var cartManager = CartManager.shared
     @ObservedObject private var authManager = AuthManager.shared
-
-    // Wallet manager (shared)
-    @StateObject private var walletManager = WalletViewModel.shared
 
     // Home ViewModel
     @StateObject private var viewModel = HomeViewModel()
@@ -39,10 +34,11 @@ struct HomeView: View {
     @State private var navigateToProfile: Bool = false
     @State private var navigateToOrders: Bool = false
     @State private var navigateToConversationalSearch: Bool = false
-    @State private var showingWallet: Bool = false
+    @State private var showCart: Bool = false
     @State private var navigateToPlansAndPricing: Bool = false
     @State private var isCheckingAccount: Bool = false
     @State private var redirectToOrdersAfterLogin: Bool = false
+    @State private var cartSubtotal: Double = 0
 
     // Carousel state
     @State private var currentIndex: Int = 0
@@ -379,8 +375,8 @@ struct HomeView: View {
                     ConversationalSearchView(categoryIndex: currentIndex)
                 }
             }
-            .fullScreenCover(isPresented: $showingWallet) {
-                WalletView()
+            .fullScreenCover(isPresented: $showCart) {
+                CartView()
             }
             .navigationDestination(isPresented: $navigateToLogin) {
                 LoginView(viewModel: ProfileViewModel()) {
@@ -406,23 +402,7 @@ struct HomeView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        showingWallet = true
-                    }) {
-                        if walletManager.isLoading {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle())
-                        } else {
-                            HStack(spacing: 4) {
-                                Image(systemName: "creditcard")
-                                    .font(.system(size: 16, weight: .semibold))
-                                Text(String(format: "$%.2f", walletManager.balance))
-                                    .font(.system(size: 14, weight: .semibold))
-                            }
-                            .foregroundColor(.black)
-                        }
-                    }
-                    .accessibilityLabel("Wallet")
+                    cartToolbarButton
                 }
 
                 ToolbarSpacer(.fixed,placement: .navigationBarTrailing)
@@ -505,8 +485,8 @@ struct HomeView: View {
                 preparePressSound()
                 // Initialize branch type based on current category
                 branchTypeManager.setTypeFromCategoryIndex(currentIndex)
-                // Load wallet balance
-                walletManager.loadBalance()
+                // Load cart subtotal for toolbar
+                refreshCartSubtotal()
                 // DEBUG: Print full JWT token on Home screen appear
                 if let jwt = authManager.getAccessToken() {
                     print("🔐 JWT (FULL): \(jwt)")
@@ -561,6 +541,37 @@ struct HomeView: View {
             .delay(1.3)
         ) {
             balanceFloat = -5
+        }
+    }
+
+    private var cartToolbarButton: some View {
+        Button(action: {
+            showCart = true
+        }) {
+            HStack(spacing: 4) {
+                Image(systemName: "cart")
+                    .font(.system(size: 16, weight: .semibold))
+                Text(String(format: "$%.2f", cartSubtotal))
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .foregroundColor(.black)
+        }
+        .accessibilityLabel("Carrito")
+    }
+
+    private func refreshCartSubtotal() {
+        CartRepository().fetchCartProducts { result in
+            switch result {
+            case .success(let cartProducts):
+                let subtotal = cartProducts.reduce(0.0) { $0 + ($1.price * Double($1.quantity)) }
+                Task { @MainActor in
+                    cartSubtotal = subtotal
+                }
+            case .failure:
+                Task { @MainActor in
+                    cartSubtotal = 0
+                }
+            }
         }
     }
 
@@ -710,4 +721,3 @@ struct Feature: Identifiable {
     let title: String
     let subtitle: String
 }
-
