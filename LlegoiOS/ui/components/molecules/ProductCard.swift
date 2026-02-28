@@ -161,8 +161,7 @@ struct ProductCard: View {
                     content: { image in
                         image
                             .resizable()
-                            .scaledToFit()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .scaledToFill()
                     },
                     placeholder: {
                         ZStack {
