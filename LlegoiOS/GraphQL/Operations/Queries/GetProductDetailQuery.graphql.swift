@@ -9,16 +9,24 @@ public extension LlegoAPI {
     public static let operationName: String = "GetProductDetail"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetProductDetail($id: String!) { product(id: $id) { __typename id branchId name description weight price currency imageUrl availability categoryId createdAt branch { __typename id name avatarUrl } business { __typename id name avatarUrl } } }"#
+        #"query GetProductDetail($id: String!, $jwt: String) { product(id: $id, jwt: $jwt) { __typename id branchId name description weight price currency imageUrl availability categoryId variantListIds variantLists { __typename id name description options { __typename id name priceAdjustment } } createdAt branch { __typename id name avatarUrl } business { __typename id name avatarUrl } } }"#
       ))
 
     public var id: String
+    public var jwt: GraphQLNullable<String>
 
-    public init(id: String) {
+    public init(
+      id: String,
+      jwt: GraphQLNullable<String>
+    ) {
       self.id = id
+      self.jwt = jwt
     }
 
-    @_spi(Unsafe) public var __variables: Variables? { ["id": id] }
+    @_spi(Unsafe) public var __variables: Variables? { [
+      "id": id,
+      "jwt": jwt
+    ] }
 
     public struct Data: LlegoAPI.SelectionSet {
       @_spi(Unsafe) public let __data: DataDict
@@ -26,7 +34,10 @@ public extension LlegoAPI {
 
       @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.Query }
       @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
-        .field("product", Product?.self, arguments: ["id": .variable("id")]),
+        .field("product", Product?.self, arguments: [
+          "id": .variable("id"),
+          "jwt": .variable("jwt")
+        ]),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
         GetProductDetailQuery.Data.self
@@ -55,6 +66,8 @@ public extension LlegoAPI {
           .field("imageUrl", String.self),
           .field("availability", Bool.self),
           .field("categoryId", String?.self),
+          .field("variantListIds", [String].self),
+          .field("variantLists", [VariantList].self),
           .field("createdAt", LlegoAPI.DateTime.self),
           .field("branch", Branch?.self),
           .field("business", Business?.self),
@@ -74,11 +87,62 @@ public extension LlegoAPI {
         public var imageUrl: String { __data["imageUrl"] }
         public var availability: Bool { __data["availability"] }
         public var categoryId: String? { __data["categoryId"] }
+        public var variantListIds: [String] { __data["variantListIds"] }
+        /// Variant lists assigned to this product
+        public var variantLists: [VariantList] { __data["variantLists"] }
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
         /// Branch associated with this product
         public var branch: Branch? { __data["branch"] }
         /// Business associated with this product (through branch)
         public var business: Business? { __data["business"] }
+
+        /// Product.VariantList
+        ///
+        /// Parent Type: `VariantListType`
+        public struct VariantList: LlegoAPI.SelectionSet {
+          @_spi(Unsafe) public let __data: DataDict
+          @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+          @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.VariantListType }
+          @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+            .field("__typename", String.self),
+            .field("id", String.self),
+            .field("name", String.self),
+            .field("description", String?.self),
+            .field("options", [Option].self),
+          ] }
+          @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+            GetProductDetailQuery.Data.Product.VariantList.self
+          ] }
+
+          public var id: String { __data["id"] }
+          public var name: String { __data["name"] }
+          public var description: String? { __data["description"] }
+          public var options: [Option] { __data["options"] }
+
+          /// Product.VariantList.Option
+          ///
+          /// Parent Type: `VariantOptionType`
+          public struct Option: LlegoAPI.SelectionSet {
+            @_spi(Unsafe) public let __data: DataDict
+            @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+            @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.VariantOptionType }
+            @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+              .field("__typename", String.self),
+              .field("id", String.self),
+              .field("name", String.self),
+              .field("priceAdjustment", Double.self),
+            ] }
+            @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+              GetProductDetailQuery.Data.Product.VariantList.Option.self
+            ] }
+
+            public var id: String { __data["id"] }
+            public var name: String { __data["name"] }
+            public var priceAdjustment: Double { __data["priceAdjustment"] }
+          }
+        }
 
         /// Product.Branch
         ///

@@ -1,7 +1,7 @@
-import SwiftUI
-import StripePaymentSheet
-import LocalAuthentication
 import AudioToolbox
+import LocalAuthentication
+import StripePaymentSheet
+import SwiftUI
 
 enum Currency: String, CaseIterable {
     case CUP = "CUP"
@@ -74,8 +74,7 @@ struct CartView: View {
     var filteredPaymentMethods: [PaymentMethod] {
         let currencyCode = selectedCurrency.rawValue
         return availablePaymentMethods.filter { method in
-            method.currency.uppercased() == currencyCode ||
-            method.currency.contains(currencyCode) // Para casos como "CUP/USD"
+            method.currency.uppercased() == currencyCode || method.currency.contains(currencyCode)  // Para casos como "CUP/USD"
         }
     }
 
@@ -85,7 +84,8 @@ struct CartView: View {
                 // Fondo gradiente sutil sincronizado
                 cartGradientBackground
                     .ignoresSafeArea()
-                    .animation(.easeInOut(duration: 0.8), value: gradientManager.currentCategoryIndex)
+                    .animation(
+                        .easeInOut(duration: 0.8), value: gradientManager.currentCategoryIndex)
 
                 // Flying particles overlay for add-to-cart animation
                 flyingParticlesOverlay
@@ -133,31 +133,42 @@ struct CartView: View {
                         VStack(spacing: 12) {
                             // Tarjeta única con todos los items del carrito
                             VStack(spacing: 0) {
-                                ForEach(Array(viewModel.cartItems.enumerated()), id: \.element.id) { index, item in
+                                ForEach(Array(viewModel.cartItems.enumerated()), id: \.element.id) {
+                                    index, item in
                                     VStack(spacing: 0) {
                                         CartItemCard(
                                             item: item,
                                             onIncrement: {
-                                                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                                                    viewModel.incrementQuantity(productId: item.id)
+                                                withAnimation(
+                                                    .spring(response: 0.6, dampingFraction: 0.8)
+                                                ) {
+                                                    viewModel.incrementQuantity(cartItemId: item.id)
                                                 }
                                             },
                                             onDecrement: {
-                                                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                                                    viewModel.decrementQuantity(productId: item.id)
+                                                withAnimation(
+                                                    .spring(response: 0.6, dampingFraction: 0.8)
+                                                ) {
+                                                    viewModel.decrementQuantity(cartItemId: item.id)
                                                 }
                                             },
                                             onRemove: {
-                                                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                                                    viewModel.removeFromCart(productId: item.id)
+                                                withAnimation(
+                                                    .spring(response: 0.6, dampingFraction: 0.8)
+                                                ) {
+                                                    viewModel.removeFromCart(cartItemId: item.id)
                                                 }
                                             }
                                         )
-                                        .transition(.asymmetric(
-                                            insertion: .scale.combined(with: .opacity),
-                                            removal: .scale.combined(with: .opacity)
-                                        ))
-                                        .animation(.easeInOut(duration: 0.3).delay(Double(index) * 0.05), value: viewModel.cartItems.count)
+                                        .transition(
+                                            .asymmetric(
+                                                insertion: .scale.combined(with: .opacity),
+                                                removal: .scale.combined(with: .opacity)
+                                            )
+                                        )
+                                        .animation(
+                                            .easeInOut(duration: 0.3).delay(Double(index) * 0.05),
+                                            value: viewModel.cartItems.count)
 
                                         if index < viewModel.cartItems.count - 1 {
                                             Divider()
@@ -248,7 +259,7 @@ struct CartView: View {
                     }
                 }
             }
-//            .modifier(NavigationBarWhiteBackground())
+            //            .modifier(NavigationBarWhiteBackground())
             .sheet(isPresented: $showPaymentMethodPicker) {
                 PaymentMethodPickerView(
                     paymentMethods: filteredPaymentMethods,
@@ -356,12 +367,12 @@ struct CartView: View {
                     pendingPaymentAfterAddressSelection = true
                     showAddressPicker = true
                 }
-                Button("Cancelar", role: .cancel) { }
+                Button("Cancelar", role: .cancel) {}
             } message: {
                 Text(deliveryAddressAlertMessage)
             }
             .alert("Estado del Pago", isPresented: $showPaymentAlert) {
-                Button("OK", role: .cancel) { }
+                Button("OK", role: .cancel) {}
             } message: {
                 Text(paymentAlertMessage)
             }
@@ -396,7 +407,7 @@ struct CartView: View {
             }
             .fullScreenCover(isPresented: $showOrderConfirmation) {
                 OrderConfirmationView(
-                    deliveryLocation: "Calle 23 #456, Vedado, La Habana", //TODO: Usar ubicación real del usuario
+                    deliveryLocation: "Calle 23 #456, Vedado, La Habana",  //TODO: Usar ubicación real del usuario
                     selectedPaymentMethod: selectedPaymentMethod?.name ?? "Método de Pago"
                 )
             }
@@ -404,7 +415,6 @@ struct CartView: View {
                 PlansAndPricingView()
             }
         }
-
 
     }
 
@@ -422,7 +432,9 @@ struct CartView: View {
                 gradient: Gradient(stops: [
                     .init(color: palette.light.opacity(0.15), location: 0.0),
                     .init(color: palette.veryLight.opacity(0.3), location: 0.4),
-                    .init(color: Color.white.opacity(colorScheme == .dark ? 0.05 : 0.95), location: 1.0)
+                    .init(
+                        color: Color.white.opacity(colorScheme == .dark ? 0.05 : 0.95),
+                        location: 1.0),
                 ]),
                 center: UnitPoint(x: 0.85, y: 0.15),
                 startRadius: 10,
@@ -548,15 +560,15 @@ struct CartView: View {
     private func processPayment() {
         // Validaciones iniciales
         if viewModel.cartItems.isEmpty {
-             paymentAlertMessage = "No hay productos en el carrito."
-             showPaymentAlert = true
-             return
+            paymentAlertMessage = "No hay productos en el carrito."
+            showPaymentAlert = true
+            return
         }
 
         guard let paymentMethod = selectedPaymentMethod else {
-             paymentAlertMessage = "Por favor selecciona un método de pago."
-             showPaymentAlert = true
-             return
+            paymentAlertMessage = "Por favor selecciona un método de pago."
+            showPaymentAlert = true
+            return
         }
 
         // Autenticación Biométrica (FaceID / TouchID)
@@ -569,9 +581,12 @@ struct CartView: View {
 
         // Verificar si el dispositivo soporta biometría
         if context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) {
-            let reason = "Confirma tu identidad para realizar el pago de \(viewModel.formattedTotal)"
+            let reason =
+                "Confirma tu identidad para realizar el pago de \(viewModel.formattedTotal)"
 
-            context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: reason) { success, authenticationError in
+            context.evaluatePolicy(
+                .deviceOwnerAuthenticationWithBiometrics, localizedReason: reason
+            ) { success, authenticationError in
                 DispatchQueue.main.async {
                     if success {
                         // ✅ Éxito: Sonido, Haptic y Proceder
@@ -580,8 +595,8 @@ struct CartView: View {
                     } else {
                         // ❌ Fallo o Cancelación
                         if let error = authenticationError as? LAError {
-                             // Manejar errores específicos si es necesario
-                             print("Authentication failed: \(error.localizedDescription)")
+                            // Manejar errores específicos si es necesario
+                            print("Authentication failed: \(error.localizedDescription)")
                         }
                     }
                 }
@@ -621,14 +636,16 @@ struct CartView: View {
                             createOrderWithPaymentMethod(paymentMethod.id)
                         } else {
                             let currencyLabel = selectedCurrency.rawValue
-                            paymentAlertMessage = "Saldo insuficiente en tu wallet. Tienes \(String(format: "%.2f", available)) \(currencyLabel) y el pedido requiere \(String(format: "%.2f", viewModel.total)) \(currencyLabel)."
+                            paymentAlertMessage =
+                                "Saldo insuficiente en tu wallet. Tienes \(String(format: "%.2f", available)) \(currencyLabel) y el pedido requiere \(String(format: "%.2f", viewModel.total)) \(currencyLabel)."
                             showPaymentAlert = true
                         }
                     }
                 } catch {
                     await MainActor.run {
                         isLoadingPayment = false
-                        paymentAlertMessage = "No se pudo verificar el saldo: \(error.localizedDescription)"
+                        paymentAlertMessage =
+                            "No se pudo verificar el saldo: \(error.localizedDescription)"
                         showPaymentAlert = true
                     }
                 }
@@ -642,7 +659,9 @@ struct CartView: View {
     }
 
     // MARK: - Create Order
-    private func createOrderWithPaymentMethod(_ paymentMethodId: String, paymentIntentId: String? = nil) {
+    private func createOrderWithPaymentMethod(
+        _ paymentMethodId: String, paymentIntentId: String? = nil
+    ) {
         isLoadingPayment = true
 
         viewModel.createOrder(
@@ -664,7 +683,8 @@ struct CartView: View {
 
                 case .failure(let error):
                     print("❌ Error creando pedido: \(error.localizedDescription)")
-                    self.paymentAlertMessage = "Error al crear el pedido: \(error.localizedDescription)"
+                    self.paymentAlertMessage =
+                        "Error al crear el pedido: \(error.localizedDescription)"
                     self.showPaymentAlert = true
                 }
             }
@@ -686,10 +706,10 @@ struct CartView: View {
         /* CÓDIGO LEGACY - COMENTADO
         // Convertir el total a centavos
         let amountInCents = Int(viewModel.total * 100)
-
+        
         print("🔗 Generando Payment Link")
         print("💰 Monto: \(amountInCents) centavos (\(viewModel.formattedTotal))")
-
+        
         paymentRepository.createPaymentLink(
             amount: amountInCents,
             currency: "usd",
@@ -701,13 +721,13 @@ struct CartView: View {
         ) { [self] result in
             Task { @MainActor in
                 self.isLoadingPayment = false
-
+        
                 switch result {
                 case .success(let paymentLinkURL):
                     print("✅ Payment Link generado exitosamente")
                     self.generatedPaymentLink = paymentLinkURL
                     self.showPaymentLinkSheet = true
-
+        
                 case .failure(let error):
                     print("❌ Error generando Payment Link: \(error.localizedDescription)")
                     self.paymentAlertMessage = "Error al generar el link de pago: \(error.localizedDescription)"
@@ -733,14 +753,14 @@ struct CartView: View {
         /* CÓDIGO LEGACY - COMENTADO
         // Convertir el total a centavos (Stripe maneja montos en centavos)
         let amountInCents = Int(viewModel.total * 100)
-
+        
         print("💳 Iniciando pago con Stripe")
         print("💰 Monto: \(amountInCents) centavos (\(viewModel.formattedTotal))")
-
+        
         // Verificar si estamos en modo mock
         if StripeConfig.useMockData {
             print("🧪 Usando MOCK MODE - llamando directamente a Stripe API (solo para testing)")
-
+        
             // Crear PaymentIntent directamente con Stripe API (SOLO PARA TESTING)
             paymentRepository.createPaymentIntentDirectly(
                 amount: amountInCents,
@@ -748,12 +768,12 @@ struct CartView: View {
             ) { [self] result in
                 Task { @MainActor in
                     self.isLoadingPayment = false
-
+        
                     switch result {
                     case .success(let response):
                         print("✅ [MOCK MODE] PaymentIntent creado exitosamente")
                         self.configurePaymentSheet(response: response)
-
+        
                     case .failure(let error):
                         print("❌ [MOCK MODE] Error creando PaymentIntent: \(error.localizedDescription)")
                         self.paymentAlertMessage = "Error al iniciar el pago: \(error.localizedDescription)"
@@ -763,7 +783,7 @@ struct CartView: View {
             }
         } else {
             print("🏭 Usando modo PRODUCCIÓN - llamando al backend")
-
+        
             // Crear PaymentIntent en el backend (PRODUCCIÓN)
             paymentRepository.createPaymentIntent(
                 amount: amountInCents,
@@ -777,12 +797,12 @@ struct CartView: View {
             ) { [self] result in
                 Task { @MainActor in
                     self.isLoadingPayment = false
-
+        
                     switch result {
                     case .success(let response):
                         print("✅ PaymentIntent creado exitosamente")
                         self.configurePaymentSheet(response: response)
-
+        
                     case .failure(let error):
                         print("❌ Error creando PaymentIntent: \(error.localizedDescription)")
                         self.paymentAlertMessage = "Error al iniciar el pago: \(error.localizedDescription)"
@@ -862,7 +882,8 @@ struct CartView: View {
 
         // Obtener el UIViewController actual
         guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let rootViewController = windowScene.windows.first?.rootViewController else {
+            let rootViewController = windowScene.windows.first?.rootViewController
+        else {
             print("❌ No se pudo obtener el rootViewController")
             return
         }
@@ -943,7 +964,10 @@ struct CartView: View {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
                         .fill(
                             LinearGradient(
-                                colors: [Color(red: 0.36, green: 0.18, blue: 0.90), Color(red: 0.55, green: 0.22, blue: 0.98)],
+                                colors: [
+                                    Color(red: 0.36, green: 0.18, blue: 0.90),
+                                    Color(red: 0.55, green: 0.22, blue: 0.98),
+                                ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -1057,7 +1081,7 @@ struct CartView: View {
                         LinearGradient(
                             colors: [
                                 gradientManager.currentAccentColor.opacity(0.22),
-                                gradientManager.currentAccentColor.opacity(0.12)
+                                gradientManager.currentAccentColor.opacity(0.12),
                             ],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
@@ -1105,10 +1129,12 @@ struct CartView: View {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(.orange)
-            Text("Solo puedes pedir a una tienda a la vez. Elimina productos de otras tiendas para continuar.")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.primary)
-                .fixedSize(horizontal: false, vertical: true)
+            Text(
+                "Solo puedes pedir a una tienda a la vez. Elimina productos de otras tiendas para continuar."
+            )
+            .font(.system(size: 12, weight: .medium))
+            .foregroundColor(.primary)
+            .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -1192,9 +1218,11 @@ struct CartView: View {
     private var deliveryAddressAlertMessage: String {
         if let selected = viewModel.selectedAddress {
             let title = selected.label.isEmpty ? "Dirección guardada" : selected.label
-            return "\(title): \(selected.street)\n\n¿Deseas continuar con esta dirección o elegir otra?"
+            return
+                "\(title): \(selected.street)\n\n¿Deseas continuar con esta dirección o elegir otra?"
         }
-        return "Dirección actual: \(UserLocationManager.shared.userAddress)\n\n¿Deseas continuar con esta dirección o elegir otra?"
+        return
+            "Dirección actual: \(UserLocationManager.shared.userAddress)\n\n¿Deseas continuar con esta dirección o elegir otra?"
     }
 
     private var priceBreakdown: some View {
@@ -1224,7 +1252,11 @@ struct CartView: View {
                     if !viewModel.deliveryFeeDescription.isEmpty {
                         Text("· \(viewModel.deliveryFeeDescription)")
                             .font(.system(size: 13, weight: .regular))
-                            .foregroundColor(viewModel.deliveryFeeError != nil && viewModel.deliveryFeeEstimate == nil ? .red : Color(.tertiaryLabel))
+                            .foregroundColor(
+                                viewModel.deliveryFeeError != nil
+                                    && viewModel.deliveryFeeEstimate == nil
+                                    ? .red : Color(.tertiaryLabel)
+                            )
                             .lineLimit(1)
                     }
                     Spacer()
@@ -1267,9 +1299,11 @@ struct CartView: View {
                         Text("Ahorra viendo una promoción")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(.primary)
-                        Text("\(viewModel.formattedTotalWithDiscount) · ahorras \(viewModel.formattedPotentialSavings)")
-                            .font(.system(size: 13, weight: .regular))
-                            .foregroundColor(.secondary)
+                        Text(
+                            "\(viewModel.formattedTotalWithDiscount) · ahorras \(viewModel.formattedPotentialSavings)"
+                        )
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(.secondary)
                     }
 
                     Spacer()
@@ -1298,7 +1332,9 @@ struct CartView: View {
         }
     }
 
-    private func priceRow(label: String, value: String, labelWeight: Font.Weight, valueWeight: Font.Weight) -> some View {
+    private func priceRow(
+        label: String, value: String, labelWeight: Font.Weight, valueWeight: Font.Weight
+    ) -> some View {
         HStack {
             Text(label)
                 .font(.system(size: 14, weight: labelWeight))
@@ -1457,7 +1493,7 @@ struct PaymentMethodPickerView: View {
 
                 ScrollView {
                     VStack(spacing: 16) {
-//                        header
+                        //                        header
                         paymentList
                     }
                 }
@@ -1480,10 +1516,12 @@ struct PaymentMethodPickerView: View {
                 .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundColor(.primary)
 
-            Text("Elige la opción que prefieras. Mostramos sólo la información esencial para que la decisión sea rápida.")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            Text(
+                "Elige la opción que prefieras. Mostramos sólo la información esencial para que la decisión sea rápida."
+            )
+            .font(.system(size: 14, weight: .medium))
+            .foregroundColor(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.horizontal, 16)
         .padding(.top, 16)
@@ -1617,6 +1655,34 @@ struct CartItemCard: View {
                         .font(.system(size: 15, weight: .bold, design: .rounded))
                         .foregroundColor(.llegoPrimary)
                 }
+
+                if !item.selectedVariants.isEmpty {
+                    VStack(alignment: .leading, spacing: 2) {
+                        ForEach(item.selectedVariants, id: \.self) { variant in
+                            HStack(spacing: 4) {
+                                Text("\(variant.listName):")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(.secondary)
+                                Text(variant.optionName)
+                                    .font(.system(size: 11, weight: .regular))
+                                    .foregroundColor(.primary)
+                                if variant.priceAdjustment != .zero {
+                                    Text(
+                                        String(
+                                            format: "(%@$%.2f)",
+                                            variant.priceAdjustment > .zero ? "+" : "",
+                                            NSDecimalNumber(decimal: variant.priceAdjustment)
+                                                .doubleValue
+                                        )
+                                    )
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.top, 2)
+                }
             }
 
             Spacer()
@@ -1744,8 +1810,10 @@ struct FlyingParticleView: View {
         )
         let t = progress
         let mt = 1 - t
-        let x = mt*mt*particle.source.x + 2*mt*t*control.x + t*t*particle.destination.x
-        let y = mt*mt*particle.source.y + 2*mt*t*control.y + t*t*particle.destination.y
+        let x =
+            mt * mt * particle.source.x + 2 * mt * t * control.x + t * t * particle.destination.x
+        let y =
+            mt * mt * particle.source.y + 2 * mt * t * control.y + t * t * particle.destination.y
         return CGPoint(x: x, y: y)
     }
 }
@@ -1860,7 +1928,7 @@ struct PaymentLinkSheetView: View {
         } else {
             colors = [
                 Color.llegoPrimary,
-                gradientManager.currentAccentColor
+                gradientManager.currentAccentColor,
             ]
         }
         return LinearGradient(
@@ -1885,7 +1953,7 @@ struct PaymentLinkSheetView: View {
                                     LinearGradient(
                                         gradient: Gradient(colors: [
                                             Color.llegoPrimary.opacity(0.15),
-                                            gradientManager.currentAccentColor.opacity(0.1)
+                                            gradientManager.currentAccentColor.opacity(0.1),
                                         ]),
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
@@ -1899,7 +1967,7 @@ struct PaymentLinkSheetView: View {
                                     LinearGradient(
                                         gradient: Gradient(colors: [
                                             Color.llegoPrimary,
-                                            gradientManager.currentAccentColor
+                                            gradientManager.currentAccentColor,
                                         ]),
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
@@ -1914,11 +1982,13 @@ struct PaymentLinkSheetView: View {
                                 .font(.system(size: 24, weight: .bold, design: .rounded))
                                 .foregroundColor(.primary)
 
-                            Text("Comparte este link con alguien en el exterior para que pague tu pedido")
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal, 30)
+                            Text(
+                                "Comparte este link con alguien en el exterior para que pague tu pedido"
+                            )
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 30)
                         }
 
                         // Link Container
@@ -1954,8 +2024,11 @@ struct PaymentLinkSheetView: View {
                                 }
                             }) {
                                 HStack(spacing: 12) {
-                                    Image(systemName: showCopiedMessage ? "checkmark.circle.fill" : "doc.on.doc.fill")
-                                        .font(.system(size: 18, weight: .bold))
+                                    Image(
+                                        systemName: showCopiedMessage
+                                            ? "checkmark.circle.fill" : "doc.on.doc.fill"
+                                    )
+                                    .font(.system(size: 18, weight: .bold))
 
                                     Text(showCopiedMessage ? "¡Copiado!" : "Copiar Link")
                                         .font(.system(size: 16, weight: .bold, design: .rounded))
@@ -1973,7 +2046,9 @@ struct PaymentLinkSheetView: View {
                                 )
                             }
                             .scaleEffect(showCopiedMessage ? 1.02 : 1.0)
-                            .animation(.spring(response: 0.4, dampingFraction: 0.7), value: showCopiedMessage)
+                            .animation(
+                                .spring(response: 0.4, dampingFraction: 0.7),
+                                value: showCopiedMessage)
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 8)
@@ -1992,9 +2067,14 @@ struct PaymentLinkSheetView: View {
 
                             VStack(alignment: .leading, spacing: 8) {
                                 InstructionRow(number: "1", text: "Copia el link de pago")
-                                InstructionRow(number: "2", text: "Envíalo por WhatsApp, email o mensaje")
-                                InstructionRow(number: "3", text: "La persona paga de forma segura (Stripe próximamente)")
-                                InstructionRow(number: "4", text: "Recibirás una notificación cuando se complete el pago")
+                                InstructionRow(
+                                    number: "2", text: "Envíalo por WhatsApp, email o mensaje")
+                                InstructionRow(
+                                    number: "3",
+                                    text: "La persona paga de forma segura (Stripe próximamente)")
+                                InstructionRow(
+                                    number: "4",
+                                    text: "Recibirás una notificación cuando se complete el pago")
                             }
                         }
                         .padding(18)
@@ -2021,7 +2101,6 @@ struct PaymentLinkSheetView: View {
         }
     }
 }
-
 
 // MARK: - Bank Transfer Sheet View
 struct BankTransferSheetView: View {
@@ -2105,7 +2184,10 @@ struct BankTransferSheetView: View {
                             .font(.system(size: 20, weight: .bold))
                             .foregroundColor(.white)
                     }
-                    .shadow(color: gradientManager.currentAccentColor.opacity(0.5), radius: 8, x: 0, y: 4)
+                    .shadow(
+                        color: gradientManager.currentAccentColor.opacity(0.5), radius: 8, x: 0,
+                        y: 4
+                    )
                     .padding()
                 }
                 Spacer()
@@ -2189,7 +2271,9 @@ struct BankTransferSheetView: View {
                                         .font(.system(size: 14, weight: .semibold))
                                         .foregroundColor(gradientManager.currentAccentColor)
                                         .padding(8)
-                                        .background(Circle().fill(gradientManager.currentAccentColor.opacity(0.15)))
+                                        .background(
+                                            Circle().fill(
+                                                gradientManager.currentAccentColor.opacity(0.15)))
                                 }
                             }
 
@@ -2228,18 +2312,25 @@ struct BankTransferSheetView: View {
                                     if allowAmountEditing {
                                         HStack(alignment: .firstTextBaseline, spacing: 6) {
                                             TextField("0.00", text: $editableAmount)
-                                                .font(.system(size: 20, weight: .bold, design: .rounded))
+                                                .font(
+                                                    .system(
+                                                        size: 20, weight: .bold, design: .rounded)
+                                                )
                                                 .keyboardType(.decimalPad)
                                                 .foregroundColor(gradientManager.currentAccentColor)
                                                 .multilineTextAlignment(.leading)
 
                                             Text("CUP")
                                                 .font(.system(size: 14, weight: .semibold))
-                                                .foregroundColor(gradientManager.currentAccentColor.opacity(0.85))
+                                                .foregroundColor(
+                                                    gradientManager.currentAccentColor.opacity(0.85)
+                                                )
                                         }
                                     } else {
                                         Text(totalAmount)
-                                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                                            .font(
+                                                .system(size: 20, weight: .bold, design: .rounded)
+                                            )
                                             .foregroundColor(gradientManager.currentAccentColor)
                                     }
                                 }
@@ -2278,7 +2369,9 @@ struct BankTransferSheetView: View {
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 12)
                                                 .stroke(
-                                                    transferId.isEmpty ? Color.gray.opacity(0.3) : gradientManager.currentAccentColor,
+                                                    transferId.isEmpty
+                                                        ? Color.gray.opacity(0.3)
+                                                        : gradientManager.currentAccentColor,
                                                     lineWidth: 1.5
                                                 )
                                         )
@@ -2383,11 +2476,16 @@ struct BankTransferSheetView: View {
 
                                         Text("Subir Comprobante")
                                             .font(.system(size: 16, weight: .semibold))
-                                            .foregroundColor(transferId.isEmpty ? .gray : .llegoPrimary)
+                                            .foregroundColor(
+                                                transferId.isEmpty ? .gray : .llegoPrimary)
 
-                                        Text(transferId.isEmpty ? "Primero introduce el identificador" : "Toca para seleccionar una imagen")
-                                            .font(.system(size: 13, weight: .medium))
-                                            .foregroundColor(.gray)
+                                        Text(
+                                            transferId.isEmpty
+                                                ? "Primero introduce el identificador"
+                                                : "Toca para seleccionar una imagen"
+                                        )
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundColor(.gray)
                                     }
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 180)
@@ -2422,7 +2520,7 @@ struct BankTransferSheetView: View {
                                 LinearGradient(
                                     gradient: Gradient(colors: [
                                         gradientManager.currentAccentColor,
-                                        Color.llegoPrimary
+                                        Color.llegoPrimary,
                                     ]),
                                     startPoint: .leading,
                                     endPoint: .trailing
@@ -2430,7 +2528,9 @@ struct BankTransferSheetView: View {
                             )
                             .cornerRadius(16)
                             .shadow(
-                                color: validationState == .validated ? gradientManager.currentAccentColor.opacity(0.4) : Color.gray.opacity(0.2),
+                                color: validationState == .validated
+                                    ? gradientManager.currentAccentColor.opacity(0.4)
+                                    : Color.gray.opacity(0.2),
                                 radius: 12,
                                 x: 0,
                                 y: 6
@@ -2456,10 +2556,12 @@ struct BankTransferSheetView: View {
                 }
             }
             .sheet(isPresented: $showImagePicker) {
-                ImagePicker(image: $selectedImage, onImageSelected: {
-                    // Iniciar validación con el servicio REST de pagos
-                    validateReceipt()
-                })
+                ImagePicker(
+                    image: $selectedImage,
+                    onImageSelected: {
+                        // Iniciar validación con el servicio REST de pagos
+                        validateReceipt()
+                    })
             }
             .alert("Error de Validación", isPresented: $showValidationError) {
                 Button("OK", role: .cancel) {
@@ -2478,7 +2580,7 @@ struct BankTransferSheetView: View {
                     LinearGradient(
                         gradient: Gradient(colors: [
                             Color.llegoSecondary.opacity(0.2),
-                            Color.llegoSecondary.opacity(0.1)
+                            Color.llegoSecondary.opacity(0.1),
                         ]),
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -2521,9 +2623,12 @@ struct BankTransferSheetView: View {
     private func validationResultSummary(result: PaymentValidationResult) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
-                Image(systemName: result.matched ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(result.matched ? gradientManager.currentAccentColor : .red)
+                Image(
+                    systemName: result.matched
+                        ? "checkmark.seal.fill" : "exclamationmark.triangle.fill"
+                )
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(result.matched ? gradientManager.currentAccentColor : .red)
 
                 Text(result.matched ? "Transferencia validada" : "Verifica el identificador")
                     .font(.system(size: 15, weight: .semibold))
@@ -2547,7 +2652,8 @@ struct BankTransferSheetView: View {
                     validationDetailRow(title: "Fecha", value: fecha)
                 }
                 if let monto = data.cantidadTransferida {
-                    validationDetailRow(title: "Monto detectado", value: String(format: "%.2f CUP", monto))
+                    validationDetailRow(
+                        title: "Monto detectado", value: String(format: "%.2f CUP", monto))
                 }
                 if let numero = data.numeroTransferencia, !numero.isEmpty {
                     validationDetailRow(title: "Número en comprobante", value: numero)
@@ -2572,7 +2678,8 @@ struct BankTransferSheetView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(
-                    result.matched ? gradientManager.currentAccentColor.opacity(0.4) : Color.red.opacity(0.4),
+                    result.matched
+                        ? gradientManager.currentAccentColor.opacity(0.4) : Color.red.opacity(0.4),
                     lineWidth: 1.5
                 )
         )
@@ -2609,7 +2716,9 @@ struct BankTransferSheetView: View {
             case .success(let paymentResult):
                 lastValidationResult = paymentResult
 
-                if let isBankMessage = paymentResult.extractedData?.esMensajeBanco, isBankMessage == false {
+                if let isBankMessage = paymentResult.extractedData?.esMensajeBanco,
+                    isBankMessage == false
+                {
                     let errorMsg = "La imagen no parece ser un mensaje de banco válido."
                     validationState = .failed(errorMsg)
                     validationError = errorMsg
@@ -2619,13 +2728,15 @@ struct BankTransferSheetView: View {
                 }
 
                 guard paymentResult.matched else {
-                    let detected = paymentResult.detectedTransferId ?? paymentResult.extractedData?.numeroTransferencia ?? "no detectado"
+                    let detected =
+                        paymentResult.detectedTransferId ?? paymentResult.extractedData?
+                        .numeroTransferencia ?? "no detectado"
                     let errorMsg = """
-El identificador no coincide.
-Ingresado: \(transferId)
-Detectado: \(detected)
-\(paymentResult.message)
-"""
+                        El identificador no coincide.
+                        Ingresado: \(transferId)
+                        Detectado: \(detected)
+                        \(paymentResult.message)
+                        """
                     validationState = .failed(errorMsg)
                     validationError = errorMsg
                     showValidationError = true
@@ -2674,7 +2785,10 @@ struct ImagePicker: UIViewControllerRepresentable {
             self.parent = parent
         }
 
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+        func imagePickerController(
+            _ picker: UIImagePickerController,
+            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
+        ) {
             if let uiImage = info[.originalImage] as? UIImage {
                 parent.image = uiImage
                 parent.onImageSelected()
@@ -2708,7 +2822,7 @@ struct AdWatcherView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var currentAdIndex: Int = 0
     @State private var secondsRemaining: Int = 30
-    @State private var canSkip: Bool = true // TODO: Cambiar a false para producción
+    @State private var canSkip: Bool = true  // TODO: Cambiar a false para producción
     @State private var isVideoPlaying: Bool = true
     @State private var showCompletionAnimation: Bool = false
     @State private var timer: Timer?
@@ -2719,7 +2833,7 @@ struct AdWatcherView: View {
     // Simulated ad data
     private let ads: [(title: String, brand: String, color: Color, icon: String)] = [
         ("Descubre ofertas increíbles", "MegaStore", .blue, "bag.fill"),
-        ("Tu próximo viaje te espera", "TravelMax", .purple, "airplane")
+        ("Tu próximo viaje te espera", "TravelMax", .purple, "airplane"),
     ]
 
     var body: some View {
@@ -2729,7 +2843,7 @@ struct AdWatcherView: View {
                 colors: [
                     ads[currentAdIndex].color.opacity(0.8),
                     ads[currentAdIndex].color.opacity(0.4),
-                    Color.black.opacity(0.9)
+                    Color.black.opacity(0.9),
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -2771,14 +2885,22 @@ struct AdWatcherView: View {
             HStack(spacing: 6) {
                 ForEach(0..<totalAds, id: \.self) { index in
                     Capsule()
-                        .fill(index < currentAdIndex ? Color.white : (index == currentAdIndex ? Color.white.opacity(0.9) : Color.white.opacity(0.3)))
+                        .fill(
+                            index < currentAdIndex
+                                ? Color.white
+                                : (index == currentAdIndex
+                                    ? Color.white.opacity(0.9) : Color.white.opacity(0.3))
+                        )
                         .frame(height: 3)
                         .overlay(
                             GeometryReader { geo in
                                 if index == currentAdIndex {
                                     Capsule()
                                         .fill(Color.white)
-                                        .frame(width: geo.size.width * CGFloat(skipAfterSeconds - secondsRemaining) / CGFloat(skipAfterSeconds))
+                                        .frame(
+                                            width: geo.size.width
+                                                * CGFloat(skipAfterSeconds - secondsRemaining)
+                                                / CGFloat(skipAfterSeconds))
                                 }
                             }
                         )
@@ -2843,7 +2965,8 @@ struct AdWatcherView: View {
                     .foregroundColor(.white)
             }
             .scaleEffect(isVideoPlaying ? 1.0 : 0.95)
-            .animation(.easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: isVideoPlaying)
+            .animation(
+                .easeInOut(duration: 1.5).repeatForever(autoreverses: true), value: isVideoPlaying)
 
             // Ad text
             VStack(spacing: 12) {
@@ -2870,7 +2993,9 @@ struct AdWatcherView: View {
 
                         Capsule()
                             .fill(Color.white)
-                            .frame(width: geo.size.width * CGFloat(skipAfterSeconds - secondsRemaining) / CGFloat(skipAfterSeconds), height: 4)
+                            .frame(
+                                width: geo.size.width * CGFloat(skipAfterSeconds - secondsRemaining)
+                                    / CGFloat(skipAfterSeconds), height: 4)
                     }
                 }
                 .frame(height: 4)

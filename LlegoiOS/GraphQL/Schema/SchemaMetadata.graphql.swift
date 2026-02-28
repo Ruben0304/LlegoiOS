@@ -84,6 +84,8 @@ public extension LlegoAPI {
       case "TutorialType": return LlegoAPI.Objects.TutorialType
       case "UserData": return LlegoAPI.Objects.UserData
       case "UserType": return LlegoAPI.Objects.UserType
+      case "VariantListType": return LlegoAPI.Objects.VariantListType
+      case "VariantOptionType": return LlegoAPI.Objects.VariantOptionType
       case "WalletBalanceType": return LlegoAPI.Objects.WalletBalanceType
       case "WalletTransactionType": return LlegoAPI.Objects.WalletTransactionType
       default: return nil

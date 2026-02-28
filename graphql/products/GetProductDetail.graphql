@@ -1,25 +1,36 @@
-query GetProductDetail($id: String!) {
-  product(id: $id) {
-    id
-    branchId
-    name
-    description
-    weight
-    price
-    currency
-    imageUrl
-    availability
-    categoryId
-    createdAt
-    branch {
-      id
-      name
-      avatarUrl
+query GetProductDetail($id: String!, $jwt: String) {
+    product(id: $id, jwt: $jwt) {
+        id
+        branchId
+        name
+        description
+        weight
+        price
+        currency
+        imageUrl
+        availability
+        categoryId
+        variantListIds
+        variantLists {
+            id
+            name
+            description
+            options {
+                id
+                name
+                priceAdjustment
+            }
+        }
+        createdAt
+        branch {
+            id
+            name
+            avatarUrl
+        }
+        business {
+            id
+            name
+            avatarUrl
+        }
     }
-    business {
-      id
-      name
-      avatarUrl
-    }
-  }
 }

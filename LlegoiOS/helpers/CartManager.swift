@@ -1,6 +1,6 @@
-import Foundation
-import Combine
 import Apollo
+import Combine
+import Foundation
 
 /// Singleton para gestionar el carrito globalmente desde cualquier parte de la app
 @MainActor
@@ -22,17 +22,42 @@ class CartManager: ObservableObject {
     // MARK: - Public Methods
 
     /// Añadir producto al carrito (llamar desde cualquier parte de la app)
-    func addToCart(productId: String, quantity: Int = 1) {
+    func addToCart(
+        productId: String,
+        quantity: Int = 1,
+        selectedVariants: [SelectedVariantOption] = [],
+        basePrice: Double? = nil,
+        finalUnitPrice: Double? = nil
+    ) {
         var items = localItems
+        let cartItemId = CartItemLocal.buildCartItemId(
+            productId: productId, selectedVariants: selectedVariants)
 
-        if let index = items.firstIndex(where: { $0.productId == productId }) {
+        if let index = items.firstIndex(where: { $0.cartItemId == cartItemId }) {
             // Si ya existe, incrementar cantidad
             items[index].quantity += quantity
-            print("✅ Updated product '\(productId)' to quantity \(items[index].quantity)")
+            if let basePrice {
+                items[index].basePrice = basePrice
+            }
+            if let finalUnitPrice {
+                items[index].finalUnitPrice = finalUnitPrice
+            }
+            let unit = items[index].finalUnitPrice ?? items[index].basePrice ?? 0
+            items[index].finalTotalPrice = unit * Double(items[index].quantity)
+            print("✅ Updated cart line '\(cartItemId)' to quantity \(items[index].quantity)")
         } else {
             // Si no existe, añadir nuevo item
-            items.append(CartItemLocal(productId: productId, quantity: quantity))
-            print("✅ Added NEW product with ID: '\(productId)' quantity: \(quantity)")
+            let item = CartItemLocal(
+                productId: productId,
+                quantity: quantity,
+                selectedVariants: selectedVariants,
+                basePrice: basePrice,
+                finalUnitPrice: finalUnitPrice,
+                finalTotalPrice: nil,
+                cartItemId: cartItemId
+            )
+            items.append(item)
+            print("✅ Added NEW cart line with ID: '\(cartItemId)' quantity: \(quantity)")
         }
 
         saveCartItems(items)
@@ -52,6 +77,25 @@ class CartManager: ObservableObject {
                 items.remove(at: index)
             } else {
                 items[index].quantity = quantity
+                let unit = items[index].finalUnitPrice ?? items[index].basePrice ?? 0
+                items[index].finalTotalPrice = unit * Double(quantity)
+            }
+        }
+
+        saveCartItems(items)
+    }
+
+    /// Actualizar cantidad por ID de línea del carrito (soporta variantes)
+    func updateQuantity(cartItemId: String, quantity: Int) {
+        var items = localItems
+
+        if let index = items.firstIndex(where: { $0.cartItemId == cartItemId }) {
+            if quantity <= 0 {
+                items.remove(at: index)
+            } else {
+                items[index].quantity = quantity
+                let unit = items[index].finalUnitPrice ?? items[index].basePrice ?? 0
+                items[index].finalTotalPrice = unit * Double(quantity)
             }
         }
 
@@ -66,6 +110,13 @@ class CartManager: ObservableObject {
         print("🗑️ Removed product \(productId) from cart")
     }
 
+    func removeFromCart(cartItemId: String) {
+        var items = localItems
+        items.removeAll { $0.cartItemId == cartItemId }
+        saveCartItems(items)
+        print("🗑️ Removed cart line \(cartItemId) from cart")
+    }
+
     /// Limpiar todo el carrito
     func clearCart() {
         userDefaults.removeObject(forKey: cartKey)
@@ -76,7 +127,11 @@ class CartManager: ObservableObject {
 
     /// Obtener cantidad de un producto específico en el carrito
     func getQuantity(for productId: String) -> Int {
-        localItems.first(where: { $0.productId == productId })?.quantity ?? 0
+        localItems
+            .filter { $0.productId == productId }
+            .reduce(0) { partial, item in
+                partial + item.quantity
+            }
     }
 
     /// Verificar si un producto está en el carrito
@@ -87,25 +142,42 @@ class CartManager: ObservableObject {
     // MARK: - Private Methods
 
     private func saveCartItems(_ items: [CartItemLocal]) {
-        let encoded = items.map { ["id": $0.productId, "quantity": $0.quantity] }
-        userDefaults.set(encoded, forKey: cartKey)
+        do {
+            let encoded = try JSONEncoder().encode(items)
+            userDefaults.set(encoded, forKey: cartKey)
+        } catch {
+            print("⚠️ CartManager: Failed to encode cart items - \(error.localizedDescription)")
+        }
         localItems = items
         updateItemCount()
     }
 
     private func loadCartItems() {
-        guard let data = userDefaults.array(forKey: cartKey) as? [[String: Any]] else {
-            localItems = []
+        if let encodedData = userDefaults.data(forKey: cartKey) {
+            do {
+                localItems = try JSONDecoder().decode([CartItemLocal].self, from: encodedData)
+                return
+            } catch {
+                print(
+                    "⚠️ CartManager: Failed to decode new cart format - \(error.localizedDescription)"
+                )
+            }
+        }
+
+        // Backward compatibility with old cart format: [[id, quantity]]
+        if let legacyData = userDefaults.array(forKey: cartKey) as? [[String: Any]] {
+            localItems = legacyData.compactMap { dict in
+                guard let id = dict["id"] as? String,
+                    let quantity = dict["quantity"] as? Int
+                else {
+                    return nil
+                }
+                return CartItemLocal(productId: id, quantity: quantity)
+            }
             return
         }
 
-        localItems = data.compactMap { dict in
-            guard let id = dict["id"] as? String,
-                  let quantity = dict["quantity"] as? Int else {
-                return nil
-            }
-            return CartItemLocal(productId: id, quantity: quantity)
-        }
+        localItems = []
     }
 
     private func updateItemCount() {
@@ -120,10 +192,11 @@ class CartManager: ObservableObject {
                 let jwt = await AuthManager.shared.getAccessToken()
 
                 // Llamar a la mutation de manera asíncrona
-                _ = try await apolloClient.perform(mutation: LlegoAPI.AddToCartMutation(
-                    productId: productId,
-                    jwt: jwt.map { .some($0) } ?? .none
-                ))
+                _ = try await apolloClient.perform(
+                    mutation: LlegoAPI.AddToCartMutation(
+                        productId: productId,
+                        jwt: jwt.map { .some($0) } ?? .none
+                    ))
 
                 print("📊 Cart analytics sent for product: \(productId)")
             } catch {

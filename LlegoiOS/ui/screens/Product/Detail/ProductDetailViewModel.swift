@@ -1,6 +1,6 @@
+import Combine
 import Foundation
 import SwiftUI
-import Combine
 
 // MARK: - View State
 enum ProductDetailState {
@@ -18,6 +18,7 @@ class ProductDetailViewModel: ObservableObject {
     @Published var productDetail: ProductDetailGraphQL?
     @Published var similarProducts: [Product] = []
     @Published var isLoadingSimilarProducts: Bool = false
+    @Published var selectedByListId: [String: VariantOption] = [:]
 
     // MARK: - Private Properties
     private var loadedProductId: String?
@@ -62,6 +63,7 @@ class ProductDetailViewModel: ObservableObject {
                 switch result {
                 case .success(let detail):
                     self.productDetail = detail
+                    self.initializeDefaultVariantSelection(from: detail)
                     self.state = .success(detail)
                     print("✅ ProductDetailViewModel: Loaded details for product \(id)")
                     self.loadSimilarProducts(using: detail.description, excludingProductId: id)
@@ -69,14 +71,16 @@ class ProductDetailViewModel: ObservableObject {
                 case .failure(let error):
                     let message = "Error al cargar detalles: \(error.localizedDescription)"
                     self.state = .error(message)
-                    self.loadedProductId = nil // Permitir reintentar
+                    self.loadedProductId = nil  // Permitir reintentar
                     print("❌ ProductDetailViewModel: \(message)")
                 }
             }
         }
     }
 
-    func loadSimilarProducts(using queryText: String, excludingProductId: String, forceRefresh: Bool = false) {
+    func loadSimilarProducts(
+        using queryText: String, excludingProductId: String, forceRefresh: Bool = false
+    ) {
         let query = queryText.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !query.isEmpty else {
@@ -105,17 +109,81 @@ class ProductDetailViewModel: ObservableObject {
                             .filter { $0.id != excludingProductId }
                             .prefix(6)
                     )
-                    print("✅ ProductDetailViewModel: Loaded \(self.similarProducts.count) similar products")
+                    print(
+                        "✅ ProductDetailViewModel: Loaded \(self.similarProducts.count) similar products"
+                    )
 
                 case .failure(let error):
                     self.similarProducts = []
-                    print("⚠️ ProductDetailViewModel: Failed loading similar products - \(error.localizedDescription)")
+                    print(
+                        "⚠️ ProductDetailViewModel: Failed loading similar products - \(error.localizedDescription)"
+                    )
                 }
             }
         }
     }
 
     // MARK: - Helper Methods
+    private func initializeDefaultVariantSelection(from detail: ProductDetailGraphQL) {
+        var defaults: [String: VariantOption] = [:]
+        
+        guard let variantLists = detail.variantLists else {
+            print("🧩 ProductDetailViewModel: No variant lists available for initialization")
+            selectedByListId = defaults
+            return
+        }
+        
+        for list in variantLists {
+            if let first = list.options.first {
+                defaults[list.id] = first
+            }
+        }
+        selectedByListId = defaults
+        print(
+            "🧩 ProductDetailViewModel: Default variant selections initialized for \(defaults.count) lists"
+        )
+    }
+
+    func selectOption(_ option: VariantOption, in list: VariantList) {
+        selectedByListId[list.id] = option
+    }
+
+    var selectedVariantOptions: [SelectedVariantOption] {
+        guard let detail = productDetail,
+              let variantLists = detail.variantLists else { return [] }
+        return variantLists.compactMap { list in
+            guard let selectedOption = selectedByListId[list.id] else { return nil }
+            return SelectedVariantOption(
+                listId: list.id,
+                listName: list.name,
+                optionId: selectedOption.id,
+                optionName: selectedOption.name,
+                priceAdjustment: selectedOption.priceAdjustment
+            )
+        }
+    }
+
+    func finalUnitPrice(for detail: ProductDetailGraphQL) -> Decimal {
+        computeFinalUnitPrice(base: Decimal(detail.price), selected: selectedVariantOptions)
+    }
+
+    func finalTotalPrice(for detail: ProductDetailGraphQL, quantity: Int) -> Decimal {
+        finalUnitPrice(for: detail) * Decimal(max(quantity, 1))
+    }
+
+    func formatPrice(decimal price: Decimal, currency: String) -> String {
+        let number = NSDecimalNumber(decimal: price).doubleValue
+        return formatPrice(price: number, currency: currency)
+    }
+
+    func formatPriceAdjustment(decimal price: Decimal, currency: String) -> String {
+        if price == .zero {
+            return formatPrice(decimal: price, currency: currency)
+        }
+        let sign = price > .zero ? "+" : ""
+        return "\(sign)\(formatPrice(decimal: price, currency: currency))"
+    }
+
     func formatPrice(price: Double, currency: String) -> String {
         let symbol: String
         switch currency.uppercased() {

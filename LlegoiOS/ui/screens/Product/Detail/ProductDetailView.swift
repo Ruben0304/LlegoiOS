@@ -13,22 +13,9 @@ struct ProductDetailView: View {
     @State private var heroAppeared = false
     @State private var contentAppeared = false
     @State private var quantity: Int = 1
-    @State private var selectedVariantIndex: Int = 0
     @State private var showAddedToCartFeedback = false
     @State private var selectedSimilarProductId: String?
     @State private var showCart = false
-
-    // Variantes calculadas dinámicamente usando el precio real del producto
-    private var variants: [ProductVariant] {
-        guard let detail = viewModel.productDetail else {
-            return []
-        }
-        return [
-            ProductVariant(name: "Clásico", price: detail.price, isDefault: true),
-            ProductVariant(name: "Con extras", price: 2.50, isDefault: false),
-            ProductVariant(name: "Premium", price: 5.00, isDefault: false)
-        ]
-    }
 
     // Computed property to get current product from ViewModel
     private var product: Product? {
@@ -48,12 +35,9 @@ struct ProductDetailView: View {
         )
     }
 
-    private var totalPrice: Double {
-        guard let detail = viewModel.productDetail else { return 0 }
-        let basePrice = detail.price
-        let variantPrice = selectedVariantIndex == 0 ? variants[0].price : variants[selectedVariantIndex].price
-        let additionalPrice = selectedVariantIndex == 0 ? 0 : variantPrice
-        return (basePrice + additionalPrice) * Double(quantity)
+    private var totalPriceDecimal: Decimal {
+        guard let detail = viewModel.productDetail else { return .zero }
+        return viewModel.finalTotalPrice(for: detail, quantity: quantity)
     }
 
     var body: some View {
@@ -102,8 +86,11 @@ struct ProductDetailView: View {
 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { toggleFavorite() }) {
-                        Image(systemName: favoritesManager.isFavorite(productId: productId) ? "heart.fill" : "heart")
-                            .foregroundColor(gradientManager.currentAccentColor)
+                        Image(
+                            systemName: favoritesManager.isFavorite(productId: productId)
+                                ? "heart.fill" : "heart"
+                        )
+                        .foregroundColor(gradientManager.currentAccentColor)
                     }
                 }
 
@@ -116,10 +103,13 @@ struct ProductDetailView: View {
                         Image(systemName: "cart")
                             .foregroundColor(gradientManager.currentAccentColor)
                     }
-                    .badge(cartManager.cartItemCount > 0 ? Text("\(cartManager.cartItemCount)")
-                        .monospacedDigit()
-                        .foregroundColor(gradientManager.currentAccentColor)
-                        .bold() : nil)
+                    .badge(
+                        cartManager.cartItemCount > 0
+                            ? Text("\(cartManager.cartItemCount)")
+                                .monospacedDigit()
+                                .foregroundColor(gradientManager.currentAccentColor)
+                                .bold() : nil
+                    )
                     .accessibilityLabel("Carrito")
                 }
 
@@ -244,7 +234,9 @@ struct ProductDetailView: View {
             productHeaderSection(product: product)
 
             // Variants Section
-            if !variants.isEmpty {
+            if let detail = viewModel.productDetail,
+               let variantLists = detail.variantLists,
+               !variantLists.isEmpty {
                 variantsSection
             }
 
@@ -335,50 +327,90 @@ struct ProductDetailView: View {
                 .tracking(-0.5)
 
             HStack(spacing: 10) {
-                Text(product.price)
+                if let detail = viewModel.productDetail {
+                    Text(
+                        viewModel.formatPrice(
+                            decimal: viewModel.finalUnitPrice(for: detail),
+                            currency: detail.currency)
+                    )
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(.primary)
+
+                    if !viewModel.selectedVariantOptions.isEmpty {
+                        Text(
+                            "(base \(viewModel.formatPrice(price: detail.price, currency: detail.currency)))"
+                        )
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.secondary)
+                    }
+                } else {
+                    Text(product.price)
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundColor(.primary)
+                }
             }
         }
     }
 
     private var variantsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Header
-            HStack {
-                Text("Elige tu opción")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.primary)
+            if let detail = viewModel.productDetail,
+               let variantLists = detail.variantLists,
+               !variantLists.isEmpty {
+                ForEach(variantLists, id: \.id) { list in
+                    if !list.options.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text(list.name)
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundColor(.primary)
 
-                Spacer()
+                                Spacer()
 
-                // Required badge
-                Text("Requerido")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(gradientManager.currentAccentColor)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(gradientManager.currentAccentColor.opacity(0.15))
-                    .cornerRadius(6)
-            }
+                                Text("Requerido")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(gradientManager.currentAccentColor)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(gradientManager.currentAccentColor.opacity(0.15))
+                                    .cornerRadius(6)
+                            }
+                            
+                            // Show description if available
+                            if let description = list.description, !description.isEmpty {
+                                Text(description)
+                                    .font(.system(size: 13, weight: .regular))
+                                    .foregroundColor(.secondary)
+                                    .padding(.bottom, 4)
+                            }
 
-            // Variants Container
-            VStack(spacing: 4) {
-                ForEach(Array(variants.enumerated()), id: \.offset) { index, variant in
-                    variantOptionRow(variant: variant, index: index)
+                            VStack(spacing: 4) {
+                                ForEach(list.options, id: \.self) { option in
+                                    variantOptionRow(list: list, option: option)
+                                }
+                            }
+                            .padding(4)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(14)
+                        }
+                    } else {
+                        Text("\(list.name): sin opciones")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
-            .padding(4)
-            .background(Color(.systemGray6))
-            .cornerRadius(14)
         }
     }
 
-    private func variantOptionRow(variant: ProductVariant, index: Int) -> some View {
-        Button(action: {
+    private func variantOptionRow(list: VariantList, option: VariantOption) -> some View {
+        let isSelected = viewModel.selectedByListId[list.id] == option
+        let currency = viewModel.productDetail?.currency ?? "USD"
+        
+        return Button(action: {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                selectedVariantIndex = index
+                viewModel.selectOption(option, in: list)
             }
         }) {
             HStack {
@@ -388,14 +420,14 @@ struct ProductDetailView: View {
                     ZStack {
                         Circle()
                             .strokeBorder(
-                                selectedVariantIndex == index
+                                isSelected
                                     ? Color.clear
                                     : Color(.systemGray4),
                                 lineWidth: 2
                             )
                             .frame(width: 22, height: 22)
 
-                        if selectedVariantIndex == index {
+                        if isSelected {
                             Circle()
                                 .fill(gradientManager.currentAccentColor)
                                 .frame(width: 22, height: 22)
@@ -407,23 +439,24 @@ struct ProductDetailView: View {
                         }
                     }
 
-                    Text(variant.name)
-                        .font(.system(size: 15, weight: selectedVariantIndex == index ? .medium : .regular))
+                    Text(option.name)
+                        .font(
+                            .system(
+                                size: 15, weight: isSelected ? .medium : .regular
+                            )
+                        )
                         .foregroundColor(.primary)
                 }
 
                 Spacer()
 
                 // Right side (price)
-                if variant.isDefault {
-                    Text(String(format: "$%.2f", variant.price))
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(.primary)
-                } else {
-                    Text(String(format: "+$%.2f", variant.price))
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(.secondary)
-                }
+                Text(
+                    viewModel.formatPriceAdjustment(
+                        decimal: option.priceAdjustment, currency: currency)
+                )
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(option.priceAdjustment > .zero ? .secondary : .primary)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
@@ -432,7 +465,7 @@ struct ProductDetailView: View {
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .strokeBorder(
-                        selectedVariantIndex == index
+                        isSelected
                             ? gradientManager.currentAccentColor
                             : Color.clear,
                         lineWidth: 2
@@ -456,11 +489,13 @@ struct ProductDetailView: View {
                     .lineSpacing(1.5)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
-                Text("Disfruta de un producto de calidad preparado con ingredientes frescos y el mejor servicio.")
-                    .font(.system(size: 14, weight: .regular))
-                    .foregroundColor(.secondary)
-                    .lineSpacing(1.5)
-                    .fixedSize(horizontal: false, vertical: true)
+                Text(
+                    "Disfruta de un producto de calidad preparado con ingredientes frescos y el mejor servicio."
+                )
+                .font(.system(size: 14, weight: .regular))
+                .foregroundColor(.secondary)
+                .lineSpacing(1.5)
+                .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -495,7 +530,7 @@ struct ProductDetailView: View {
                 LazyVGrid(
                     columns: [
                         GridItem(.flexible(), spacing: 16),
-                        GridItem(.flexible(), spacing: 16)
+                        GridItem(.flexible(), spacing: 16),
                     ],
                     alignment: .center,
                     spacing: 20
@@ -551,17 +586,19 @@ struct ProductDetailView: View {
                 HStack(spacing: 8) {
                     Image(systemName: showAddedToCartFeedback ? "checkmark" : "cart")
                         .contentTransition(.symbolEffect(.replace))
-                    Text(showAddedToCartFeedback ? "¡Agregado!" : "Añadir al carrito")
+                    Text(showAddedToCartFeedback ? "¡Agregado!" : "Añadir \(formatTotalPrice())")
 
                 }
-                    .font(.system(size: 16, weight: .semibold))
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
+                .font(.system(size: 16, weight: .semibold))
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
             }
             .buttonStyle(.glassProminent)
             .tint(showAddedToCartFeedback ? .green : gradientManager.currentAccentColor)
             .scaleEffect(showAddedToCartFeedback ? 1.05 : 1.0)
-            .animation(.spring(response: 0.35, dampingFraction: 0.6), value: showAddedToCartFeedback)
+            .animation(
+                .spring(response: 0.35, dampingFraction: 0.6), value: showAddedToCartFeedback
+            )
             .disabled(showAddedToCartFeedback)
         }
     }
@@ -569,7 +606,10 @@ struct ProductDetailView: View {
     // MARK: - Helpers
 
     private func formatTotalPrice() -> String {
-        String(format: "$%.2f", totalPrice)
+        guard let detail = viewModel.productDetail else {
+            return "$0.00"
+        }
+        return viewModel.formatPrice(decimal: totalPriceDecimal, currency: detail.currency)
     }
 
     private func incrementQuantity() {
@@ -599,7 +639,19 @@ struct ProductDetailView: View {
         generator.prepare()
         generator.notificationOccurred(.success)
 
-        cartManager.addToCart(productId: productId, quantity: quantity)
+        let selected = viewModel.selectedVariantOptions
+        let basePrice = viewModel.productDetail?.price
+        let finalUnitPrice = viewModel.productDetail.map { detail in
+            NSDecimalNumber(decimal: viewModel.finalUnitPrice(for: detail)).doubleValue
+        }
+        cartManager.addToCart(
+            productId: productId,
+            quantity: quantity,
+            selectedVariants: selected,
+            basePrice: basePrice,
+            finalUnitPrice: finalUnitPrice
+        )
+        print("🛒 ProductDetailView: Added to cart with \(selected.count) selected variants")
 
         withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) {
             showAddedToCartFeedback = true
@@ -621,14 +673,6 @@ struct ProductDetailView: View {
             contentAppeared = true
         }
     }
-}
-
-// MARK: - Supporting Types
-
-struct ProductVariant {
-    let name: String
-    let price: Double
-    let isDefault: Bool
 }
 
 #Preview {

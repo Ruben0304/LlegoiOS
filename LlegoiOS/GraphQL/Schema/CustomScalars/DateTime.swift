@@ -8,6 +8,7 @@
 @_spi(Internal) @_spi(Execution) import ApolloAPI
 
 public extension LlegoAPI {
+  /// Date with time (isoformat)
   typealias DateTime = String
 
 }

@@ -1,7 +1,7 @@
-import Foundation
-import SwiftUI
 import Combine
 import CoreLocation
+import Foundation
+import SwiftUI
 
 enum CartViewState {
     case idle
@@ -15,7 +15,7 @@ class CartViewModel: ObservableObject {
     @Published var state: CartViewState = .idle
     @Published var cartItems: [CartItem] = []
     @Published var errorMessage: String?
-    @Published var hasWatchedAds: Bool = false // Descuento por ver anuncios
+    @Published var hasWatchedAds: Bool = false  // Descuento por ver anuncios
     @Published var isCreatingOrder: Bool = false
     @Published var createdOrder: CreatedOrder?
     @Published var orderError: String?
@@ -73,8 +73,8 @@ class CartViewModel: ObservableObject {
     }
 
     // MARK: - Service Fee Constants
-    private let standardServiceFeeRate: Double = 0.15 // 15%
-    private let discountedServiceFeeRate: Double = 0.10 // 10% con descuento
+    private let standardServiceFeeRate: Double = 0.15  // 15%
+    private let discountedServiceFeeRate: Double = 0.10  // 10% con descuento
 
     init() {
         bindGlobalRecommendations()
@@ -87,7 +87,9 @@ class CartViewModel: ObservableObject {
     }
 
     var subtotal: Double {
-        cartItems.reduce(0.0) { $0 + ($1.price * Double($1.quantity)) }
+        cartItems.reduce(0.0) { partial, item in
+            partial + item.finalTotalPrice
+        }
     }
 
     var deliveryFee: Double {
@@ -229,13 +231,17 @@ class CartViewModel: ObservableObject {
                     self.cartItems = cartProducts.map { product in
                         CartItem(
                             id: product.id,
+                            productId: product.productId,
                             name: product.name,
                             shop: product.businessName,
                             weight: product.weight,
-                            price: product.price,
+                            basePrice: product.basePrice,
+                            finalUnitPrice: product.finalUnitPrice,
+                            finalTotalPrice: product.finalTotalPrice,
                             imageUrl: product.image,
                             quantity: product.quantity,
-                            availability: product.availability
+                            availability: product.availability,
+                            selectedVariants: product.selectedVariants
                         )
                     }
 
@@ -247,7 +253,9 @@ class CartViewModel: ObservableObject {
                     }
 
                     // Check for default saved address
-                    if let user = self.authManager.currentUser, let defaultId = user.defaultAddressId, let addresses = user.savedAddresses {
+                    if let user = self.authManager.currentUser,
+                        let defaultId = user.defaultAddressId, let addresses = user.savedAddresses
+                    {
                         if let defaultAddr = addresses.first(where: { $0.id == defaultId }) {
                             self.defaultAddress = defaultAddr
                             self.selectedAddress = defaultAddr
@@ -290,13 +298,17 @@ class CartViewModel: ObservableObject {
         } else {
             let newItem = CartItem(
                 id: product.id,
+                productId: product.id,
                 name: product.name,
                 shop: product.shop,
                 weight: product.weight,
-                price: priceValue,
+                basePrice: priceValue,
+                finalUnitPrice: priceValue,
+                finalTotalPrice: priceValue,
                 imageUrl: product.imageUrl,
                 quantity: 1,
-                availability: true
+                availability: true,
+                selectedVariants: []
             )
             withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
                 cartItems.append(newItem)
@@ -389,7 +401,7 @@ class CartViewModel: ObservableObject {
             return
         }
 
-        let productIds = cartProducts.map { $0.id }
+        let productIds = cartProducts.map { $0.productId }
         let productNames = cartProducts.map { $0.name }
 
         print("🌐 [CartViewModel] ========================================")
@@ -400,7 +412,8 @@ class CartViewModel: ObservableObject {
 
         // Detectar si hay múltiples branches
         if hasMultipleBranches {
-            print("⚠️ [CartViewModel] ADVERTENCIA: Carrito con múltiples branches: \(uniqueBranchIds)")
+            print(
+                "⚠️ [CartViewModel] ADVERTENCIA: Carrito con múltiples branches: \(uniqueBranchIds)")
             print("⚠️ [CartViewModel] Esto puede afectar las recomendaciones")
         } else if let branchId = cartBranchId {
             print("✅ [CartViewModel] Branch único: \(branchId)")
@@ -408,31 +421,41 @@ class CartViewModel: ObservableObject {
 
         print("🌐 [CartViewModel] ========================================")
 
-        repository.fetchCloudRecommendations(productIds: productIds, limit: 6) { [weak self] result in
+        repository.fetchCloudRecommendations(productIds: productIds, limit: 6) {
+            [weak self] result in
             guard let self = self else { return }
 
             Task { @MainActor in
                 switch result {
                 case .success(let recommendations):
-                    print("🌐 [CartViewModel] Backend retornó \(recommendations.count) recomendaciones")
+                    print(
+                        "🌐 [CartViewModel] Backend retornó \(recommendations.count) recomendaciones"
+                    )
 
                     // Filtrar productos que ya están en el carrito
-                    let cartProductIds = Set(self.cartProducts.map { $0.id })
-                    self.suggestedProducts = recommendations.filter { !cartProductIds.contains($0.id) }
+                    let cartProductIds = Set(self.cartProducts.map { $0.productId })
+                    self.suggestedProducts = recommendations.filter {
+                        !cartProductIds.contains($0.id)
+                    }
 
                     self.isLoadingSuggestions = false
 
                     if self.suggestedProducts.isEmpty {
                         print("⚠️ [CartViewModel] No hay recomendaciones después de filtrar")
-                        self.suggestionsError = "No hay recomendaciones disponibles para estos productos"
+                        self.suggestionsError =
+                            "No hay recomendaciones disponibles para estos productos"
                     } else {
-                        print("✅ [CartViewModel] Loaded \(self.suggestedProducts.count) cloud recommendations")
+                        print(
+                            "✅ [CartViewModel] Loaded \(self.suggestedProducts.count) cloud recommendations"
+                        )
                     }
 
                 case .failure(let error):
                     self.isLoadingSuggestions = false
                     self.suggestionsError = "No se pudieron cargar recomendaciones de la nube"
-                    print("❌ [CartViewModel] Error loading cloud recommendations: \(error.localizedDescription)")
+                    print(
+                        "❌ [CartViewModel] Error loading cloud recommendations: \(error.localizedDescription)"
+                    )
                 }
             }
         }
@@ -465,7 +488,7 @@ class CartViewModel: ObservableObject {
             )
 
             // Filtrar productos que ya están en el carrito
-            let cartProductIds = Set(cartProducts.map { $0.id })
+            let cartProductIds = Set(cartProducts.map { $0.productId })
             suggestedProducts = filteredProducts.filter { !cartProductIds.contains($0.id) }
 
             isLoadingSuggestions = false
@@ -517,13 +540,17 @@ class CartViewModel: ObservableObject {
             isLoadingPaymentMethods = true
 
             do {
-                let methods = try await paymentMethodManager.fetchPaymentMethods(branchId: cartBranchId)
+                let methods = try await paymentMethodManager.fetchPaymentMethods(
+                    branchId: cartBranchId)
                 await MainActor.run {
-                    self.paymentMethods = methods
+                    self.paymentMethods =
+                        methods
                         .filter { $0.isActive }
                         .sorted { $0.displayOrder < $1.displayOrder }
                     self.isLoadingPaymentMethods = false
-                    print("✅ Loaded \(self.paymentMethods.count) payment methods for branch \(self.cartBranchId ?? "all")")
+                    print(
+                        "✅ Loaded \(self.paymentMethods.count) payment methods for branch \(self.cartBranchId ?? "all")"
+                    )
                 }
             } catch {
                 await MainActor.run {
@@ -547,16 +574,21 @@ class CartViewModel: ObservableObject {
         paymentMethodId: String,
         sendsSmsNotification: Bool = false,
         comments: String? = nil,
-        completion: @escaping @Sendable (Result<(CreatedOrder, InitiatePaymentResultModel), Error>) -> Void
+        completion:
+            @escaping @Sendable (Result<(CreatedOrder, InitiatePaymentResultModel), Error>) -> Void
     ) {
         guard let branchId = cartBranchId else {
-            let error = NSError(domain: "CartViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "No se pudo determinar la tienda"])
+            let error = NSError(
+                domain: "CartViewModel", code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "No se pudo determinar la tienda"])
             completion(.failure(error))
             return
         }
 
         guard !cartItems.isEmpty else {
-            let error = NSError(domain: "CartViewModel", code: -2, userInfo: [NSLocalizedDescriptionKey: "El carrito está vacío"])
+            let error = NSError(
+                domain: "CartViewModel", code: -2,
+                userInfo: [NSLocalizedDescriptionKey: "El carrito está vacío"])
             completion(.failure(error))
             return
         }
@@ -564,7 +596,11 @@ class CartViewModel: ObservableObject {
         // Get user location for delivery address
         let locationManager = UserLocationManager.shared
         guard let userLocation = locationManager.userLocation else {
-            let error = NSError(domain: "CartViewModel", code: -3, userInfo: [NSLocalizedDescriptionKey: "Por favor selecciona una ubicación de entrega"])
+            let error = NSError(
+                domain: "CartViewModel", code: -3,
+                userInfo: [
+                    NSLocalizedDescriptionKey: "Por favor selecciona una ubicación de entrega"
+                ])
             completion(.failure(error))
             return
         }
@@ -572,10 +608,9 @@ class CartViewModel: ObservableObject {
         isCreatingOrder = true
         orderError = nil
 
-        // Build items array
-        let items = cartItems.map { item in
-            (productId: item.id, quantity: item.quantity)
-        }
+        // Build items array aggregated by productId.
+        // Backend de orders aún no recibe variantes para productos.
+        let items = aggregatedOrderItems()
 
         // Build delivery address
         let deliveryAddress: DeliveryAddressInput
@@ -618,7 +653,7 @@ class CartViewModel: ObservableObject {
             branchId: branchId,
             items: items,
             deliveryAddress: deliveryAddress,
-            paymentMethod: "pending", // Temporary, will be updated by payment
+            paymentMethod: "pending",  // Temporary, will be updated by payment
             paymentIntentId: nil,
             comments: comments
         ) { [weak self] result in
@@ -672,7 +707,9 @@ class CartViewModel: ObservableObject {
         sendsSmsNotification: Bool = false
     ) async throws -> InitiatePaymentResultModel {
         guard let jwt = await authManager.getAccessToken() else {
-            throw NSError(domain: "CartViewModel", code: -4, userInfo: [NSLocalizedDescriptionKey: "No hay sesión activa"])
+            throw NSError(
+                domain: "CartViewModel", code: -4,
+                userInfo: [NSLocalizedDescriptionKey: "No hay sesión activa"])
         }
 
         await MainActor.run {
@@ -712,7 +749,9 @@ class CartViewModel: ObservableObject {
     ) {
         Task {
             guard let jwt = await authManager.getAccessToken() else {
-                let error = NSError(domain: "CartViewModel", code: -5, userInfo: [NSLocalizedDescriptionKey: "No hay sesión activa"])
+                let error = NSError(
+                    domain: "CartViewModel", code: -5,
+                    userInfo: [NSLocalizedDescriptionKey: "No hay sesión activa"])
                 completion(.failure(error))
                 return
             }
@@ -757,7 +796,9 @@ class CartViewModel: ObservableObject {
                         self.currentPaymentAttempt = attempt
                     }
                     let status = attempt.status.lowercased()
-                    if status == "confirmed" || status == "completed" || status == "customer_confirmed" {
+                    if status == "confirmed" || status == "completed"
+                        || status == "customer_confirmed"
+                    {
                         await MainActor.run {
                             self.isPollingShortcut = false
                         }
@@ -768,7 +809,7 @@ class CartViewModel: ObservableObject {
                     // El backend aún no encontró la transferencia — seguimos intentando
                     print("⏳ Shortcut poll: \(error.localizedDescription)")
                 }
-                try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 segundos
+                try? await Task.sleep(nanoseconds: 5_000_000_000)  // 5 segundos
             }
             await MainActor.run {
                 self.isPollingShortcut = false
@@ -791,7 +832,9 @@ class CartViewModel: ObservableObject {
     ) {
         Task {
             guard let jwt = await authManager.getAccessToken() else {
-                let error = NSError(domain: "CartViewModel", code: -5, userInfo: [NSLocalizedDescriptionKey: "No hay sesión activa"])
+                let error = NSError(
+                    domain: "CartViewModel", code: -5,
+                    userInfo: [NSLocalizedDescriptionKey: "No hay sesión activa"])
                 completion(.failure(error))
                 return
             }
@@ -824,13 +867,17 @@ class CartViewModel: ObservableObject {
         completion: @escaping @Sendable (Result<CreatedOrder, Error>) -> Void
     ) {
         guard let branchId = cartBranchId else {
-            let error = NSError(domain: "CartViewModel", code: -1, userInfo: [NSLocalizedDescriptionKey: "No se pudo determinar la tienda"])
+            let error = NSError(
+                domain: "CartViewModel", code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "No se pudo determinar la tienda"])
             completion(.failure(error))
             return
         }
 
         guard !cartItems.isEmpty else {
-            let error = NSError(domain: "CartViewModel", code: -2, userInfo: [NSLocalizedDescriptionKey: "El carrito está vacío"])
+            let error = NSError(
+                domain: "CartViewModel", code: -2,
+                userInfo: [NSLocalizedDescriptionKey: "El carrito está vacío"])
             completion(.failure(error))
             return
         }
@@ -838,7 +885,11 @@ class CartViewModel: ObservableObject {
         // Get user location for delivery address
         let locationManager = UserLocationManager.shared
         guard let userLocation = locationManager.userLocation else {
-            let error = NSError(domain: "CartViewModel", code: -3, userInfo: [NSLocalizedDescriptionKey: "Por favor selecciona una ubicación de entrega"])
+            let error = NSError(
+                domain: "CartViewModel", code: -3,
+                userInfo: [
+                    NSLocalizedDescriptionKey: "Por favor selecciona una ubicación de entrega"
+                ])
             completion(.failure(error))
             return
         }
@@ -846,10 +897,9 @@ class CartViewModel: ObservableObject {
         isCreatingOrder = true
         orderError = nil
 
-        // Build items array
-        let items = cartItems.map { item in
-            (productId: item.id, quantity: item.quantity)
-        }
+        // Build items array aggregated by productId.
+        // Backend de orders aún no recibe variantes para productos.
+        let items = aggregatedOrderItems()
 
         // Build delivery address
         let deliveryAddress: DeliveryAddressInput
@@ -915,29 +965,29 @@ class CartViewModel: ObservableObject {
     }
 
     /// Incrementar cantidad de un producto
-    func incrementQuantity(productId: String) {
-        if let item = cartItems.first(where: { $0.id == productId }) {
-            cartManager.updateQuantity(productId: productId, quantity: item.quantity + 1)
+    func incrementQuantity(cartItemId: String) {
+        if let item = cartItems.first(where: { $0.id == cartItemId }) {
+            cartManager.updateQuantity(cartItemId: cartItemId, quantity: item.quantity + 1)
             loadCart()
         }
     }
 
     /// Decrementar cantidad de un producto
-    func decrementQuantity(productId: String) {
-        if let item = cartItems.first(where: { $0.id == productId }) {
+    func decrementQuantity(cartItemId: String) {
+        if let item = cartItems.first(where: { $0.id == cartItemId }) {
             let newQuantity = item.quantity - 1
             if newQuantity <= 0 {
-                removeFromCart(productId: productId)
+                removeFromCart(cartItemId: cartItemId)
             } else {
-                cartManager.updateQuantity(productId: productId, quantity: newQuantity)
+                cartManager.updateQuantity(cartItemId: cartItemId, quantity: newQuantity)
                 loadCart()
             }
         }
     }
 
     /// Remover producto del carrito
-    func removeFromCart(productId: String) {
-        cartManager.removeFromCart(productId: productId)
+    func removeFromCart(cartItemId: String) {
+        cartManager.removeFromCart(cartItemId: cartItemId)
         loadCart()
     }
 
@@ -949,6 +999,16 @@ class CartViewModel: ObservableObject {
     }
 
     // MARK: - Helpers
+
+    private func aggregatedOrderItems() -> [(productId: String, quantity: Int)] {
+        let grouped = Dictionary(grouping: cartItems, by: \.productId)
+        return grouped.map { productId, items in
+            let qty = items.reduce(0) { partial, item in
+                partial + item.quantity
+            }
+            return (productId: productId, quantity: qty)
+        }
+    }
 
     private func formatPrice(_ price: Double) -> String {
         return String(format: "$%.2f", price)
@@ -988,20 +1048,28 @@ class CartViewModel: ObservableObject {
 
 struct CartItem: Identifiable, Hashable {
     let id: String
+    let productId: String
     let name: String
     let shop: String
     let weight: String
-    let price: Double
+    let basePrice: Double
+    let finalUnitPrice: Double
+    let finalTotalPrice: Double
     let imageUrl: String
     var quantity: Int
     let availability: Bool
+    let selectedVariants: [SelectedVariantOption]
 
     var formattedPrice: String {
-        String(format: "$%.2f", price)
+        String(format: "$%.2f", finalUnitPrice)
+    }
+
+    var formattedBasePrice: String {
+        String(format: "$%.2f", basePrice)
     }
 
     var itemTotal: Double {
-        price * Double(quantity)
+        finalTotalPrice
     }
 
     var formattedItemTotal: String {

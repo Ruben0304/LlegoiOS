@@ -563,7 +563,10 @@ struct HomeView: View {
         CartRepository().fetchCartProducts { result in
             switch result {
             case .success(let cartProducts):
-                let subtotal = cartProducts.reduce(0.0) { $0 + ($1.price * Double($1.quantity)) }
+                var subtotal: Double = 0.0
+                for product in cartProducts {
+                    subtotal += product.finalTotalPrice
+                }
                 Task { @MainActor in
                     cartSubtotal = subtotal
                 }

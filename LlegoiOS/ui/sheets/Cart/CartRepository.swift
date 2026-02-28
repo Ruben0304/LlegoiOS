@@ -1,7 +1,7 @@
-import Foundation
 import Apollo
-import UIKit
 import Combine
+import Foundation
+import UIKit
 
 @MainActor
 class CartRepository {
@@ -12,7 +12,9 @@ class CartRepository {
     // MARK: - GraphQL Fetching
 
     /// Obtener datos completos de los productos en el carrito desde GraphQL
-    func fetchCartProducts(completion: @escaping @Sendable (Result<[CartProductGraphQL], Error>) -> Void) {
+    func fetchCartProducts(
+        completion: @escaping @Sendable (Result<[CartProductGraphQL], Error>) -> Void
+    ) {
         let localItems = cartManager.localItems
 
         print("🔍 CartRepository: Fetching cart products...")
@@ -26,7 +28,7 @@ class CartRepository {
             return
         }
 
-        let productIds = localItems.map { $0.productId }
+        let productIds = Array(Set(localItems.map { $0.productId }))
         print("🔎 Querying GraphQL for product IDs: \(productIds)")
 
         apolloClient.fetchCompat(
@@ -35,14 +37,18 @@ class CartRepository {
                 after: .none,
                 ids: productIds
             ),
-            cachePolicy: .fetchIgnoringCacheData // Siempre datos frescos para el carrito
+            cachePolicy: .fetchIgnoringCacheData  // Siempre datos frescos para el carrito
         ) { result in
             switch result {
             case .success(let graphQLResult):
                 if let errors = graphQLResult.errors {
                     print("❌ GraphQL Errors fetching cart products:")
                     errors.forEach { print("  - \($0.localizedDescription)") }
-                    completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: "GraphQL errors"])))
+                    completion(
+                        .failure(
+                            NSError(
+                                domain: "GraphQL", code: -1,
+                                userInfo: [NSLocalizedDescriptionKey: "GraphQL errors"])))
                     return
                 }
 
@@ -51,24 +57,44 @@ class CartRepository {
                     return
                 }
 
-                // Mapear GraphQL products y combinar con cantidades locales
-                let mappedProducts = data.edges.compactMap { edge -> CartProductGraphQL? in
-                    guard let localItem = localItems.first(where: { $0.productId == edge.node.id }) else {
+                // Mapear GraphQL products y combinar con cantidades locales.
+                // Soporta múltiples líneas para el mismo productId con variantes distintas.
+                let productsById = Dictionary(
+                    uniqueKeysWithValues: data.edges.map { ($0.node.id, $0.node) })
+                let mappedProducts = localItems.compactMap { localItem -> CartProductGraphQL? in
+                    guard let productNode = productsById[localItem.productId] else {
+                        print(
+                            "⚠️ CartRepository: Product \(localItem.productId) no longer available in backend response"
+                        )
                         return nil
                     }
 
+                    let selected = localItem.selectedVariants
+                    let computedUnit = NSDecimalNumber(
+                        decimal: computeFinalUnitPrice(
+                            base: Decimal(productNode.price), selected: selected)
+                    ).doubleValue
+                    let resolvedBase = localItem.basePrice ?? productNode.price
+                    let resolvedUnit = localItem.finalUnitPrice ?? computedUnit
+                    let resolvedTotal = resolvedUnit * Double(localItem.quantity)
+
                     return CartProductGraphQL(
-                        id: edge.node.id,
-                        branchId: edge.node.branchId,
-                        name: edge.node.name,
-                        description: edge.node.description,
-                        weight: edge.node.weight,
-                        price: edge.node.price,
-                        currency: edge.node.currency,
-                        image: edge.node.imageUrl,
-                        availability: edge.node.availability,
+                        id: localItem.cartItemId,
+                        cartItemId: localItem.cartItemId,
+                        productId: productNode.id,
+                        branchId: productNode.branchId,
+                        name: productNode.name,
+                        description: productNode.description,
+                        weight: productNode.weight,
+                        basePrice: resolvedBase,
+                        finalUnitPrice: resolvedUnit,
+                        finalTotalPrice: resolvedTotal,
+                        currency: productNode.currency,
+                        image: productNode.imageUrl,
+                        availability: productNode.availability,
                         quantity: localItem.quantity,
-                        businessName: edge.node.business?.name ?? "Tienda"
+                        businessName: productNode.business?.name ?? "Tienda",
+                        selectedVariants: selected
                     )
                 }
 
@@ -85,17 +111,22 @@ class CartRepository {
     // MARK: - Delivery Fee Estimation
 
     /// Estimar el costo de envío para una sucursal
-    func estimateDeliveryFee(branchId: String, completion: @escaping @Sendable (Result<DeliveryFeeEstimate, Error>) -> Void) {
+    func estimateDeliveryFee(
+        branchId: String,
+        completion: @escaping @Sendable (Result<DeliveryFeeEstimate, Error>) -> Void
+    ) {
         let client = apolloClient
 
         Task { @MainActor in
             guard let jwt = authManager.getAccessToken() else {
                 print("❌ CartRepository: No JWT available for delivery fee estimation")
-                completion(.failure(NSError(
-                    domain: "CartRepository",
-                    code: -1,
-                    userInfo: [NSLocalizedDescriptionKey: "No hay sesión activa"]
-                )))
+                completion(
+                    .failure(
+                        NSError(
+                            domain: "CartRepository",
+                            code: -1,
+                            userInfo: [NSLocalizedDescriptionKey: "No hay sesión activa"]
+                        )))
                 return
             }
 
@@ -113,21 +144,30 @@ class CartRepository {
                     if let errors = graphQLResult.errors {
                         print("❌ GraphQL Errors estimating delivery fee:")
                         errors.forEach { print("  - \($0.localizedDescription)") }
-                        completion(.failure(NSError(
-                            domain: "GraphQL",
-                            code: -1,
-                            userInfo: [NSLocalizedDescriptionKey: errors.first?.localizedDescription ?? "Error estimando envío"]
-                        )))
+                        completion(
+                            .failure(
+                                NSError(
+                                    domain: "GraphQL",
+                                    code: -1,
+                                    userInfo: [
+                                        NSLocalizedDescriptionKey: errors.first?
+                                            .localizedDescription ?? "Error estimando envío"
+                                    ]
+                                )))
                         return
                     }
 
                     guard let data = graphQLResult.data?.estimateDeliveryFee else {
                         print("❌ CartRepository: No delivery fee data returned")
-                        completion(.failure(NSError(
-                            domain: "CartRepository",
-                            code: -2,
-                            userInfo: [NSLocalizedDescriptionKey: "No se recibieron datos de envío"]
-                        )))
+                        completion(
+                            .failure(
+                                NSError(
+                                    domain: "CartRepository",
+                                    code: -2,
+                                    userInfo: [
+                                        NSLocalizedDescriptionKey: "No se recibieron datos de envío"
+                                    ]
+                                )))
                         return
                     }
 
@@ -140,7 +180,9 @@ class CartRepository {
                         branchName: data.branchName
                     )
 
-                    print("✅ Delivery fee estimated: \(estimate.deliveryFee) \(estimate.currency) (distance: \(estimate.distanceKm) km, zone: \(estimate.zoneName ?? "N/A"))")
+                    print(
+                        "✅ Delivery fee estimated: \(estimate.deliveryFee) \(estimate.currency) (distance: \(estimate.distanceKm) km, zone: \(estimate.zoneName ?? "N/A"))"
+                    )
                     completion(.success(estimate))
 
                 case .failure(let error):
@@ -167,12 +209,14 @@ class CartRepository {
             print("🔍 CartRepository: Fetching all products for branch: \(branchId)")
 
             let query = LlegoAPI.GetProductsQuery(
-                first: Int32(100), // Obtener hasta 100 productos
+                first: Int32(100),  // Obtener hasta 100 productos
                 after: .none,
                 branchId: .some(branchId),
                 categoryId: .none,
-                availableOnly: .some(true), // Solo productos disponibles
-                branchTipo: LlegoAPI.BranchTipo(rawValue: branchType.uppercased()).map { .some(GraphQLEnum($0)) } ?? .none,
+                availableOnly: .some(true),  // Solo productos disponibles
+                branchTipo: LlegoAPI.BranchTipo(rawValue: branchType.uppercased()).map {
+                    .some(GraphQLEnum($0))
+                } ?? .none,
                 radiusKm: .none,
                 jwt: jwt.map { .some($0) } ?? .none
             )
@@ -183,11 +227,15 @@ class CartRepository {
                     if let errors = graphQLResult.errors {
                         print("❌ GraphQL Errors fetching branch products:")
                         errors.forEach { print("  - \($0.localizedDescription)") }
-                        completion(.failure(NSError(
-                            domain: "CartRepository",
-                            code: -1,
-                            userInfo: [NSLocalizedDescriptionKey: "Error obteniendo productos"]
-                        )))
+                        completion(
+                            .failure(
+                                NSError(
+                                    domain: "CartRepository",
+                                    code: -1,
+                                    userInfo: [
+                                        NSLocalizedDescriptionKey: "Error obteniendo productos"
+                                    ]
+                                )))
                         return
                     }
 
@@ -278,11 +326,16 @@ class CartRepository {
                     if let errors = graphQLResult.errors {
                         print("❌ [CartRepository] GraphQL Errors fetching recommendations:")
                         errors.forEach { print("  - \($0.localizedDescription)") }
-                        completion(.failure(NSError(
-                            domain: "CartRepository",
-                            code: -1,
-                            userInfo: [NSLocalizedDescriptionKey: "Error obteniendo recomendaciones"]
-                        )))
+                        completion(
+                            .failure(
+                                NSError(
+                                    domain: "CartRepository",
+                                    code: -1,
+                                    userInfo: [
+                                        NSLocalizedDescriptionKey:
+                                            "Error obteniendo recomendaciones"
+                                    ]
+                                )))
                         return
                     }
 
@@ -306,14 +359,16 @@ class CartRepository {
                     // Mapear recomendaciones a Product
                     let products = recommendations.compactMap { rec -> Product? in
                         guard let product = rec.product else {
-                            print("⚠️ [CartRepository] Recommendation without product: \(rec.productId)")
+                            print(
+                                "⚠️ [CartRepository] Recommendation without product: \(rec.productId)"
+                            )
                             return nil
                         }
 
                         return Product(
                             id: product.id,
                             name: product.name,
-                            shop: "Tienda", // El producto no incluye info de branch en el schema
+                            shop: "Tienda",  // El producto no incluye info de branch en el schema
                             shopLogoUrl: "",
                             weight: product.currency,
                             price: "\(product.currency) \(product.price)",
@@ -321,11 +376,14 @@ class CartRepository {
                         )
                     }
 
-                    print("✅ [CartRepository] Mapped \(products.count) products from recommendations")
+                    print(
+                        "✅ [CartRepository] Mapped \(products.count) products from recommendations")
                     completion(.success(products))
 
                 case .failure(let error):
-                    print("❌ [CartRepository] Error fetching cloud recommendations: \(error.localizedDescription)")
+                    print(
+                        "❌ [CartRepository] Error fetching cloud recommendations: \(error.localizedDescription)"
+                    )
                     completion(.failure(error))
                 }
             }
@@ -348,31 +406,43 @@ class CartRepository {
         // Convertir UIImage a datos JPEG
         guard let imageData = image.jpegData(compressionQuality: 0.85) else {
             print("❌ Error: No se pudo convertir la imagen a datos JPEG")
-            completion(.failure(NSError(
-                domain: "CartRepository",
-                code: -1,
-                userInfo: [NSLocalizedDescriptionKey: "No se pudo procesar la imagen"]
-            )))
+            completion(
+                .failure(
+                    NSError(
+                        domain: "CartRepository",
+                        code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "No se pudo procesar la imagen"]
+                    )))
             return
         }
 
         print("✅ Imagen convertida a JPEG: \(imageData.count) bytes")
 
         guard !transferId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            completion(.failure(NSError(
-                domain: "CartRepository",
-                code: -2,
-                userInfo: [NSLocalizedDescriptionKey: "El identificador de transferencia está vacío"]
-            )))
+            completion(
+                .failure(
+                    NSError(
+                        domain: "CartRepository",
+                        code: -2,
+                        userInfo: [
+                            NSLocalizedDescriptionKey:
+                                "El identificador de transferencia está vacío"
+                        ]
+                    )))
             return
         }
 
-        guard let url = URL(string: "https://llegobackend-production.up.railway.app/payments/validate") else {
-            completion(.failure(NSError(
-                domain: "CartRepository",
-                code: -3,
-                userInfo: [NSLocalizedDescriptionKey: "URL de validación inválida"]
-            )))
+        guard
+            let url = URL(
+                string: "https://llegobackend-production.up.railway.app/payments/validate")
+        else {
+            completion(
+                .failure(
+                    NSError(
+                        domain: "CartRepository",
+                        code: -3,
+                        userInfo: [NSLocalizedDescriptionKey: "URL de validación inválida"]
+                    )))
             return
         }
 
@@ -380,7 +450,8 @@ class CartRepository {
         request.httpMethod = "POST"
 
         let boundary = "Boundary-\(UUID().uuidString)"
-        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.setValue(
+            "multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
 
         if let authorization = AuthManager.shared.getAuthorizationHeader() {
             request.setValue(authorization, forHTTPHeaderField: "Authorization")
@@ -393,11 +464,14 @@ class CartRepository {
         let lineBreak = "\r\n"
 
         body.appendString("--\(boundary)\(lineBreak)")
-        body.appendString("Content-Disposition: form-data; name=\"transfer_id\"\(lineBreak)\(lineBreak)")
+        body.appendString(
+            "Content-Disposition: form-data; name=\"transfer_id\"\(lineBreak)\(lineBreak)")
         body.appendString("\(transferId)\(lineBreak)")
 
         body.appendString("--\(boundary)\(lineBreak)")
-        body.appendString("Content-Disposition: form-data; name=\"file\"; filename=\"comprobante.jpg\"\(lineBreak)")
+        body.appendString(
+            "Content-Disposition: form-data; name=\"file\"; filename=\"comprobante.jpg\"\(lineBreak)"
+        )
         body.appendString("Content-Type: image/jpeg\(lineBreak)\(lineBreak)")
         body.append(imageData)
         body.appendString("\(lineBreak)")
@@ -442,16 +516,20 @@ class CartRepository {
 
             if (200...299).contains(httpResponse.statusCode) {
                 do {
-                    let validationResult = try decoder.decode(PaymentValidationResult.self, from: data)
+                    let validationResult = try decoder.decode(
+                        PaymentValidationResult.self, from: data)
                     print("✅ Validación procesada. matched: \(validationResult.matched)")
                     print("   message: \(validationResult.message)")
-                    print("   detectedTransferId: \(validationResult.detectedTransferId ?? "sin detectar")")
+                    print(
+                        "   detectedTransferId: \(validationResult.detectedTransferId ?? "sin detectar")"
+                    )
 
                     if let extracted = validationResult.extractedData {
                         print("   extractedData:")
                         print("     banco: \(extracted.banco ?? "desconocido")")
                         print("     quienEnvio: \(extracted.quienEnvio ?? "desconocido")")
-                        print("     esMensajeBanco: \(String(describing: extracted.esMensajeBanco))")
+                        print(
+                            "     esMensajeBanco: \(String(describing: extracted.esMensajeBanco))")
                         print("     monto: \(String(describing: extracted.cantidadTransferida))")
                         print("     numeroTransferencia: \(extracted.numeroTransferencia ?? "n/a")")
                     }
@@ -468,7 +546,8 @@ class CartRepository {
                 }
             } else {
                 do {
-                    let errorBody = try decoder.decode(PaymentValidationErrorResponse.self, from: data)
+                    let errorBody = try decoder.decode(
+                        PaymentValidationErrorResponse.self, from: data)
                     let apiError = NSError(
                         domain: "CartRepository",
                         code: httpResponse.statusCode,
@@ -495,8 +574,85 @@ class CartRepository {
 
 /// Item del carrito guardado localmente (solo id + cantidad)
 struct CartItemLocal: Codable, Sendable {
+    var cartItemId: String
     let productId: String
     var quantity: Int
+    var selectedVariants: [SelectedVariantOption]
+    var basePrice: Double?
+    var finalUnitPrice: Double?
+    var finalTotalPrice: Double
+
+    enum CodingKeys: String, CodingKey {
+        case cartItemId
+        case productId
+        case quantity
+        case selectedVariants
+        case basePrice
+        case finalUnitPrice
+        case finalTotalPrice
+    }
+
+    init(
+        productId: String,
+        quantity: Int,
+        selectedVariants: [SelectedVariantOption] = [],
+        basePrice: Double? = nil,
+        finalUnitPrice: Double? = nil,
+        finalTotalPrice: Double? = nil,
+        cartItemId: String? = nil
+    ) {
+        self.productId = productId
+        self.quantity = quantity
+        self.selectedVariants = selectedVariants
+        self.basePrice = basePrice
+        self.finalUnitPrice = finalUnitPrice
+        let resolvedId =
+            cartItemId
+            ?? Self.buildCartItemId(productId: productId, selectedVariants: selectedVariants)
+        self.cartItemId = resolvedId
+        let resolvedUnit = finalUnitPrice ?? basePrice ?? 0
+        self.finalTotalPrice = finalTotalPrice ?? (resolvedUnit * Double(quantity))
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        productId = try container.decode(String.self, forKey: .productId)
+        quantity = try container.decode(Int.self, forKey: .quantity)
+        selectedVariants =
+            try container.decodeIfPresent([SelectedVariantOption].self, forKey: .selectedVariants)
+            ?? []
+        basePrice = try container.decodeIfPresent(Double.self, forKey: .basePrice)
+        finalUnitPrice = try container.decodeIfPresent(Double.self, forKey: .finalUnitPrice)
+        let decodedId = try container.decodeIfPresent(String.self, forKey: .cartItemId)
+        cartItemId =
+            decodedId
+            ?? Self.buildCartItemId(productId: productId, selectedVariants: selectedVariants)
+        let decodedTotal = try container.decodeIfPresent(Double.self, forKey: .finalTotalPrice)
+        let resolvedUnit = finalUnitPrice ?? basePrice ?? 0
+        finalTotalPrice = decodedTotal ?? (resolvedUnit * Double(quantity))
+    }
+
+    static func buildCartItemId(productId: String, selectedVariants: [SelectedVariantOption])
+        -> String
+    {
+        guard !selectedVariants.isEmpty else {
+            return productId
+        }
+        let signature =
+            selectedVariants
+            .sorted { lhs, rhs in
+                if lhs.listId == rhs.listId {
+                    return lhs.optionName < rhs.optionName
+                }
+                return lhs.listId < rhs.listId
+            }
+            .map { selected in
+                let optionKey = selected.optionId ?? selected.optionName
+                return "\(selected.listId):\(optionKey)"
+            }
+            .joined(separator: "|")
+        return "\(productId)::\(signature)"
+    }
 }
 
 /// Estimación de costo de envío desde el backend
@@ -512,16 +668,21 @@ struct DeliveryFeeEstimate: Sendable {
 /// Producto completo del carrito (datos GraphQL + cantidad local)
 struct CartProductGraphQL: Identifiable, Sendable {
     let id: String
+    let cartItemId: String
+    let productId: String
     let branchId: String
     let name: String
     let description: String
     let weight: String
-    let price: Double
+    let basePrice: Double
+    let finalUnitPrice: Double
+    let finalTotalPrice: Double
     let currency: String
     let image: String
     let availability: Bool
-    let quantity: Int // Cantidad del carrito (desde local storage)
+    let quantity: Int  // Cantidad del carrito (desde local storage)
     let businessName: String
+    let selectedVariants: [SelectedVariantOption]
 }
 
 /// Resultado de validación de pago
@@ -560,7 +721,8 @@ struct PaymentValidationResult: Decodable, Sendable {
             fecha = try container.decodeIfPresent(String.self, forKey: .fecha)
             esMensajeBanco = try container.decodeIfPresent(Bool.self, forKey: .esMensajeBanco)
             cantidadTransferida = container.decodeFlexibleDouble(forKey: .cantidadTransferida)
-            numeroTransferencia = try container.decodeIfPresent(String.self, forKey: .numeroTransferencia)
+            numeroTransferencia = try container.decodeIfPresent(
+                String.self, forKey: .numeroTransferencia)
             primeros4Tarjeta = try container.decodeIfPresent(String.self, forKey: .primeros4Tarjeta)
             ultimos4Tarjeta = try container.decodeIfPresent(String.self, forKey: .ultimos4Tarjeta)
         }
@@ -597,7 +759,8 @@ struct PaymentValidationResult: Decodable, Sendable {
             fecha = try container.decodeIfPresent(String.self, forKey: .fecha)
             esMensajeBanco = try container.decodeIfPresent(Bool.self, forKey: .esMensajeBanco)
             cantidadTransferida = container.decodeFlexibleDouble(forKey: .cantidadTransferida)
-            numeroTransferencia = try container.decodeIfPresent(String.self, forKey: .numeroTransferencia)
+            numeroTransferencia = try container.decodeIfPresent(
+                String.self, forKey: .numeroTransferencia)
             primeros4Tarjeta = try container.decodeIfPresent(String.self, forKey: .primeros4Tarjeta)
             ultimos4Tarjeta = try container.decodeIfPresent(String.self, forKey: .ultimos4Tarjeta)
         }
@@ -608,22 +771,23 @@ private struct PaymentValidationErrorResponse: Decodable {
     let message: String
 }
 
-private extension Data {
-    mutating func appendString(_ string: String) {
+extension Data {
+    fileprivate mutating func appendString(_ string: String) {
         if let data = string.data(using: .utf8) {
             append(data)
         }
     }
 }
 
-private extension KeyedDecodingContainer {
-    func decodeFlexibleDouble(forKey key: Key) -> Double? {
+extension KeyedDecodingContainer {
+    fileprivate func decodeFlexibleDouble(forKey key: Key) -> Double? {
         if let value = try? decode(Double.self, forKey: key) {
             return value
         }
 
         if let stringValue = try? decode(String.self, forKey: key) {
-            let normalized = stringValue
+            let normalized =
+                stringValue
                 .replacingOccurrences(of: ",", with: ".")
                 .filter { "0123456789.".contains($0) }
             return Double(normalized)

@@ -10,7 +10,10 @@ struct Store: Identifiable {
     let address: String?
     let rating: Double?
 
-    init(id: String, name: String, etaMinutes: Int, logoUrl: String, bannerUrl: String, address: String? = nil, rating: Double? = nil) {
+    init(
+        id: String, name: String, etaMinutes: Int, logoUrl: String, bannerUrl: String,
+        address: String? = nil, rating: Double? = nil
+    ) {
         self.id = id
         self.name = name
         self.etaMinutes = etaMinutes
@@ -21,7 +24,10 @@ struct Store: Identifiable {
     }
 
     // Convenience initializer for backward compatibility with default values
-    init(id: String, name: String, address: String, etaMinutes: Int = 30, logoUrl: String = "", bannerUrl: String = "", rating: Double? = nil) {
+    init(
+        id: String, name: String, address: String, etaMinutes: Int = 30, logoUrl: String = "",
+        bannerUrl: String = "", rating: Double? = nil
+    ) {
         self.id = id
         self.name = name
         self.etaMinutes = etaMinutes
@@ -69,8 +75,13 @@ struct BranchGraphQL: Identifiable, Sendable {
     let facilities: [String]?
     let createdAt: String
     let products: [BranchProductGraphQL]  // Productos anidados (opcional, puede estar vacío)
-    
-    init(id: String, businessId: String, name: String, address: String, coordinates: CoordinatesGraphQL, phone: String, status: String, avatarUrl: String?, coverUrl: String?, deliveryRadius: Double?, facilities: [String]?, createdAt: String, products: [BranchProductGraphQL] = []) {
+
+    init(
+        id: String, businessId: String, name: String, address: String,
+        coordinates: CoordinatesGraphQL, phone: String, status: String, avatarUrl: String?,
+        coverUrl: String?, deliveryRadius: Double?, facilities: [String]?, createdAt: String,
+        products: [BranchProductGraphQL] = []
+    ) {
         self.id = id
         self.businessId = businessId
         self.name = name
@@ -130,10 +141,13 @@ struct StoryItem: Identifiable {
     let id: String
     let mediaUrl: String
     let mediaType: StoryMediaType
-    let duration: TimeInterval // En segundos
+    let duration: TimeInterval  // En segundos
     let timestamp: Date
 
-    init(id: String = UUID().uuidString, mediaUrl: String, mediaType: StoryMediaType, duration: TimeInterval = 5.0, timestamp: Date = Date()) {
+    init(
+        id: String = UUID().uuidString, mediaUrl: String, mediaType: StoryMediaType,
+        duration: TimeInterval = 5.0, timestamp: Date = Date()
+    ) {
         self.id = id
         self.mediaUrl = mediaUrl
         self.mediaType = mediaType
@@ -147,3 +161,37 @@ enum StoryMediaType {
     case video
 }
 
+// MARK: - Product Variants
+
+struct VariantOption: Identifiable, Sendable, Hashable, Codable {
+    let id: String?
+    let name: String
+    let priceAdjustment: Decimal
+
+    init(id: String?, name: String, priceAdjustment: Decimal) {
+        self.id = id
+        self.name = name
+        self.priceAdjustment = priceAdjustment
+    }
+}
+
+struct VariantList: Identifiable, Sendable, Hashable, Codable {
+    let id: String
+    let name: String
+    let description: String?
+    let options: [VariantOption]
+}
+
+struct SelectedVariantOption: Sendable, Hashable, Codable {
+    let listId: String
+    let listName: String
+    let optionId: String?
+    let optionName: String
+    let priceAdjustment: Decimal
+}
+
+func computeFinalUnitPrice(base: Decimal, selected: [SelectedVariantOption]) -> Decimal {
+    selected.reduce(base) { partial, option in
+        partial + option.priceAdjustment
+    }
+}
