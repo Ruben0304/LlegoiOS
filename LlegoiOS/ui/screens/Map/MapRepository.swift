@@ -21,7 +21,7 @@ class MapRepository {
                 first: 100,
                 after: .none,
                 businessId: businessId.map { .some($0) } ?? .none,
-                tipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) }
+                tipo: LlegoAPI.BranchTipo(rawValue: branchType.uppercased()).map { .some(GraphQLEnum($0)) }
                     ?? .none,
                 radiusKm: radiusKm.map { .some($0) } ?? .none,
                 productCategoryId: productCategoryId.map { .some($0) } ?? .none,

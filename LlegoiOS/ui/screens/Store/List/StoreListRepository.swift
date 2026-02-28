@@ -25,7 +25,7 @@ class StoreListRepository {
                 first: Int32(first),
                 after: after.map { .some($0) } ?? .none,
                 businessId: businessId.map { .some($0) } ?? .none,
-                tipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) }
+                tipo: LlegoAPI.BranchTipo(rawValue: branchType.uppercased()).map { .some(GraphQLEnum($0)) }
                     ?? .none,
                 radiusKm: radiusKm.map { .some($0) } ?? .none,
                 productCategoryId: productCategoryId.map { .some($0) } ?? .none,
@@ -211,7 +211,7 @@ class StoreListRepository {
                 branchId: .some(branchId),
                 categoryId: .none,
                 availableOnly: .some(true),
-                branchTipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) }
+                branchTipo: LlegoAPI.BranchTipo(rawValue: branchType.uppercased()).map { .some(GraphQLEnum($0)) }
                     ?? .none,
                 radiusKm: .none,
                 jwt: jwt.map { .some($0) } ?? .none

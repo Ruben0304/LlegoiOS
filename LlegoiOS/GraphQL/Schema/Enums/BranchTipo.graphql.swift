@@ -8,6 +8,7 @@ public extension LlegoAPI {
     case restaurante = "RESTAURANTE"
     case dulceria = "DULCERIA"
     case tienda = "TIENDA"
+    case perfumeria = "PERFUMERIA"
   }
 
 }

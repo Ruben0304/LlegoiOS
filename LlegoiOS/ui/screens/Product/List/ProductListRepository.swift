@@ -20,25 +20,25 @@ class ProductListRepository {
         let branchType = BranchTypeManager.shared.selectedType.rawValue
 
         print(
-            "📦 fetchProducts - branchId: \(branchId ?? "nil"), branchType: \(branchType), first: \(first)"
+            "📦 fetchProducts - branchId: \(branchId ?? "nil"), branchType: \(branchType), SIN PAGINACIÓN (máx 100)"
         )
 
+        // Traer todos los productos sin paginación (máximo 100)
         let query = LlegoAPI.GetProductsQuery(
-            first: Int32(first),
-            after: after.map { .some($0) } ?? .none,
+            first: Int32(100),  // Máximo permitido por el backend
+            after: .none,  // Sin cursor de paginación
             branchId: branchId.map { .some($0) } ?? .none,
             categoryId: categoryId.map { .some($0) } ?? .none,
             availableOnly: .none,
-            branchTipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) }
+            branchTipo: LlegoAPI.BranchTipo(rawValue: branchType.uppercased()).map { .some(GraphQLEnum($0)) }
                 ?? .none,
             radiusKm: radiusKm.map { .some($0) } ?? .none,
             jwt: jwt.map { .some($0) } ?? .none
         )
 
-        // Usar política de caché diferente si hay branchId específico
-        // Para evitar mostrar datos incorrectos del caché
-        let cachePolicy: ApolloCompatCachePolicy =
-            branchId != nil ? .fetchIgnoringCacheData : .returnCacheDataAndFetch
+        // Siempre ignorar caché para obtener datos frescos del backend
+        // Esto asegura que siempre se vean los productos más recientes
+        let cachePolicy: ApolloCompatCachePolicy = .fetchIgnoringCacheData
 
         apolloClient.fetchCompat(query: query, cachePolicy: cachePolicy) {
             [apolloClient = self.apolloClient] result in
@@ -187,7 +187,7 @@ class ProductListRepository {
             first: Int32(first),
             after: after.map { .some($0) } ?? .none,
             useVectorSearch: .some(useVectorSearch),
-            branchTipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) }
+            branchTipo: LlegoAPI.BranchTipo(rawValue: branchType.uppercased()).map { .some(GraphQLEnum($0)) }
                 ?? .none,
             categoryId: categoryId.map { .some($0) } ?? .none,
             radiusKm: radiusKm.map { .some($0) } ?? .none,
@@ -238,7 +238,7 @@ class ProductListRepository {
                             first: Int32(first),
                             after: after.map { .some($0) } ?? .none,
                             useVectorSearch: .some(false),
-                            branchTipo: LlegoAPI.BranchTipo(rawValue: branchType).map {
+                            branchTipo: LlegoAPI.BranchTipo(rawValue: branchType.uppercased()).map {
                                 .some(GraphQLEnum($0))
                             } ?? .none,
                             categoryId: categoryId.map { .some($0) } ?? .none,

@@ -163,12 +163,6 @@ class ProductListViewModel: ObservableObject {
     }
 
     func loadProducts(isRefreshing: Bool = false) {
-        // Evitar recargar si ya se cargaron los datos (excepto en refresh explícito o cuando hay branchId)
-        if hasLoaded && !isRefreshing && branchId == nil {
-            print("📦 ProductListViewModel - Datos ya cargados, omitiendo recarga")
-            return
-        }
-
         // Reset pagination state on refresh
         if isRefreshing {
             currentCursor = nil
@@ -266,75 +260,14 @@ class ProductListViewModel: ObservableObject {
     }
 
     func loadMoreProducts() {
-        guard !isLoadingMore, hasNextPage, let cursor = currentCursor else {
-            print(
-                "📦 loadMoreProducts - Skipping (isLoadingMore: \(isLoadingMore), hasNextPage: \(hasNextPage), cursor: \(currentCursor ?? "nil"))"
-            )
-            return
-        }
-
-        print("📦 loadMoreProducts - Loading next page with cursor: \(cursor)")
-        isLoadingMore = true
-
-        repository.fetchProducts(
-            first: 8, after: cursor, branchId: branchId, categoryId: selectedCategoryId,
-            radiusKm: effectiveRadiusKm
-        ) { [weak self] result in
-            guard let self = self else { return }
-
-            Task { @MainActor in
-                self.isLoadingMore = false
-
-                switch result {
-                case .success(let (productsGraphQL, pageInfo)):
-                    // Mapear productos GraphQL a modelos UI
-                    let newProducts = productsGraphQL.map { productGraphQL in
-                        Product(
-                            id: productGraphQL.id,
-                            name: productGraphQL.name,
-                            shop: productGraphQL.businessName,
-                            shopLogoUrl: productGraphQL.businessLogoUrl,
-                            weight: "0",
-                            price: self.formatPrice(
-                                price: productGraphQL.price,
-                                currency: productGraphQL.currency
-                            ),
-                            imageUrl: productGraphQL.imageUrl
-                        )
-                    }
-
-                    // Append new products to existing list
-                    self.products.append(contentsOf: newProducts)
-
-                    // Update pagination state
-                    self.currentCursor = pageInfo.endCursor
-                    self.hasNextPage = pageInfo.hasNextPage
-
-                    self.applyFiltersAndSort()
-
-                    print(
-                        "✅ Loaded \(newProducts.count) more products (total: \(self.products.count), hasNextPage: \(pageInfo.hasNextPage))"
-                    )
-
-                case .failure(let error):
-                    print("❌ Error loading more products: \(error.localizedDescription)")
-                }
-            }
-        }
+        // Paginación deshabilitada - ahora traemos todos los productos (máx 100) de una vez
+        print("📦 loadMoreProducts - DISABLED (sin paginación)")
+        return
     }
 
     func loadMoreIfNeeded(currentItem: Product?) {
-        guard let currentItem = currentItem else {
-            loadMoreProducts()
-            return
-        }
-
-        let thresholdIndex = filteredProducts.index(filteredProducts.endIndex, offsetBy: -3)
-        if let currentIndex = filteredProducts.firstIndex(where: { $0.id == currentItem.id }),
-            currentIndex >= thresholdIndex
-        {
-            loadMoreProducts()
-        }
+        // Paginación deshabilitada - no necesitamos cargar más productos
+        return
     }
 
     func clearFilters() {

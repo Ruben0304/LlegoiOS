@@ -17,16 +17,58 @@ extension ApolloClient {
         resultHandler: @escaping @Sendable (Result<GraphQLResponse<Query>, Swift.Error>) -> Void
     ) -> Task<Void, Never> where Query.ResponseFormat == SingleResponseFormat {
         Task {
-            do {
-                _ = cachePolicy
-                let result = try await fetch(query: query, requestConfiguration: .init())
+            @Sendable func emit(_ result: Result<GraphQLResponse<Query>, Swift.Error>) async {
                 await MainActor.run {
-                    resultHandler(.success(result))
+                    resultHandler(result)
+                }
+            }
+
+            let requestConfiguration: RequestConfiguration =
+                cachePolicy == .fetchIgnoringCacheCompletely
+                ? .init(writeResultsToCache: false)
+                : .init()
+
+            do {
+                switch cachePolicy {
+                case .returnCacheDataElseFetch:
+                    let result = try await fetch(
+                        query: query,
+                        cachePolicy: .cacheFirst,
+                        requestConfiguration: requestConfiguration
+                    )
+                    await emit(.success(result))
+
+                case .fetchIgnoringCacheData, .fetchIgnoringCacheCompletely:
+                    let result = try await fetch(
+                        query: query,
+                        cachePolicy: .networkOnly,
+                        requestConfiguration: requestConfiguration
+                    )
+                    await emit(.success(result))
+
+                case .returnCacheDataDontFetch:
+                    if let result = try await fetch(
+                        query: query,
+                        cachePolicy: .cacheOnly,
+                        requestConfiguration: requestConfiguration
+                    ) {
+                        await emit(.success(result))
+                    } else {
+                        await emit(.failure(ApolloClient.Error.noResults))
+                    }
+
+                case .returnCacheDataAndFetch:
+                    // Compat mode: return a single result to avoid duplicate callbacks in legacy call sites.
+                    // We still prioritize hitting backend first and fallback to cache if network fails.
+                    let result = try await fetch(
+                        query: query,
+                        cachePolicy: .networkFirst,
+                        requestConfiguration: requestConfiguration
+                    )
+                    await emit(.success(result))
                 }
             } catch {
-                await MainActor.run {
-                    resultHandler(.failure(error))
-                }
+                await emit(.failure(error))
             }
         }
     }

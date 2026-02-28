@@ -72,10 +72,6 @@ class ProductFeedViewModel: ObservableObject {
     // MARK: - Public Methods
 
     func loadFeed(isRefreshing: Bool = false) {
-        if hasLoaded && !isRefreshing {
-            return
-        }
-
         if isRefreshing {
             currentCursor = nil
             hasNextPage = false

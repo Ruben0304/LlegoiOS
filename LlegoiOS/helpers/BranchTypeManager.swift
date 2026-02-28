@@ -2,12 +2,12 @@ import SwiftUI
 import Combine
 
 /// Enum que representa los tipos de sucursales disponibles
-/// Coincide con el enum BranchTipo del schema GraphQL
+/// Fuente de verdad para branchTipo en minúsculas (como lo espera el backend para campos String)
 enum BranchType: String {
-    case restaurante = "RESTAURANTE"
-    case tienda = "TIENDA"
-    case dulceria = "DULCERIA"
-    case perfume = "PERFUME"
+    case restaurante = "restaurante"
+    case tienda = "tienda"
+    case dulceria = "dulceria"
+    case perfumeria = "perfumeria"
 }
 
 /// Manages the global branch type filter across the application
@@ -19,7 +19,7 @@ class BranchTypeManager: ObservableObject {
     static let shared = BranchTypeManager()
 
     /// Current selected branch type that determines the filter for queries
-    /// Default is RESTAURANTE (index 0 in HomeView)
+    /// Default is restaurante (index 0 in HomeView)
     @Published var selectedType: BranchType = .restaurante
 
     private init() {}
@@ -30,10 +30,10 @@ class BranchTypeManager: ObservableObject {
     }
 
     /// Set type based on HomeView category index
-    /// - 0: Restaurantes -> RESTAURANTE
-    /// - 1: Tiendas -> TIENDA
-    /// - 2: Dulcería -> DULCERIA
-    /// - 3: Perfumería -> PERFUME
+    /// - 0: Restaurantes -> restaurante
+    /// - 1: Tiendas -> tienda
+    /// - 2: Dulcería -> dulceria
+    /// - 3: Perfumería -> perfumeria
     func setTypeFromCategoryIndex(_ index: Int) {
         switch index {
         case 0:
@@ -43,13 +43,13 @@ class BranchTypeManager: ObservableObject {
         case 2:
             selectedType = .dulceria
         case 3:
-            selectedType = .perfume
+            selectedType = .perfumeria
         default:
             selectedType = .restaurante
         }
     }
 
-    /// Get the GraphQL enum string value for the current type
+    /// Valor branchTipo en minúsculas para argumentos GraphQL de tipo String
     var graphQLValue: String {
         selectedType.rawValue
     }

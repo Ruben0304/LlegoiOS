@@ -181,7 +181,7 @@ class StoreDetailRepository {
                     branchId: .some(branchId),
                     categoryId: .none,
                     availableOnly: .some(true),
-                    branchTipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) } ?? .none,
+                    branchTipo: LlegoAPI.BranchTipo(rawValue: branchType.uppercased()).map { .some(GraphQLEnum($0)) } ?? .none,
                     radiusKm: .none,
                     jwt: jwt.map { .some($0) } ?? .none
                 ),

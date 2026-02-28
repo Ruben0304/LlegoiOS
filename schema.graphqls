@@ -1491,6 +1491,7 @@ enum BranchTipo {
   RESTAURANTE
   DULCERIA
   TIENDA
+  PERFUMERIA
 }
 enum BranchVehicle {
   MOTO
@@ -2066,4 +2067,3 @@ directive @specifiedBy(
   ) on SCALAR
 "Indicates an Input Object is a OneOf Input Object."
 directive @oneOf on INPUT_OBJECT
-

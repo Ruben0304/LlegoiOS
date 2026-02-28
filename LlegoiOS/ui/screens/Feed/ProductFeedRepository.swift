@@ -264,7 +264,7 @@ class ProductFeedRepository {
     {
         let jwt = AuthManager.shared.getAccessToken()
         let branchTypeRaw = BranchTypeManager.shared.selectedType.rawValue
-        let branchTipo = LlegoAPI.BranchTipo(rawValue: branchTypeRaw)
+        let branchTipo = LlegoAPI.BranchTipo(rawValue: branchTypeRaw.uppercased())
         print(
             "🧭 [Feed] GetCompleteFeed branchTipo=\(branchTypeRaw), branchTipoEnum=\(branchTipo?.rawValue ?? "nil")"
         )
@@ -637,7 +637,7 @@ class ProductFeedRepository {
             first: 15,
             after: .none,
             businessId: .none,
-            tipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) } ?? .none,
+            tipo: LlegoAPI.BranchTipo(rawValue: branchType.uppercased()).map { .some(GraphQLEnum($0)) } ?? .none,
             radiusKm: radiusKm.map { .some($0) } ?? .none,
             productCategoryId: categoryId.map { .some($0) } ?? .none,
             jwt: jwt.map { .some($0) } ?? .none
@@ -680,7 +680,7 @@ class ProductFeedRepository {
             branchId: .none,
             categoryId: categoryId.map { .some($0) } ?? .none,
             availableOnly: .some(true),
-            branchTipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) }
+            branchTipo: LlegoAPI.BranchTipo(rawValue: branchType.uppercased()).map { .some(GraphQLEnum($0)) }
                 ?? .none,
             radiusKm: radiusKm.map { .some($0) } ?? .none,
             jwt: jwt.map { .some($0) } ?? .none

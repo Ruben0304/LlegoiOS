@@ -290,9 +290,6 @@ struct ProductListView: View {
                             selectedProductId = product.id
                         }
                     )
-                    .onAppear {
-                        activeViewModel.loadMoreIfNeeded(currentItem: product)
-                    }
                     .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
                     .onTapGesture {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -306,20 +303,6 @@ struct ProductListView: View {
                         .delay(Double(index) * 0.05),
                         value: animationDelay
                     )
-                }
-
-                // Loading indicator for pagination
-                if activeViewModel.isLoadingMore {
-                    GridRow {
-                        HStack {
-                            Spacer()
-                            ProgressView()
-                                .tint(Color.llegoPrimary)
-                                .padding()
-                            Spacer()
-                        }
-                        .gridCellColumns(2)
-                    }
                 }
             }
             .padding(.horizontal, 20)

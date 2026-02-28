@@ -37,7 +37,7 @@ class SearchRepository {
             first: first,
             after: .none,
             useVectorSearch: .some(true),
-            branchTipo: LlegoAPI.BranchTipo(rawValue: branchType).map { .some(GraphQLEnum($0)) }
+            branchTipo: LlegoAPI.BranchTipo(rawValue: branchType.uppercased()).map { .some(GraphQLEnum($0)) }
                 ?? .none,
             categoryId: categoryId.map { .some($0) } ?? .none,
             radiusKm: .none,
