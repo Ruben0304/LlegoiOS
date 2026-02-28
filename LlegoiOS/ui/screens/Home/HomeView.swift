@@ -70,7 +70,7 @@ struct HomeView: View {
             return Color(red: 0.2, green: 0.7, blue: 0.5)
         case 2: // Dulcería - Marrón-Dorado
             return Color(red: 0.737, green: 0.514, blue: 0.345)
-        case 3: // Perfume - Azul morado/Lavanda (estilo Sauvage)
+        case 3: // Perfumería - Azul morado/Lavanda (estilo Sauvage)
             return Color(red: 0.50, green: 0.45, blue: 0.70)
         default:
             return Color(red: 0.9, green: 0.3, blue: 0.2)
@@ -110,7 +110,7 @@ struct HomeView: View {
                 Feature(icon: "sparkles", title: "Galletas", subtitle: "Artesanales"),
                 Feature(icon: "star.fill", title: "Especiales", subtitle: "Del día")
             ]
-        case 3: // Perfume
+        case 3: // Perfumería
             return [
                 Feature(icon: "drop.fill", title: "Eau de Parfum", subtitle: "Larga duración"),
                 Feature(icon: "sparkles", title: "Eau de Toilette", subtitle: "Frescura diaria"),
@@ -123,7 +123,7 @@ struct HomeView: View {
         }
     }
     
-    // Models data - Orden: Restaurantes, Supermercado, Dulcería, Perfume
+    // Models data - Orden: Restaurantes, Supermercado, Dulcería, Perfumería
     // Siempre usa modelos hardcodeados con posiciones de cámara fijas
     var models: [CategoryModel3D] {
         return [
@@ -149,7 +149,7 @@ struct HomeView: View {
                 customScale: 0.8
             ),
             CategoryModel3D(
-                name: "Perfumes",
+                name: "Perfumería",
                 fileName: "perfume.usdz",
                 description: "Fragancias Exclusivas",
                 icon: "drop.fill",

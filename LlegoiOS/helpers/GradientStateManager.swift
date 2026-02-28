@@ -38,7 +38,7 @@ class GradientStateManager: ObservableObject {
                 currentAccentColor = Color(red: 0.2, green: 0.7, blue: 0.5)
             case 2: // Dulcería - Marrón-Dorado
                 currentAccentColor = Color(red: 0.737, green: 0.514, blue: 0.345)
-            case 3: // Perfume - Azul morado/Lavanda (estilo Sauvage)
+            case 3: // Perfumería - Azul morado/Lavanda (estilo Sauvage)
                 currentAccentColor = Color(red: 0.50, green: 0.45, blue: 0.70)
             default:
                 currentAccentColor = Color(red: 0.9, green: 0.3, blue: 0.2)

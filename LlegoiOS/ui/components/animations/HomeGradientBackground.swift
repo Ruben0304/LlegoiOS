@@ -55,7 +55,7 @@ struct HomeGradientBackground: View {
                 veryLight: Color(red: 0.96, green: 0.92, blue: 0.88),
                 overlay: Color(red: 0.65, green: 0.45, blue: 0.3)
             )
-        case 3: // Perfume - Azul morado/Lavanda (estilo Sauvage)
+        case 3: // Perfumería - Azul morado/Lavanda (estilo Sauvage)
             return (
                 dark: Color(red: 0.30, green: 0.28, blue: 0.55),
                 medium: Color(red: 0.48, green: 0.45, blue: 0.68),

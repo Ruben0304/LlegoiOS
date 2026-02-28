@@ -33,7 +33,7 @@ class BranchTypeManager: ObservableObject {
     /// - 0: Restaurantes -> RESTAURANTE
     /// - 1: Tiendas -> TIENDA
     /// - 2: Dulcería -> DULCERIA
-    /// - 3: Perfume -> PERFUME
+    /// - 3: Perfumería -> PERFUME
     func setTypeFromCategoryIndex(_ index: Int) {
         switch index {
         case 0:
