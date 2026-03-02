@@ -111,7 +111,7 @@ public extension LlegoAPI {
             .field("name", String.self),
             .field("price", Double.self),
             .field("quantity", Int.self),
-            .field("imageUrl", String.self),
+            .field("imageUrl", String?.self),
             .field("lineTotal", Double.self),
           ] }
           @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
@@ -122,7 +122,7 @@ public extension LlegoAPI {
           public var name: String { __data["name"] }
           public var price: Double { __data["price"] }
           public var quantity: Int { __data["quantity"] }
-          public var imageUrl: String { __data["imageUrl"] }
+          public var imageUrl: String? { __data["imageUrl"] }
           /// Line total (price * quantity)
           public var lineTotal: Double { __data["lineTotal"] }
         }

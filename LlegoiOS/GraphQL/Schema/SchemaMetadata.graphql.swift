@@ -36,7 +36,9 @@ public extension LlegoAPI {
       case "BranchEdge": return LlegoAPI.Objects.BranchEdge
       case "BranchLikeType": return LlegoAPI.Objects.BranchLikeType
       case "BranchSuggestionType": return LlegoAPI.Objects.BranchSuggestionType
+      case "BranchSyncType": return LlegoAPI.Objects.BranchSyncType
       case "BranchType": return LlegoAPI.Objects.BranchType
+      case "BusinessSyncType": return LlegoAPI.Objects.BusinessSyncType
       case "BusinessType": return LlegoAPI.Objects.BusinessType
       case "BusinessTypeConfigType": return LlegoAPI.Objects.BusinessTypeConfigType
       case "CameraConfigType": return LlegoAPI.Objects.CameraConfigType
@@ -44,6 +46,7 @@ public extension LlegoAPI {
       case "ComboOptionType": return LlegoAPI.Objects.ComboOptionType
       case "ComboSlotType": return LlegoAPI.Objects.ComboSlotType
       case "ComboType": return LlegoAPI.Objects.ComboType
+      case "CoordinatesSyncType": return LlegoAPI.Objects.CoordinatesSyncType
       case "CoordinatesType": return LlegoAPI.Objects.CoordinatesType
       case "DeliveryAddressType": return LlegoAPI.Objects.DeliveryAddressType
       case "DeliveryFeeEstimateType": return LlegoAPI.Objects.DeliveryFeeEstimateType
@@ -56,6 +59,8 @@ public extension LlegoAPI {
       case "FeedSection": return LlegoAPI.Objects.FeedSection
       case "FeedSectionDiagnostic": return LlegoAPI.Objects.FeedSectionDiagnostic
       case "GradientConfigType": return LlegoAPI.Objects.GradientConfigType
+      case "ImageSyncType": return LlegoAPI.Objects.ImageSyncType
+      case "ImageUrlType": return LlegoAPI.Objects.ImageUrlType
       case "InitiatePaymentResult": return LlegoAPI.Objects.InitiatePaymentResult
       case "IosConfigType": return LlegoAPI.Objects.IosConfigType
       case "MaintenanceConfigType": return LlegoAPI.Objects.MaintenanceConfigType
@@ -76,6 +81,7 @@ public extension LlegoAPI {
       case "ProductRecommendationType": return LlegoAPI.Objects.ProductRecommendationType
       case "ProductRecommendationsResponseType": return LlegoAPI.Objects.ProductRecommendationsResponseType
       case "ProductSuggestionType": return LlegoAPI.Objects.ProductSuggestionType
+      case "ProductSyncType": return LlegoAPI.Objects.ProductSyncType
       case "ProductType": return LlegoAPI.Objects.ProductType
       case "Query": return LlegoAPI.Objects.Query
       case "SavedAddressType": return LlegoAPI.Objects.SavedAddressType

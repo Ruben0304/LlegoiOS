@@ -46,7 +46,7 @@ final class CreateOrderRepository {
             // Build items input
             let itemsInput = items.compactMap { item -> LlegoAPI.OrderItemInput? in
                 guard let productId = item.productId else { return nil }
-                return LlegoAPI.OrderItemInput(productId: productId, quantity: Int32(item.quantity))
+                return LlegoAPI.OrderItemInput(quantity: Int32(item.quantity), productId: .some(productId))
             }
             
             // Build delivery address input
@@ -269,7 +269,7 @@ final class CreateOrderRepository {
                 name: item.name,
                 price: item.price,
                 quantity: item.quantity,
-                imageUrl: item.imageUrl,
+                imageUrl: item.imageUrl ?? "",
                 lineTotal: item.lineTotal
             )
         }

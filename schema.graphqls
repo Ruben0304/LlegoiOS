@@ -47,6 +47,12 @@ type Query {
   productRecommendations(productIds: [String!]!, limit: Int! = 5, jwt: String = null): ProductRecommendationsResponseType
   "Obtener productos de la misma branch/sucursal, excluyendo el producto dado"
   productsFromSameBranch(productId: String!, limit: Int! = 10, jwt: String = null): [ProductType!]!
+  "Obtener vitrina por ID"
+  showcase(showcaseId: String!, jwt: String = null): ShowcaseType
+  "Obtener vitrinas por sucursal"
+  showcasesByBranch(branchId: String!, activeOnly: Boolean! = true, jwt: String = null): [ShowcaseType!]!
+  "Obtener todas las vitrinas"
+  allShowcases(activeOnly: Boolean! = false, jwt: String = null): [ShowcaseType!]!
   "Lista de categorías con subcategorías"
   categories(jwt: String = null): [CategoryType!]!
   "Obtener categoría por ID"
@@ -175,6 +181,12 @@ type Query {
   variantLists(businessId: String!, jwt: String = null): [VariantListType!]!
   "Obtener lista de variantes por ID"
   variantList(id: String!, jwt: String = null): VariantListType
+  "Sincronizar negocios con sus branches (excluye datos sensibles como managerIds y ownerId)"
+  syncBusinessesWithBranches(jwt: String = null): [BusinessSyncType!]!
+  "Sincronizar productos (todos los productos disponibles)"
+  syncProducts(branchId: String = null, categoryId: String = null, availableOnly: Boolean! = false, jwt: String = null): [ProductSyncType!]!
+  "Sincronizar imágenes con URLs para diferentes calidades (baja 100x100, original)"
+  syncImages(entityType: String = null, entityIds: [String!] = null, qualities: [ImageQuality!] = null, jwt: String = null): [ImageSyncType!]!
   "Saludo de ejemplo"
   hello(jwt: String = null): String!
   "Saluda por nombre"
@@ -538,6 +550,28 @@ type ProductRecommendationType {
   "Full product details"
   product: ProductType
 }
+type ShowcaseType {
+  id: String!
+  branchId: String!
+  title: String!
+  image: String!
+  description: String
+  items: [ShowcaseItemType!]
+  isActive: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  "Presigned URL for the showcase image"
+  imageUrl: String!
+  "Branch associated with this showcase"
+  branch: BranchType
+}
+type ShowcaseItemType {
+  id: String!
+  name: String!
+  description: String
+  price: Float
+  availability: Boolean!
+}
 type CategoryType {
   id: String!
   name: String!
@@ -787,10 +821,15 @@ type OrderType {
 }
 type OrderItemType {
   productId: String!
+  itemId: String!
+  itemType: String!
   name: String!
   price: Float!
+  basePrice: Float!
+  finalPrice: Float!
   quantity: Int!
-  imageUrl: String!
+  imageUrl: String
+  requestDescription: String
   wasModifiedByStore: Boolean!
   "Line total (price * quantity)"
   lineTotal: Float!
@@ -1248,6 +1287,72 @@ type ShortcutTransferType {
   "When the record was created"
   createdAt: DateTime!
 }
+type BusinessSyncType {
+  id: String!
+  name: String!
+  globalRating: Float!
+  avatar: String
+  description: String
+  tags: [String!]
+  isActive: Boolean!
+  createdAt: DateTime!
+  branches: [BranchSyncType!]!
+  "Presigned URL for the business avatar"
+  avatarUrl: String
+}
+type BranchSyncType {
+  id: String!
+  businessId: String!
+  name: String!
+  address: String
+  coordinates: CoordinatesSyncType!
+  phone: String!
+  schedule: JSON!
+  isActive: Boolean!
+  status: String
+  avatar: String
+  coverImage: String
+  socialMedia: JSON
+  tipos: [String!]!
+  useAppMessaging: Boolean!
+  vehicles: [String!]!
+  deliveryRadius: Float
+  createdAt: DateTime!
+  "Presigned URL for the branch avatar"
+  avatarUrl: String
+  "Presigned URL for the branch cover image"
+  coverUrl: String
+}
+type CoordinatesSyncType {
+  type: String!
+  coordinates: [Float!]!
+}
+type ProductSyncType {
+  id: String!
+  branchId: String!
+  name: String!
+  description: String!
+  weight: String!
+  price: Float!
+  currency: String!
+  image: String!
+  availability: Boolean!
+  categoryId: String
+  variantListIds: [String!]!
+  createdAt: DateTime!
+  "Presigned URL for the product image"
+  imageUrl: String!
+}
+type ImageSyncType {
+  entityId: String!
+  entityType: String!
+  imagePath: String!
+  urls: ImageUrlType!
+}
+type ImageUrlType {
+  baja: String
+  original: String
+}
 type Mutation {
   "Register a new user"
   register(input: RegisterInput!, jwt: String = null): AuthResponse!
@@ -1295,6 +1400,14 @@ type Mutation {
   updateProduct(productId: String!, input: UpdateProductInput!, jwt: String = null): ProductType!
   "Eliminar un producto"
   deleteProduct(productId: String!, jwt: String = null): Boolean!
+  "Crear una vitrina"
+  createShowcase(input: CreateShowcaseInput!, jwt: String = null): ShowcaseType!
+  "Actualizar una vitrina"
+  updateShowcase(showcaseId: String!, input: UpdateShowcaseInput!, jwt: String = null): ShowcaseType!
+  "Eliminar una vitrina"
+  deleteShowcase(showcaseId: String!, jwt: String = null): Boolean!
+  "Cambiar disponibilidad de una vitrina"
+  toggleShowcaseAvailability(showcaseId: String!, isActive: Boolean!, jwt: String = null): ShowcaseType!
   "Crear un nuevo combo"
   createCombo(input: CreateComboInput!, jwt: String = null): ComboType!
   "Actualizar un combo existente"
@@ -1638,6 +1751,14 @@ enum AppTarget {
   MERCHANT
   BOTH
 }
+enum ImageQuality {
+  BAJA
+  ORIGINAL
+}
+enum OrderItemTypeInput {
+  PRODUCT
+  SHOWCASE
+}
 enum AddressTypeInput {
   HOUSE
   APARTMENT
@@ -1828,6 +1949,27 @@ input UpdateProductInput {
   image: String = null
   variantListIds: [String!] = null
 }
+input CreateShowcaseInput {
+  branchId: String!
+  title: String!
+  image: String!
+  description: String = null
+  items: [ShowcaseItemInput!] = null
+}
+input ShowcaseItemInput {
+  id: String = null
+  name: String!
+  description: String = null
+  price: Float = null
+  availability: Boolean! = true
+}
+input UpdateShowcaseInput {
+  title: String = null
+  image: String = null
+  description: String = null
+  items: [ShowcaseItemInput!] = null
+  isActive: Boolean = null
+}
 input CreateComboInput {
   branchId: String!
   name: String!
@@ -1878,8 +2020,11 @@ input CreateOrderInput {
   promoCode: String = null
 }
 input OrderItemInput {
-  productId: String!
   quantity: Int!
+  itemType: OrderItemTypeInput! = PRODUCT
+  productId: String = null
+  showcaseId: String = null
+  description: String = null
 }
 input DeliveryAddressInput {
   street: String!

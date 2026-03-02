@@ -1,0 +1,33 @@
+query SyncBusinessesWithBranches {
+  syncBusinessesWithBranches {
+    id
+    name
+    globalRating
+    avatar
+    avatarUrl
+    description
+    tags
+    isActive
+    createdAt
+    branches {
+      id
+      businessId
+      name
+      address
+      coordinates {
+        type
+        coordinates
+      }
+      phone
+      isActive
+      status
+      avatar
+      avatarUrl
+      coverImage
+      coverUrl
+      tipos
+      deliveryRadius
+      createdAt
+    }
+  }
+}

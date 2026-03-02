@@ -135,7 +135,7 @@ public extension LlegoAPI {
               .field("productId", String.self),
               .field("name", String.self),
               .field("quantity", Int.self),
-              .field("imageUrl", String.self),
+              .field("imageUrl", String?.self),
             ] }
             @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
               GetMyOrdersQuery.Data.MyOrders.Order.Item.self
@@ -144,7 +144,7 @@ public extension LlegoAPI {
             public var productId: String { __data["productId"] }
             public var name: String { __data["name"] }
             public var quantity: Int { __data["quantity"] }
-            public var imageUrl: String { __data["imageUrl"] }
+            public var imageUrl: String? { __data["imageUrl"] }
           }
 
           /// MyOrders.Order.Branch

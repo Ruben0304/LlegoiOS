@@ -1,0 +1,16 @@
+query SyncProducts($availableOnly: Boolean) {
+  syncProducts(availableOnly: $availableOnly) {
+    id
+    branchId
+    name
+    description
+    weight
+    price
+    currency
+    image
+    imageUrl
+    availability
+    categoryId
+    createdAt
+  }
+}

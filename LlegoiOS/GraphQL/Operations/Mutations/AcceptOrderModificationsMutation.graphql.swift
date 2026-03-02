@@ -94,7 +94,7 @@ public extension LlegoAPI {
             .field("name", String.self),
             .field("price", Double.self),
             .field("quantity", Int.self),
-            .field("imageUrl", String.self),
+            .field("imageUrl", String?.self),
             .field("wasModifiedByStore", Bool.self),
             .field("lineTotal", Double.self),
           ] }
@@ -106,7 +106,7 @@ public extension LlegoAPI {
           public var name: String { __data["name"] }
           public var price: Double { __data["price"] }
           public var quantity: Int { __data["quantity"] }
-          public var imageUrl: String { __data["imageUrl"] }
+          public var imageUrl: String? { __data["imageUrl"] }
           public var wasModifiedByStore: Bool { __data["wasModifiedByStore"] }
           /// Line total (price * quantity)
           public var lineTotal: Double { __data["lineTotal"] }

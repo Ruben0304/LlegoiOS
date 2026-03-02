@@ -133,7 +133,7 @@ public extension LlegoAPI {
               .field("name", String.self),
               .field("quantity", Int.self),
               .field("price", Double.self),
-              .field("imageUrl", String.self),
+              .field("imageUrl", String?.self),
             ] }
             @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
               GetOrderTrackingQuery.Data.OrderTracking.Order.Item.self
@@ -143,7 +143,7 @@ public extension LlegoAPI {
             public var name: String { __data["name"] }
             public var quantity: Int { __data["quantity"] }
             public var price: Double { __data["price"] }
-            public var imageUrl: String { __data["imageUrl"] }
+            public var imageUrl: String? { __data["imageUrl"] }
           }
 
           /// OrderTracking.Order.DeliveryPerson

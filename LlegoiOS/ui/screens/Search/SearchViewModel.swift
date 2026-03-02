@@ -9,6 +9,7 @@ import Foundation
 import SwiftUI
 import MapKit
 import Combine
+import SwiftData
 
 enum SearchState {
     case idle
@@ -26,59 +27,127 @@ class SearchViewModel: ObservableObject {
     @Published var storeProducts: [String: [ProductGraphQL]] = [:]
     @Published var selectedCategory: SearchCategory = .both
 
+    // MARK: - Offline mode
+    @Published var isOfflineMode: Bool = false
+
     private let searchRepository = SearchRepository()
     private let productRepository = ProductListRepository()
     private let storeRepository = StoreListRepository()
     private let branchTypeManager = BranchTypeManager.shared
 
+    private var localSearchRepository: LocalSearchRepository?
     private var loadingProductsForStores: Set<String> = []
     private var cancellables = Set<AnyCancellable>()
+    private var offlineSearchTask: Task<Void, Never>?
 
-    // Default images
     private let defaultLogoUrl = ""
     private let defaultBannerUrl = ""
 
     // MARK: - Initialization
     init() {
         setupBranchTypeObserver()
+        checkConnectivity()
+    }
+
+    // MARK: - Configure offline repository
+    func configure(modelContext: ModelContext) {
+        localSearchRepository = LocalSearchRepository(modelContext: modelContext)
+    }
+
+    // MARK: - Connectivity Check
+    private func checkConnectivity() {
+        // Detectar si hay conexión intentando alcanzar el backend
+        // Para simplicidad usamos Network framework en background
+        Task {
+            let hasConnection = await checkInternetConnection()
+            isOfflineMode = !hasConnection
+        }
+    }
+
+    private func checkInternetConnection() async -> Bool {
+        guard let url = URL(string: "https://llegobackend-production.up.railway.app/graphql") else {
+            return false
+        }
+        var request = URLRequest(url: url, timeoutInterval: 5)
+        request.httpMethod = "HEAD"
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            return (response as? HTTPURLResponse)?.statusCode != nil
+        } catch {
+            return false
+        }
+    }
+
+    func setOfflineMode(_ offline: Bool) {
+        isOfflineMode = offline
+        loadInitialData()
     }
 
     // MARK: - Branch Type Observer
-
     private func setupBranchTypeObserver() {
         branchTypeManager.$selectedType
-            .dropFirst() // Ignore initial value
+            .dropFirst()
             .sink { [weak self] _ in
                 guard let self = self else { return }
-                print("🔄 SearchViewModel - Branch type changed, reloading data")
                 self.loadInitialData()
             }
             .store(in: &cancellables)
     }
-    
+
     // MARK: - Load Initial Data
     func loadInitialData() {
-        print("🔍 SearchViewModel - loadInitialData() called, selectedCategory: \(selectedCategory)")
         state = .idle
+
+        if isOfflineMode {
+            loadInitialDataOffline()
+            return
+        }
 
         switch selectedCategory {
         case .products:
-            print("🔍 SearchViewModel - Loading initial products...")
             loadInitialProducts()
         case .stores:
-            print("🔍 SearchViewModel - Loading initial stores...")
             loadInitialStores()
         case .both:
-            // En modo "Ambos" sin búsqueda activa no pre-cargamos nada
             state = .idle
         }
     }
-    
+
+    // MARK: - Offline initial data
+    private func loadInitialDataOffline() {
+        guard let localRepo = localSearchRepository else {
+            state = .idle
+            return
+        }
+
+        // Si no hay datos locales, quedarse en idle para que la UI muestre el prompt de descarga
+        if !OfflineSyncService.shared.hasLocalData {
+            state = .idle
+            return
+        }
+
+        switch selectedCategory {
+        case .products:
+            let result = localRepo.loadInitialProducts()
+            products = result
+            state = products.isEmpty ? .empty : .idle
+
+        case .stores:
+            let (storesResult, storeProdsResult) = localRepo.loadInitialStores()
+            stores = storesResult
+            storeProducts = storeProdsResult
+            state = stores.isEmpty ? .empty : .idle
+
+        case .both:
+            state = .idle
+        }
+    }
+
+    // MARK: - Online initial data
     private func loadInitialProducts() {
         productRepository.fetchProducts(first: 20) { [weak self] result in
             Task { @MainActor in
                 guard let self = self else { return }
-                
                 switch result {
                 case .success(let (productsGraphQL, _)):
                     self.products = productsGraphQL.map { graphQL in
@@ -93,7 +162,6 @@ class SearchViewModel: ObservableObject {
                         )
                     }
                     self.state = self.products.isEmpty ? .empty : .idle
-                    
                 case .failure(let error):
                     print("❌ Error loading initial products: \(error)")
                     self.state = .error(error.localizedDescription)
@@ -101,12 +169,11 @@ class SearchViewModel: ObservableObject {
             }
         }
     }
-    
+
     private func loadInitialStores() {
         storeRepository.fetchBranches(first: 20) { [weak self] result in
             Task { @MainActor in
                 guard let self = self else { return }
-                
                 switch result {
                 case .success(let (branchesGraphQL, _)):
                     self.stores = branchesGraphQL.map { branch in
@@ -125,8 +192,6 @@ class SearchViewModel: ObservableObject {
                             )
                         )
                     }
-                    
-                    // Mapear productos anidados (solo los primeros 4)
                     for branch in branchesGraphQL {
                         let mappedProducts = branch.products.prefix(4).map { product in
                             ProductGraphQL(
@@ -146,9 +211,7 @@ class SearchViewModel: ObservableObject {
                         }
                         self.storeProducts[branch.id] = mappedProducts
                     }
-                    
                     self.state = self.stores.isEmpty ? .empty : .idle
-                    
                 case .failure(let error):
                     print("❌ Error loading initial stores: \(error)")
                     self.state = .error(error.localizedDescription)
@@ -156,30 +219,78 @@ class SearchViewModel: ObservableObject {
             }
         }
     }
-    
-    // MARK: - Search (solo cuando se presiona buscar)
-    func search(query: String) {
-        print("🔍 SearchViewModel - search() called with query: '\(query)'")
-        print("🔍 SearchViewModel - selectedCategory: \(selectedCategory)")
 
-        guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            print("⚠️ SearchViewModel - Query is empty after trimming, clearing search")
+    // MARK: - Live search (offline only, llamado en onChange del texto)
+    func searchLive(query: String) {
+        guard isOfflineMode else { return }
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            clearSearch()
+            return
+        }
+        // Cancelar búsqueda anterior y lanzar nueva con pequeño debounce
+        offlineSearchTask?.cancel()
+        offlineSearchTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 200_000_000) // 200ms debounce
+            guard !Task.isCancelled else { return }
+            state = .loading
+            searchOffline(query: trimmed)
+        }
+    }
+
+    // MARK: - Search (online: solo al pulsar buscar; offline: también en tiempo real)
+    func search(query: String) {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
             clearSearch()
             return
         }
 
-        print("✅ SearchViewModel - Query valid, setting state to loading")
         state = .loading
+
+        if isOfflineMode {
+            searchOffline(query: trimmed)
+        } else {
+            searchOnline(query: trimmed)
+        }
+    }
+
+    // MARK: - Offline Search
+    private func searchOffline(query: String) {
+        guard let localRepo = localSearchRepository else {
+            state = .error("Base de datos local no disponible")
+            return
+        }
 
         switch selectedCategory {
         case .products:
-            print("🔍 SearchViewModel - Searching products...")
+            let result = localRepo.searchProducts(query: query)
+            products = result
+            state = products.isEmpty ? .empty : .success
+
+        case .stores:
+            let (storesResult, storeProdsResult) = localRepo.searchStores(query: query)
+            stores = storesResult
+            storeProducts = storeProdsResult
+            state = stores.isEmpty ? .empty : .success
+
+        case .both:
+            let result = localRepo.searchBoth(query: query)
+            products = result.products
+            stores = result.stores
+            storeProducts = result.storeProducts
+            state = (products.isEmpty && stores.isEmpty) ? .empty : .success
+        }
+    }
+
+    // MARK: - Online Search
+    private func searchOnline(query: String) {
+        switch selectedCategory {
+        case .products:
             searchProducts(query: query)
         case .stores:
-            print("🔍 SearchViewModel - Searching stores...")
             searchStores(query: query)
         case .both:
-            print("🔍 SearchViewModel - Searching both (single query)...")
             searchBoth(query: query)
         }
     }
@@ -199,75 +310,52 @@ class SearchViewModel: ObservableObject {
             }
         }
     }
-    
+
     private func searchProducts(query: String) {
-        print("🔍 SearchViewModel - searchProducts() calling repository with query: '\(query)'")
         searchRepository.searchProducts(query: query) { [weak self] result in
             Task { @MainActor in
                 guard let self = self else { return }
-
                 switch result {
                 case .success(let products):
-                    print("✅ SearchViewModel - Products search SUCCESS, found \(products.count) products")
-                    print("📦 SearchViewModel - Products: \(products.map { $0.name }.joined(separator: ", "))")
                     self.products = products
                     self.state = products.isEmpty ? .empty : .success
-                    print("🔍 SearchViewModel - State set to: \(products.isEmpty ? "empty" : "success")")
-
                 case .failure(let error):
-                    print("❌ SearchViewModel - Products search FAILED: \(error.localizedDescription)")
                     self.state = .error(error.localizedDescription)
                 }
             }
         }
     }
-    
+
     private func searchStores(query: String) {
-        print("🔍 SearchViewModel - searchStores() calling repository with query: '\(query)'")
         searchRepository.searchBranches(query: query, first: 20) { [weak self] result in
             Task { @MainActor in
                 guard let self = self else { return }
-
                 switch result {
                 case .success(let (storesData, products)):
-                    print("✅ SearchViewModel - Stores search SUCCESS, found \(storesData.count) stores")
-                    print("🏪 SearchViewModel - Stores: \(storesData.map { $0.name }.joined(separator: ", "))")
-                    print("📦 SearchViewModel - Productos anidados recibidos para \(products.count) tiendas")
-
-                    // Asignar tiendas y productos directamente
                     self.stores = storesData
                     self.storeProducts = products
-
                     self.state = self.stores.isEmpty ? .empty : .success
-                    print("🔍 SearchViewModel - State set to: \(self.stores.isEmpty ? "empty" : "success")")
-                    print("✅ SearchViewModel - Optimización: productos cargados en 1 sola llamada (antes eran N+1)")
-
                 case .failure(let error):
-                    print("❌ SearchViewModel - Stores search FAILED: \(error.localizedDescription)")
                     self.state = .error(error.localizedDescription)
                 }
             }
         }
     }
-    
+
     // MARK: - Clear Search
     func clearSearch() {
-        print("🔍 SearchViewModel - clearSearch() called, reloading initial data")
         loadInitialData()
     }
-    
+
     // MARK: - Load Products for Store
     func loadProductsForStore(storeId: String) {
         guard !loadingProductsForStores.contains(storeId) else { return }
-        
         loadingProductsForStores.insert(storeId)
-        
+
         storeRepository.fetchBranchProducts(branchId: storeId, limit: 4) { [weak self] result in
             Task { @MainActor in
                 guard let self = self else { return }
-                
                 self.loadingProductsForStores.remove(storeId)
-                
                 switch result {
                 case .success(let products):
                     self.storeProducts[storeId] = products
@@ -277,11 +365,11 @@ class SearchViewModel: ObservableObject {
             }
         }
     }
-    
+
     func isLoadingProductsFor(storeId: String) -> Bool {
         loadingProductsForStores.contains(storeId)
     }
-    
+
     // MARK: - Helpers
     private func calculateETA(deliveryRadius: Double?) -> Int {
         guard let radius = deliveryRadius else { return 20 }

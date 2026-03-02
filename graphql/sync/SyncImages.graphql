@@ -1,0 +1,11 @@
+query SyncImages($entityType: String, $entityIds: [String!], $qualities: [ImageQuality!]) {
+  syncImages(entityType: $entityType, entityIds: $entityIds, qualities: $qualities) {
+    entityId
+    entityType
+    imagePath
+    urls {
+      baja
+      original
+    }
+  }
+}
