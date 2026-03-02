@@ -9,13 +9,16 @@ class CartManager: ObservableObject {
 
     @Published private(set) var cartItemCount: Int = 0
     @Published private(set) var localItems: [CartItemLocal] = []
+    @Published private(set) var localShowcaseItems: [ShowcaseCartItemLocal] = []
 
     private let userDefaults = UserDefaults.standard
     private let cartKey = "llego_cart_items"
+    private let showcaseCartKey = "llego_showcase_cart_items"
     private let apolloClient = ApolloClientManager.shared.apollo
 
     private init() {
         loadCartItems()
+        loadShowcaseCartItems()
         updateItemCount()
     }
 
@@ -88,6 +91,7 @@ class CartManager: ObservableObject {
     /// Actualizar cantidad por ID de línea del carrito (soporta variantes)
     func updateQuantity(cartItemId: String, quantity: Int) {
         var items = localItems
+        var showcaseItems = localShowcaseItems
 
         if let index = items.firstIndex(where: { $0.cartItemId == cartItemId }) {
             if quantity <= 0 {
@@ -97,9 +101,18 @@ class CartManager: ObservableObject {
                 let unit = items[index].finalUnitPrice ?? items[index].basePrice ?? 0
                 items[index].finalTotalPrice = unit * Double(quantity)
             }
+            saveCartItems(items)
+            return
         }
 
-        saveCartItems(items)
+        if let index = showcaseItems.firstIndex(where: { $0.cartItemId == cartItemId }) {
+            if quantity <= 0 {
+                showcaseItems.remove(at: index)
+            } else {
+                showcaseItems[index].quantity = quantity
+            }
+            saveShowcaseCartItems(showcaseItems)
+        }
     }
 
     /// Remover producto del carrito
@@ -112,15 +125,58 @@ class CartManager: ObservableObject {
 
     func removeFromCart(cartItemId: String) {
         var items = localItems
+        var showcaseItems = localShowcaseItems
         items.removeAll { $0.cartItemId == cartItemId }
+        showcaseItems.removeAll { $0.cartItemId == cartItemId }
         saveCartItems(items)
+        saveShowcaseCartItems(showcaseItems)
         print("🗑️ Removed cart line \(cartItemId) from cart")
+    }
+
+    func addShowcaseToCart(
+        showcaseId: String,
+        branchId: String,
+        branchName: String,
+        title: String,
+        imageUrl: String,
+        requestDescription: String,
+        quantity: Int = 1
+    ) {
+        let normalizedDescription = requestDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedDescription.isEmpty else { return }
+
+        var items = localShowcaseItems
+        let cartItemId = ShowcaseCartItemLocal.buildCartItemId(
+            showcaseId: showcaseId,
+            requestDescription: normalizedDescription
+        )
+
+        if let index = items.firstIndex(where: { $0.cartItemId == cartItemId }) {
+            items[index].quantity += quantity
+        } else {
+            let item = ShowcaseCartItemLocal(
+                cartItemId: cartItemId,
+                showcaseId: showcaseId,
+                branchId: branchId,
+                branchName: branchName,
+                title: title,
+                imageUrl: imageUrl,
+                requestDescription: normalizedDescription,
+                quantity: quantity
+            )
+            items.append(item)
+        }
+
+        saveShowcaseCartItems(items)
+        print("✅ Added showcase item '\(showcaseId)' to cart")
     }
 
     /// Limpiar todo el carrito
     func clearCart() {
         userDefaults.removeObject(forKey: cartKey)
+        userDefaults.removeObject(forKey: showcaseCartKey)
         localItems = []
+        localShowcaseItems = []
         updateItemCount()
         print("🧹 Cart cleared")
     }
@@ -152,6 +208,17 @@ class CartManager: ObservableObject {
         updateItemCount()
     }
 
+    private func saveShowcaseCartItems(_ items: [ShowcaseCartItemLocal]) {
+        do {
+            let encoded = try JSONEncoder().encode(items)
+            userDefaults.set(encoded, forKey: showcaseCartKey)
+        } catch {
+            print("⚠️ CartManager: Failed to encode showcase cart items - \(error.localizedDescription)")
+        }
+        localShowcaseItems = items
+        updateItemCount()
+    }
+
     private func loadCartItems() {
         if let encodedData = userDefaults.data(forKey: cartKey) {
             do {
@@ -180,8 +247,23 @@ class CartManager: ObservableObject {
         localItems = []
     }
 
+    private func loadShowcaseCartItems() {
+        if let encodedData = userDefaults.data(forKey: showcaseCartKey) {
+            do {
+                localShowcaseItems = try JSONDecoder().decode([ShowcaseCartItemLocal].self, from: encodedData)
+                return
+            } catch {
+                print("⚠️ CartManager: Failed to decode showcase cart items - \(error.localizedDescription)")
+            }
+        }
+
+        localShowcaseItems = []
+    }
+
     private func updateItemCount() {
-        cartItemCount = localItems.reduce(0) { $0 + $1.quantity }
+        let productCount = localItems.reduce(0) { $0 + $1.quantity }
+        let showcaseCount = localShowcaseItems.reduce(0) { $0 + $1.quantity }
+        cartItemCount = productCount + showcaseCount
     }
 
     /// Enviar mutation al backend para estadísticas (sin bloquear la UI)
@@ -204,5 +286,24 @@ class CartManager: ObservableObject {
                 print("⚠️ Failed to send cart analytics: \(error.localizedDescription)")
             }
         }
+    }
+}
+
+struct ShowcaseCartItemLocal: Codable, Sendable {
+    let cartItemId: String
+    let showcaseId: String
+    let branchId: String
+    let branchName: String
+    let title: String
+    let imageUrl: String
+    let requestDescription: String
+    var quantity: Int
+
+    static func buildCartItemId(showcaseId: String, requestDescription: String) -> String {
+        let normalizedDescription = requestDescription
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .lowercased()
+        return "showcase::\(showcaseId)::\(normalizedDescription)"
     }
 }

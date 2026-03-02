@@ -12,6 +12,8 @@ struct StoreDetailView: View {
     @State private var region: MKCoordinateRegion
     @State private var selectedProductId: String?
     @State private var selectedComboId: String?
+    @State private var selectedShowcase: ShowcaseGraphQL?
+    @State private var showShowcaseAddedToast: Bool = false
 
     // Default images - Empty strings to trigger AsyncImage failure -> shows generic assets
     private let defaultLogoUrl = ""
@@ -141,19 +143,19 @@ struct StoreDetailView: View {
                                     case .success(let image):
                                         image
                                             .resizable()
-                                            .aspectRatio(contentMode: .fill)
+                                            .scaledToFill()
                                             .frame(width: geometry.size.width, height: 280)
                                             .clipped()
                                     case .failure:
                                         Image("generic_cover")
                                             .resizable()
-                                            .aspectRatio(contentMode: .fill)
+                                            .scaledToFill()
                                             .frame(width: geometry.size.width, height: 280)
                                             .clipped()
                                     @unknown default:
                                         Image("generic_cover")
                                             .resizable()
-                                            .aspectRatio(contentMode: .fill)
+                                            .scaledToFill()
                                             .frame(width: geometry.size.width, height: 280)
                                             .clipped()
                                     }
@@ -455,6 +457,10 @@ struct StoreDetailView: View {
                                     combosSection(store: store)
                                 }
 
+                                if viewModel.isLoadingShowcases || !viewModel.branchShowcases.isEmpty {
+                                    showcasesSection()
+                                }
+
                                 // Products Section - Show branch products
                                 if viewModel.isLoadingProducts || !viewModel.branchProducts.isEmpty {
                                     VStack(alignment: .leading, spacing: 16) {
@@ -566,6 +572,34 @@ struct StoreDetailView: View {
             .fullScreenCover(item: $selectedComboId) { comboId in
                 ComboDetailView(comboId: comboId)
             }
+            .sheet(item: $selectedShowcase) { showcase in
+                ShowcaseOrderSheet(
+                    showcase: showcase,
+                    branchId: storeId,
+                    branchName: store?.name ?? "Tienda"
+                ) {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        showShowcaseAddedToast = true
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            showShowcaseAddedToast = false
+                        }
+                    }
+                }
+            }
+            .overlay(alignment: .bottom) {
+                if showShowcaseAddedToast {
+                    Text("Se agregó el pedido de vitrina al carrito")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(Capsule().fill(Color.black.opacity(0.85)))
+                        .padding(.bottom, 18)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
         }
     }
 
@@ -576,6 +610,112 @@ struct StoreDetailView: View {
                 _ = newPosition
             }
         )
+    }
+
+    @ViewBuilder
+    private func showcasesSection() -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Vitrinas")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(.black)
+                    Text("Pide por descripción manual")
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+
+            if viewModel.isLoadingShowcases {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                        .padding()
+                    Spacer()
+                }
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 14) {
+                        ForEach(viewModel.branchShowcases, id: \.id) { showcase in
+                            VStack(alignment: .leading, spacing: 10) {
+                                AsyncImage(url: URL(string: showcase.imageUrl)) { phase in
+                                    switch phase {
+                                    case .empty:
+                                        ZStack {
+                                            Color.gray.opacity(0.12)
+                                            ProgressView()
+                                        }
+                                    case .success(let image):
+                                        image
+                                            .resizable()
+                                            .scaledToFill()
+                                    case .failure:
+                                        ZStack {
+                                            Color.gray.opacity(0.15)
+                                            Image(systemName: "photo")
+                                                .font(.system(size: 22, weight: .medium))
+                                                .foregroundColor(.secondary)
+                                        }
+                                    @unknown default:
+                                        Color.gray.opacity(0.12)
+                                    }
+                                }
+                                .frame(width: 280, height: 160)
+                                .clipShape(RoundedRectangle(cornerRadius: 14))
+
+                                Text(showcase.title)
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(.black)
+                                    .lineLimit(2)
+
+                                if let description = showcase.description, !description.isEmpty {
+                                    Text(description)
+                                        .font(.system(size: 12, weight: .regular))
+                                        .foregroundColor(.secondary)
+                                        .lineLimit(2)
+                                }
+
+                                if let items = showcase.items, !items.isEmpty {
+                                    Text("\(min(items.count, 3)) items sugeridos")
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundColor(.llegoPrimary)
+                                } else {
+                                    Text("Pide por descripción libre")
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundColor(.llegoPrimary)
+                                }
+
+                                Button(action: {
+                                    selectedShowcase = showcase
+                                }) {
+                                    Text("Pedir desde vitrina")
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 10)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 10)
+                                                .fill(Color.llegoPrimary)
+                                        )
+                                }
+                            }
+                            .padding(12)
+                            .frame(width: 304, alignment: .leading)
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(Color.white)
+                                    .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 2)
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                }
+                .frame(height: 305)
+            }
+        }
+        .padding(.bottom, 24)
     }
 
     // MARK: - Combos Section
@@ -648,6 +788,77 @@ struct StoreDetailView: View {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
             branchLikesManager.toggleLike(branchId: storeId)
+        }
+    }
+}
+
+struct ShowcaseOrderSheet: View {
+    let showcase: ShowcaseGraphQL
+    let branchId: String
+    let branchName: String
+    let onAdded: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var requestDescription: String = ""
+    @State private var quantity: Int = 1
+    @State private var showValidationError: Bool = false
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Vitrina") {
+                    Text(showcase.title)
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("Este pedido será confirmado por la tienda según disponibilidad y precio final.")
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundColor(.secondary)
+                }
+
+                Section("Qué necesitas") {
+                    TextEditor(text: $requestDescription)
+                        .frame(minHeight: 120)
+                    if showValidationError {
+                        Text("Debes escribir una descripción para pedir desde vitrina.")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.red)
+                    }
+                }
+
+                Section("Cantidad") {
+                    Stepper(value: $quantity, in: 1...20) {
+                        Text("\(quantity)")
+                    }
+                }
+            }
+            .navigationTitle("Pedir desde vitrina")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Agregar") {
+                        let trimmedDescription = requestDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !trimmedDescription.isEmpty else {
+                            showValidationError = true
+                            return
+                        }
+
+                        CartManager.shared.addShowcaseToCart(
+                            showcaseId: showcase.id,
+                            branchId: branchId,
+                            branchName: branchName,
+                            title: showcase.title,
+                            imageUrl: showcase.imageUrl,
+                            requestDescription: trimmedDescription,
+                            quantity: quantity
+                        )
+                        onAdded()
+                        dismiss()
+                    }
+                    .font(.system(size: 15, weight: .bold))
+                }
+            }
         }
     }
 }

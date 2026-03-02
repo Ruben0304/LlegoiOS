@@ -18,6 +18,7 @@ final class CartRecommendationsManager: ObservableObject {
     private var cartObserver: AnyCancellable?
     private var loadingTask: Task<Void, Never>?
     private var currentCartSignature: String = ""
+    private var currentFirstProductId: String?
 
     private init() {
         loadPersistedState()
@@ -28,6 +29,44 @@ final class CartRecommendationsManager: ObservableObject {
     func refreshNow() {
         let signature = Self.signature(for: cartManager.localItems)
         refreshIfNeeded(for: signature)
+    }
+
+    func updateFirstProductId(_ firstProductId: String?) {
+        let didChangeFirstProductId = firstProductId != currentFirstProductId
+        let previousFirstProductId = currentFirstProductId
+        currentFirstProductId = firstProductId
+
+        let signature = Self.signature(for: cartManager.localItems)
+        guard !signature.isEmpty else { return }
+
+        if didChangeFirstProductId {
+            // Si cambia el firstProductId (p. ej. cambio de tienda), invalidar recomendaciones
+            // previas y recargar para traer candidatos correctos del backend.
+            print("🛒 [CartRecommendationsManager] FirstProductId cambió de \(previousFirstProductId ?? "nil") a \(firstProductId ?? "nil"), recargando recomendaciones")
+            clearPersistedRecommendations(signature: signature)
+            startBackgroundLoad(for: signature)
+            return
+        }
+
+        // Aunque no cambie el firstProductId, si cambió la estructura del carrito
+        // (agregar/quitar productos o variantes), recargar recomendaciones.
+        if signature != currentCartSignature {
+            print("🛒 [CartRecommendationsManager] Carrito cambió sin cambio de firstProductId, recargando recomendaciones")
+            handleCartSignatureChange(signature)
+        }
+    }
+
+    private func cacheSignature(for cartSignature: String) -> String {
+        let engine = AIPreferenceManager.shared.selectedEngine.rawValue
+        let firstProductId = currentFirstProductId ?? "nil"
+        return "\(engine)|\(firstProductId)|\(cartSignature)"
+    }
+
+    private func persist(products: [Product], signature: String) {
+        if let encoded = try? JSONEncoder().encode(products) {
+            userDefaults.set(encoded, forKey: cachedProductsKey)
+        }
+        userDefaults.set(signature, forKey: cachedSignatureKey)
     }
 
     private func observeCartChanges() {
@@ -66,8 +105,9 @@ final class CartRecommendationsManager: ObservableObject {
             return
         }
 
+        let effectiveSignature = cacheSignature(for: signature)
         let persistedSignature = userDefaults.string(forKey: cachedSignatureKey) ?? ""
-        if persistedSignature == signature, !suggestedProducts.isEmpty {
+        if persistedSignature == effectiveSignature, !suggestedProducts.isEmpty {
             return
         }
 
@@ -85,16 +125,34 @@ final class CartRecommendationsManager: ObservableObject {
         errorMessage = nil
         
         let productIds = cartManager.localItems.map(\.productId)
+        let effectiveSignature = cacheSignature(for: signature)
         
         loadingTask = Task { [weak self] in
             guard let self = self else { return }
             
             do {
-                print("🛒 [CartRecommendationsManager] Iniciando carga...")
+                let engine = AIPreferenceManager.shared.selectedEngine
+                print("🛒 ══════════════════════════════════════")
+                print("🛒 [CartRecommendationsManager] Iniciando carga de recomendaciones")
+                print("🛒 Engine seleccionado: \(engine.displayName) (\(engine.rawValue))")
+                print("🛒 FirstProductId disponible: \(self.currentFirstProductId ?? "nil")")
+                print("🛒 ProductIds del carrito (\(productIds.count)): \(productIds)")
+                print("🛒 Items locales del carrito: \(self.cartManager.localItems.map { "productId=\($0.productId) qty=\($0.quantity)" })")
+                print("🛒 ══════════════════════════════════════")
+
+                if engine == .appleIntelligence, !RecommendationEngine.shared.isAvailable() {
+                    let status = RecommendationEngine.shared.getAvailabilityStatus()
+                    print("⚠️ [CartRecommendationsManager] \(status.message)")
+                    self.suggestedProducts = []
+                    self.isLoading = false
+                    self.errorMessage = status.message
+                    self.persist(products: [], signature: effectiveSignature)
+                    return
+                }
                 
                 let result = try await RecommendationRouter.shared.getRecommendations(
-                    context: .cart(productIds: productIds),
-                    limit: 6
+                    context: .cart(productIds: productIds, firstProductId: self.currentFirstProductId),
+                    limit: 10
                 )
                 
                 guard !Task.isCancelled else { return }
@@ -106,7 +164,7 @@ final class CartRecommendationsManager: ObservableObject {
                 self.suggestedProducts = result.products
                 self.isLoading = false
                 self.errorMessage = nil
-                self.persist(products: result.products, signature: signature)
+                self.persist(products: result.products, signature: effectiveSignature)
                 
             } catch {
                 guard !Task.isCancelled else { return }
@@ -115,7 +173,7 @@ final class CartRecommendationsManager: ObservableObject {
                 self.suggestedProducts = []
                 self.isLoading = false
                 self.errorMessage = "No se pudieron cargar recomendaciones"
-                self.persist(products: [], signature: signature)
+                self.persist(products: [], signature: effectiveSignature)
             }
         }
     }
@@ -141,25 +199,19 @@ final class CartRecommendationsManager: ObservableObject {
         }
     }
 
-    private func persist(products: [Product], signature: String) {
-        if let encoded = try? JSONEncoder().encode(products) {
-            userDefaults.set(encoded, forKey: cachedProductsKey)
-        }
-        userDefaults.set(signature, forKey: cachedSignatureKey)
-    }
-
     private func clearPersistedRecommendations(signature: String) {
         loadingTask?.cancel()
         suggestedProducts = []
         errorMessage = nil
         isLoading = false
-        persist(products: [], signature: signature)
+        persist(products: [], signature: cacheSignature(for: signature))
     }
 
     private static func signature(for items: [CartItemLocal]) -> String {
-        // Solo los IDs ordenados — cambios de cantidad no disparan nuevas recomendaciones
+        // Incluye cartItemId (producto + variantes) para recargar ante cambios reales del carrito,
+        // pero ignora quantity para no recargar en ajustes de cantidad.
         items
-            .map(\.productId)
+            .map(\.cartItemId)
             .sorted()
             .joined(separator: "|")
     }

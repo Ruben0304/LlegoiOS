@@ -20,9 +20,11 @@ class StoreDetailViewModel: ObservableObject {
     @Published var siblingBranches: [BranchGraphQL] = []
     @Published var branchProducts: [StoreProductGraphQL] = []
     @Published var branchCombos: [ComboDetailGraphQL] = []
+    @Published var branchShowcases: [ShowcaseGraphQL] = []
     @Published var isLoadingSiblings: Bool = false
     @Published var isLoadingProducts: Bool = false
     @Published var isLoadingCombos: Bool = false
+    @Published var isLoadingShowcases: Bool = false
 
     // MARK: - Computed Properties
     var isLoading: Bool {
@@ -75,6 +77,7 @@ class StoreDetailViewModel: ObservableObject {
                     self.loadSiblingBranches(businessId: detail.businessId, currentBranchId: id)
                     self.loadBranchProducts(branchId: id)
                     self.loadBranchCombos(branchId: id)
+                    self.loadBranchShowcases(branchId: id)
 
                 case .failure(let error):
                     let message = "Error al cargar detalles: \(error.localizedDescription)"
@@ -167,6 +170,27 @@ class StoreDetailViewModel: ObservableObject {
                 case .failure(let error):
                     print("⚠️ StoreDetailViewModel: Failed to load combos: \(error.localizedDescription)")
                     self.branchCombos = []
+                }
+            }
+        }
+    }
+
+    func loadBranchShowcases(branchId: String) {
+        isLoadingShowcases = true
+
+        repository.fetchShowcases(branchId: branchId) { [weak self] result in
+            guard let self = self else { return }
+
+            Task { @MainActor in
+                self.isLoadingShowcases = false
+
+                switch result {
+                case .success(let showcases):
+                    self.branchShowcases = showcases
+                    print("✅ StoreDetailViewModel: Loaded \(showcases.count) showcases for branch")
+                case .failure(let error):
+                    print("⚠️ StoreDetailViewModel: Failed to load showcases: \(error.localizedDescription)")
+                    self.branchShowcases = []
                 }
             }
         }

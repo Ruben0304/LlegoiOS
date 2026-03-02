@@ -20,19 +20,19 @@ struct StoreOptionsModal: View {
                         case .success(let image):
                             image
                                 .resizable()
-                                .aspectRatio(contentMode: .fill)
+                                .scaledToFill()
                                 .frame(width: geometry.size.width, height: 180)
                                 .clipped()
                         case .empty, .failure:
                             Image("generic_cover")
                                 .resizable()
-                                .aspectRatio(contentMode: .fill)
+                                .scaledToFill()
                                 .frame(width: geometry.size.width, height: 180)
                                 .clipped()
                         @unknown default:
                             Image("generic_cover")
                                 .resizable()
-                                .aspectRatio(contentMode: .fill)
+                                .scaledToFill()
                                 .frame(width: geometry.size.width, height: 180)
                                 .clipped()
                         }
@@ -49,7 +49,7 @@ struct StoreOptionsModal: View {
                         )
                     )
                 }
-                .frame(height: 180)
+                .frame(maxWidth: .infinity, minHeight: 180, maxHeight: 180)
                 
                 // Logo flotante con cache
                 CachedAsyncImage(

@@ -1030,7 +1030,7 @@ struct CartView: View {
                     .padding(.horizontal, 14)
                     .padding(.bottom, 14)
                 }
-            } else {
+            } else if !viewModel.suggestedProducts.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
                         ForEach(viewModel.suggestedProducts) { product in
@@ -1064,6 +1064,18 @@ struct CartView: View {
                     .padding(.horizontal, 14)
                     .padding(.bottom, 14)
                 }
+            } else {
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                    Text("No se encontraron recomendaciones")
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 14)
+                .padding(.bottom, 14)
             }
         }
         .background(Color.white)
@@ -1326,9 +1338,7 @@ struct CartView: View {
             }
 
             // Productos recomendados por IA
-            if !viewModel.suggestedProducts.isEmpty || viewModel.isLoadingSuggestions {
-                suggestedProductsSection
-            }
+            suggestedProductsSection
         }
     }
 
@@ -1596,22 +1606,28 @@ struct CartItemCard: View {
                     .fill(Color(.systemGray5))
                     .frame(width: 56, height: 56)
 
-                CachedAsyncImage(
-                    url: URL(string: item.imageUrl),
-                    content: { image in
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 56, height: 56)
-                            .clipShape(Circle())
-                    },
-                    placeholder: {
-                        ProgressView()
-                            .tint(Color.gray.opacity(0.6))
-                            .scaleEffect(0.85)
-                            .frame(width: 56, height: 56)
-                    }
-                )
+                if item.isShowcase && item.imageUrl.isEmpty {
+                    Image(systemName: "sparkles.rectangle.stack.fill")
+                        .font(.system(size: 22, weight: .medium))
+                        .foregroundColor(.llegoPrimary)
+                } else {
+                    CachedAsyncImage(
+                        url: URL(string: item.imageUrl),
+                        content: { image in
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 56, height: 56)
+                                .clipShape(Circle())
+                        },
+                        placeholder: {
+                            ProgressView()
+                                .tint(Color.gray.opacity(0.6))
+                                .scaleEffect(0.85)
+                                .frame(width: 56, height: 56)
+                        }
+                    )
+                }
             }
             .frame(width: 56, height: 56)
             .overlay(Circle().stroke(Color(.systemGray4), lineWidth: 1))
@@ -1623,37 +1639,60 @@ struct CartItemCard: View {
                     .foregroundColor(.primary)
                     .lineLimit(1)
 
-                HStack(spacing: 6) {
-                    Text(item.shop)
-                        .font(.system(size: 12, weight: .medium))
+                if item.isShowcase {
+                    Text(item.showcaseRequestDescription ?? "")
+                        .font(.system(size: 12, weight: .regular))
                         .foregroundColor(.secondary)
+                        .lineLimit(2)
+                } else {
+                    HStack(spacing: 6) {
+                        Text(item.shop)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
 
-                    Text("•")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(.secondary)
+                        Text("•")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(.secondary)
 
-                    Text(item.weight)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(gradientManager.currentAccentColor)
+                        Text(item.weight)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(gradientManager.currentAccentColor)
+                    }
                 }
 
                 // Precio y total
-                HStack(spacing: 6) {
-                    Text(item.formattedPrice)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.secondary)
+                if item.isShowcase {
+                    HStack(spacing: 6) {
+                        Text("Precio por confirmar")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.orange)
 
-                    Text("× \(item.quantity)")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.llegoPrimary)
+                        Text("•")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(.secondary)
 
-                    Text("=")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.secondary)
+                        Text("Cantidad: \(item.quantity)")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.llegoPrimary)
+                    }
+                } else {
+                    HStack(spacing: 6) {
+                        Text(item.formattedPrice)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.secondary)
 
-                    Text(item.formattedItemTotal)
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .foregroundColor(.llegoPrimary)
+                        Text("× \(item.quantity)")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.llegoPrimary)
+
+                        Text("=")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.secondary)
+
+                        Text(item.formattedItemTotal)
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundColor(.llegoPrimary)
+                    }
                 }
 
                 if !item.selectedVariants.isEmpty {

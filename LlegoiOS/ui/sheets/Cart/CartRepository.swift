@@ -605,18 +605,30 @@ class CartRepository {
                         return
                     }
                     
-                    guard let data = graphQLResult.data,
-                          let productRecommendations = data.productRecommendations else {
-                        print("⚠️ [CartRepository] No recommendations in response")
+                    guard let data = graphQLResult.data else {
+                        print("⚠️ [CartRepository] No data in cloud candidates response")
                         completion(.success([]))
                         return
                     }
-                    
+
+                    guard let productRecommendations = data.productRecommendations else {
+                        print("⚠️ [CartRepository] productRecommendations es nil (el backend no reconoce los productIds)")
+                        completion(.success([]))
+                        return
+                    }
+
                     let recommendations = productRecommendations.recommendations
                     print("✅ [CartRepository] Received \(recommendations.count) candidatos")
-                    
+                    print("   Reasoning del backend: \(productRecommendations.reasoning)")
+                    recommendations.forEach { rec in
+                        print("   - productId=\(rec.productId), name=\(rec.productName), hasProduct=\(rec.product != nil)")
+                    }
+
                     let products = recommendations.compactMap { rec -> Product? in
-                        guard let product = rec.product else { return nil }
+                        guard let product = rec.product else {
+                            print("   ⚠️ rec.product es nil para productId=\(rec.productId)")
+                            return nil
+                        }
                         return Product(
                             id: product.id,
                             name: product.name,
@@ -627,11 +639,84 @@ class CartRepository {
                             imageUrl: product.image ?? ""
                         )
                     }
-                    
+
                     completion(.success(products))
                     
                 case .failure(let error):
                     print("❌ [CartRepository] Error: \(error.localizedDescription)")
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+
+    // MARK: - Branch Products for Apple Intelligence
+
+    struct BranchProductForAI {
+        let id: String
+        let name: String
+        let description: String
+        let price: Double
+        let currency: String
+        let imageUrl: String
+    }
+
+    /// Obtiene productos del mismo branch usando la query `productsFromSameBranch`,
+    /// para enviar a Apple Intelligence y generar recomendaciones locales.
+    /// - Parameter productId: ID de cualquier producto del carrito (el backend retorna productos del mismo branch)
+    func fetchBranchProductsForAI(
+        productId: String,
+        limit: Int = 50,
+        completion: @escaping @Sendable (Result<[BranchProductForAI], Error>) -> Void
+    ) {
+        let client = apolloClient
+
+        Task { @MainActor in
+            let jwt = authManager.getAccessToken()
+
+            print("🤖 [CartRepository] Fetching branch products for AI via productsFromSameBranch: productId=\(productId) (limit: \(limit))")
+
+            let query = LlegoAPI.GetBranchProductsForAIQuery(
+                productId: productId,
+                limit: Int32(limit),
+                jwt: jwt.map { .some($0) } ?? .none
+            )
+
+            client.fetchCompat(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
+                switch result {
+                case .success(let graphQLResult):
+                    if let errors = graphQLResult.errors {
+                        print("❌ [CartRepository] GraphQL Errors fetching AI products:")
+                        errors.forEach { print("  - \($0.localizedDescription)") }
+                        completion(.failure(NSError(
+                            domain: "CartRepository",
+                            code: -1,
+                            userInfo: [NSLocalizedDescriptionKey: "Error obteniendo productos para IA"]
+                        )))
+                        return
+                    }
+
+                    guard let data = graphQLResult.data else {
+                        completion(.success([]))
+                        return
+                    }
+
+                    let products = data.productsFromSameBranch.map { node in
+                        BranchProductForAI(
+                            id: node.id,
+                            name: node.name,
+                            description: node.description,
+                            price: node.price,
+                            currency: node.currency,
+                            imageUrl: node.imageUrl
+                        )
+                    }
+
+                    print("✅ [CartRepository] Fetched \(products.count) products for AI from same branch")
+                    completion(.success(products))
+
+                case .failure(let error):
+                    print("❌ [CartRepository] Error fetching AI products: \(error.localizedDescription)")
                     completion(.failure(error))
                 }
             }

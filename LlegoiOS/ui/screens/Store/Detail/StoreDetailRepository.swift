@@ -373,6 +373,100 @@ class StoreDetailRepository {
         }
     }
 
+    func fetchShowcases(
+        branchId: String,
+        completion: @escaping @Sendable (Result<[ShowcaseGraphQL], Error>) -> Void
+    ) {
+        Task { @MainActor in
+            guard let jwt = AuthManager.shared.getAccessToken() else {
+                completion(
+                    .failure(
+                        NSError(
+                            domain: "StoreDetailRepository",
+                            code: 401,
+                            userInfo: [NSLocalizedDescriptionKey: "No autenticado"]
+                        )
+                    )
+                )
+                return
+            }
+
+            guard let url = URL(string: "\(ApolloClientManager.baseURL)/graphql") else {
+                completion(
+                    .failure(
+                        NSError(
+                            domain: "StoreDetailRepository",
+                            code: -10,
+                            userInfo: [NSLocalizedDescriptionKey: "Endpoint GraphQL inválido"]
+                        )
+                    )
+                )
+                return
+            }
+
+            let query = """
+                query ShowcasesByBranch($branchId: String!, $jwt: String!) {
+                  showcasesByBranch(branchId: $branchId, activeOnly: true, jwt: $jwt) {
+                    id
+                    title
+                    description
+                    imageUrl
+                    isActive
+                    items {
+                      id
+                      name
+                      price
+                      availability
+                    }
+                  }
+                }
+                """
+
+            do {
+                let payload = ShowcaseRequestPayload(
+                    query: query,
+                    variables: .init(branchId: branchId, jwt: jwt)
+                )
+
+                var request = URLRequest(url: url)
+                request.httpMethod = "POST"
+                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                request.httpBody = try JSONEncoder().encode(payload)
+
+                let (data, response) = try await URLSession.shared.data(for: request)
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw NSError(
+                        domain: "StoreDetailRepository",
+                        code: -11,
+                        userInfo: [NSLocalizedDescriptionKey: "Respuesta HTTP inválida"]
+                    )
+                }
+                guard (200..<300).contains(httpResponse.statusCode) else {
+                    let rawMessage = String(data: data, encoding: .utf8) ?? "Respuesta desconocida"
+                    throw NSError(
+                        domain: "StoreDetailRepository",
+                        code: httpResponse.statusCode,
+                        userInfo: [NSLocalizedDescriptionKey: rawMessage]
+                    )
+                }
+
+                let decoded = try JSONDecoder().decode(ShowcaseResponsePayload.self, from: data)
+                if let firstError = decoded.errors?.first {
+                    throw NSError(
+                        domain: "GraphQL",
+                        code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: firstError.message]
+                    )
+                }
+
+                let showcases = decoded.data?.showcasesByBranch ?? []
+                completion(.success(showcases))
+            } catch {
+                completion(.failure(error))
+            }
+        }
+    }
+
 }
 
 // MARK: - Models
@@ -414,4 +508,43 @@ struct StoreProductGraphQL: Identifiable, Sendable {
     let imageUrl: String
     let availability: Bool
     let createdAt: String
+}
+
+struct ShowcaseGraphQL: Identifiable, Sendable, Decodable {
+    let id: String
+    let title: String
+    let description: String?
+    let imageUrl: String
+    let isActive: Bool
+    let items: [ShowcaseItemGraphQL]?
+}
+
+struct ShowcaseItemGraphQL: Identifiable, Sendable, Decodable {
+    let id: String?
+    let name: String
+    let price: Double?
+    let availability: Bool
+}
+
+private struct ShowcaseRequestPayload: Encodable {
+    let query: String
+    let variables: Variables
+
+    struct Variables: Encodable {
+        let branchId: String
+        let jwt: String
+    }
+}
+
+private struct ShowcaseResponsePayload: Decodable {
+    let data: DataContainer?
+    let errors: [GraphQLErrorPayload]?
+
+    struct DataContainer: Decodable {
+        let showcasesByBranch: [ShowcaseGraphQL]
+    }
+
+    struct GraphQLErrorPayload: Decodable {
+        let message: String
+    }
 }

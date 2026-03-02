@@ -310,19 +310,19 @@ private struct StoreMapOptionsModal: View {
                         case .success(let image):
                             image
                                 .resizable()
-                                .aspectRatio(contentMode: .fill)
+                                .scaledToFill()
                                 .frame(width: geometry.size.width, height: 180)
                                 .clipped()
                         case .empty, .failure:
                             Image("generic_cover")
                                 .resizable()
-                                .aspectRatio(contentMode: .fill)
+                                .scaledToFill()
                                 .frame(width: geometry.size.width, height: 180)
                                 .clipped()
                         @unknown default:
                             Image("generic_cover")
                                 .resizable()
-                                .aspectRatio(contentMode: .fill)
+                                .scaledToFill()
                                 .frame(width: geometry.size.width, height: 180)
                                 .clipped()
                         }
@@ -330,16 +330,15 @@ private struct StoreMapOptionsModal: View {
                     .overlay(
                         LinearGradient(
                             colors: [
-                                Color.clear,
-                                Color(.systemBackground).opacity(0.3),
-                                Color(.systemBackground),
+                                Color.black.opacity(0.05),
+                                Color.black.opacity(0.2),
                             ],
                             startPoint: .top,
                             endPoint: .bottom
                         )
                     )
                 }
-                .frame(height: 180)
+                .frame(maxWidth: .infinity, minHeight: 180, maxHeight: 180)
 
                 CachedAsyncImage(
                     url: URL(string: store.logoUrl),

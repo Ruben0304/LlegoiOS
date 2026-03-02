@@ -1,0 +1,13 @@
+query GetBranchProductsForAI($productId: String!, $limit: Int! = 50, $jwt: String) {
+  productsFromSameBranch(productId: $productId, limit: $limit, jwt: $jwt) {
+    id
+    name
+    description
+    price
+    currency
+    image
+    imageUrl
+    availability
+    branchId
+  }
+}

@@ -65,7 +65,7 @@ class CartViewModel: ObservableObject {
 
     // MARK: - Multi-branch detection
     var uniqueBranchIds: Set<String> {
-        Set(cartProducts.map { $0.branchId })
+        Set(cartItems.compactMap { $0.branchId })
     }
 
     var hasMultipleBranches: Bool {
@@ -224,14 +224,14 @@ class CartViewModel: ObservableObject {
                     // Store cart products for order creation
                     self.cartProducts = cartProducts
 
-                    // Get branchId from first product (assuming all products are from same branch)
-                    self.cartBranchId = cartProducts.first?.branchId
-
                     // Mapear a UI models
-                    self.cartItems = cartProducts.map { product in
+                    let productItems = cartProducts.map { product in
                         CartItem(
                             id: product.id,
+                            itemType: .product,
                             productId: product.productId,
+                            showcaseId: nil,
+                            showcaseRequestDescription: nil,
                             name: product.name,
                             shop: product.businessName,
                             weight: product.weight,
@@ -240,10 +240,35 @@ class CartViewModel: ObservableObject {
                             finalTotalPrice: product.finalTotalPrice,
                             imageUrl: product.image,
                             quantity: product.quantity,
+                            branchId: product.branchId,
                             availability: product.availability,
                             selectedVariants: product.selectedVariants
                         )
                     }
+
+                    let showcaseItems = self.cartManager.localShowcaseItems.map { showcase in
+                        CartItem(
+                            id: showcase.cartItemId,
+                            itemType: .showcase,
+                            productId: "",
+                            showcaseId: showcase.showcaseId,
+                            showcaseRequestDescription: showcase.requestDescription,
+                            name: showcase.title,
+                            shop: showcase.branchName,
+                            weight: "Pedido manual",
+                            basePrice: 0,
+                            finalUnitPrice: 0,
+                            finalTotalPrice: 0,
+                            imageUrl: showcase.imageUrl,
+                            quantity: showcase.quantity,
+                            branchId: showcase.branchId,
+                            availability: true,
+                            selectedVariants: []
+                        )
+                    }
+
+                    self.cartItems = productItems + showcaseItems
+                    self.cartBranchId = self.cartItems.first?.branchId
 
                     print("✅ Loaded \(self.cartItems.count) items in cart")
                     if let branchId = self.cartBranchId {
@@ -298,7 +323,10 @@ class CartViewModel: ObservableObject {
         } else {
             let newItem = CartItem(
                 id: product.id,
+                itemType: .product,
                 productId: product.id,
+                showcaseId: nil,
+                showcaseRequestDescription: nil,
                 name: product.name,
                 shop: product.shop,
                 weight: product.weight,
@@ -307,6 +335,7 @@ class CartViewModel: ObservableObject {
                 finalTotalPrice: priceValue,
                 imageUrl: product.imageUrl,
                 quantity: 1,
+                branchId: nil,
                 availability: true,
                 selectedVariants: []
             )
@@ -323,10 +352,13 @@ class CartViewModel: ObservableObject {
 
     /// Obtener sugerencias de productos usando la estrategia seleccionada por el usuario
     func loadAISuggestions() {
-        // El manager global se encarga de recargar solo cuando cambia el carrito.
-        suggestedProducts = recommendationsManager.suggestedProducts
-        isLoadingSuggestions = recommendationsManager.isLoading
-        suggestionsError = recommendationsManager.errorMessage
+        // Pasar el productId del primer producto del carrito para que el flujo de Apple Intelligence
+        // pueda llamar productsFromSameBranch con ese productId
+        if let firstProductId = cartProducts.first?.productId {
+            recommendationsManager.updateFirstProductId(firstProductId)
+        }
+        // El manager global maneja el estado reactivamente via Combine bindings
+        recommendationsManager.refreshNow()
     }
 
     private func bindGlobalRecommendations() {
@@ -608,9 +640,16 @@ class CartViewModel: ObservableObject {
         isCreatingOrder = true
         orderError = nil
 
-        // Build items array aggregated by productId.
-        // Backend de orders aún no recibe variantes para productos.
-        let items = aggregatedOrderItems()
+        let items = buildOrderRequestItems()
+        guard !items.isEmpty else {
+            let error = NSError(
+                domain: "CartViewModel",
+                code: -8,
+                userInfo: [NSLocalizedDescriptionKey: "No hay ítems válidos para crear el pedido"]
+            )
+            completion(.failure(error))
+            return
+        }
 
         // Build delivery address
         let deliveryAddress: DeliveryAddressInput
@@ -897,9 +936,16 @@ class CartViewModel: ObservableObject {
         isCreatingOrder = true
         orderError = nil
 
-        // Build items array aggregated by productId.
-        // Backend de orders aún no recibe variantes para productos.
-        let items = aggregatedOrderItems()
+        let items = buildOrderRequestItems()
+        guard !items.isEmpty else {
+            let error = NSError(
+                domain: "CartViewModel",
+                code: -8,
+                userInfo: [NSLocalizedDescriptionKey: "No hay ítems válidos para crear el pedido"]
+            )
+            completion(.failure(error))
+            return
+        }
 
         // Build delivery address
         let deliveryAddress: DeliveryAddressInput
@@ -1001,13 +1047,49 @@ class CartViewModel: ObservableObject {
     // MARK: - Helpers
 
     private func aggregatedOrderItems() -> [(productId: String, quantity: Int)] {
-        let grouped = Dictionary(grouping: cartItems, by: \.productId)
+        let grouped = Dictionary(grouping: cartItems.filter { $0.itemType == .product }, by: \.productId)
         return grouped.map { productId, items in
             let qty = items.reduce(0) { partial, item in
                 partial + item.quantity
             }
             return (productId: productId, quantity: qty)
         }
+    }
+
+    private func buildOrderRequestItems() -> [OrderRequestItem] {
+        let productItems = aggregatedOrderItems().map { item in
+            OrderRequestItem(
+                itemType: .product,
+                quantity: item.quantity,
+                productId: item.productId,
+                showcaseId: nil,
+                description: nil
+            )
+        }
+
+        let showcaseItems = cartItems
+            .filter { $0.itemType == .showcase }
+            .compactMap { item -> OrderRequestItem? in
+                guard
+                    let showcaseId = item.showcaseId,
+                    let description = item.showcaseRequestDescription?.trimmingCharacters(
+                        in: .whitespacesAndNewlines
+                    ),
+                    !description.isEmpty
+                else {
+                    return nil
+                }
+
+                return OrderRequestItem(
+                    itemType: .showcase,
+                    quantity: item.quantity,
+                    productId: nil,
+                    showcaseId: showcaseId,
+                    description: description
+                )
+            }
+
+        return productItems + showcaseItems
     }
 
     private func formatPrice(_ price: Double) -> String {
@@ -1048,7 +1130,10 @@ class CartViewModel: ObservableObject {
 
 struct CartItem: Identifiable, Hashable {
     let id: String
+    let itemType: CartOrderItemType
     let productId: String
+    let showcaseId: String?
+    let showcaseRequestDescription: String?
     let name: String
     let shop: String
     let weight: String
@@ -1057,6 +1142,7 @@ struct CartItem: Identifiable, Hashable {
     let finalTotalPrice: Double
     let imageUrl: String
     var quantity: Int
+    let branchId: String?
     let availability: Bool
     let selectedVariants: [SelectedVariantOption]
 
@@ -1075,4 +1161,13 @@ struct CartItem: Identifiable, Hashable {
     var formattedItemTotal: String {
         String(format: "$%.2f", itemTotal)
     }
+
+    var isShowcase: Bool {
+        itemType == .showcase
+    }
+}
+
+enum CartOrderItemType: String, Codable, Hashable {
+    case product = "PRODUCT"
+    case showcase = "SHOWCASE"
 }
