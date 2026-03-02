@@ -304,41 +304,19 @@ private struct StoreMapOptionsModal: View {
         VStack(spacing: 0) {
             // Header con imagen
             ZStack(alignment: .bottom) {
-                GeometryReader { geometry in
-                    AsyncImage(url: URL(string: store.bannerUrl)) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: geometry.size.width, height: 180)
-                                .clipped()
-                        case .empty, .failure:
-                            Image("generic_cover")
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: geometry.size.width, height: 180)
-                                .clipped()
-                        @unknown default:
-                            Image("generic_cover")
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: geometry.size.width, height: 180)
-                                .clipped()
-                        }
-                    }
+                Color.clear
+                    .frame(height: 180)
                     .overlay(
-                        LinearGradient(
-                            colors: [
-                                Color.black.opacity(0.05),
-                                Color.black.opacity(0.2),
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
+                        AsyncImage(url: URL(string: store.bannerUrl)) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image.resizable().scaledToFill()
+                            default:
+                                Image("generic_cover").resizable().scaledToFill()
+                            }
+                        }
                     )
-                }
-                .frame(maxWidth: .infinity, minHeight: 180, maxHeight: 180)
+                    .clipped()
 
                 CachedAsyncImage(
                     url: URL(string: store.logoUrl),
