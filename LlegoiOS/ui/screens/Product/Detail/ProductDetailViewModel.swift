@@ -23,6 +23,7 @@ class ProductDetailViewModel: ObservableObject {
     // MARK: - Private Properties
     private var loadedProductId: String?
     private var loadedSimilarQuery: String?
+    private var similarProductsTask: Task<Void, Never>?
 
     // MARK: - Computed Properties
     var isLoading: Bool {
@@ -41,7 +42,6 @@ class ProductDetailViewModel: ObservableObject {
 
     // MARK: - Dependencies
     private let repository = ProductDetailRepository()
-    private let searchRepository = SearchRepository()
 
     // MARK: - Public Methods
     func loadProductDetail(id: String, forceRefresh: Bool = false) {
@@ -66,12 +66,26 @@ class ProductDetailViewModel: ObservableObject {
                     self.initializeDefaultVariantSelection(from: detail)
                     self.state = .success(detail)
                     print("✅ ProductDetailViewModel: Loaded details for product \(id)")
+                    
+                    let cachedProduct = CachedProduct(
+                        id: detail.id,
+                        name: detail.name,
+                        branchId: detail.branchId,
+                        categoryId: detail.categoryId,
+                        price: detail.price,
+                        currency: detail.currency,
+                        imageUrl: detail.imageUrl,
+                        timestamp: Date(),
+                        source: .viewed
+                    )
+                    ProductCacheManager.shared.addProduct(cachedProduct)
+                    
                     self.loadSimilarProducts(using: detail.description, excludingProductId: id)
 
                 case .failure(let error):
                     let message = "Error al cargar detalles: \(error.localizedDescription)"
                     self.state = .error(message)
-                    self.loadedProductId = nil  // Permitir reintentar
+                    self.loadedProductId = nil
                     print("❌ ProductDetailViewModel: \(message)")
                 }
             }
@@ -81,43 +95,58 @@ class ProductDetailViewModel: ObservableObject {
     func loadSimilarProducts(
         using queryText: String, excludingProductId: String, forceRefresh: Bool = false
     ) {
-        let query = queryText.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !query.isEmpty else {
-            similarProducts = []
-            isLoadingSimilarProducts = false
+        guard forceRefresh || loadedSimilarQuery != excludingProductId else {
             return
         }
-
-        guard forceRefresh || loadedSimilarQuery != query else {
-            return
-        }
-
-        loadedSimilarQuery = query
+        
+        loadedSimilarQuery = excludingProductId
+        
+        similarProductsTask?.cancel()
+        
         isLoadingSimilarProducts = true
-
-        searchRepository.searchProducts(query: query, first: 12) { [weak self] result in
-            guard let self = self else { return }
-
-            Task { @MainActor in
-                self.isLoadingSimilarProducts = false
-
-                switch result {
-                case .success(let products):
-                    self.similarProducts = Array(
-                        products
-                            .filter { $0.id != excludingProductId }
-                            .prefix(6)
-                    )
-                    print(
-                        "✅ ProductDetailViewModel: Loaded \(self.similarProducts.count) similar products"
-                    )
-
-                case .failure(let error):
+        
+        similarProductsTask = Task { [weak self] in
+            guard let self else { return }
+            
+            defer {
+                Task { @MainActor in
+                    self.isLoadingSimilarProducts = false
+                }
+            }
+            
+            do {
+                print("📱 [ProductDetailViewModel] Cargando similares...")
+                
+                let result = try await RecommendationRouter.shared.getRecommendations(
+                    context: .pdp(
+                        productId: excludingProductId,
+                        productName: await self.productDetail?.name ?? ""
+                    ),
+                    limit: 6
+                )
+                
+                guard !Task.isCancelled else { return }
+                
+                await MainActor.run {
+                    self.similarProducts = result.products
+                    
+                    print("✅ [ProductDetailViewModel] Loaded \(result.products.count) similar products")
+                    print("   Fuente: \(result.source)")
+                    print("   Usó fallback: \(result.usedFallback)")
+                }
+                
+            } catch {
+                guard !Task.isCancelled else { return }
+                
+                let nsError = error as NSError
+                if nsError.domain == NSURLErrorDomain && nsError.code == -1001 {
+                    print("⏱️ [ProductDetailViewModel] Timeout cargando similares")
+                } else {
+                    print("⚠️ [ProductDetailViewModel] Failed: \(error.localizedDescription)")
+                }
+                
+                await MainActor.run {
                     self.similarProducts = []
-                    print(
-                        "⚠️ ProductDetailViewModel: Failed loading similar products - \(error.localizedDescription)"
-                    )
                 }
             }
         }

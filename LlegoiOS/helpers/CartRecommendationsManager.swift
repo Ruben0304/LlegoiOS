@@ -83,24 +83,35 @@ final class CartRecommendationsManager: ObservableObject {
         loadingTask?.cancel()
         isLoading = true
         errorMessage = nil
-
+        
         let productIds = cartManager.localItems.map(\.productId)
-
+        
         loadingTask = Task { [weak self] in
             guard let self = self else { return }
+            
             do {
-                let recommendations = try await self.fetchCloudRecommendations(productIds: productIds)
+                print("🛒 [CartRecommendationsManager] Iniciando carga...")
+                
+                let result = try await RecommendationRouter.shared.getRecommendations(
+                    context: .cart(productIds: productIds),
+                    limit: 6
+                )
+                
                 guard !Task.isCancelled else { return }
-
-                let cartIds = Set(self.cartManager.localItems.map(\.productId))
-                let filtered = recommendations.filter { !cartIds.contains($0.id) }
-
-                self.suggestedProducts = filtered
+                
+                print("✅ [CartRecommendationsManager] Recibidas \(result.products.count) recomendaciones")
+                print("   Fuente: \(result.source)")
+                print("   Usó fallback: \(result.usedFallback)")
+                
+                self.suggestedProducts = result.products
                 self.isLoading = false
                 self.errorMessage = nil
-                self.persist(products: filtered, signature: signature)
+                self.persist(products: result.products, signature: signature)
+                
             } catch {
                 guard !Task.isCancelled else { return }
+                
+                print("❌ [CartRecommendationsManager] Error: \(error.localizedDescription)")
                 self.suggestedProducts = []
                 self.isLoading = false
                 self.errorMessage = "No se pudieron cargar recomendaciones"

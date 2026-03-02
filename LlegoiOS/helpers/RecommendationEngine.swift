@@ -191,6 +191,128 @@ final class RecommendationEngine {
         #endif
         return (false, "Apple Intelligence requiere iOS 26.0 o superior")
     }
+    
+    func reRankSimilar(
+        productName: String,
+        candidates: [(id: String, name: String)]
+    ) async throws -> [String] {
+        #if canImport(FoundationModels)
+        if #available(iOS 26.0, *) {
+            print("🔍 [RecommendationEngine] Re-ranking similares")
+            print("🔍 [RecommendationEngine] Producto: \(productName)")
+            print("🔍 [RecommendationEngine] Candidatos: \(candidates.count)")
+            
+            guard isAvailable() else {
+                throw RecommendationError.appleIntelligenceNotAvailable
+            }
+            
+            let candidatesText = candidates.map { "ID: \($0.id), Nombre: \($0.name)" }.joined(separator: "\n")
+            
+            let prompt = """
+            Eres un experto en recomendaciones de productos.
+            Reordena los siguientes candidatos por similitud al producto de referencia.
+            
+            PRODUCTO DE REFERENCIA:
+            \(productName)
+            
+            CANDIDATOS:
+            \(candidatesText)
+            
+            INSTRUCCIONES:
+            - Responde SOLO con los IDs reordenados, separados por comas
+            - Ordena del MÁS similar al MENOS similar
+            - NO incluyas el producto de referencia
+            - Ejemplo: "id1,id2,id3"
+            
+            IDs reordenados:
+            """
+            
+            let session = LanguageModelSession()
+            let response = try await session.respond(to: prompt)
+            
+            let productIds = response.content
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .components(separatedBy: ",")
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            
+            guard !productIds.isEmpty else {
+                throw RecommendationError.invalidResponse
+            }
+            
+            let validCandidateIds = Set(candidates.map { $0.id })
+            let validatedIds = productIds.filter { validCandidateIds.contains($0) }
+            let uniqueIds = Array(NSOrderedSet(array: validatedIds)) as! [String]
+            let limitedIds = Array(uniqueIds.prefix(20))
+            
+            print("✅ [RecommendationEngine] Re-ranking completado: \(limitedIds.count) productos")
+            return limitedIds
+        }
+        #endif
+        
+        throw RecommendationError.appleIntelligenceNotAvailable
+    }
+    
+    func reRankComplementary(
+        cartNames: [String],
+        candidates: [(id: String, name: String)]
+    ) async throws -> [String] {
+        #if canImport(FoundationModels)
+        if #available(iOS 26.0, *) {
+            print("🔍 [RecommendationEngine] Re-ranking complementarios")
+            print("🔍 [RecommendationEngine] Carrito: \(cartNames)")
+            print("🔍 [RecommendationEngine] Candidatos: \(candidates.count)")
+            
+            guard isAvailable() else {
+                throw RecommendationError.appleIntelligenceNotAvailable
+            }
+            
+            let candidatesText = candidates.map { "ID: \($0.id), Nombre: \($0.name)" }.joined(separator: "\n")
+            let cartText = cartNames.joined(separator: ", ")
+            
+            let prompt = """
+            Eres un experto en ventas cruzadas.
+            Reordena los siguientes candidatos por complementariedad con el carrito actual.
+            
+            CARRITO ACTUAL:
+            \(cartText)
+            
+            CANDIDATOS:
+            \(candidatesText)
+            
+            INSTRUCCIONES:
+            - Responde SOLO con los IDs reordenados, separados por comas
+            - Ordena del MÁS complementario al MENOS complementario
+            - Ejemplo: "id1,id2,id3"
+            
+            IDs reordenados:
+            """
+            
+            let session = LanguageModelSession()
+            let response = try await session.respond(to: prompt)
+            
+            let productIds = response.content
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .components(separatedBy: ",")
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            
+            guard !productIds.isEmpty else {
+                throw RecommendationError.invalidResponse
+            }
+            
+            let validCandidateIds = Set(candidates.map { $0.id })
+            let validatedIds = productIds.filter { validCandidateIds.contains($0) }
+            let uniqueIds = Array(NSOrderedSet(array: validatedIds)) as! [String]
+            let limitedIds = Array(uniqueIds.prefix(20))
+            
+            print("✅ [RecommendationEngine] Re-ranking completado: \(limitedIds.count) productos")
+            return limitedIds
+        }
+        #endif
+        
+        throw RecommendationError.appleIntelligenceNotAvailable
+    }
 }
 
 /// Errores del motor de recomendaciones
