@@ -568,6 +568,75 @@ class CartRepository {
             }
         }.resume()
     }
+    
+    func fetchCloudCandidates(
+        productIds: [String],
+        limit: Int = 20,
+        completion: @escaping @Sendable (Result<[Product], Error>) -> Void
+    ) {
+        let client = apolloClient
+        
+        Task { @MainActor in
+            let jwt = authManager.getAccessToken()
+            
+            print("🌐 [CartRepository] Obteniendo candidatos desde Cloud")
+            print("🌐 [CartRepository] Product IDs: \(productIds)")
+            print("🌐 [CartRepository] Limit: \(limit)")
+            
+            let query = LlegoAPI.GetProductRecommendationsQuery(
+                productIds: productIds,
+                limit: Int32(limit),
+                jwt: jwt.map { .some($0) } ?? .none
+            )
+            
+            client.fetchCompat(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
+                switch result {
+                case .success(let graphQLResult):
+                    if let errors = graphQLResult.errors {
+                        print("❌ [CartRepository] GraphQL Errors:")
+                        errors.forEach { print("  - \($0.localizedDescription)") }
+                        completion(
+                            .failure(
+                                NSError(
+                                    domain: "CartRepository",
+                                    code: -1,
+                                    userInfo: [NSLocalizedDescriptionKey: "Error obteniendo candidatos"]
+                                )))
+                        return
+                    }
+                    
+                    guard let data = graphQLResult.data,
+                          let productRecommendations = data.productRecommendations else {
+                        print("⚠️ [CartRepository] No recommendations in response")
+                        completion(.success([]))
+                        return
+                    }
+                    
+                    let recommendations = productRecommendations.recommendations
+                    print("✅ [CartRepository] Received \(recommendations.count) candidatos")
+                    
+                    let products = recommendations.compactMap { rec -> Product? in
+                        guard let product = rec.product else { return nil }
+                        return Product(
+                            id: product.id,
+                            name: product.name,
+                            shop: "Tienda",
+                            shopLogoUrl: "",
+                            weight: product.currency,
+                            price: "\(product.currency) \(product.price)",
+                            imageUrl: product.image ?? ""
+                        )
+                    }
+                    
+                    completion(.success(products))
+                    
+                case .failure(let error):
+                    print("❌ [CartRepository] Error: \(error.localizedDescription)")
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
 }
 
 // MARK: - Models
