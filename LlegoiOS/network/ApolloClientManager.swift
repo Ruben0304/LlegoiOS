@@ -27,7 +27,7 @@ final class ApolloClientManager: @unchecked Sendable {
         )
     }()
 
-    private lazy var cache: SQLiteNormalizedCache = {
+    private lazy var cache: any NormalizedCache = {
         let documentsPath = NSSearchPathForDirectoriesInDomains(
             .documentDirectory,
             .userDomainMask,
@@ -40,7 +40,8 @@ final class ApolloClientManager: @unchecked Sendable {
             let sqliteCache = try SQLiteNormalizedCache(fileURL: sqliteFileURL)
             return sqliteCache
         } catch {
-            fatalError("Failed to create SQLite cache: \(error)")
+            print("❌ Failed to create SQLite cache, using in-memory cache. Error: \(error.localizedDescription)")
+            return InMemoryNormalizedCache()
         }
     }()
 
