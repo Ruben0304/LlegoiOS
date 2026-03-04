@@ -1,40 +1,54 @@
 query AIChat($message: String!, $deviceId: String, $jwt: String) {
   aiChat(input: { message: $message, deviceId: $deviceId }, jwt: $jwt) {
-    responseType
-    aiText
-    suggestedProducts {
-      product {
-        id
-        name
-        description
-        price
-        currency
-        imageUrl
-        availability
-      }
-      reason
-      # Nuevos campos de branch (info directa del producto)
-      branchName
-      branchAvatarUrl
-      branchAddress
-      branchPhone
-    }
-    suggestedBranches {
-      branch {
-        id
-        name
-        address
-        phone
-        status
-        tipos
-        avatarUrl
-        coordinates {
-          type
-          coordinates
+    success {
+      responseType
+      aiText
+      suggestedProducts {
+        product {
+          id
+          name
+          description
+          price
+          currency
+          imageUrl
+          availability
         }
+        reason
+        branchName
+        branchAvatarUrl
+        branchAddress
+        branchPhone
       }
-      reason
+      suggestedBranches {
+        branch {
+          id
+          name
+          address
+          phone
+          status
+          tipos
+          avatarUrl
+          coordinates {
+            type
+            coordinates
+          }
+        }
+        reason
+      }
+      confidence
     }
-    confidence
+    error {
+      code
+      message
+      quota {
+        source
+        limit
+        used
+        remaining
+      }
+      retryAfter
+      maxWords
+      wordsCount
+    }
   }
 }

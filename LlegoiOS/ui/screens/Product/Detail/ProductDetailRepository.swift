@@ -133,6 +133,73 @@ final class ProductDetailRepository: @unchecked Sendable {
         }
     }
 
+    // MARK: - Fetch similar products via vector search (timeout 5s)
+    func fetchSimilarProducts(
+        productName: String,
+        excludingProductId: String,
+        completion: @escaping @Sendable (Result<[Product], Error>) -> Void
+    ) {
+        let client = apolloClient
+        Task {
+            let jwt = await getJWT()
+            let query = LlegoAPI.SearchProductsQuery(
+                query: productName,
+                first: 7,
+                after: .none,
+                useVectorSearch: true,
+                branchTipo: .none,
+                categoryId: .none,
+                radiusKm: .none,
+                jwt: jwt.map { .some($0) } ?? .none
+            )
+
+            // Usamos withCheckedThrowingContinuation para que solo se resuelva una vez.
+            // La tarea de timeout lanza CancellationError si la red ya respondió.
+            let products: [Product]
+            do {
+                products = try await withThrowingTaskGroup(of: [Product].self) { group in
+                    group.addTask {
+                        try await withCheckedThrowingContinuation { continuation in
+                            client.fetchCompat(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
+                                switch result {
+                                case .success(let graphQLResult):
+                                    let edges = graphQLResult.data?.searchProducts.edges ?? []
+                                    let mapped = edges.compactMap { edge -> Product? in
+                                        let node = edge.node
+                                        guard node.id != excludingProductId else { return nil }
+                                        return Product(
+                                            id: node.id,
+                                            name: node.name,
+                                            shop: node.business?.name ?? "",
+                                            shopLogoUrl: node.business?.avatarUrl ?? "",
+                                            weight: node.weight,
+                                            price: "\(node.currency) \(node.price)",
+                                            imageUrl: node.imageUrl
+                                        )
+                                    }
+                                    continuation.resume(returning: mapped)
+                                case .failure(let error):
+                                    continuation.resume(throwing: error)
+                                }
+                            }
+                        }
+                    }
+                    group.addTask {
+                        try await Task.sleep(nanoseconds: 5_000_000_000)
+                        throw CancellationError()
+                    }
+                    // Tomar el primer resultado (red o timeout)
+                    let result = try await group.next() ?? []
+                    group.cancelAll()
+                    return result
+                }
+            } catch {
+                products = []
+            }
+            completion(.success(products))
+        }
+    }
+
 }
 
 // MARK: - Models

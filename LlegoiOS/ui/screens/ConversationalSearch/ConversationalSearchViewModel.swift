@@ -30,6 +30,7 @@ class ConversationalSearchViewModel: ObservableObject {
     private let repository = ConversationalSearchRepository()
     private let locationManager = UserLocationManager.shared
     private let localAIAssistantService = LocalAIAssistantService.shared
+    private var activeStreamingAssistantMessageId: UUID?
 
     init() {
         refreshAppleIntelligenceAvailability()
@@ -71,7 +72,27 @@ class ConversationalSearchViewModel: ObservableObject {
         print("⏳ [VIEWMODEL] Estado cambiado a LOADING\n")
 
         // Enviar según proveedor seleccionado
-        repository.sendMessage(message: text, provider: selectedProvider) { [weak self] result in
+        activeStreamingAssistantMessageId = nil
+
+        repository.sendMessage(
+            message: text,
+            provider: selectedProvider,
+            onStreamEvent: { [weak self] event in
+                Task { @MainActor in
+                    guard let self else { return }
+                    guard self.selectedProvider == .llegoAI else { return }
+
+                    switch event {
+                    case .started:
+                        // Mantener typing visible hasta recibir el primer chunk real.
+                        break
+                    case .partialText(let text):
+                        self.isTyping = false
+                        self.updateStreamingAssistantMessageText(text)
+                    }
+                }
+            }
+        ) { [weak self] result in
             guard let self = self else { return }
 
             Task { @MainActor in
@@ -109,30 +130,10 @@ class ConversationalSearchViewModel: ObservableObject {
                     }
                     print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
-                    // Crear mensaje del asistente
-                    print(
-                        "📦 [VIEWMODEL] Pasando \(chatData.productEntities.count) productos al mensaje"
-                    )
-                    print(
-                        "🏪 [VIEWMODEL] Pasando \(chatData.branchEntities.count) branches al mensaje"
-                    )
-
-                    let assistantMessage = ConversationalChatMessage(
-                        text: chatData.aiText,
-                        isFromUser: false,
-                        timestamp: Date(),
-                        responseType: chatData.responseType,
-                        productEntities: chatData.productEntities.isEmpty
-                            ? nil : chatData.productEntities,
-                        branchEntities: chatData.branchEntities.isEmpty
-                            ? nil : chatData.branchEntities,
-                        confidence: chatData.confidence
-                    )
-
-                    self.messages.append(assistantMessage)
+                    self.finalizeAssistantMessage(with: chatData)
                     self.state = .success
 
-                    print("✅ [VIEWMODEL] Mensaje del asistente agregado")
+                    print("✅ [VIEWMODEL] Mensaje del asistente finalizado")
                     print("✅ [VIEWMODEL] Estado cambiado a SUCCESS")
                     print("📊 [VIEWMODEL] Total mensajes: \(self.messages.count)\n")
 
@@ -146,6 +147,7 @@ class ConversationalSearchViewModel: ObservableObject {
                     if let backendError = error as? AIChatBackendError {
                         self.errorMessage = backendError.fallbackMessage
                         self.state = .error(backendError.fallbackMessage)
+                        self.removeStreamingAssistantMessageIfNeeded()
                         let assistantErrorMessage = self.makeAssistantErrorMessage(
                             from: backendError)
                         self.messages.append(assistantErrorMessage)
@@ -157,6 +159,7 @@ class ConversationalSearchViewModel: ObservableObject {
                     if let localError = error as? LocalAIAssistantError {
                         self.errorMessage = localError.localizedDescription
                         self.state = .error(localError.localizedDescription)
+                        self.removeStreamingAssistantMessageIfNeeded()
                         let assistantErrorMessage = self.makeAssistantErrorMessage(from: localError)
                         self.messages.append(assistantErrorMessage)
                         return
@@ -164,6 +167,7 @@ class ConversationalSearchViewModel: ObservableObject {
 
                     self.errorMessage = error.localizedDescription
                     self.state = .error(error.localizedDescription)
+                    self.removeStreamingAssistantMessageIfNeeded()
 
                     let errorMessage = ConversationalChatMessage(
                         text:
@@ -178,6 +182,89 @@ class ConversationalSearchViewModel: ObservableObject {
                 }
             }
         }
+    }
+
+    private func ensureStreamingAssistantMessage() {
+        if let activeStreamingAssistantMessageId,
+            messages.contains(where: { $0.id == activeStreamingAssistantMessageId })
+        {
+            return
+        }
+
+        let streamId = UUID()
+        let streamingMessage = ConversationalChatMessage(
+            id: streamId,
+            text: "",
+            isFromUser: false,
+            timestamp: Date()
+        )
+        activeStreamingAssistantMessageId = streamId
+        messages.append(streamingMessage)
+    }
+
+    private func updateStreamingAssistantMessageText(_ text: String) {
+        ensureStreamingAssistantMessage()
+        guard let activeStreamingAssistantMessageId else { return }
+        guard let index = messages.firstIndex(where: { $0.id == activeStreamingAssistantMessageId }) else {
+            return
+        }
+
+        let current = messages[index]
+        let updated = ConversationalChatMessage(
+            id: current.id,
+            text: text,
+            isFromUser: current.isFromUser,
+            timestamp: current.timestamp,
+            responseType: current.responseType,
+            productEntities: current.productEntities,
+            branchEntities: current.branchEntities,
+            confidence: current.confidence,
+            actionTitle: current.actionTitle,
+            action: current.action
+        )
+        messages[index] = updated
+    }
+
+    private func finalizeAssistantMessage(with chatData: AIChatData) {
+        let assistantMessage = ConversationalChatMessage(
+            text: chatData.aiText,
+            isFromUser: false,
+            timestamp: Date(),
+            responseType: chatData.responseType,
+            productEntities: chatData.productEntities.isEmpty
+                ? nil : chatData.productEntities,
+            branchEntities: chatData.branchEntities.isEmpty
+                ? nil : chatData.branchEntities,
+            confidence: chatData.confidence
+        )
+
+        if let activeStreamingAssistantMessageId,
+            let index = messages.firstIndex(where: { $0.id == activeStreamingAssistantMessageId })
+        {
+            let updated = ConversationalChatMessage(
+                id: activeStreamingAssistantMessageId,
+                text: chatData.aiText,
+                isFromUser: false,
+                timestamp: messages[index].timestamp,
+                responseType: chatData.responseType,
+                productEntities: chatData.productEntities.isEmpty
+                    ? nil : chatData.productEntities,
+                branchEntities: chatData.branchEntities.isEmpty
+                    ? nil : chatData.branchEntities,
+                confidence: chatData.confidence
+            )
+            messages[index] = updated
+        } else {
+            messages.append(assistantMessage)
+        }
+
+        self.activeStreamingAssistantMessageId = nil
+    }
+
+    private func removeStreamingAssistantMessageIfNeeded() {
+        guard let activeStreamingAssistantMessageId else { return }
+        messages.removeAll { $0.id == activeStreamingAssistantMessageId }
+        self.activeStreamingAssistantMessageId = nil
     }
 
     func sendWelcomeMessage(mode: SearchMode) {
@@ -244,6 +331,51 @@ class ConversationalSearchViewModel: ObservableObject {
                 isFromUser: false,
                 timestamp: Date()
             )
+        case .messageTooLong:
+            return ConversationalChatMessage(
+                text:
+                    "Tu mensaje es muy largo. Envíalo en menos palabras para que pueda ayudarte mejor.",
+                isFromUser: false,
+                timestamp: Date()
+            )
+        case .dailyDeviceQuotaExceeded:
+            return ConversationalChatMessage(
+                text:
+                    "Llegaste al límite diario de consultas para este dispositivo. Vuelve mañana.\(quotaSummary)",
+                isFromUser: false,
+                timestamp: Date()
+            )
+        case .rateLimitExceeded:
+            let retryText: String
+            if let retryAfter = backendError.retryAfter {
+                retryText = "\n\nInténtalo de nuevo en \(retryAfter)s."
+            } else {
+                retryText = ""
+            }
+            return ConversationalChatMessage(
+                text: "Espera un momento antes de enviar otro mensaje.\(retryText)",
+                isFromUser: false,
+                timestamp: Date()
+            )
+        case .serviceError:
+            return ConversationalChatMessage(
+                text: "El servicio de AI no está disponible temporalmente. Intenta de nuevo en breve.",
+                isFromUser: false,
+                timestamp: Date()
+            )
+        case .invalidRequest:
+            return ConversationalChatMessage(
+                text:
+                    "No pudimos procesar esta solicitud. Verifica tu sesión e inténtalo de nuevo.",
+                isFromUser: false,
+                timestamp: Date()
+            )
+        case .unknown:
+            return ConversationalChatMessage(
+                text: backendError.fallbackMessage,
+                isFromUser: false,
+                timestamp: Date()
+            )
         }
     }
 
@@ -293,6 +425,12 @@ class ConversationalSearchViewModel: ObservableObject {
             return ConversationalChatMessage(
                 text:
                     "La consulta tenía demasiado contexto para Apple Intelligence local. Intenta con una petición más corta.",
+                isFromUser: false,
+                timestamp: Date()
+            )
+        case .storageUnavailable(let message):
+            return ConversationalChatMessage(
+                text: "No se pudo acceder al almacenamiento local del chat: \(message)",
                 isFromUser: false,
                 timestamp: Date()
             )

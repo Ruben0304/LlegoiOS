@@ -45,6 +45,7 @@ enum LocalAIAssistantError: LocalizedError {
     case invalidModelResponse
     case semanticSearchFailed(String)
     case contextWindowExceeded
+    case storageUnavailable(String)
 
     var errorDescription: String? {
         switch self {
@@ -63,6 +64,8 @@ enum LocalAIAssistantError: LocalizedError {
             return "Falló la búsqueda semántica: \(message)"
         case .contextWindowExceeded:
             return "El mensaje y el contexto eran demasiado largos para Apple Intelligence local."
+        case .storageUnavailable(let message):
+            return "No se pudo acceder al almacenamiento local del chat: \(message)"
         }
     }
 }
@@ -184,7 +187,7 @@ struct LocalAIBranchEntity {
     let name: String
     let address: String
     let phone: String
-    let status: String
+    let status: String?
     let avatarUrl: String?
     let coordinatesType: String
     let coordinates: [Double]
@@ -214,17 +217,24 @@ struct LocalAIHistoryItem {
 }
 
 actor LocalAIConversationStore {
-    private let container: ModelContainer
+    private let container: ModelContainer?
+    private let initializationError: String?
 
     init() {
         do {
             self.container = try ModelContainer(for: LocalAIChatMessageEntity.self)
+            self.initializationError = nil
         } catch {
-            fatalError("No se pudo inicializar SwiftData para chat local: \(error)")
+            self.container = nil
+            self.initializationError = error.localizedDescription
+            print("❌ No se pudo inicializar SwiftData para chat local: \(error.localizedDescription)")
         }
     }
 
     func addMessage(sessionId: String, role: String, content: String) throws {
+        guard let container else {
+            throw LocalAIAssistantError.storageUnavailable(initializationError ?? "Error desconocido")
+        }
         let context = ModelContext(container)
         let message = LocalAIChatMessageEntity(sessionId: sessionId, role: role, content: content)
         context.insert(message)
@@ -232,6 +242,9 @@ actor LocalAIConversationStore {
     }
 
     func getConversationHistory(sessionId: String, limit: Int) throws -> [LocalAIHistoryItem] {
+        guard let container else {
+            throw LocalAIAssistantError.storageUnavailable(initializationError ?? "Error desconocido")
+        }
         let context = ModelContext(container)
         var descriptor = FetchDescriptor<LocalAIChatMessageEntity>(
             predicate: #Predicate { $0.sessionId == sessionId },
@@ -300,7 +313,7 @@ struct SemanticSearchBranch: Decodable {
     let name: String
     let address: String?
     let phone: String
-    let status: String
+    let status: String?
     let avatarUrl: String?
     let coordinates: SemanticSearchCoordinates?
 }
@@ -348,15 +361,15 @@ private struct GraphQLErrorPayload: Decodable {
 }
 
 final class SemanticSearchClient: @unchecked Sendable {
-    private let endpointURL: URL
+    private let endpointURL: URL?
     private let jsonDecoder = JSONDecoder()
     private let jsonEncoder = JSONEncoder()
 
     init(baseURL: String) {
-        guard let url = URL(string: "\(baseURL)/graphql") else {
-            fatalError("Base URL inválida para semantic search")
+        self.endpointURL = URL(string: "\(baseURL)/graphql")
+        if endpointURL == nil {
+            print("❌ Base URL inválida para semantic search: \(baseURL)")
         }
-        self.endpointURL = url
     }
 
     func search(
@@ -365,6 +378,10 @@ final class SemanticSearchClient: @unchecked Sendable {
         limit: Int,
         jwt: String
     ) async throws -> SemanticSearchResponsePayload {
+        guard let endpointURL else {
+            throw LocalAIAssistantError.semanticSearchFailed("Configuración inválida del endpoint")
+        }
+
         let queryText = """
             query SemanticSearch($query: String!, $collection: SemanticSearchCollection!, $limit: Int!, $jwt: String!) {
               semanticSearch(query: $query, collection: $collection, limit: $limit, jwt: $jwt) {
@@ -595,7 +612,7 @@ final class LocalAIAssistantService: @unchecked Sendable {
             lines.append("Available Branches:")
             for item in branches.branches.prefix(6) {
                 lines.append(
-                    "- ID: \(item.branch.id), Name: \(trimmed(item.branch.name, max: 48)), Address: \(trimmed(item.branch.address ?? "N/A", max: 72)), Status: \(item.branch.status)"
+                    "- ID: \(item.branch.id), Name: \(trimmed(item.branch.name, max: 48)), Address: \(trimmed(item.branch.address ?? "N/A", max: 72)), Status: \(item.branch.status ?? "N/A")"
                 )
             }
         }
@@ -1015,10 +1032,44 @@ final class LocalAIAssistantService: @unchecked Sendable {
 
         CURRENT LIMITATION: Order creation is temporarily disabled. Focus on helping users discover products and branches.
 
-        When analyzing user intent, determine:
-        - What type of response is needed (search products, search branches, request for details, or general conversation)
-        - What vector searches should be executed (if any)
-        - What information might be missing for a complete search
+        == SEARCH COLLECTION RULES ==
+
+        You must decide which collections to search based on user intent:
+
+        USE "products" ONLY when:
+        - User wants to BUY or FIND a specific item ("quiero pizza", "busco batidos", "dame café")
+        - User asks about food, drinks, goods, or any purchasable item
+        - Examples: "pizza", "hamburguesa", "jugo de naranja", "ropa deportiva"
+
+        USE "branches" ONLY when:
+        - User wants to find a PLACE, STORE, or BUSINESS ("farmacia cerca", "restaurante italiano", "donde comprar X")
+        - User asks about a specific store name or type of business
+        - User asks about location, hours, or contact of a store
+        - Examples: "farmacias", "supermercado", "tienda de ropa", "restaurante japonés"
+
+        USE BOTH "products" AND "branches" when:
+        - The query mixes product + location intent ("donde puedo comprar pizza", "tienda que venda batidos")
+        - User is exploring without a clear focus
+
+        == QUERY FORMULATION RULES ==
+
+        - Extract ONLY the essential keywords, remove filler words ("quiero", "dame", "buscar", "necesito", "por favor", "un", "una")
+        - For compound queries ("pizza y batidos"), create SEPARATE searchQuery entries per item — do NOT combine them in one query string
+        - Keep each query short and specific (2-4 words max)
+        - Use the same language the user used (Spanish stays Spanish, English stays English)
+
+        Examples:
+        - "quiero una pizza hawaiana" → [{ collection: "products", query: "pizza hawaiana", limit: 10 }]
+        - "farmacias cerca de mí" → [{ collection: "branches", query: "farmacia", limit: 6 }]
+        - "donde comprar batidos y pizza" → [{ collection: "products", query: "batido", limit: 8 }, { collection: "products", query: "pizza", limit: 8 }, { collection: "branches", query: "restaurante batidos", limit: 6 }]
+        - "hola cómo estás" → [] (no search needed, general_response)
+
+        == RESPONSE TYPES ==
+
+        - "search_products" → user wants products/items
+        - "search_branches" → user wants stores/places only
+        - "request_details" → need more info to search
+        - "general_response" → greeting, question, off-topic
 
         Be conversational and helpful. If the user is vague, ask clarifying questions.
         If user wants to create an order, politely explain that order creation is temporarily unavailable but you can help them find products and stores.

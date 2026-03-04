@@ -11,6 +11,8 @@ import Foundation
 final class ConversationalSearchRepository {
     private let localAIAssistantService = LocalAIAssistantService.shared
     private let backendClient = AIChatBackendClient(baseURL: ApolloClientManager.baseURL)
+    private var activeBackendTask: Task<Void, Never>?
+    private var activeBackendRequestId: UUID?
 
     func sendMessage(
         message: String,
@@ -64,10 +66,15 @@ final class ConversationalSearchRepository {
     ) {
         let jwt = AuthManager.shared.getAccessToken()
         let deviceId = DeviceIDManager.shared.getDeviceId()
+        let requestId = UUID()
 
-        Task {
+        activeBackendTask?.cancel()
+        activeBackendRequestId = requestId
+
+        activeBackendTask = Task {
             if onStreamEvent != nil {
                 await MainActor.run {
+                    guard self.activeBackendRequestId == requestId else { return }
                     onStreamEvent?(.started)
                 }
             }
@@ -79,15 +86,23 @@ final class ConversationalSearchRepository {
                     jwt: jwt,
                     onChunk: { text in
                         await MainActor.run {
+                            guard self.activeBackendRequestId == requestId else { return }
                             onStreamEvent?(.partialText(text))
                         }
                     }
                 )
 
                 await MainActor.run {
+                    guard self.activeBackendRequestId == requestId else { return }
                     completion(.success(result))
+                    self.activeBackendTask = nil
+                    self.activeBackendRequestId = nil
                 }
             } catch {
+                if Task.isCancelled || error is CancellationError {
+                    return
+                }
+
                 do {
                     // Fallback a query HTTP para mantener compatibilidad si WS no está disponible.
                     let fallback = try await backendClient.queryMessage(
@@ -96,11 +111,20 @@ final class ConversationalSearchRepository {
                         jwt: jwt
                     )
                     await MainActor.run {
+                        guard self.activeBackendRequestId == requestId else { return }
                         completion(.success(fallback))
+                        self.activeBackendTask = nil
+                        self.activeBackendRequestId = nil
                     }
                 } catch {
+                    if Task.isCancelled || error is CancellationError {
+                        return
+                    }
                     await MainActor.run {
+                        guard self.activeBackendRequestId == requestId else { return }
                         completion(.failure(error))
+                        self.activeBackendTask = nil
+                        self.activeBackendRequestId = nil
                     }
                 }
             }
@@ -111,6 +135,7 @@ final class ConversationalSearchRepository {
         let products = output.products.map {
             AIChatProductEntity(
                 id: $0.id,
+                branchId: nil,
                 name: $0.name,
                 description: $0.description,
                 price: $0.price,
@@ -226,12 +251,14 @@ private actor AIChatBackendClient {
         jwt: String?,
         onChunk: @escaping @Sendable (String) async -> Void
     ) async throws -> AIChatData {
-        let request = URLRequest(url: webSocketURL)
-        let webSocket = URLSession.shared.webSocketTask(with: request, protocols: ["graphql-transport-ws"])
+        let webSocket = URLSession.shared.webSocketTask(
+            with: webSocketURL,
+            protocols: ["graphql-transport-ws"]
+        )
         webSocket.resume()
 
         defer {
-            webSocket.cancel(with: .normalClosure, reason: nil)
+            webSocket.cancel(with: URLSessionWebSocketTask.CloseCode.normalClosure, reason: nil)
         }
 
         try await sendWebSocket(
@@ -265,8 +292,11 @@ private actor AIChatBackendClient {
                 payload: [
                     "query": Self.aiChatStreamSubscription,
                     "variables": GraphQLWSVariables(
-                        message: message,
-                        deviceId: deviceId,
+                        input: GraphQLWSInput(
+                            message: message,
+                            deviceId: deviceId,
+                            stream: true
+                        ),
                         jwt: jwt
                     ).dictionary
                 ]
@@ -342,21 +372,39 @@ private actor AIChatBackendClient {
             }
         }
 
-        try? await sendWebSocket(
-            webSocket,
-            payload: GraphQLWSMessage(id: operationId, type: "complete")
+        let suggestedProductIds = finalChunk?.suggestedProductIds ?? []
+        let suggestedBranchIds = finalChunk?.suggestedBranchIds ?? []
+        let products = try await hydrateProductsByIds(
+            ids: suggestedProductIds,
+            jwt: jwt
         )
-
-        let products = mapProductEntities(finalChunk?.suggestedProducts ?? [])
+        var branches = uniqueBranchesFromProducts(products)
+        if !suggestedBranchIds.isEmpty {
+            let existingIds = Set(branches.map(\.id))
+            let missingBranchIds = suggestedBranchIds.filter { !existingIds.contains($0) }
+            if !missingBranchIds.isEmpty {
+                let extraBranches = try await hydrateBranchesByIdsAlias(ids: missingBranchIds, jwt: jwt)
+                branches.append(contentsOf: extraBranches)
+            }
+        }
         let aiText = finalChunk?.accumulatedText?.isEmpty == false
             ? finalChunk?.accumulatedText ?? latestText
             : latestText
 
+        let responseType: String
+        if !products.isEmpty {
+            responseType = "search_products"
+        } else if !branches.isEmpty {
+            responseType = "search_branches"
+        } else {
+            responseType = "general_response"
+        }
+
         return AIChatData(
-            responseType: products.isEmpty ? "general_response" : "search_products",
+            responseType: responseType,
             aiText: aiText,
             productEntities: products,
-            branchEntities: [],
+            branchEntities: branches,
             confidence: finalChunk?.confidence ?? 0
         )
     }
@@ -389,6 +437,7 @@ private actor AIChatBackendClient {
             let product = suggestion.product
             return AIChatProductEntity(
                 id: product.id,
+                branchId: nil,
                 name: product.name,
                 description: product.description,
                 price: product.price,
@@ -412,7 +461,7 @@ private actor AIChatBackendClient {
                 name: branch.name,
                 address: branch.address ?? "",
                 phone: branch.phone,
-                status: branch.status ?? "",
+                status: branch.status,
                 avatarUrl: branch.avatarUrl,
                 coordinates: AIChatCoordinates(
                     type: branch.coordinates.type,
@@ -421,6 +470,162 @@ private actor AIChatBackendClient {
                 reason: suggestion.reason
             )
         }
+    }
+
+    private func uniqueBranchesFromProducts(_ products: [AIChatProductEntity]) -> [AIChatBranchEntity] {
+        var seen: Set<String> = []
+        var result: [AIChatBranchEntity] = []
+
+        for product in products {
+            guard let branchId = product.branchId else { continue }
+            guard !seen.contains(branchId) else { continue }
+            seen.insert(branchId)
+            result.append(
+                AIChatBranchEntity(
+                    id: branchId,
+                    name: product.branchName ?? "Sucursal",
+                    address: product.branchAddress ?? "",
+                    phone: product.branchPhone ?? "",
+                    status: nil,
+                    avatarUrl: product.branchAvatarUrl,
+                    coordinates: AIChatCoordinates(type: "Point", coordinates: []),
+                    reason: nil
+                )
+            )
+        }
+
+        return result
+    }
+
+    private func hydrateProductsByIds(ids: [String], jwt: String?) async throws -> [AIChatProductEntity] {
+        guard !ids.isEmpty else { return [] }
+
+        let payload = GenericGraphQLRequest(
+            query: Self.productsByIdsQuery,
+            variables: [
+                "ids": AnyEncodable(ids),
+                "jwt": AnyEncodable(jwt as Any),
+            ]
+        )
+
+        var request = URLRequest(url: endpointURL)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try jsonEncoder.encode(payload)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, (200..<300).contains(httpResponse.statusCode) else {
+            throw NSError(
+                domain: "AIChat",
+                code: -20,
+                userInfo: [NSLocalizedDescriptionKey: "No fue posible hidratar productos por IDs."]
+            )
+        }
+
+        let decoded = try jsonDecoder.decode(ProductsByIdsHTTPResponse.self, from: data)
+        if let error = decoded.errors?.first {
+            throw backendError(from: error)
+        }
+
+        let edges = decoded.data?.products.edges ?? []
+        var byId: [String: AIChatProductEntity] = [:]
+        for edge in edges {
+            let node = edge.node
+            let product = AIChatProductEntity(
+                id: node.id,
+                branchId: node.branchId,
+                name: node.name,
+                description: "",
+                price: node.price,
+                currency: node.currency,
+                imageUrl: node.imageUrl,
+                availability: node.availability,
+                branchName: node.branch?.name,
+                branchAvatarUrl: node.branch?.avatarUrl,
+                branchAddress: node.branch?.address,
+                branchPhone: node.branch?.phone,
+                reason: nil
+            )
+            byId[product.id] = product
+        }
+
+        return ids.compactMap { byId[$0] }
+    }
+
+    private func hydrateBranchesByIdsAlias(ids: [String], jwt: String?) async throws -> [AIChatBranchEntity] {
+        guard !ids.isEmpty else { return [] }
+
+        var variableDefs: [String] = ["$jwt: String"]
+        var fields: [String] = []
+        var variables: [String: AnyEncodable] = ["jwt": AnyEncodable(jwt as Any)]
+
+        for (index, id) in ids.enumerated() {
+            let variableName = "id\(index)"
+            variableDefs.append("$\(variableName): String!")
+            fields.append(
+                """
+                b\(index): branch(id: $\(variableName), jwt: $jwt) {
+                  id
+                  name
+                  avatarUrl
+                  address
+                  phone
+                  status
+                  coordinates { type coordinates }
+                }
+                """
+            )
+            variables[variableName] = AnyEncodable(id)
+        }
+
+        let query = """
+        query BranchesByIdsAlias(\(variableDefs.joined(separator: ", "))) {
+          \(fields.joined(separator: "\n"))
+        }
+        """
+
+        let payload = GenericGraphQLRequest(query: query, variables: variables)
+        var request = URLRequest(url: endpointURL)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try jsonEncoder.encode(payload)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, (200..<300).contains(httpResponse.statusCode) else {
+            throw NSError(
+                domain: "AIChat",
+                code: -21,
+                userInfo: [NSLocalizedDescriptionKey: "No fue posible hidratar sucursales por IDs."]
+            )
+        }
+
+        let decoded = try jsonDecoder.decode(BranchesByAliasHTTPResponse.self, from: data)
+        if let error = decoded.errors?.first {
+            throw backendError(from: error)
+        }
+
+        var result: [AIChatBranchEntity] = []
+        for id in ids {
+            guard let rawBranch = decoded.data?.first(where: { $0.value.id == id })?.value else {
+                continue
+            }
+            result.append(
+                AIChatBranchEntity(
+                    id: rawBranch.id,
+                    name: rawBranch.name,
+                    address: rawBranch.address ?? "",
+                    phone: rawBranch.phone ?? "",
+                    status: rawBranch.status ?? "",
+                    avatarUrl: rawBranch.avatarUrl,
+                    coordinates: AIChatCoordinates(
+                        type: rawBranch.coordinates?.type ?? "Point",
+                        coordinates: rawBranch.coordinates?.coordinates ?? []
+                    ),
+                    reason: nil
+                )
+            )
+        }
+        return result
     }
 
     private func backendError(from payload: AIChatErrorPayload) -> AIChatBackendError {
@@ -505,38 +710,62 @@ private actor AIChatBackendClient {
             remaining
           }
           retryAfter
+          maxWords
+          wordsCount
         }
       }
     }
     """
 
     private static let aiChatStreamSubscription = """
-    subscription AIChatStream($message: String!, $deviceId: String, $jwt: String) {
-      aiChatStream(input: { message: $message, deviceId: $deviceId }, jwt: $jwt) {
+    subscription AIChatStream($input: AiAssistantChatInput!, $jwt: String) {
+      aiChatStream(input: $input, jwt: $jwt) {
         delta
         accumulatedText
         isFinal
-        suggestedProducts {
-          product {
-            id
-            name
-            description
-            price
-            currency
-            imageUrl
-            image
-            availability
-          }
-          reason
-          branchName
-          branchAvatarUrl
-          branchAddress
-          branchPhone
-        }
         confidence
+        missingFields
+        suggestedProductIds
+        suggestedBranchIds
         error {
           code
           message
+          quota {
+            source
+            limit
+            used
+            remaining
+          }
+          retryAfter
+        }
+      }
+    }
+    """
+
+    private static let productsByIdsQuery = """
+    query ProductsByIds($ids: [String!], $jwt: String) {
+      products(ids: $ids, first: 50, jwt: $jwt) {
+        edges {
+          node {
+            id
+            name
+            price
+            currency
+            availability
+            imageUrl
+            branchId
+            branch {
+              id
+              name
+              avatarUrl
+              address
+              phone
+            }
+          }
+        }
+        pageInfo {
+          totalCount
+          hasNextPage
         }
       }
     }
@@ -546,6 +775,11 @@ private actor AIChatBackendClient {
 private struct GraphQLHTTPRequest: Encodable {
     let query: String
     let variables: GraphQLHTTPVariables
+}
+
+private struct GenericGraphQLRequest: Encodable {
+    let query: String
+    let variables: [String: AnyEncodable]
 }
 
 private struct GraphQLHTTPVariables: Encodable {
@@ -621,6 +855,8 @@ private struct AIChatErrorPayload: Decodable {
     let message: String
     let quota: AIChatQuotaPayload?
     let retryAfter: Int?
+    let maxWords: Int?
+    let wordsCount: Int?
 }
 
 private struct AIChatQuotaPayload: Decodable {
@@ -654,15 +890,27 @@ private struct GraphQLWSMessage: Encodable {
 }
 
 private struct GraphQLWSVariables {
+    let input: GraphQLWSInput
+    let jwt: String?
+
+    var dictionary: [String: Any] {
+        [
+            "input": input.dictionary,
+            "jwt": jwt as Any,
+        ]
+    }
+}
+
+private struct GraphQLWSInput {
     let message: String
     let deviceId: String?
-    let jwt: String?
+    let stream: Bool
 
     var dictionary: [String: Any] {
         [
             "message": message,
             "deviceId": deviceId as Any,
-            "jwt": jwt as Any,
+            "stream": stream,
         ]
     }
 }
@@ -699,20 +947,104 @@ private struct AIChatStreamChunkPayload: Decodable {
     let delta: String?
     let accumulatedText: String?
     let isFinal: Bool?
-    let suggestedProducts: [AIChatSuggestedProductPayload]?
+    let missingFields: [String]?
+    let suggestedProductIds: [String]?
+    let suggestedBranchIds: [String]?
     let confidence: Double?
     let error: AIChatErrorPayload?
 }
 
-private struct AnyEncodable: Encodable {
-    private let encodeFunction: (Encoder) throws -> Void
+private struct ProductsByIdsHTTPResponse: Decodable {
+    let data: ProductsByIdsDataContainer?
+    let errors: [GraphQLErrorPayload]?
+}
 
-    init<T: Encodable>(_ wrapped: T) {
-        encodeFunction = wrapped.encode
+private struct ProductsByIdsDataContainer: Decodable {
+    let products: ProductsByIdsConnection
+}
+
+private struct ProductsByIdsConnection: Decodable {
+    let edges: [ProductsByIdsEdge]
+}
+
+private struct ProductsByIdsEdge: Decodable {
+    let node: ProductsByIdsNode
+}
+
+private struct ProductsByIdsNode: Decodable {
+    let id: String
+    let branchId: String?
+    let name: String
+    let price: Double
+    let currency: String
+    let availability: Bool
+    let imageUrl: String
+    let branch: ProductsByIdsBranch?
+}
+
+private struct ProductsByIdsBranch: Decodable {
+    let id: String
+    let name: String
+    let avatarUrl: String?
+    let address: String?
+    let phone: String?
+}
+
+private struct BranchesByAliasHTTPResponse: Decodable {
+    let data: [String: BranchByAliasPayload]?
+    let errors: [GraphQLErrorPayload]?
+}
+
+private struct BranchByAliasPayload: Decodable {
+    let id: String
+    let name: String
+    let avatarUrl: String?
+    let address: String?
+    let phone: String?
+    let status: String?
+    let coordinates: AIChatCoordinatesPayload?
+}
+
+private struct AnyEncodable: Encodable {
+    private let value: Any
+
+    init(_ value: Any) {
+        self.value = value
     }
 
     func encode(to encoder: Encoder) throws {
-        try encodeFunction(encoder)
+        var container = encoder.singleValueContainer()
+
+        switch value {
+        case is NSNull:
+            try container.encodeNil()
+        case let value as String:
+            try container.encode(value)
+        case let value as Int:
+            try container.encode(value)
+        case let value as Double:
+            try container.encode(value)
+        case let value as Float:
+            try container.encode(value)
+        case let value as Bool:
+            try container.encode(value)
+        case let value as [String: Any]:
+            try container.encode(value.mapValues { AnyEncodable($0) })
+        case let value as [Any]:
+            try container.encode(value.map { AnyEncodable($0) })
+        case let value as String?:
+            if let value {
+                try container.encode(value)
+            } else {
+                try container.encodeNil()
+            }
+        default:
+            let context = EncodingError.Context(
+                codingPath: encoder.codingPath,
+                debugDescription: "Unsupported type for AnyEncodable: \(type(of: value))"
+            )
+            throw EncodingError.invalidValue(value, context)
+        }
     }
 }
 
@@ -816,6 +1148,7 @@ struct AIChatBackendError: LocalizedError, Sendable {
 
 struct AIChatProductEntity: Identifiable, Sendable, Hashable {
     let id: String
+    let branchId: String?
     let name: String
     let description: String
     let price: Double
@@ -834,7 +1167,7 @@ struct AIChatBranchEntity: Identifiable, Sendable, Hashable {
     let name: String
     let address: String
     let phone: String
-    let status: String
+    let status: String?
     let avatarUrl: String?
     let coordinates: AIChatCoordinates
     let reason: String?

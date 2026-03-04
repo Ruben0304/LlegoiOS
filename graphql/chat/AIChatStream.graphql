@@ -1,0 +1,51 @@
+subscription AIChatStream($message: String!, $deviceId: String, $jwt: String) {
+  aiChatStream(input: { message: $message, deviceId: $deviceId }, jwt: $jwt) {
+    delta
+    accumulatedText
+    isFinal
+    suggestedProducts {
+      product {
+        id
+        name
+        description
+        price
+        currency
+        imageUrl
+        availability
+      }
+      reason
+      branchName
+      branchAvatarUrl
+      branchAddress
+      branchPhone
+    }
+    suggestedBranches {
+      branch {
+        id
+        name
+        address
+        phone
+        status
+        tipos
+        avatarUrl
+        coordinates {
+          type
+          coordinates
+        }
+      }
+      reason
+    }
+    confidence
+    error {
+      code
+      message
+      quota {
+        source
+        limit
+        used
+        remaining
+      }
+      retryAfter
+    }
+  }
+}

@@ -95,7 +95,11 @@ struct AIStoreCard: View {
                         Spacer()
 
                         // Estado de la tienda
-                        if branch.status.lowercased() == "open" {
+                        let normalizedStatus = branch.status?
+                            .trimmingCharacters(in: .whitespacesAndNewlines)
+                            .lowercased()
+
+                        if normalizedStatus == "open" {
                             HStack(spacing: 4) {
                                 Circle()
                                     .fill(Color.green)
@@ -104,7 +108,7 @@ struct AIStoreCard: View {
                                     .font(.system(size: 11, weight: .medium))
                                     .foregroundColor(.green)
                             }
-                        } else {
+                        } else if normalizedStatus == "closed" {
                             HStack(spacing: 4) {
                                 Circle()
                                     .fill(Color.red)

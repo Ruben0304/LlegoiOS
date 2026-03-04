@@ -23,7 +23,6 @@ class ProductDetailViewModel: ObservableObject {
     // MARK: - Private Properties
     private var loadedProductId: String?
     private var loadedSimilarQuery: String?
-    private var similarProductsTask: Task<Void, Never>?
 
     // MARK: - Computed Properties
     var isLoading: Bool {
@@ -80,7 +79,7 @@ class ProductDetailViewModel: ObservableObject {
                     )
                     ProductCacheManager.shared.addProduct(cachedProduct)
                     
-                    self.loadSimilarProducts(using: detail.description, excludingProductId: id)
+                    self.loadSimilarProducts(using: detail.name, excludingProductId: id)
 
                 case .failure(let error):
                     let message = "Error al cargar detalles: \(error.localizedDescription)"
@@ -98,54 +97,19 @@ class ProductDetailViewModel: ObservableObject {
         guard forceRefresh || loadedSimilarQuery != excludingProductId else {
             return
         }
-        
+
         loadedSimilarQuery = excludingProductId
-        
-        similarProductsTask?.cancel()
-        
         isLoadingSimilarProducts = true
-        
-        similarProductsTask = Task { [weak self] in
-            guard let self else { return }
-            
-            defer {
-                Task { @MainActor in
-                    self.isLoadingSimilarProducts = false
-                }
-            }
-            
-            do {
-                print("📱 [ProductDetailViewModel] Cargando similares...")
-                
-                let result = try await RecommendationRouter.shared.getRecommendations(
-                    context: .pdp(
-                        productId: excludingProductId,
-                        productName: await self.productDetail?.name ?? ""
-                    ),
-                    limit: 6
-                )
-                
-                guard !Task.isCancelled else { return }
-                
-                await MainActor.run {
-                    self.similarProducts = result.products
-                    
-                    print("✅ [ProductDetailViewModel] Loaded \(result.products.count) similar products")
-                    print("   Fuente: \(result.source)")
-                    print("   Usó fallback: \(result.usedFallback)")
-                }
-                
-            } catch {
-                guard !Task.isCancelled else { return }
-                
-                let nsError = error as NSError
-                if nsError.domain == NSURLErrorDomain && nsError.code == -1001 {
-                    print("⏱️ [ProductDetailViewModel] Timeout cargando similares")
-                } else {
-                    print("⚠️ [ProductDetailViewModel] Failed: \(error.localizedDescription)")
-                }
-                
-                await MainActor.run {
+
+        repository.fetchSimilarProducts(productName: queryText, excludingProductId: excludingProductId) { [weak self] result in
+            Task { @MainActor in
+                guard let self else { return }
+                self.isLoadingSimilarProducts = false
+                switch result {
+                case .success(let products):
+                    self.similarProducts = Array(products.prefix(6))
+                    print("✅ [ProductDetailViewModel] \(self.similarProducts.count) similares")
+                case .failure:
                     self.similarProducts = []
                 }
             }

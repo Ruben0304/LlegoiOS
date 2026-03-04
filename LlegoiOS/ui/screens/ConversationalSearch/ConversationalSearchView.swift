@@ -962,6 +962,9 @@ struct StreamingMarkdownText: View {
             .onAppear {
                 startStreaming()
             }
+            .onChange(of: text) { _, newValue in
+                updateForIncomingText(newValue)
+            }
             .onDisappear {
                 timer?.invalidate()
             }
@@ -990,25 +993,31 @@ struct StreamingMarkdownText: View {
             return
         }
 
-        // Para mensajes del asistente, hacer streaming
-        displayedText = ""
-        currentIndex = 0
-
-        // Fade in inicial
+        // Para mensajes del asistente, el backend ya entrega chunks;
+        // reflejamos el texto directamente para no duplicar efecto de streaming.
+        displayedText = text
         withAnimation(.easeIn(duration: 0.3)) {
             opacity = 1.0
         }
+    }
 
-        // Streaming character por character
-        let characters = Array(text)
-        let baseDelay = 0.02  // 20ms por caracter
+    private func updateForIncomingText(_ newText: String) {
+        timer?.invalidate()
 
-        timer = Timer.scheduledTimer(withTimeInterval: baseDelay, repeats: true) { t in
-            if currentIndex < characters.count {
-                displayedText.append(characters[currentIndex])
-                currentIndex += 1
-            } else {
-                t.invalidate()
+        if isFromUser {
+            displayedText = newText
+            if opacity < 1.0 {
+                withAnimation(.easeIn(duration: 0.2)) {
+                    opacity = 1.0
+                }
+            }
+            return
+        }
+
+        displayedText = newText
+        if opacity < 1.0 {
+            withAnimation(.easeIn(duration: 0.2)) {
+                opacity = 1.0
             }
         }
     }

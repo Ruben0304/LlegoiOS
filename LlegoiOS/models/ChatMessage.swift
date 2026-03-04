@@ -12,7 +12,7 @@ enum ConversationalChatAction: Equatable {
 }
 
 struct ConversationalChatMessage: Identifiable, Equatable {
-    let id = UUID()
+    let id: UUID
     let text: String
     let isFromUser: Bool
     let timestamp: Date
@@ -24,6 +24,7 @@ struct ConversationalChatMessage: Identifiable, Equatable {
     var action: ConversationalChatAction?
     
     init(
+        id: UUID = UUID(),
         text: String,
         isFromUser: Bool,
         timestamp: Date,
@@ -34,6 +35,7 @@ struct ConversationalChatMessage: Identifiable, Equatable {
         actionTitle: String? = nil,
         action: ConversationalChatAction? = nil
     ) {
+        self.id = id
         self.text = text
         self.isFromUser = isFromUser
         self.timestamp = timestamp
