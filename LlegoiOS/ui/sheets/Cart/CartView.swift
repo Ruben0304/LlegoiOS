@@ -706,10 +706,10 @@ struct CartView: View {
         /* CÓDIGO LEGACY - COMENTADO
         // Convertir el total a centavos
         let amountInCents = Int(viewModel.total * 100)
-        
+
         print("🔗 Generando Payment Link")
         print("💰 Monto: \(amountInCents) centavos (\(viewModel.formattedTotal))")
-        
+
         paymentRepository.createPaymentLink(
             amount: amountInCents,
             currency: "usd",
@@ -721,13 +721,13 @@ struct CartView: View {
         ) { [self] result in
             Task { @MainActor in
                 self.isLoadingPayment = false
-        
+
                 switch result {
                 case .success(let paymentLinkURL):
                     print("✅ Payment Link generado exitosamente")
                     self.generatedPaymentLink = paymentLinkURL
                     self.showPaymentLinkSheet = true
-        
+
                 case .failure(let error):
                     print("❌ Error generando Payment Link: \(error.localizedDescription)")
                     self.paymentAlertMessage = "Error al generar el link de pago: \(error.localizedDescription)"
@@ -753,14 +753,14 @@ struct CartView: View {
         /* CÓDIGO LEGACY - COMENTADO
         // Convertir el total a centavos (Stripe maneja montos en centavos)
         let amountInCents = Int(viewModel.total * 100)
-        
+
         print("💳 Iniciando pago con Stripe")
         print("💰 Monto: \(amountInCents) centavos (\(viewModel.formattedTotal))")
-        
+
         // Verificar si estamos en modo mock
         if StripeConfig.useMockData {
             print("🧪 Usando MOCK MODE - llamando directamente a Stripe API (solo para testing)")
-        
+
             // Crear PaymentIntent directamente con Stripe API (SOLO PARA TESTING)
             paymentRepository.createPaymentIntentDirectly(
                 amount: amountInCents,
@@ -768,12 +768,12 @@ struct CartView: View {
             ) { [self] result in
                 Task { @MainActor in
                     self.isLoadingPayment = false
-        
+
                     switch result {
                     case .success(let response):
                         print("✅ [MOCK MODE] PaymentIntent creado exitosamente")
                         self.configurePaymentSheet(response: response)
-        
+
                     case .failure(let error):
                         print("❌ [MOCK MODE] Error creando PaymentIntent: \(error.localizedDescription)")
                         self.paymentAlertMessage = "Error al iniciar el pago: \(error.localizedDescription)"
@@ -783,7 +783,7 @@ struct CartView: View {
             }
         } else {
             print("🏭 Usando modo PRODUCCIÓN - llamando al backend")
-        
+
             // Crear PaymentIntent en el backend (PRODUCCIÓN)
             paymentRepository.createPaymentIntent(
                 amount: amountInCents,
@@ -797,12 +797,12 @@ struct CartView: View {
             ) { [self] result in
                 Task { @MainActor in
                     self.isLoadingPayment = false
-        
+
                     switch result {
                     case .success(let response):
                         print("✅ PaymentIntent creado exitosamente")
                         self.configurePaymentSheet(response: response)
-        
+
                     case .failure(let error):
                         print("❌ Error creando PaymentIntent: \(error.localizedDescription)")
                         self.paymentAlertMessage = "Error al iniciar el pago: \(error.localizedDescription)"
@@ -1644,6 +1644,20 @@ struct CartItemCard: View {
                         .font(.system(size: 12, weight: .regular))
                         .foregroundColor(.secondary)
                         .lineLimit(2)
+                } else if item.isComboComponent {
+                    HStack(spacing: 6) {
+                        Text(item.comboName ?? "Combo")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.llegoPrimary)
+                        if let slotName = item.comboComponentSlotName, !slotName.isEmpty {
+                            Text("•")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.secondary)
+                            Text(slotName)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 } else {
                     HStack(spacing: 6) {
                         Text(item.shop)

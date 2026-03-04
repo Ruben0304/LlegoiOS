@@ -232,6 +232,12 @@ class CartViewModel: ObservableObject {
                             productId: product.productId,
                             showcaseId: nil,
                             showcaseRequestDescription: nil,
+                            comboGroupId: product.comboGroupId,
+                            comboId: product.comboId,
+                            comboName: product.comboName,
+                            comboComponentSlotId: product.comboComponentSlotId,
+                            comboComponentSlotName: product.comboComponentSlotName,
+                            comboComponentOrder: product.comboComponentOrder,
                             name: product.name,
                             shop: product.businessName,
                             weight: product.weight,
@@ -253,6 +259,12 @@ class CartViewModel: ObservableObject {
                             productId: "",
                             showcaseId: showcase.showcaseId,
                             showcaseRequestDescription: showcase.requestDescription,
+                            comboGroupId: nil,
+                            comboId: nil,
+                            comboName: nil,
+                            comboComponentSlotId: nil,
+                            comboComponentSlotName: nil,
+                            comboComponentOrder: nil,
                             name: showcase.title,
                             shop: showcase.branchName,
                             weight: "Pedido manual",
@@ -327,6 +339,12 @@ class CartViewModel: ObservableObject {
                 productId: product.id,
                 showcaseId: nil,
                 showcaseRequestDescription: nil,
+                comboGroupId: nil,
+                comboId: nil,
+                comboName: nil,
+                comboComponentSlotId: nil,
+                comboComponentSlotName: nil,
+                comboComponentOrder: nil,
                 name: product.name,
                 shop: product.shop,
                 weight: product.weight,
@@ -1013,6 +1031,15 @@ class CartViewModel: ObservableObject {
     /// Incrementar cantidad de un producto
     func incrementQuantity(cartItemId: String) {
         if let item = cartItems.first(where: { $0.id == cartItemId }) {
+            if let comboGroupId = item.comboGroupId {
+                let currentComboQty =
+                    cartItems.first(where: { $0.comboGroupId == comboGroupId })?
+                    .quantity ?? 0
+                cartManager.updateComboQuantity(
+                    comboGroupId: comboGroupId, quantity: currentComboQty + 1)
+                loadCart()
+                return
+            }
             cartManager.updateQuantity(cartItemId: cartItemId, quantity: item.quantity + 1)
             loadCart()
         }
@@ -1021,6 +1048,19 @@ class CartViewModel: ObservableObject {
     /// Decrementar cantidad de un producto
     func decrementQuantity(cartItemId: String) {
         if let item = cartItems.first(where: { $0.id == cartItemId }) {
+            if let comboGroupId = item.comboGroupId {
+                let currentComboQty =
+                    cartItems.first(where: { $0.comboGroupId == comboGroupId })?
+                    .quantity ?? 0
+                let newQty = currentComboQty - 1
+                if newQty <= 0 {
+                    cartManager.removeComboFromCart(comboGroupId: comboGroupId)
+                } else {
+                    cartManager.updateComboQuantity(comboGroupId: comboGroupId, quantity: newQty)
+                }
+                loadCart()
+                return
+            }
             let newQuantity = item.quantity - 1
             if newQuantity <= 0 {
                 removeFromCart(cartItemId: cartItemId)
@@ -1033,6 +1073,11 @@ class CartViewModel: ObservableObject {
 
     /// Remover producto del carrito
     func removeFromCart(cartItemId: String) {
+        if let comboGroupId = cartItems.first(where: { $0.id == cartItemId })?.comboGroupId {
+            cartManager.removeComboFromCart(comboGroupId: comboGroupId)
+            loadCart()
+            return
+        }
         cartManager.removeFromCart(cartItemId: cartItemId)
         loadCart()
     }
@@ -1047,7 +1092,8 @@ class CartViewModel: ObservableObject {
     // MARK: - Helpers
 
     private func aggregatedOrderItems() -> [(productId: String, quantity: Int)] {
-        let grouped = Dictionary(grouping: cartItems.filter { $0.itemType == .product }, by: \.productId)
+        let grouped = Dictionary(
+            grouping: cartItems.filter { $0.itemType == .product }, by: \.productId)
         return grouped.map { productId, items in
             let qty = items.reduce(0) { partial, item in
                 partial + item.quantity
@@ -1067,7 +1113,8 @@ class CartViewModel: ObservableObject {
             )
         }
 
-        let showcaseItems = cartItems
+        let showcaseItems =
+            cartItems
             .filter { $0.itemType == .showcase }
             .compactMap { item -> OrderRequestItem? in
                 guard
@@ -1134,6 +1181,12 @@ struct CartItem: Identifiable, Hashable {
     let productId: String
     let showcaseId: String?
     let showcaseRequestDescription: String?
+    let comboGroupId: String?
+    let comboId: String?
+    let comboName: String?
+    let comboComponentSlotId: String?
+    let comboComponentSlotName: String?
+    let comboComponentOrder: Int?
     let name: String
     let shop: String
     let weight: String
@@ -1164,6 +1217,10 @@ struct CartItem: Identifiable, Hashable {
 
     var isShowcase: Bool {
         itemType == .showcase
+    }
+
+    var isComboComponent: Bool {
+        comboGroupId != nil
     }
 }
 

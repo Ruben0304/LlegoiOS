@@ -194,7 +194,7 @@ struct ComboDetailView: View {
                 LinearGradient(
                     colors: [
                         Color.llegoAccent.opacity(0.22),
-                        Color.llegoPrimary.opacity(0.12)
+                        Color.llegoPrimary.opacity(0.12),
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -232,8 +232,8 @@ struct ComboDetailView: View {
             url: URL(string: url),
             cacheKey: "combo_hero_prod_\(comboId)_\(idx)",
             content: { image in image.resizable().scaledToFill() },
-            placeholder: { Color(red: 240/255, green: 242/255, blue: 246/255) },
-            failure: { Color(red: 240/255, green: 242/255, blue: 246/255) }
+            placeholder: { Color(red: 240 / 255, green: 242 / 255, blue: 246 / 255) },
+            failure: { Color(red: 240 / 255, green: 242 / 255, blue: 246 / 255) }
         )
         .frame(width: size, height: size)
         .clipShape(Circle())
@@ -273,9 +273,11 @@ struct ComboDetailView: View {
                 Image(systemName: "square.stack.3d.up.fill")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.llegoAccent)
-                Text("\(combo.slots.count) \(combo.slots.count == 1 ? "lote" : "lotes") a personalizar")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.llegoAccent)
+                Text(
+                    "\(combo.slots.count) \(combo.slots.count == 1 ? "lote" : "lotes") a personalizar"
+                )
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(.llegoAccent)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
@@ -364,7 +366,9 @@ struct ComboDetailView: View {
                         .transition(.scale.combined(with: .opacity))
                 }
             }
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: viewModel.slotSelections[slot.id]?.count)
+            .animation(
+                .spring(response: 0.3, dampingFraction: 0.7),
+                value: viewModel.slotSelections[slot.id]?.count)
 
             // Options list
             VStack(spacing: 10) {
@@ -381,13 +385,16 @@ struct ComboDetailView: View {
         )
     }
 
-    private func optionRow(option: ComboOptionGraphQL, slot: ComboSlotGraphQL, combo: ComboDetailGraphQL) -> some View {
+    private func optionRow(
+        option: ComboOptionGraphQL, slot: ComboSlotGraphQL, combo: ComboDetailGraphQL
+    ) -> some View {
         let isSelected = viewModel.isOptionSelected(slotId: slot.id, productId: option.productId)
 
         return Button {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                viewModel.toggleOption(slotId: slot.id, productId: option.productId, maxSelections: slot.maxSelections)
+                viewModel.toggleOption(
+                    slotId: slot.id, productId: option.productId, maxSelections: slot.maxSelections)
             }
         } label: {
             HStack(spacing: 12) {
@@ -416,13 +423,17 @@ struct ComboDetailView: View {
                         .lineLimit(2)
 
                     if option.priceAdjustment > 0 {
-                        Text("+\(viewModel.formatPrice(option.priceAdjustment, currency: combo.currency))")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.llegoPrimary)
+                        Text(
+                            "+\(viewModel.formatPrice(option.priceAdjustment, currency: combo.currency))"
+                        )
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.llegoPrimary)
                     } else if option.priceAdjustment < 0 {
-                        Text("\(viewModel.formatPrice(option.priceAdjustment, currency: combo.currency))")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.green)
+                        Text(
+                            "\(viewModel.formatPrice(option.priceAdjustment, currency: combo.currency))"
+                        )
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.green)
                     } else {
                         Text("Incluido")
                             .font(.system(size: 13))
@@ -437,7 +448,10 @@ struct ComboDetailView: View {
                     if slot.maxSelections == 1 {
                         // Radio button style
                         Circle()
-                            .stroke(isSelected ? Color.llegoPrimary : Color.gray.opacity(0.3), lineWidth: 2)
+                            .stroke(
+                                isSelected ? Color.llegoPrimary : Color.gray.opacity(0.3),
+                                lineWidth: 2
+                            )
                             .frame(width: 22, height: 22)
 
                         if isSelected {
@@ -448,7 +462,10 @@ struct ComboDetailView: View {
                     } else {
                         // Checkbox style
                         RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .stroke(isSelected ? Color.llegoPrimary : Color.gray.opacity(0.3), lineWidth: 2)
+                            .stroke(
+                                isSelected ? Color.llegoPrimary : Color.gray.opacity(0.3),
+                                lineWidth: 2
+                            )
                             .frame(width: 22, height: 22)
 
                         if isSelected {
@@ -488,6 +505,7 @@ struct ComboDetailView: View {
 
                 Button {
                     guard viewModel.isReadyToAdd else { return }
+                    guard viewModel.addCurrentComboToCart() else { return }
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                         addedToCartPulse = true
@@ -497,8 +515,11 @@ struct ComboDetailView: View {
                     }
                 } label: {
                     HStack(spacing: 8) {
-                        Image(systemName: addedToCartPulse ? "checkmark.circle.fill" : "cart.badge.plus")
-                            .font(.system(size: 16, weight: .semibold))
+                        Image(
+                            systemName: addedToCartPulse
+                                ? "checkmark.circle.fill" : "cart.badge.plus"
+                        )
+                        .font(.system(size: 16, weight: .semibold))
                         Text(addedToCartPulse ? "Agregado" : "Agregar combo")
                             .font(.system(size: 16, weight: .semibold))
                     }
@@ -507,7 +528,9 @@ struct ComboDetailView: View {
                     .padding(.horizontal, 20)
                     .background(
                         Capsule()
-                            .fill(viewModel.isReadyToAdd ? Color.llegoPrimary : Color.gray.opacity(0.4))
+                            .fill(
+                                viewModel.isReadyToAdd
+                                    ? Color.llegoPrimary : Color.gray.opacity(0.4))
                     )
                 }
                 .disabled(!viewModel.isReadyToAdd)
@@ -539,10 +562,10 @@ struct ComboDetailView: View {
 
 // MARK: - Combo extensions used by the view
 
-private extension ComboDetailGraphQL {
-    var hasDiscount: Bool { savings > 0 }
+extension ComboDetailGraphQL {
+    fileprivate var hasDiscount: Bool { savings > 0 }
 
-    var formattedBasePrice: String {
+    fileprivate var formattedBasePrice: String {
         let symbol: String
         switch currency.uppercased() {
         case "USD": symbol = "$"
@@ -553,7 +576,7 @@ private extension ComboDetailGraphQL {
         return String(format: "\(symbol)%.2f", basePrice)
     }
 
-    var discountLabel: String {
+    fileprivate var discountLabel: String {
         switch discountType.uppercased() {
         case "PERCENTAGE": return "-\(Int(discountValue))%"
         case "FIXED":

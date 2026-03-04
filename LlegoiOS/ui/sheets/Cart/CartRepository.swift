@@ -82,6 +82,12 @@ class CartRepository {
                         id: localItem.cartItemId,
                         cartItemId: localItem.cartItemId,
                         productId: productNode.id,
+                        comboGroupId: localItem.comboGroupId,
+                        comboId: localItem.comboId,
+                        comboName: localItem.comboName,
+                        comboComponentSlotId: localItem.comboComponentSlotId,
+                        comboComponentSlotName: localItem.comboComponentSlotName,
+                        comboComponentOrder: localItem.comboComponentOrder,
                         branchId: productNode.branchId,
                         name: productNode.name,
                         description: productNode.description,
@@ -568,27 +574,27 @@ class CartRepository {
             }
         }.resume()
     }
-    
+
     func fetchCloudCandidates(
         productIds: [String],
         limit: Int = 20,
         completion: @escaping @Sendable (Result<[Product], Error>) -> Void
     ) {
         let client = apolloClient
-        
+
         Task { @MainActor in
             let jwt = authManager.getAccessToken()
-            
+
             print("🌐 [CartRepository] Obteniendo candidatos desde Cloud")
             print("🌐 [CartRepository] Product IDs: \(productIds)")
             print("🌐 [CartRepository] Limit: \(limit)")
-            
+
             let query = LlegoAPI.GetProductRecommendationsQuery(
                 productIds: productIds,
                 limit: Int32(limit),
                 jwt: jwt.map { .some($0) } ?? .none
             )
-            
+
             client.fetchCompat(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
                 switch result {
                 case .success(let graphQLResult):
@@ -600,11 +606,13 @@ class CartRepository {
                                 NSError(
                                     domain: "CartRepository",
                                     code: -1,
-                                    userInfo: [NSLocalizedDescriptionKey: "Error obteniendo candidatos"]
+                                    userInfo: [
+                                        NSLocalizedDescriptionKey: "Error obteniendo candidatos"
+                                    ]
                                 )))
                         return
                     }
-                    
+
                     guard let data = graphQLResult.data else {
                         print("⚠️ [CartRepository] No data in cloud candidates response")
                         completion(.success([]))
@@ -612,7 +620,9 @@ class CartRepository {
                     }
 
                     guard let productRecommendations = data.productRecommendations else {
-                        print("⚠️ [CartRepository] productRecommendations es nil (el backend no reconoce los productIds)")
+                        print(
+                            "⚠️ [CartRepository] productRecommendations es nil (el backend no reconoce los productIds)"
+                        )
                         completion(.success([]))
                         return
                     }
@@ -621,7 +631,9 @@ class CartRepository {
                     print("✅ [CartRepository] Received \(recommendations.count) candidatos")
                     print("   Reasoning del backend: \(productRecommendations.reasoning)")
                     recommendations.forEach { rec in
-                        print("   - productId=\(rec.productId), name=\(rec.productName), hasProduct=\(rec.product != nil)")
+                        print(
+                            "   - productId=\(rec.productId), name=\(rec.productName), hasProduct=\(rec.product != nil)"
+                        )
                     }
 
                     let products = recommendations.compactMap { rec -> Product? in
@@ -641,7 +653,7 @@ class CartRepository {
                     }
 
                     completion(.success(products))
-                    
+
                 case .failure(let error):
                     print("❌ [CartRepository] Error: \(error.localizedDescription)")
                     completion(.failure(error))
@@ -674,7 +686,9 @@ class CartRepository {
         Task { @MainActor in
             let jwt = authManager.getAccessToken()
 
-            print("🤖 [CartRepository] Fetching branch products for AI via productsFromSameBranch: productId=\(productId) (limit: \(limit))")
+            print(
+                "🤖 [CartRepository] Fetching branch products for AI via productsFromSameBranch: productId=\(productId) (limit: \(limit))"
+            )
 
             let query = LlegoAPI.GetBranchProductsForAIQuery(
                 productId: productId,
@@ -688,11 +702,16 @@ class CartRepository {
                     if let errors = graphQLResult.errors {
                         print("❌ [CartRepository] GraphQL Errors fetching AI products:")
                         errors.forEach { print("  - \($0.localizedDescription)") }
-                        completion(.failure(NSError(
-                            domain: "CartRepository",
-                            code: -1,
-                            userInfo: [NSLocalizedDescriptionKey: "Error obteniendo productos para IA"]
-                        )))
+                        completion(
+                            .failure(
+                                NSError(
+                                    domain: "CartRepository",
+                                    code: -1,
+                                    userInfo: [
+                                        NSLocalizedDescriptionKey:
+                                            "Error obteniendo productos para IA"
+                                    ]
+                                )))
                         return
                     }
 
@@ -712,11 +731,15 @@ class CartRepository {
                         )
                     }
 
-                    print("✅ [CartRepository] Fetched \(products.count) products for AI from same branch")
+                    print(
+                        "✅ [CartRepository] Fetched \(products.count) products for AI from same branch"
+                    )
                     completion(.success(products))
 
                 case .failure(let error):
-                    print("❌ [CartRepository] Error fetching AI products: \(error.localizedDescription)")
+                    print(
+                        "❌ [CartRepository] Error fetching AI products: \(error.localizedDescription)"
+                    )
                     completion(.failure(error))
                 }
             }
@@ -732,6 +755,12 @@ struct CartItemLocal: Codable, Sendable {
     let productId: String
     var quantity: Int
     var selectedVariants: [SelectedVariantOption]
+    var comboGroupId: String?
+    var comboId: String?
+    var comboName: String?
+    var comboComponentSlotId: String?
+    var comboComponentSlotName: String?
+    var comboComponentOrder: Int?
     var basePrice: Double?
     var finalUnitPrice: Double?
     var finalTotalPrice: Double
@@ -741,6 +770,12 @@ struct CartItemLocal: Codable, Sendable {
         case productId
         case quantity
         case selectedVariants
+        case comboGroupId
+        case comboId
+        case comboName
+        case comboComponentSlotId
+        case comboComponentSlotName
+        case comboComponentOrder
         case basePrice
         case finalUnitPrice
         case finalTotalPrice
@@ -750,6 +785,12 @@ struct CartItemLocal: Codable, Sendable {
         productId: String,
         quantity: Int,
         selectedVariants: [SelectedVariantOption] = [],
+        comboGroupId: String? = nil,
+        comboId: String? = nil,
+        comboName: String? = nil,
+        comboComponentSlotId: String? = nil,
+        comboComponentSlotName: String? = nil,
+        comboComponentOrder: Int? = nil,
         basePrice: Double? = nil,
         finalUnitPrice: Double? = nil,
         finalTotalPrice: Double? = nil,
@@ -758,6 +799,12 @@ struct CartItemLocal: Codable, Sendable {
         self.productId = productId
         self.quantity = quantity
         self.selectedVariants = selectedVariants
+        self.comboGroupId = comboGroupId
+        self.comboId = comboId
+        self.comboName = comboName
+        self.comboComponentSlotId = comboComponentSlotId
+        self.comboComponentSlotName = comboComponentSlotName
+        self.comboComponentOrder = comboComponentOrder
         self.basePrice = basePrice
         self.finalUnitPrice = finalUnitPrice
         let resolvedId =
@@ -775,6 +822,14 @@ struct CartItemLocal: Codable, Sendable {
         selectedVariants =
             try container.decodeIfPresent([SelectedVariantOption].self, forKey: .selectedVariants)
             ?? []
+        comboGroupId = try container.decodeIfPresent(String.self, forKey: .comboGroupId)
+        comboId = try container.decodeIfPresent(String.self, forKey: .comboId)
+        comboName = try container.decodeIfPresent(String.self, forKey: .comboName)
+        comboComponentSlotId = try container.decodeIfPresent(
+            String.self, forKey: .comboComponentSlotId)
+        comboComponentSlotName = try container.decodeIfPresent(
+            String.self, forKey: .comboComponentSlotName)
+        comboComponentOrder = try container.decodeIfPresent(Int.self, forKey: .comboComponentOrder)
         basePrice = try container.decodeIfPresent(Double.self, forKey: .basePrice)
         finalUnitPrice = try container.decodeIfPresent(Double.self, forKey: .finalUnitPrice)
         let decodedId = try container.decodeIfPresent(String.self, forKey: .cartItemId)
@@ -824,6 +879,12 @@ struct CartProductGraphQL: Identifiable, Sendable {
     let id: String
     let cartItemId: String
     let productId: String
+    let comboGroupId: String?
+    let comboId: String?
+    let comboName: String?
+    let comboComponentSlotId: String?
+    let comboComponentSlotName: String?
+    let comboComponentOrder: Int?
     let branchId: String
     let name: String
     let description: String

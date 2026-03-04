@@ -29,16 +29,34 @@ class CartManager: ObservableObject {
         productId: String,
         quantity: Int = 1,
         selectedVariants: [SelectedVariantOption] = [],
+        cartItemId: String? = nil,
+        comboGroupId: String? = nil,
+        comboId: String? = nil,
+        comboName: String? = nil,
+        comboComponentSlotId: String? = nil,
+        comboComponentSlotName: String? = nil,
+        comboComponentOrder: Int? = nil,
         basePrice: Double? = nil,
         finalUnitPrice: Double? = nil
     ) {
         var items = localItems
-        let cartItemId = CartItemLocal.buildCartItemId(
-            productId: productId, selectedVariants: selectedVariants)
+        let resolvedCartItemId =
+            cartItemId
+            ?? CartItemLocal.buildCartItemId(
+                productId: productId, selectedVariants: selectedVariants)
 
-        if let index = items.firstIndex(where: { $0.cartItemId == cartItemId }) {
+        if let index = items.firstIndex(where: { $0.cartItemId == resolvedCartItemId }) {
             // Si ya existe, incrementar cantidad
             items[index].quantity += quantity
+            items[index].comboGroupId = comboGroupId ?? items[index].comboGroupId
+            items[index].comboId = comboId ?? items[index].comboId
+            items[index].comboName = comboName ?? items[index].comboName
+            items[index].comboComponentSlotId =
+                comboComponentSlotId ?? items[index].comboComponentSlotId
+            items[index].comboComponentSlotName =
+                comboComponentSlotName ?? items[index].comboComponentSlotName
+            items[index].comboComponentOrder =
+                comboComponentOrder ?? items[index].comboComponentOrder
             if let basePrice {
                 items[index].basePrice = basePrice
             }
@@ -47,20 +65,27 @@ class CartManager: ObservableObject {
             }
             let unit = items[index].finalUnitPrice ?? items[index].basePrice ?? 0
             items[index].finalTotalPrice = unit * Double(items[index].quantity)
-            print("✅ Updated cart line '\(cartItemId)' to quantity \(items[index].quantity)")
+            print(
+                "✅ Updated cart line '\(resolvedCartItemId)' to quantity \(items[index].quantity)")
         } else {
             // Si no existe, añadir nuevo item
             let item = CartItemLocal(
                 productId: productId,
                 quantity: quantity,
                 selectedVariants: selectedVariants,
+                comboGroupId: comboGroupId,
+                comboId: comboId,
+                comboName: comboName,
+                comboComponentSlotId: comboComponentSlotId,
+                comboComponentSlotName: comboComponentSlotName,
+                comboComponentOrder: comboComponentOrder,
                 basePrice: basePrice,
                 finalUnitPrice: finalUnitPrice,
                 finalTotalPrice: nil,
-                cartItemId: cartItemId
+                cartItemId: resolvedCartItemId
             )
             items.append(item)
-            print("✅ Added NEW cart line with ID: '\(cartItemId)' quantity: \(quantity)")
+            print("✅ Added NEW cart line with ID: '\(resolvedCartItemId)' quantity: \(quantity)")
         }
 
         saveCartItems(items)
@@ -68,6 +93,70 @@ class CartManager: ObservableObject {
 
         // Llamar a la mutation en segundo plano para estadísticas
         sendAddToCartMutation(productId: productId)
+    }
+
+    /// Añadir un combo al carrito como múltiples líneas de producto agrupadas.
+    func addComboToCart(
+        comboId: String,
+        comboName: String,
+        components: [(
+            productId: String,
+            slotId: String,
+            slotName: String,
+            unitBasePrice: Double,
+            unitFinalPrice: Double,
+            componentOrder: Int
+        )],
+        quantity: Int = 1
+    ) {
+        guard quantity > 0 else { return }
+        guard !components.isEmpty else { return }
+
+        let comboGroupId = "combo::\(comboId)::\(UUID().uuidString)"
+        for component in components {
+            let lineCartItemId =
+                "combo-item::\(comboGroupId)::\(component.componentOrder)::\(component.productId)"
+            addToCart(
+                productId: component.productId,
+                quantity: quantity,
+                selectedVariants: [],
+                cartItemId: lineCartItemId,
+                comboGroupId: comboGroupId,
+                comboId: comboId,
+                comboName: comboName,
+                comboComponentSlotId: component.slotId,
+                comboComponentSlotName: component.slotName,
+                comboComponentOrder: component.componentOrder,
+                basePrice: component.unitBasePrice,
+                finalUnitPrice: component.unitFinalPrice
+            )
+        }
+    }
+
+    func updateComboQuantity(comboGroupId: String, quantity: Int) {
+        var items = localItems
+        let indexes = items.indices.filter { items[$0].comboGroupId == comboGroupId }
+        guard !indexes.isEmpty else { return }
+
+        if quantity <= 0 {
+            items.removeAll { $0.comboGroupId == comboGroupId }
+            saveCartItems(items)
+            return
+        }
+
+        for index in indexes {
+            items[index].quantity = quantity
+            let unit = items[index].finalUnitPrice ?? items[index].basePrice ?? 0
+            items[index].finalTotalPrice = unit * Double(quantity)
+        }
+        saveCartItems(items)
+    }
+
+    func removeComboFromCart(comboGroupId: String) {
+        var items = localItems
+        items.removeAll { $0.comboGroupId == comboGroupId }
+        saveCartItems(items)
+        print("🗑️ Removed combo group \(comboGroupId) from cart")
     }
 
     /// Actualizar cantidad de un producto
@@ -142,7 +231,8 @@ class CartManager: ObservableObject {
         requestDescription: String,
         quantity: Int = 1
     ) {
-        let normalizedDescription = requestDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedDescription = requestDescription.trimmingCharacters(
+            in: .whitespacesAndNewlines)
         guard !normalizedDescription.isEmpty else { return }
 
         var items = localShowcaseItems
@@ -213,7 +303,9 @@ class CartManager: ObservableObject {
             let encoded = try JSONEncoder().encode(items)
             userDefaults.set(encoded, forKey: showcaseCartKey)
         } catch {
-            print("⚠️ CartManager: Failed to encode showcase cart items - \(error.localizedDescription)")
+            print(
+                "⚠️ CartManager: Failed to encode showcase cart items - \(error.localizedDescription)"
+            )
         }
         localShowcaseItems = items
         updateItemCount()
@@ -250,10 +342,13 @@ class CartManager: ObservableObject {
     private func loadShowcaseCartItems() {
         if let encodedData = userDefaults.data(forKey: showcaseCartKey) {
             do {
-                localShowcaseItems = try JSONDecoder().decode([ShowcaseCartItemLocal].self, from: encodedData)
+                localShowcaseItems = try JSONDecoder().decode(
+                    [ShowcaseCartItemLocal].self, from: encodedData)
                 return
             } catch {
-                print("⚠️ CartManager: Failed to decode showcase cart items - \(error.localizedDescription)")
+                print(
+                    "⚠️ CartManager: Failed to decode showcase cart items - \(error.localizedDescription)"
+                )
             }
         }
 
@@ -300,7 +395,8 @@ struct ShowcaseCartItemLocal: Codable, Sendable {
     var quantity: Int
 
     static func buildCartItemId(showcaseId: String, requestDescription: String) -> String {
-        let normalizedDescription = requestDescription
+        let normalizedDescription =
+            requestDescription
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
             .lowercased()

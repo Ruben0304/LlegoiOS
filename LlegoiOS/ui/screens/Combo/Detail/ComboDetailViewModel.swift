@@ -1,6 +1,6 @@
+import Combine
 import Foundation
 import SwiftUI
-import Combine
 
 // MARK: - View State
 
@@ -30,11 +30,12 @@ class ComboDetailViewModel: ObservableObject {
     @Published var comboDetail: ComboDetailGraphQL?
     /// Key: slotId, Value: selected productIds (may be multiple if maxSelections > 1)
     @Published var slotSelections: [String: Set<String>] = [:]
-    @Published var selectedModifiers: [String: Set<String>] = [:] // key: productId
+    @Published var selectedModifiers: [String: Set<String>] = [:]  // key: productId
 
     // MARK: - Private
     private var loadedComboId: String?
     private let repository = ComboDetailRepository()
+    private let cartManager = CartManager.shared
 
     // MARK: - Computed Properties
 
@@ -51,7 +52,7 @@ class ComboDetailViewModel: ObservableObject {
     /// Total price based on current selections
     var calculatedPrice: Double {
         guard let combo = comboDetail else { return 0 }
-        var total = combo.finalPrice // Start from discounted base price
+        var total = combo.finalPrice  // Start from discounted base price
 
         // Add price adjustments for non-default selections
         for slot in combo.slots {
@@ -130,6 +131,93 @@ class ComboDetailViewModel: ObservableObject {
         slotSelections[slotId]?.contains(productId) ?? false
     }
 
+    @discardableResult
+    func addCurrentComboToCart(quantity: Int = 1) -> Bool {
+        guard quantity > 0 else { return false }
+        guard isReadyToAdd, let combo = comboDetail else { return false }
+
+        let sortedSlots = combo.slots.sorted { $0.displayOrder < $1.displayOrder }
+        var selectedComponents:
+            [(
+                productId: String,
+                slotId: String,
+                slotName: String,
+                unitBasePrice: Double,
+                unitRawFinalPrice: Double,
+                componentOrder: Int
+            )] = []
+
+        var order = 0
+        for slot in sortedSlots {
+            let selectedIds = Array(slotSelections[slot.id] ?? []).sorted()
+            for selectedId in selectedIds {
+                guard let option = slot.options.first(where: { $0.productId == selectedId }) else {
+                    continue
+                }
+
+                let selectedModifierNames = selectedModifiers[option.productId] ?? []
+                let modifierAdjustment = option.availableModifiers
+                    .filter { selectedModifierNames.contains($0.name) }
+                    .reduce(0.0) { $0 + $1.priceAdjustment }
+
+                // Valor base para distribuir de forma estable el precio final del combo.
+                let unitRawFinal =
+                    option.productBasePrice + modifierAdjustment
+                    + (option.isDefault ? 0 : option.priceAdjustment)
+
+                selectedComponents.append(
+                    (
+                        productId: option.productId,
+                        slotId: slot.id,
+                        slotName: slot.name,
+                        unitBasePrice: option.productBasePrice,
+                        unitRawFinalPrice: unitRawFinal,
+                        componentOrder: order
+                    )
+                )
+                order += 1
+            }
+        }
+
+        guard !selectedComponents.isEmpty else { return false }
+
+        let targetTotalCents = cents(from: calculatedPrice)
+        let totalRaw = selectedComponents.reduce(0.0) { $0 + max(0.01, $1.unitRawFinalPrice) }
+
+        var allocatedCents: [Int] = []
+        var assigned = 0
+        for (index, component) in selectedComponents.enumerated() {
+            if index == selectedComponents.count - 1 {
+                let remainder = max(0, targetTotalCents - assigned)
+                allocatedCents.append(remainder)
+                continue
+            }
+            let ratio = max(0.01, component.unitRawFinalPrice) / totalRaw
+            let centsValue = Int((Double(targetTotalCents) * ratio).rounded())
+            allocatedCents.append(centsValue)
+            assigned += centsValue
+        }
+
+        let cartComponents = zip(selectedComponents, allocatedCents).map { component, cents in
+            (
+                productId: component.productId,
+                slotId: component.slotId,
+                slotName: component.slotName,
+                unitBasePrice: component.unitBasePrice,
+                unitFinalPrice: Double(cents) / 100.0,
+                componentOrder: component.componentOrder
+            )
+        }
+
+        cartManager.addComboToCart(
+            comboId: combo.id,
+            comboName: combo.name,
+            components: cartComponents,
+            quantity: quantity
+        )
+        return true
+    }
+
     // MARK: - Private Methods
 
     private func applyDefaultSelections(for combo: ComboDetailGraphQL) {
@@ -152,5 +240,9 @@ class ComboDetailViewModel: ObservableObject {
         default: symbol = currency + " "
         }
         return String(format: "\(symbol)%.2f", value)
+    }
+
+    private func cents(from value: Double) -> Int {
+        Int((value * 100.0).rounded())
     }
 }
