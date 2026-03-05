@@ -37,12 +37,21 @@ query SearchBoth(
         id
         name
         avatarUrl
+        coverUrl
         address
         coordinates {
           type
           coordinates
         }
         deliveryRadius
+        products(limit: 4) {
+          id
+          name
+          price
+          currency
+          imageUrl
+          availability
+        }
       }
     }
   }
