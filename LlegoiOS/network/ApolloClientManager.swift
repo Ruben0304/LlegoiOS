@@ -1,6 +1,5 @@
 import Foundation
 import Apollo
-import ApolloSQLite
 
 
 final class ApolloClientManager: @unchecked Sendable {
@@ -28,22 +27,20 @@ final class ApolloClientManager: @unchecked Sendable {
     }()
 
     private lazy var cache: any NormalizedCache = {
-        let documentsPath = NSSearchPathForDirectoriesInDomains(
-            .documentDirectory,
-            .userDomainMask,
-            true
-        ).first!
-        let documentsURL = URL(fileURLWithPath: documentsPath)
-        let sqliteFileURL = documentsURL.appendingPathComponent("llego_apollo_cache.sqlite")
-
-        do {
-            let sqliteCache = try SQLiteNormalizedCache(fileURL: sqliteFileURL)
-            return sqliteCache
-        } catch {
-            print("❌ Failed to create SQLite cache, using in-memory cache. Error: \(error.localizedDescription)")
-            return InMemoryNormalizedCache()
-        }
+        return InMemoryNormalizedCache()
     }()
+
+    /// Clears only the GraphQL data cache (normalized store), preserving image caches.
+    func clearDataCache() {
+        Task {
+            do {
+                try await apollo.store.clearCache()
+                print("✅ Apollo data cache cleared")
+            } catch {
+                print("❌ Failed to clear Apollo cache: \(error.localizedDescription)")
+            }
+        }
+    }
 
     private init() {}
 }

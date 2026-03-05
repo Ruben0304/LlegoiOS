@@ -18,7 +18,7 @@ query GetBranches($first: Int! = 20, $after: String, $businessId: String, $tipo:
         createdAt
         score
         distanceKm
-        products(limit: $productsLimit, availableOnly: true) {
+        products(limit: $productsLimit, availableOnly: false) {
           id
           name
           price

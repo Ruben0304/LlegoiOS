@@ -48,6 +48,7 @@ struct CartView: View {
     @State private var showPaymentLinkSheet = false
     @State private var showBankTransferSheet = false
     @State private var showOrderConfirmation = false
+    @State private var navigateToOrders = false
     @State private var showTransferSmsSheet = false
     @State private var pendingTransferPaymentMethodId: String?
     @State private var preInitiatedPaymentResult: InitiatePaymentResultModel?
@@ -406,10 +407,18 @@ struct CartView: View {
                 viewModel.loadCart()
             }
             .fullScreenCover(isPresented: $showOrderConfirmation) {
-                OrderConfirmationView(
-                    deliveryLocation: "Calle 23 #456, Vedado, La Habana",  //TODO: Usar ubicación real del usuario
-                    selectedPaymentMethod: selectedPaymentMethod?.name ?? "Método de Pago"
-                )
+                NavigationStack {
+                    OrderConfirmationView(
+                        deliveryLocation: "Calle 23 #456, Vedado, La Habana",  //TODO: Usar ubicación real del usuario
+                        selectedPaymentMethod: selectedPaymentMethod?.name ?? "Método de Pago",
+                        onDismiss: {
+                            navigateToOrders = true
+                        }
+                    )
+                    .navigationDestination(isPresented: $navigateToOrders) {
+                        OrderListView()
+                    }
+                }
             }
             .navigationDestination(isPresented: $navigateToPlans) {
                 PlansAndPricingView()

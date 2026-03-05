@@ -73,9 +73,9 @@ struct StoreListView: View {
 
     // MARK: - Refresh Function
     private func refreshStores() async {
+        ApolloClientManager.shared.clearDataCache()
         await withCheckedContinuation { continuation in
             viewModel.loadStores(isRefreshing: true)
-            // Wait a bit to allow the animation to complete
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 continuation.resume()
             }

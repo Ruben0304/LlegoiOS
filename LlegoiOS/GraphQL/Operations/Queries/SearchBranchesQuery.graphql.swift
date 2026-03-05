@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "SearchBranches"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query SearchBranches($query: String!, $first: Int! = 20, $after: String, $useVectorSearch: Boolean, $productCategoryId: String, $radiusKm: Float, $jwt: String) { searchBranches( query: $query first: $first after: $after useVectorSearch: $useVectorSearch productCategoryId: $productCategoryId radiusKm: $radiusKm jwt: $jwt ) { __typename edges { __typename node { __typename id businessId name address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius createdAt score distanceKm products(limit: 4, availableOnly: true) { __typename id name price currency imageUrl availability } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
+        #"query SearchBranches($query: String!, $first: Int! = 20, $after: String, $useVectorSearch: Boolean, $productCategoryId: String, $radiusKm: Float, $jwt: String) { searchBranches( query: $query first: $first after: $after useVectorSearch: $useVectorSearch productCategoryId: $productCategoryId radiusKm: $radiusKm jwt: $jwt ) { __typename edges { __typename node { __typename id businessId name address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius createdAt score distanceKm products(limit: 4, availableOnly: false) { __typename id name price currency imageUrl availability } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
       ))
 
     public var query: String
@@ -136,7 +136,7 @@ public extension LlegoAPI {
               .field("distanceKm", Double?.self),
               .field("products", [Product].self, arguments: [
                 "limit": 4,
-                "availableOnly": true
+                "availableOnly": false
               ]),
             ] }
             @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [

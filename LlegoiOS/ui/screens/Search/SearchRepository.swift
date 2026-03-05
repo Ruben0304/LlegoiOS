@@ -107,7 +107,7 @@ class SearchRepository {
     @MainActor
     func searchBoth(
         query: String,
-        completion: @escaping @Sendable (Result<([Product], [StoreWithCoordinates]), Error>) -> Void
+        completion: @escaping @Sendable (Result<([Product], [StoreWithCoordinates], [String: [ProductGraphQL]]), Error>) -> Void
     ) {
         let jwt = AuthManager.shared.getAccessToken()
 
@@ -116,7 +116,7 @@ class SearchRepository {
             firstProducts: 10,
             firstBranches: 8,
             useVectorSearch: .some(true),
-            jwt: jwt.map { .some($0) } ?? .none
+            jwt: .none  // No JWT: prevents backend from filtering branch products by user delivery radius
         )
 
         apolloClient.fetchCompat(query: searchQuery, cachePolicy: .fetchIgnoringCacheData) { result in
@@ -131,7 +131,7 @@ class SearchRepository {
                 }
 
                 guard let data = graphQLResult.data else {
-                    completion(.success(([], [])))
+                    completion(.success(([], [], [:])))
                     return
                 }
 
@@ -149,15 +149,37 @@ class SearchRepository {
                     )
                 }
 
+                var storeProducts: [String: [ProductGraphQL]] = [:]
+
                 let stores = data.searchBranches.edges.map { edge -> StoreWithCoordinates in
                     let node = edge.node
                     let etaMinutes = node.deliveryRadius.map { Int($0 * 5 + 10) } ?? 30
+
+                    // Collect nested products for each branch
+                    let branchProducts = node.products.map { product in
+                        ProductGraphQL(
+                            id: product.id,
+                            branchId: node.id,
+                            name: product.name,
+                            price: product.price,
+                            currency: product.currency,
+                            imageUrl: product.imageUrl,
+                            availability: product.availability,
+                            createdAt: "",
+                            businessName: node.name,
+                            distanceKm: nil,
+                            categoryId: nil,
+                            categoryName: nil
+                        )
+                    }
+                    storeProducts[node.id] = branchProducts
+
                     return StoreWithCoordinates(
                         id: node.id,
                         name: node.name,
                         etaMinutes: etaMinutes,
                         logoUrl: node.avatarUrl ?? "",
-                        bannerUrl: "",
+                        bannerUrl: node.coverUrl ?? "",
                         address: node.address,
                         rating: nil,
                         description: "Descripción de la tienda que estará disponible próximamente",
@@ -168,7 +190,7 @@ class SearchRepository {
                     )
                 }
 
-                completion(.success((products, stores)))
+                completion(.success((products, stores, storeProducts)))
 
             case .failure(let error):
                 completion(.failure(error))
@@ -202,7 +224,7 @@ class SearchRepository {
             useVectorSearch: .some(true),
             productCategoryId: productCategoryId.map { .some($0) } ?? .none,
             radiusKm: .none,
-            jwt: jwt.map { .some($0) } ?? .none
+            jwt: .none  // No JWT: prevents backend from filtering products by user delivery radius
         )
 
         print("🚀 SearchRepository - Calling apolloClient.fetchCompat() for branches...")

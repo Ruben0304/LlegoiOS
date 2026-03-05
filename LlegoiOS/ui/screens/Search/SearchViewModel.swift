@@ -300,9 +300,10 @@ class SearchViewModel: ObservableObject {
             Task { @MainActor in
                 guard let self = self else { return }
                 switch result {
-                case .success(let (products, stores)):
+                case .success(let (products, stores, branchProducts)):
                     self.products = products
                     self.stores = stores
+                    self.storeProducts = branchProducts
                     self.state = (products.isEmpty && stores.isEmpty) ? .empty : .success
                 case .failure(let error):
                     self.state = .error(error.localizedDescription)

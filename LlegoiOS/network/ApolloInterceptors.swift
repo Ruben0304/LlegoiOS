@@ -18,6 +18,7 @@ struct AuthorizationInterceptor: HTTPInterceptor {
     }
 }
 
+
 struct LlegoInterceptorProvider: InterceptorProvider {
     func graphQLInterceptors<Operation: GraphQLOperation>(
         for operation: Operation

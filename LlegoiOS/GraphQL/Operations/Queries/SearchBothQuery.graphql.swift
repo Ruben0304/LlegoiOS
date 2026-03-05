@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "SearchBoth"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query SearchBoth($query: String!, $firstProducts: Int! = 10, $firstBranches: Int! = 8, $useVectorSearch: Boolean, $jwt: String) { searchProducts( query: $query first: $firstProducts useVectorSearch: $useVectorSearch jwt: $jwt ) { __typename edges { __typename node { __typename id name price currency imageUrl business { __typename id name avatarUrl } } } } searchBranches( query: $query first: $firstBranches useVectorSearch: $useVectorSearch jwt: $jwt ) { __typename edges { __typename node { __typename id name avatarUrl address coordinates { __typename type coordinates } deliveryRadius } } } }"#
+        #"query SearchBoth($query: String!, $firstProducts: Int! = 10, $firstBranches: Int! = 8, $useVectorSearch: Boolean, $jwt: String) { searchProducts( query: $query first: $firstProducts useVectorSearch: $useVectorSearch jwt: $jwt ) { __typename edges { __typename node { __typename id name price currency imageUrl business { __typename id name avatarUrl } } } } searchBranches( query: $query first: $firstBranches useVectorSearch: $useVectorSearch jwt: $jwt ) { __typename edges { __typename node { __typename id name avatarUrl coverUrl address coordinates { __typename type coordinates } deliveryRadius products(limit: 4, availableOnly: false) { __typename id name price currency imageUrl availability } } } } }"#
       ))
 
     public var query: String
@@ -210,9 +210,14 @@ public extension LlegoAPI {
               .field("id", String.self),
               .field("name", String.self),
               .field("avatarUrl", String?.self),
+              .field("coverUrl", String?.self),
               .field("address", String?.self),
               .field("coordinates", Coordinates.self),
               .field("deliveryRadius", Double?.self),
+              .field("products", [Product].self, arguments: [
+                "limit": 4,
+                "availableOnly": false
+              ]),
             ] }
             @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
               SearchBothQuery.Data.SearchBranches.Edge.Node.self
@@ -222,9 +227,13 @@ public extension LlegoAPI {
             public var name: String { __data["name"] }
             /// Presigned URL for the branch avatar (inherits from business if not set)
             public var avatarUrl: String? { __data["avatarUrl"] }
+            /// Presigned URL for the branch cover image
+            public var coverUrl: String? { __data["coverUrl"] }
             public var address: String? { __data["address"] }
             public var coordinates: Coordinates { __data["coordinates"] }
             public var deliveryRadius: Double? { __data["deliveryRadius"] }
+            /// Products from this branch
+            public var products: [Product] { __data["products"] }
 
             /// SearchBranches.Edge.Node.Coordinates
             ///
@@ -245,6 +254,36 @@ public extension LlegoAPI {
 
               public var type: String { __data["type"] }
               public var coordinates: [Double] { __data["coordinates"] }
+            }
+
+            /// SearchBranches.Edge.Node.Product
+            ///
+            /// Parent Type: `ProductType`
+            public struct Product: LlegoAPI.SelectionSet {
+              @_spi(Unsafe) public let __data: DataDict
+              @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+              @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.ProductType }
+              @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+                .field("__typename", String.self),
+                .field("id", String.self),
+                .field("name", String.self),
+                .field("price", Double.self),
+                .field("currency", String.self),
+                .field("imageUrl", String.self),
+                .field("availability", Bool.self),
+              ] }
+              @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+                SearchBothQuery.Data.SearchBranches.Edge.Node.Product.self
+              ] }
+
+              public var id: String { __data["id"] }
+              public var name: String { __data["name"] }
+              public var price: Double { __data["price"] }
+              public var currency: String { __data["currency"] }
+              /// Presigned URL for the product image
+              public var imageUrl: String { __data["imageUrl"] }
+              public var availability: Bool { __data["availability"] }
             }
           }
         }

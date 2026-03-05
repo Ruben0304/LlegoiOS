@@ -199,9 +199,6 @@ struct MainAppView: View {
             // Detener verificación cuando la vista desaparece
             appUpdateViewModel.stopPeriodicCheck()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .navigateToHome)) { _ in
-            selectedTab = 0
-        }
     }
 }
 

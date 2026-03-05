@@ -107,6 +107,9 @@ class StoreListViewModel: ObservableObject {
                         self.storeProducts[branch.id] = mappedProducts
                     }
 
+                    for b in branchesGraphQL {
+                        print("   🗺️ ViewModel storeProducts[\(b.name)] = \(b.products.count) items")
+                    }
                     print("✅ Loaded \(branchesGraphQL.count) stores (hasNextPage: \(pageInfo.hasNextPage), totalCount: \(pageInfo.totalCount))")
 
                 case .failure(let error):

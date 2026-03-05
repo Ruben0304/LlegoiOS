@@ -3,6 +3,7 @@ import SwiftUI
 struct OrderConfirmationView: View {
     let deliveryLocation: String
     let selectedPaymentMethod: String
+    let onDismiss: () -> Void
 
     @Environment(\.presentationMode) var presentationMode
     @State private var backgroundProgress: CGFloat = 0
@@ -10,6 +11,7 @@ struct OrderConfirmationView: View {
     @State private var showBadge = false
     @State private var showTitle = false
     @State private var showButton = false
+    @State private var navigateToOrders = false
 
     private let titleColor = Color.black
     private let accentColor = Color(red: 0.42, green: 1.0, blue: 0.66)
@@ -91,8 +93,8 @@ struct OrderConfirmationView: View {
     }
 
     private var closeButton: some View {
-        Button(action: dismissToHome) {
-            Text("Cerrar")
+        Button(action: goToOrders) {
+            Text("Ver mis pedidos")
                 .font(.system(size: 16, weight: .bold, design: .rounded))
                 .foregroundColor(titleColor)
                 .frame(maxWidth: .infinity)
@@ -101,26 +103,14 @@ struct OrderConfirmationView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 16))
         }
         .padding(.top, 4)
-        .accessibilityLabel("Cerrar confirmación")
+        .accessibilityLabel("Ver mis pedidos")
         .opacity(showButton ? 1 : 0)
         .offset(y: showButton ? 0 : 12)
         .animation(.easeOut(duration: 0.5), value: showButton)
     }
 
-    private func dismissToHome() {
-        withAnimation(.easeInOut(duration: 0.5)) {
-            presentationMode.wrappedValue.dismiss()
-        }
-
-        // Navegar a la pantalla de inicio (tab 0)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-               let window = windowScene.windows.first,
-               let contentView = window.rootViewController?.view.subviews.first {
-                // Esto es una simulación - en una app real usarías un NavigationController o similar
-                NotificationCenter.default.post(name: .navigateToHome, object: nil)
-            }
-        }
+    private func goToOrders() {
+        onDismiss()
     }
 }
 
@@ -233,14 +223,10 @@ private struct AnimatedGreenBackground: View {
     }
 }
 
-// Extensión para la notificación de navegación
-extension Notification.Name {
-    static let navigateToHome = Notification.Name("navigateToHome")
-}
-
 #Preview {
     OrderConfirmationView(
         deliveryLocation: "Vedado, La Habana",
-        selectedPaymentMethod: "Efectivo CUP"
+        selectedPaymentMethod: "Efectivo CUP",
+        onDismiss: {}
     )
 }

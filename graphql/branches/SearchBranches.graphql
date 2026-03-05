@@ -18,7 +18,7 @@ query SearchBranches($query: String!, $first: Int! = 20, $after: String, $useVec
         createdAt
         score
         distanceKm
-        products(limit: 4, availableOnly: true) {
+        products(limit: 4, availableOnly: false) {
           id
           name
           price

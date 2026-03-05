@@ -29,11 +29,11 @@ class StoreListRepository {
                     ?? .none,
                 radiusKm: radiusKm.map { .some($0) } ?? .none,
                 productCategoryId: productCategoryId.map { .some($0) } ?? .none,
-                jwt: jwt.map { .some($0) } ?? .none,
+                jwt: .none,  // No JWT: prevents backend from filtering products by user delivery radius
                 productsLimit: .some(4)
             )
 
-            client.fetchCompat(query: query, cachePolicy: .returnCacheDataAndFetch) { result in
+            client.fetchCompat(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
                 switch result {
                 case .success(let graphQLResult):
                     if let errors = graphQLResult.errors {
@@ -98,9 +98,10 @@ class StoreListRepository {
                         totalCount: Int(data.branches.pageInfo.totalCount)
                     )
 
-                    print(
-                        "✅ Fetched \(mappedBranches.count) branches with nested products (hasNextPage: \(pageInfo.hasNextPage), totalCount: \(pageInfo.totalCount))"
-                    )
+                    print("✅ Fetched \(mappedBranches.count) branches (hasNextPage: \(pageInfo.hasNextPage))")
+                    for b in mappedBranches {
+                        print("   🏪 \(b.name) → \(b.products.count) products")
+                    }
                     completion(.success((branches: mappedBranches, pageInfo: pageInfo)))
 
                 case .failure(let error):
@@ -217,7 +218,7 @@ class StoreListRepository {
                 jwt: jwt.map { .some($0) } ?? .none
             )
 
-            client.fetchCompat(query: query, cachePolicy: .returnCacheDataAndFetch) { result in
+            client.fetchCompat(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
                 switch result {
                 case .success(let graphQLResult):
                     if let errors = graphQLResult.errors {
@@ -334,7 +335,7 @@ class StoreListRepository {
                 useVectorSearch: .some(useVectorSearch),
                 productCategoryId: productCategoryId.map { .some($0) } ?? .none,
                 radiusKm: radiusKm.map { .some($0) } ?? .none,
-                jwt: jwt.map { .some($0) } ?? .none
+                jwt: .none  // No JWT: prevents backend from filtering products by user delivery radius
             )
 
             client.fetchCompat(query: searchQuery, cachePolicy: .fetchIgnoringCacheData) { result in
@@ -385,7 +386,7 @@ class StoreListRepository {
                                 useVectorSearch: .some(false),
                                 productCategoryId: productCategoryId.map { .some($0) } ?? .none,
                                 radiusKm: radiusKm.map { .some($0) } ?? .none,
-                                jwt: jwt.map { .some($0) } ?? .none
+                                jwt: .none  // No JWT: prevents backend from filtering products by user delivery radius
                             )
 
                             client.fetchCompat(

@@ -44,7 +44,7 @@ query SearchBoth(
           coordinates
         }
         deliveryRadius
-        products(limit: 4) {
+        products(limit: 4, availableOnly: false) {
           id
           name
           price

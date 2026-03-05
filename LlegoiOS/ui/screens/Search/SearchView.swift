@@ -57,6 +57,13 @@ struct SearchView: View {
                     }
                     .padding(.bottom, 100)
                 }
+                .refreshable {
+                    ApolloClientManager.shared.clearDataCache()
+                    viewModel.loadInitialData()
+                    if !searchText.isEmpty {
+                        viewModel.search(query: searchText)
+                    }
+                }
                 .searchable(
                     text: $searchText,
                     prompt: viewModel.isOfflineMode ? "Buscar sin internet..." : "Buscar productos o negocios..."
