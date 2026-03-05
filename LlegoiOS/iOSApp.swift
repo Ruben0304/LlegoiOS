@@ -33,6 +33,9 @@ struct iOSApp: App {
         StripeAPI.defaultPublishableKey = key
 
         _ = CartRecommendationsManager.shared
+
+        // Limpiar caché de Apollo en cada inicio para evitar datos desactualizados
+        ApolloClientManager.shared.clearDataCache()
     }
 
     var body: some Scene {

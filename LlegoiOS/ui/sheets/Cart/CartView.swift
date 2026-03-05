@@ -6,24 +6,18 @@ import SwiftUI
 enum Currency: String, CaseIterable {
     case CUP = "CUP"
     case USD = "USD"
-    case EUR = "EUR"
-    case MXN = "MXN"
 
     var flag: String {
         switch self {
         case .CUP: return "🇨🇺"
         case .USD: return "🇺🇸"
-        case .EUR: return "🇪🇺"
-        case .MXN: return "🇲🇽"
         }
     }
 
-    var symbol: String {
+    var title: String {
         switch self {
-        case .CUP: return "CUP"
-        case .USD: return "$"
-        case .EUR: return "€"
-        case .MXN: return "MX$"
+        case .CUP: return "Peso Cubano"
+        case .USD: return "Dólar"
         }
     }
 }
@@ -75,7 +69,17 @@ struct CartView: View {
     var filteredPaymentMethods: [PaymentMethod] {
         let currencyCode = selectedCurrency.rawValue
         return availablePaymentMethods.filter { method in
-            method.currency.uppercased() == currencyCode || method.currency.contains(currencyCode)  // Para casos como "CUP/USD"
+            paymentMethodSupportsCurrency(method.currency, currencyCode: currencyCode)
+        }
+    }
+
+    /// Monedas válidas para el carrito según los ítems con precio.
+    var availableCurrencies: [Currency] {
+        let pricedItems = viewModel.cartItems.filter { !$0.isShowcase }
+        guard !pricedItems.isEmpty else { return Currency.allCases }
+
+        return Currency.allCases.filter { currency in
+            pricedItems.allSatisfy { $0.supportsCurrency(currency.rawValue) }
         }
     }
 
@@ -218,33 +222,26 @@ struct CartView: View {
                 }
 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Menu {
-                        ForEach(Currency.allCases, id: \.self) { currency in
-                            Button(action: {
-                                withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-                                    selectedCurrency = currency
-                                }
-                            }) {
-                                if selectedCurrency == currency {
-                                    Label(currency.rawValue, systemImage: "checkmark")
-                                } else {
-                                    Text(currency.rawValue)
+                    if availableCurrencies.count > 1 {
+                        Menu {
+                            ForEach(availableCurrencies, id: \.self) { currency in
+                                Button(action: {
+                                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                                        selectedCurrency = currency
+                                    }
+                                }) {
+                                    if selectedCurrency == currency {
+                                        Label(currency.rawValue, systemImage: "checkmark")
+                                    } else {
+                                        Text(currency.rawValue)
+                                    }
                                 }
                             }
+                        } label: {
+                            currencyToolbarChip(showChevron: true)
                         }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Text(selectedCurrency.flag)
-                                .font(.system(size: 18))
-                            Text(selectedCurrency.rawValue)
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(gradientManager.currentAccentColor)
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(gradientManager.currentAccentColor)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
+                    } else {
+                        currencyToolbarChip(showChevron: false)
                     }
                 }
 
@@ -405,6 +402,10 @@ struct CartView: View {
             }
             .onAppear {
                 viewModel.loadCart()
+                ensureSelectedCurrencyIsValid()
+            }
+            .onChange(of: viewModel.cartItems) { _, _ in
+                ensureSelectedCurrencyIsValid()
             }
             .fullScreenCover(isPresented: $showOrderConfirmation) {
                 NavigationStack {
@@ -425,6 +426,60 @@ struct CartView: View {
             }
         }
 
+    }
+
+    private func ensureSelectedCurrencyIsValid() {
+        guard !availableCurrencies.isEmpty else { return }
+        if !availableCurrencies.contains(selectedCurrency) {
+            selectedCurrency = availableCurrencies[0]
+        }
+        if let currentMethod = selectedPaymentMethod,
+            !paymentMethodSupportsCurrency(
+                currentMethod.currency,
+                currencyCode: selectedCurrency.rawValue
+            )
+        {
+            selectedPaymentMethod = nil
+        }
+    }
+
+    private func paymentMethodSupportsCurrency(_ methodCurrency: String, currencyCode: String) -> Bool {
+        let uppercased = methodCurrency.uppercased()
+        if uppercased.contains("BOTH") {
+            return true
+        }
+        return uppercased.contains(currencyCode.uppercased())
+    }
+
+    private func currencyToolbarChip(showChevron: Bool) -> some View {
+        HStack(spacing: 7) {
+            Text(selectedCurrency.flag)
+                .font(.system(size: 17))
+            VStack(alignment: .leading, spacing: 1) {
+                Text(selectedCurrency.rawValue)
+                    .font(.system(size: 13, weight: .bold))
+                Text(selectedCurrency.title)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+            .foregroundColor(gradientManager.currentAccentColor)
+
+            if showChevron {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(gradientManager.currentAccentColor.opacity(0.9))
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            Capsule()
+                .fill(Color.white.opacity(0.9))
+                .overlay(
+                    Capsule()
+                        .stroke(gradientManager.currentAccentColor.opacity(0.25), lineWidth: 1)
+                )
+        )
     }
 
     // MARK: - Cart Gradient Background
@@ -1716,6 +1771,23 @@ struct CartItemCard: View {
                             .font(.system(size: 15, weight: .bold, design: .rounded))
                             .foregroundColor(.llegoPrimary)
                     }
+                }
+
+                if let currencyInfo = item.currencyInfoText {
+                    HStack(spacing: 6) {
+                        Image(systemName: "info.circle.fill")
+                            .font(.system(size: 10, weight: .medium))
+                        Text(currencyInfo)
+                            .font(.system(size: 11, weight: .medium))
+                            .lineLimit(2)
+                    }
+                    .foregroundColor(.orange.opacity(0.9))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule()
+                            .fill(Color.orange.opacity(0.12))
+                    )
                 }
 
                 if !item.selectedVariants.isEmpty {

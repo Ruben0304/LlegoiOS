@@ -29,7 +29,7 @@ final class ProductDetailRepository: @unchecked Sendable {
 
             apolloClient.fetchCompat(
                 query: query,
-                cachePolicy: .returnCacheDataAndFetch
+                cachePolicy: .fetchIgnoringCacheData
             ) { result in
                 switch result {
                 case .success(let graphQLResult):
@@ -97,6 +97,9 @@ final class ProductDetailRepository: @unchecked Sendable {
                         weight: product.weight,
                         price: product.price,
                         currency: product.currency,
+                        convertedPrice: product.convertedPrice,
+                        convertedCurrency: product.convertedCurrency,
+                        exchangeRate: product.exchangeRate,
                         imageUrl: product.imageUrl,
                         availability: product.availability,
                         categoryId: product.categoryId,
@@ -213,6 +216,9 @@ struct ProductDetailGraphQL: Identifiable, Sendable, Equatable {
     let weight: String
     let price: Double
     let currency: String
+    let convertedPrice: Double?
+    let convertedCurrency: String?
+    let exchangeRate: Int?
     let imageUrl: String
     let availability: Bool
     let categoryId: String?

@@ -53,6 +53,7 @@ class CartViewModel: ObservableObject {
     // Store branchId from cart products
     private var cartBranchId: String?
     private var cartProducts: [CartProductGraphQL] = []
+    @Published private(set) var branchAcceptedCurrency: String?
 
     // MARK: - AI Suggestions
     @Published var suggestedProducts: [Product] = []
@@ -244,6 +245,7 @@ class CartViewModel: ObservableObject {
                             basePrice: product.basePrice,
                             finalUnitPrice: product.finalUnitPrice,
                             finalTotalPrice: product.finalTotalPrice,
+                            currency: product.currency,
                             imageUrl: product.image,
                             quantity: product.quantity,
                             branchId: product.branchId,
@@ -271,6 +273,7 @@ class CartViewModel: ObservableObject {
                             basePrice: 0,
                             finalUnitPrice: 0,
                             finalTotalPrice: 0,
+                            currency: "BOTH",
                             imageUrl: showcase.imageUrl,
                             quantity: showcase.quantity,
                             branchId: showcase.branchId,
@@ -285,6 +288,7 @@ class CartViewModel: ObservableObject {
                     print("✅ Loaded \(self.cartItems.count) items in cart")
                     if let branchId = self.cartBranchId {
                         print("📍 Branch ID: \(branchId)")
+                        self.fetchBranchAcceptedCurrency(branchId: branchId)
                         // Estimar envío usando el branchId del primer producto
                         self.fetchDeliveryFeeEstimate(branchId: branchId)
                     }
@@ -351,6 +355,7 @@ class CartViewModel: ObservableObject {
                 basePrice: priceValue,
                 finalUnitPrice: priceValue,
                 finalTotalPrice: priceValue,
+                currency: "CUP",
                 imageUrl: product.imageUrl,
                 quantity: 1,
                 branchId: nil,
@@ -609,6 +614,38 @@ class CartViewModel: ObservableObject {
                 }
             }
         }
+    }
+
+    private func fetchBranchAcceptedCurrency(branchId: String) {
+        repository.fetchBranchAcceptedCurrency(branchId: branchId) { [weak self] result in
+            guard let self = self else { return }
+            Task { @MainActor in
+                switch result {
+                case .success(let accepted):
+                    self.branchAcceptedCurrency = accepted?.uppercased()
+                    self.refreshCartItemCurrencies()
+                case .failure(let error):
+                    print("⚠️ Error loading branch accepted currency: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    private func refreshCartItemCurrencies() {
+        guard !hasMultipleBranches else { return }
+        guard let accepted = normalizedAcceptedCurrency else { return }
+        guard accepted == "CUP" || accepted == "USD" || accepted == "BOTH" else { return }
+
+        cartItems = cartItems.map { item in
+            guard item.itemType == .product else { return item }
+            var updated = item
+            updated.currency = accepted
+            return updated
+        }
+    }
+
+    private var normalizedAcceptedCurrency: String? {
+        branchAcceptedCurrency?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
     }
 
     // MARK: - Filter Payment Methods
@@ -1193,6 +1230,7 @@ struct CartItem: Identifiable, Hashable {
     let basePrice: Double
     let finalUnitPrice: Double
     let finalTotalPrice: Double
+    var currency: String
     let imageUrl: String
     var quantity: Int
     let branchId: String?
@@ -1200,7 +1238,7 @@ struct CartItem: Identifiable, Hashable {
     let selectedVariants: [SelectedVariantOption]
 
     var formattedPrice: String {
-        String(format: "$%.2f", finalUnitPrice)
+        "\(currencySymbol) \(String(format: "%.2f", finalUnitPrice))"
     }
 
     var formattedBasePrice: String {
@@ -1212,7 +1250,7 @@ struct CartItem: Identifiable, Hashable {
     }
 
     var formattedItemTotal: String {
-        String(format: "$%.2f", itemTotal)
+        "\(currencySymbol) \(String(format: "%.2f", itemTotal))"
     }
 
     var isShowcase: Bool {
@@ -1221,6 +1259,72 @@ struct CartItem: Identifiable, Hashable {
 
     var isComboComponent: Bool {
         comboGroupId != nil
+    }
+
+    var supportsCUP: Bool {
+        supportedCurrencyCodes.contains("CUP")
+    }
+
+    var supportsUSD: Bool {
+        supportedCurrencyCodes.contains("USD")
+    }
+
+    var acceptsBothCurrencies: Bool {
+        supportsCUP && supportsUSD
+    }
+
+    func supportsCurrency(_ code: String) -> Bool {
+        supportedCurrencyCodes.contains(code.uppercased())
+    }
+
+    var currencyInfoText: String? {
+        if acceptsBothCurrencies {
+            return nil
+        }
+        if supportsUSD {
+            return "Este producto solo se paga en USD"
+        }
+        if supportsCUP {
+            return "Este producto solo se paga en CUP"
+        }
+        return "Moneda disponible: \(currency.uppercased())"
+    }
+
+    private var currencySymbol: String {
+        switch canonicalCurrencyForDisplay {
+        case "USD":
+            return "USD"
+        case "CUP":
+            return "CUP"
+        default:
+            return currency.uppercased()
+        }
+    }
+
+    private var canonicalCurrencyForDisplay: String {
+        if supportsUSD && !supportsCUP {
+            return "USD"
+        }
+        if supportsCUP && !supportsUSD {
+            return "CUP"
+        }
+        return currency.uppercased()
+    }
+
+    private var supportedCurrencyCodes: Set<String> {
+        let uppercase = currency.uppercased()
+        if uppercase.contains("BOTH") {
+            return ["CUP", "USD"]
+        }
+
+        var codes = Set<String>()
+        if uppercase.contains("CUP") {
+            codes.insert("CUP")
+        }
+        if uppercase.contains("USD") {
+            codes.insert("USD")
+        }
+        return codes
     }
 }
 

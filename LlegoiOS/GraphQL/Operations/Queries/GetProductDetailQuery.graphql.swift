@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetProductDetail"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetProductDetail($id: String!, $jwt: String) { product(id: $id, jwt: $jwt) { __typename id branchId name description weight price currency imageUrl availability categoryId variantListIds variantLists { __typename id name description options { __typename id name priceAdjustment } } createdAt branch { __typename id name avatarUrl } business { __typename id name avatarUrl } } }"#
+        #"query GetProductDetail($id: String!, $jwt: String) { product(id: $id, jwt: $jwt) { __typename id branchId name description weight price currency convertedPrice convertedCurrency exchangeRate imageUrl availability categoryId variantListIds variantLists { __typename id name description options { __typename id name priceAdjustment } } createdAt branch { __typename id name avatarUrl } business { __typename id name avatarUrl } } }"#
       ))
 
     public var id: String
@@ -63,6 +63,9 @@ public extension LlegoAPI {
           .field("weight", String.self),
           .field("price", Double.self),
           .field("currency", String.self),
+          .field("convertedPrice", Double?.self),
+          .field("convertedCurrency", String?.self),
+          .field("exchangeRate", Int?.self),
           .field("imageUrl", String.self),
           .field("availability", Bool.self),
           .field("categoryId", String?.self),
@@ -83,6 +86,12 @@ public extension LlegoAPI {
         public var weight: String { __data["weight"] }
         public var price: Double { __data["price"] }
         public var currency: String { __data["currency"] }
+        /// Precio convertido a la otra moneda (si la sucursal acepta ambas)
+        public var convertedPrice: Double? { __data["convertedPrice"] }
+        /// Moneda del precio convertido
+        public var convertedCurrency: String? { __data["convertedCurrency"] }
+        /// Tasa de cambio de la sucursal (si acepta ambas monedas)
+        public var exchangeRate: Int? { __data["exchangeRate"] }
         /// Presigned URL for the product image
         public var imageUrl: String { __data["imageUrl"] }
         public var availability: Bool { __data["availability"] }

@@ -81,8 +81,11 @@ class StoreDetailViewModel: ObservableObject {
 
                 case .failure(let error):
                     let message = "Error al cargar detalles: \(error.localizedDescription)"
-                    self.state = .error(message)
-                    print("❌ StoreDetailViewModel: \(message)")
+                    print("❌ StoreDetailViewModel FAILURE: \(message)")
+                    // Solo actualiza el estado de error si no tenemos datos previos
+                    if self.branchDetail == nil {
+                        self.state = .error(message)
+                    }
                 }
             }
         }

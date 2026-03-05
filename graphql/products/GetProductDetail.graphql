@@ -7,6 +7,9 @@ query GetProductDetail($id: String!, $jwt: String) {
         weight
         price
         currency
+        convertedPrice
+        convertedCurrency
+        exchangeRate
         imageUrl
         availability
         categoryId

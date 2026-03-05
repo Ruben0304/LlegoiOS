@@ -116,6 +116,30 @@ class CartRepository {
 
     // MARK: - Delivery Fee Estimation
 
+    /// Obtener moneda aceptada por la sucursal (CUP, USD, BOTH)
+    func fetchBranchAcceptedCurrency(
+        branchId: String,
+        completion: @escaping @Sendable (Result<String?, Error>) -> Void
+    ) {
+        apolloClient.fetchCompat(
+            query: LlegoAPI.GetBranchDetailQuery(id: branchId),
+            cachePolicy: .fetchIgnoringCacheData
+        ) { result in
+            switch result {
+            case .success(let graphQLResult):
+                if let errors = graphQLResult.errors, let firstError = errors.first {
+                    completion(.failure(firstError))
+                    return
+                }
+                let accepted = graphQLResult.data?.branch?.acceptedCurrency?.value?.rawValue
+                completion(.success(accepted))
+
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
     /// Estimar el costo de envío para una sucursal
     func estimateDeliveryFee(
         branchId: String,

@@ -13,6 +13,8 @@ query GetBranchDetail($id: String!) {
     avatarUrl
     coverUrl
     deliveryRadius
+    acceptedCurrency
+    exchangeRate
     createdAt
   }
 }

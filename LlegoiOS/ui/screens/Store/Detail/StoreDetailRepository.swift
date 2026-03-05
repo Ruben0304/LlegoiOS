@@ -10,21 +10,17 @@ class StoreDetailRepository {
     ) {
         apolloClient.fetchCompat(
             query: LlegoAPI.GetBranchDetailQuery(id: id),
-            cachePolicy: .returnCacheDataAndFetch
+            cachePolicy: .fetchIgnoringCacheData
         ) { result in
             switch result {
             case .success(let graphQLResult):
+                print("🔎 [StoreDetail] GetBranchDetail id=\(id) baseURL=\(ApolloClientManager.baseURL)")
+
                 if let errors = graphQLResult.errors {
                     print("❌ GraphQL Errors (Branch Detail):")
                     errors.forEach { error in
                         print("  - \(error.localizedDescription)")
                     }
-                    completion(
-                        .failure(
-                            NSError(
-                                domain: "GraphQL", code: -1,
-                                userInfo: [NSLocalizedDescriptionKey: "GraphQL errors occurred"])))
-                    return
                 }
 
                 guard let branch = graphQLResult.data?.branch else {
@@ -32,17 +28,20 @@ class StoreDetailRepository {
                     completion(
                         .failure(
                             NSError(
-                                domain: "BranchDetail", code: -1,
-                                userInfo: [NSLocalizedDescriptionKey: "Branch not found"])))
+                                domain: "BranchDetail",
+                                code: -1,
+                                userInfo: [NSLocalizedDescriptionKey: "Branch not found"]
+                            )
+                        )
+                    )
                     return
                 }
 
-                // Map GraphQL branch detail to our model
                 let branchDetail = BranchDetailGraphQL(
                     id: branch.id,
                     businessId: branch.businessId,
                     name: branch.name,
-                    address: branch.address ?? "",
+                    address: branch.address,
                     coordinates: CoordinatesGraphQL(
                         type: branch.coordinates.type,
                         coordinates: branch.coordinates.coordinates
@@ -52,11 +51,16 @@ class StoreDetailRepository {
                     avatarUrl: branch.avatarUrl,
                     coverUrl: branch.coverUrl,
                     deliveryRadius: branch.deliveryRadius,
-                    facilities: nil,  // Not available in query
+                    facilities: nil,
                     createdAt: branch.createdAt,
-                    socialMedia: nil  // Will be loaded separately
+                    socialMedia: nil,
+                    acceptedCurrency: branch.acceptedCurrency?.value?.rawValue,
+                    exchangeRate: branch.exchangeRate
                 )
 
+                print(
+                    "🔎 [StoreDetail] branchId=\(branch.id) name=\(branch.name) acceptedCurrency=\(branchDetail.acceptedCurrency ?? "nil") exchangeRate=\(branchDetail.exchangeRate.map(String.init) ?? "nil")"
+                )
                 print("✅ Fetched branch detail for ID: \(id)")
                 completion(.success(branchDetail))
 
@@ -487,6 +491,8 @@ struct BranchDetailGraphQL: Identifiable, Sendable {
     let facilities: [String]?
     let createdAt: String
     let socialMedia: [String: String]?
+    let acceptedCurrency: String?
+    let exchangeRate: Int?
 }
 
 // Model to represent GraphQL Business details

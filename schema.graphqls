@@ -286,6 +286,8 @@ type BranchType {
   qrPayments: [QrPaymentType!]!
   phones: [TransferPhoneType!]!
   deliveryRadius: Float
+  acceptedCurrency: AcceptedCurrency
+  exchangeRate: Int
   createdAt: DateTime!
   wallet: WalletBalanceType!
   walletStatus: String!
@@ -333,6 +335,12 @@ type ProductType {
   createdAt: DateTime!
   "Presigned URL for the product image"
   imageUrl: String!
+  "Precio convertido a la otra moneda (si la sucursal acepta ambas)"
+  convertedPrice: Float
+  "Moneda del precio convertido"
+  convertedCurrency: String
+  "Tasa de cambio de la sucursal (si acepta ambas monedas)"
+  exchangeRate: Int
   "Product category name"
   categoryName: String
   "Variant lists assigned to this product"
@@ -435,6 +443,8 @@ type ScoredBranchType {
   qrPayments: [QrPaymentType!]!
   phones: [TransferPhoneType!]!
   deliveryRadius: Float
+  acceptedCurrency: AcceptedCurrency
+  exchangeRate: Int
   createdAt: DateTime!
   score: Float!
   distanceM: Float
@@ -490,6 +500,8 @@ type NearbyBranchType {
   qrPayments: [QrPaymentType!]!
   phones: [TransferPhoneType!]!
   deliveryRadius: Float
+  acceptedCurrency: AcceptedCurrency
+  exchangeRate: Int
   createdAt: DateTime!
   distanceM: Float!
   wallet: WalletBalanceType!
@@ -534,6 +546,12 @@ type ScoredProductType {
   imageUrl: String!
   "Distance in kilometers from user"
   distanceKm: Float
+  "Precio convertido a la otra moneda (si la sucursal acepta ambas)"
+  convertedPrice: Float
+  "Moneda del precio convertido"
+  convertedCurrency: String
+  "Tasa de cambio de la sucursal (si acepta ambas monedas)"
+  exchangeRate: Int
   "Product category name"
   categoryName: String
   "Variant lists assigned to this product"
@@ -1353,6 +1371,8 @@ type BranchSyncType {
   useAppMessaging: Boolean!
   vehicles: [String!]!
   deliveryRadius: Float
+  acceptedCurrency: String
+  exchangeRate: Int
   createdAt: DateTime!
   "Presigned URL for the branch avatar"
   avatarUrl: String
@@ -1710,6 +1730,11 @@ enum BranchVehicle {
   CAMIONETA
   CAMINANDO
 }
+enum AcceptedCurrency {
+  CUP
+  USD
+  BOTH
+}
 enum DiscountType {
   NONE
   PERCENTAGE
@@ -1930,6 +1955,8 @@ input RegisterBranchInput {
   avatar: String = null
   coverImage: String = null
   socialMedia: JSON = null
+  acceptedCurrency: AcceptedCurrency = null
+  exchangeRate: Int = null
   accounts: [TransferAccountInput!] = null
   qrPayments: [QrPaymentInput!] = null
   phones: [TransferPhoneInput!] = null
@@ -1978,6 +2005,8 @@ input CreateBranchInput {
   socialMedia: JSON = null
   useAppMessaging: Boolean! = true
   vehicles: [BranchVehicle!] = null
+  acceptedCurrency: AcceptedCurrency = null
+  exchangeRate: Int = null
   accounts: [TransferAccountInput!] = null
   qrPayments: [QrPaymentInput!] = null
   phones: [TransferPhoneInput!] = null
@@ -1997,6 +2026,8 @@ input UpdateBranchInput {
   paymentMethodIds: [String!] = null
   useAppMessaging: Boolean = null
   vehicles: [BranchVehicle!] = null
+  acceptedCurrency: AcceptedCurrency = null
+  exchangeRate: Int = null
   accounts: [TransferAccountInput!] = null
   qrPayments: [QrPaymentInput!] = null
   phones: [TransferPhoneInput!] = null

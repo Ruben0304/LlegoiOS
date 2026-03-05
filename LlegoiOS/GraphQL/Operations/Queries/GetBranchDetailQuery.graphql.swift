@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetBranchDetail"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetBranchDetail($id: String!) { branch(id: $id) { __typename id businessId name address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius createdAt } }"#
+        #"query GetBranchDetail($id: String!) { branch(id: $id) { __typename id businessId name address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius acceptedCurrency exchangeRate createdAt } }"#
       ))
 
     public var id: String
@@ -55,6 +55,8 @@ public extension LlegoAPI {
           .field("avatarUrl", String?.self),
           .field("coverUrl", String?.self),
           .field("deliveryRadius", Double?.self),
+          .field("acceptedCurrency", GraphQLEnum<LlegoAPI.AcceptedCurrency>?.self),
+          .field("exchangeRate", Int?.self),
           .field("createdAt", LlegoAPI.DateTime.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
@@ -73,6 +75,8 @@ public extension LlegoAPI {
         /// Presigned URL for the branch cover image
         public var coverUrl: String? { __data["coverUrl"] }
         public var deliveryRadius: Double? { __data["deliveryRadius"] }
+        public var acceptedCurrency: GraphQLEnum<LlegoAPI.AcceptedCurrency>? { __data["acceptedCurrency"] }
+        public var exchangeRate: Int? { __data["exchangeRate"] }
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
 
         /// Branch.Coordinates

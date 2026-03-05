@@ -326,28 +326,48 @@ struct ProductDetailView: View {
                 .foregroundColor(.primary)
                 .tracking(-0.5)
 
-            HStack(spacing: 10) {
-                if let detail = viewModel.productDetail {
-                    Text(
-                        viewModel.formatPrice(
-                            decimal: viewModel.finalUnitPrice(for: detail),
-                            currency: detail.currency)
-                    )
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundColor(.primary)
-
-                    if !viewModel.selectedVariantOptions.isEmpty {
+            if let detail = viewModel.productDetail {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 10) {
                         Text(
-                            "(base \(viewModel.formatPrice(price: detail.price, currency: detail.currency)))"
+                            viewModel.formatPrice(
+                                decimal: viewModel.finalUnitPrice(for: detail),
+                                currency: detail.currency)
                         )
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.secondary)
-                    }
-                } else {
-                    Text(product.price)
                         .font(.system(size: 22, weight: .semibold))
                         .foregroundColor(.primary)
+
+                        if !viewModel.selectedVariantOptions.isEmpty {
+                            Text(
+                                "(base \(viewModel.formatPrice(price: detail.price, currency: detail.currency)))"
+                            )
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.secondary)
+                        }
+                    }
+
+                    // Precio convertido + tasa de cambio (cuando la tienda acepta ambas monedas)
+                    if let convertedPrice = detail.convertedPrice,
+                       let convertedCurrency = detail.convertedCurrency {
+                        HStack(spacing: 6) {
+                            Text("≈ \(viewModel.formatPrice(price: convertedPrice, currency: convertedCurrency))")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.secondary)
+
+                            if let rate = detail.exchangeRate {
+                                Text("·")
+                                    .foregroundColor(.secondary)
+                                Text("1 USD = \(rate) CUP")
+                                    .font(.system(size: 12, weight: .regular))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
                 }
+            } else {
+                Text(product.price)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundColor(.primary)
             }
         }
     }
