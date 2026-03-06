@@ -303,7 +303,7 @@ class ProductFeedRepository {
                                     branchTipos: product.branch?.tipos.compactMap { $0.rawValue }
                                         ?? [],
                                     businessName: product.branch?.name ?? "",
-                                    categoryId: nil,
+                                    categoryId: product.categoryId,
                                     categoryName: product.categoryName,
                                     availability: product.availability,
                                     score: product.score,
@@ -479,7 +479,7 @@ class ProductFeedRepository {
                                     branchTipos: product.branch?.tipos.compactMap { $0.rawValue }
                                         ?? [],
                                     businessName: product.branch?.name ?? "",
-                                    categoryId: nil,
+                                    categoryId: product.categoryId,
                                     categoryName: product.categoryName,
                                     availability: product.availability,
                                     score: product.score,
