@@ -317,6 +317,65 @@ private struct ImageMetadata: Codable {
     let expirationDate: Date
 }
 
+// MARK: - Network Request Limiter (FIFO)
+actor ImageRequestLimiter {
+    enum Priority {
+        case high
+        case normal
+        case low
+    }
+
+    static let shared = ImageRequestLimiter(maxConcurrentRequests: 4)
+
+    private let maxConcurrentRequests: Int
+    private var runningRequests = 0
+    private var highPriorityWaiters: [CheckedContinuation<Void, Never>] = []
+    private var normalPriorityWaiters: [CheckedContinuation<Void, Never>] = []
+    private var lowPriorityWaiters: [CheckedContinuation<Void, Never>] = []
+
+    init(maxConcurrentRequests: Int) {
+        self.maxConcurrentRequests = maxConcurrentRequests
+    }
+
+    func acquire(priority: Priority = .normal) async {
+        if runningRequests < maxConcurrentRequests {
+            runningRequests += 1
+            return
+        }
+
+        await withCheckedContinuation { continuation in
+            switch priority {
+            case .high:
+                highPriorityWaiters.append(continuation)
+            case .normal:
+                normalPriorityWaiters.append(continuation)
+            case .low:
+                lowPriorityWaiters.append(continuation)
+            }
+        }
+    }
+
+    func release() {
+        let next: CheckedContinuation<Void, Never>?
+        if !highPriorityWaiters.isEmpty {
+            next = highPriorityWaiters.removeFirst()
+        } else if !normalPriorityWaiters.isEmpty {
+            next = normalPriorityWaiters.removeFirst()
+        } else if !lowPriorityWaiters.isEmpty {
+            next = lowPriorityWaiters.removeFirst()
+        } else {
+            next = nil
+        }
+
+        guard let next else {
+            runningRequests = max(0, runningRequests - 1)
+            return
+        }
+
+        next.resume()
+    }
+}
+
 // MARK: - Cached AsyncImage View with Loading and Failure States
 struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
     let url: URL?
@@ -333,7 +392,8 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
     @State private var isLoading = false
     @State private var loadFailed = false
     @State private var isNetworkError = false // Flag para errores de red
-    @State private var loadTask: URLSessionDataTask?
+    @State private var loadTask: Task<Void, Never>?
+    @State private var backgroundRefreshTask: Task<Void, Never>?
 
     private var effectiveCacheKey: String {
         let urlKey = url?.absoluteString ?? ""
@@ -374,6 +434,7 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
         .onDisappear {
             // Cancel ongoing download if view disappears
             loadTask?.cancel()
+            backgroundRefreshTask?.cancel()
         }
         .onChange(of: effectiveCacheKey) { _, _ in
             resetAndReloadImage()
@@ -432,6 +493,7 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
 
     private func resetAndReloadImage() {
         loadTask?.cancel()
+        backgroundRefreshTask?.cancel()
         image = nil
         isLoading = false
         loadFailed = false
@@ -440,7 +502,6 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
     }
 
     private func downloadImage(from url: URL) {
-        // Capture actor-isolated values before entering the URLSession closure
         let cacheKey = effectiveCacheKey
         let pixelSize = maxPixelSize
 
@@ -451,16 +512,50 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
             request.setValue(etag, forHTTPHeaderField: "If-None-Match")
         }
 
-        loadTask = URLSession.shared.dataTask(with: request) { data, response, error in
-            // Handle errors on background thread before touching UI
-            if let error = error as NSError? {
-                if error.domain == NSURLErrorDomain &&
-                   (error.code == NSURLErrorNotConnectedToInternet ||
-                    error.code == NSURLErrorTimedOut ||
-                    error.code == NSURLErrorCannotConnectToHost ||
-                    error.code == NSURLErrorNetworkConnectionLost) {
+        loadTask = Task {
+            await ImageRequestLimiter.shared.acquire(priority: .high)
+            defer { Task { await ImageRequestLimiter.shared.release() } }
+
+            do {
+                let (data, response) = try await URLSession.shared.data(for: request)
+                guard !Task.isCancelled else { return }
+
+                if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 304 {
                     let cached = ImageCacheManager.shared.getImage(for: cacheKey)
-                    DispatchQueue.main.async {
+                    await MainActor.run {
+                        self.isLoading = false
+                        if let cachedImage = cached { self.image = cachedImage }
+                    }
+                    return
+                }
+
+                if let downloadedImage = ImageCacheManager.shared.decodeImageForDisplay(from: data, maxPixelSize: pixelSize) {
+                    let etag = (response as? HTTPURLResponse)?.allHeaderFields["Etag"] as? String
+                    ImageCacheManager.shared.setImage(downloadedImage, for: cacheKey, etag: etag)
+                    await MainActor.run {
+                        self.isLoading = false
+                        self.image = downloadedImage
+                    }
+                } else {
+                    await MainActor.run {
+                        self.isLoading = false
+                        self.loadFailed = true
+                    }
+                }
+            } catch {
+                guard !Task.isCancelled else { return }
+
+                let nsError = error as NSError
+                let networkErrorCodes: Set<Int> = [
+                    NSURLErrorNotConnectedToInternet,
+                    NSURLErrorTimedOut,
+                    NSURLErrorCannotConnectToHost,
+                    NSURLErrorNetworkConnectionLost,
+                ]
+
+                if nsError.domain == NSURLErrorDomain && networkErrorCodes.contains(nsError.code) {
+                    let cached = ImageCacheManager.shared.getImage(for: cacheKey)
+                    await MainActor.run {
                         self.isLoading = false
                         self.isNetworkError = true
                         self.loadFailed = true
@@ -471,46 +566,17 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
                     }
                     return
                 }
-                DispatchQueue.main.async {
+
+                await MainActor.run {
                     self.isLoading = false
                     self.isNetworkError = false
                     self.loadFailed = true
                 }
-                return
-            }
-
-            // 304 Not Modified
-            if let httpResponse = response as? HTTPURLResponse,
-               httpResponse.statusCode == 304 {
-                let cached = ImageCacheManager.shared.getImage(for: cacheKey)
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                    if let cachedImage = cached { self.image = cachedImage }
-                }
-                return
-            }
-
-            // Decode on background thread (expensive — keeps main thread free)
-            if let data = data,
-               let downloadedImage = ImageCacheManager.shared.decodeImageForDisplay(from: data, maxPixelSize: pixelSize) {
-                let etag = (response as? HTTPURLResponse)?.allHeaderFields["Etag"] as? String
-                ImageCacheManager.shared.setImage(downloadedImage, for: cacheKey, etag: etag)
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                    self.image = downloadedImage
-                }
-            } else {
-                DispatchQueue.main.async {
-                    self.isLoading = false
-                    self.loadFailed = true
-                }
             }
         }
-        loadTask?.resume()
     }
 
     private func downloadImageInBackground(from url: URL) {
-        // Capture actor-isolated values before entering the URLSession closure
         let cacheKey = effectiveCacheKey
         let pixelSize = maxPixelSize
 
@@ -521,28 +587,27 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
             request.setValue(etag, forHTTPHeaderField: "If-None-Match")
         }
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error as NSError?,
-               error.domain == NSURLErrorDomain &&
-               (error.code == NSURLErrorNotConnectedToInternet ||
-                error.code == NSURLErrorTimedOut ||
-                error.code == NSURLErrorCannotConnectToHost ||
-                error.code == NSURLErrorNetworkConnectionLost) {
-                return
-            }
+        backgroundRefreshTask = Task {
+            await ImageRequestLimiter.shared.acquire(priority: .low)
+            defer { Task { await ImageRequestLimiter.shared.release() } }
 
-            // Decode on background thread, update cache and UI
-            if let data = data,
-               let httpResponse = response as? HTTPURLResponse,
-               httpResponse.statusCode != 304,
-               let downloadedImage = ImageCacheManager.shared.decodeImageForDisplay(from: data, maxPixelSize: pixelSize) {
-                let etag = httpResponse.allHeaderFields["Etag"] as? String
-                ImageCacheManager.shared.setImage(downloadedImage, for: cacheKey, etag: etag)
-                DispatchQueue.main.async {
-                    self.image = downloadedImage
+            do {
+                let (data, response) = try await URLSession.shared.data(for: request)
+                guard !Task.isCancelled else { return }
+
+                if let httpResponse = response as? HTTPURLResponse,
+                   httpResponse.statusCode != 304,
+                   let downloadedImage = ImageCacheManager.shared.decodeImageForDisplay(from: data, maxPixelSize: pixelSize) {
+                    let etag = httpResponse.allHeaderFields["Etag"] as? String
+                    ImageCacheManager.shared.setImage(downloadedImage, for: cacheKey, etag: etag)
+                    await MainActor.run {
+                        self.image = downloadedImage
+                    }
                 }
+            } catch {
+                // Silent failure for background refresh.
             }
-        }.resume()
+        }
     }
 
     // MARK: - Initializers

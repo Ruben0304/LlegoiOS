@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetProductDetail"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetProductDetail($id: String!, $jwt: String) { product(id: $id, jwt: $jwt) { __typename id branchId name description weight price currency convertedPrice convertedCurrency exchangeRate imageUrl availability categoryId variantListIds variantLists { __typename id name description options { __typename id name priceAdjustment } } createdAt branch { __typename id name avatarUrl } business { __typename id name avatarUrl } } }"#
+        #"query GetProductDetail($id: String!, $jwt: String) { product(id: $id, jwt: $jwt) { __typename id branchId name description weight price currency convertedPrice convertedCurrency exchangeRate imageUrlAlta availability categoryId variantListIds variantLists { __typename id name description options { __typename id name priceAdjustment } } createdAt branch { __typename id name avatarUrl } business { __typename id name avatarUrl } } }"#
       ))
 
     public var id: String
@@ -66,7 +66,7 @@ public extension LlegoAPI {
           .field("convertedPrice", Double?.self),
           .field("convertedCurrency", String?.self),
           .field("exchangeRate", Int?.self),
-          .field("imageUrl", String.self),
+          .field("imageUrlAlta", String.self),
           .field("availability", Bool.self),
           .field("categoryId", String?.self),
           .field("variantListIds", [String].self),
@@ -92,8 +92,8 @@ public extension LlegoAPI {
         public var convertedCurrency: String? { __data["convertedCurrency"] }
         /// Tasa de cambio de la sucursal (si acepta ambas monedas)
         public var exchangeRate: Int? { __data["exchangeRate"] }
-        /// Presigned URL for the product image
-        public var imageUrl: String { __data["imageUrl"] }
+        /// Presigned URL for the high quality product image (1000x1000)
+        public var imageUrlAlta: String { __data["imageUrlAlta"] }
         public var availability: Bool { __data["availability"] }
         public var categoryId: String? { __data["categoryId"] }
         public var variantListIds: [String] { __data["variantListIds"] }

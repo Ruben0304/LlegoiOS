@@ -7,7 +7,7 @@ query GetProducts($first: Int! = 20, $after: String, $branchId: String, $categor
         name
         price
         currency
-        imageUrl
+        imageUrlBaja
         availability
         createdAt
         distanceKm

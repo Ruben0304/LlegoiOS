@@ -636,7 +636,7 @@ struct FeaturedProductCard: View {
     @ViewBuilder
     private var featuredImage: some View {
         let imageView = CachedAsyncImage(
-            url: URL(string: product.imageUrl),
+            url: URL(string: product.imageUrlMedia),
             cacheKey: "featured_\(product.id)",
             displaySize: CGSize(width: 280, height: 350),
             content: { image in
@@ -712,7 +712,7 @@ struct SmallProductCard: View {
     @ViewBuilder
     private var smallCardImage: some View {
         let imageView = CachedAsyncImage(
-            url: URL(string: product.imageUrl),
+            url: URL(string: product.imageUrlBaja),
             cacheKey: "small_\(product.id)",
             displaySize: CGSize(width: 140, height: 100),
             content: { image in image.resizable().scaledToFill() },
@@ -742,7 +742,7 @@ struct CompactProductCard: View {
         VStack(alignment: .leading, spacing: 10) {
             ZStack(alignment: .topTrailing) {
                 CachedAsyncImage(
-                    url: URL(string: product.imageUrl),
+                    url: URL(string: product.imageUrlBaja),
                     cacheKey: "compact_\(product.id)",
                     displaySize: CGSize(width: 180, height: 130),
                     content: { image in image.resizable().scaledToFill() },

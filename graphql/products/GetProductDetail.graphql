@@ -10,7 +10,7 @@ query GetProductDetail($id: String!, $jwt: String) {
         convertedPrice
         convertedCurrency
         exchangeRate
-        imageUrl
+        imageUrlAlta
         availability
         categoryId
         variantListIds

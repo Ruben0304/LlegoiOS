@@ -21,7 +21,8 @@ query GetFeed($jwt: String, $first: Int = 10, $sections: [String!], $branchTipo:
         currency
         availability
         score
-        imageUrl
+        imageUrlBaja
+        imageUrlMedia
         categoryId
         categoryName
         branch {

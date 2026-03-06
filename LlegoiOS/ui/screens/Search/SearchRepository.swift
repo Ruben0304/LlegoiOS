@@ -89,7 +89,7 @@ class SearchRepository {
                         shop: node.business?.name ?? "",
                         weight: node.weight,
                         price: priceFormatted,
-                        imageUrl: node.imageUrl
+                        imageUrl: node.imageUrlBaja
                     )
                 }
 
@@ -145,7 +145,7 @@ class SearchRepository {
                         shopLogoUrl: node.business?.avatarUrl ?? "",
                         weight: "",
                         price: priceFormatted,
-                        imageUrl: node.imageUrl
+                        imageUrl: node.imageUrlBaja
                     )
                 }
 
@@ -163,7 +163,7 @@ class SearchRepository {
                             name: product.name,
                             price: product.price,
                             currency: product.currency,
-                            imageUrl: product.imageUrl,
+                            imageUrl: product.imageUrlBaja,
                             availability: product.availability,
                             createdAt: "",
                             businessName: node.name,
@@ -274,7 +274,7 @@ class SearchRepository {
                             name: product.name,
                             price: product.price,
                             currency: product.currency,
-                            imageUrl: product.imageUrl,
+                            imageUrl: product.imageUrlBaja,
                             availability: product.availability,
                             createdAt: "",
                             businessName: node.name,

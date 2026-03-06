@@ -34,7 +34,8 @@ struct FeedProduct: Identifiable, Hashable, Sendable {
     let name: String
     let price: Double
     let currency: String
-    let imageUrl: String
+    let imageUrlBaja: String
+    let imageUrlMedia: String
     let distanceKm: Double?
     let branchId: String
     let branchName: String
@@ -69,15 +70,16 @@ struct FeedProduct: Identifiable, Hashable, Sendable {
 
     // Convenience init for backward compatibility (old code paths)
     init(
-        id: String, name: String, price: Double, currency: String, imageUrl: String,
-        distanceKm: Double?, branchId: String, branchName: String, branchAvatarUrl: String?,
-        businessName: String, categoryId: String?, categoryName: String?
+        id: String, name: String, price: Double, currency: String, imageUrlBaja: String,
+        imageUrlMedia: String = "", distanceKm: Double?, branchId: String, branchName: String,
+        branchAvatarUrl: String?, businessName: String, categoryId: String?, categoryName: String?
     ) {
         self.id = id
         self.name = name
         self.price = price
         self.currency = currency
-        self.imageUrl = imageUrl
+        self.imageUrlBaja = imageUrlBaja
+        self.imageUrlMedia = imageUrlMedia
         self.distanceKm = distanceKm
         self.branchId = branchId
         self.branchName = branchName
@@ -94,16 +96,18 @@ struct FeedProduct: Identifiable, Hashable, Sendable {
 
     // Full init with all new fields
     init(
-        id: String, name: String, price: Double, currency: String, imageUrl: String,
-        distanceKm: Double?, branchId: String, branchName: String, branchAvatarUrl: String?,
-        branchAddress: String?, branchTipos: [String], businessName: String, categoryId: String?,
-        categoryName: String?, availability: Bool, score: Double, productDescription: String
+        id: String, name: String, price: Double, currency: String, imageUrlBaja: String,
+        imageUrlMedia: String, distanceKm: Double?, branchId: String, branchName: String,
+        branchAvatarUrl: String?, branchAddress: String?, branchTipos: [String],
+        businessName: String, categoryId: String?, categoryName: String?, availability: Bool,
+        score: Double, productDescription: String
     ) {
         self.id = id
         self.name = name
         self.price = price
         self.currency = currency
-        self.imageUrl = imageUrl
+        self.imageUrlBaja = imageUrlBaja
+        self.imageUrlMedia = imageUrlMedia
         self.distanceKm = distanceKm
         self.branchId = branchId
         self.branchName = branchName
@@ -294,7 +298,8 @@ class ProductFeedRepository {
                                     name: product.name,
                                     price: product.price,
                                     currency: product.currency,
-                                    imageUrl: product.imageUrl,
+                                    imageUrlBaja: product.imageUrlBaja,
+                                    imageUrlMedia: product.imageUrlMedia,
                                     distanceKm: nil,
                                     branchId: product.branchId,
                                     branchName: product.branch?.name ?? "",
@@ -470,7 +475,8 @@ class ProductFeedRepository {
                                     name: product.name,
                                     price: product.price,
                                     currency: product.currency,
-                                    imageUrl: product.imageUrl,
+                                    imageUrlBaja: product.imageUrlBaja,
+                                    imageUrlMedia: product.imageUrlMedia,
                                     distanceKm: nil,  // Not provided in new API
                                     branchId: product.branchId,
                                     branchName: product.branch?.name ?? "",
@@ -703,7 +709,7 @@ class ProductFeedRepository {
                                 name: edge.node.name,
                                 price: edge.node.price,
                                 currency: edge.node.currency,
-                                imageUrl: edge.node.imageUrl,
+                                imageUrlBaja: edge.node.imageUrlBaja,
                                 distanceKm: edge.node.distanceKm,
                                 branchId: edge.node.branchId,
                                 branchName: edge.node.business?.name ?? "",

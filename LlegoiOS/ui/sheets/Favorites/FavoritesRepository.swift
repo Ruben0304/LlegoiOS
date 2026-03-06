@@ -52,7 +52,7 @@ class FavoritesRepository {
                         weight: edge.node.weight,
                         price: edge.node.price,
                         currency: edge.node.currency,
-                        image: edge.node.imageUrl,
+                        image: edge.node.imageUrlBaja,
                         availability: edge.node.availability
                     )
                 }

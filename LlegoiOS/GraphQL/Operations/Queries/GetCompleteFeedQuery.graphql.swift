@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetCompleteFeed"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetCompleteFeed($jwt: String, $first: Int, $sections: [String!], $branchTipo: String!, $branchTipoEnum: BranchTipo, $radiusKm: Float, $categoryId: String) { getFeed( jwt: $jwt first: $first sections: $sections branchTipo: $branchTipo productCategoryId: $categoryId ) { __typename sections { __typename sectionId title description totalCount products { __typename id name price currency imageUrl branchId categoryId branch { __typename name address tipos } categoryName availability score description } } sectionDiagnostics { __typename sectionId title status reason totalBeforeDedup totalAfterDedup } timestamp } productCategories(branchType: $branchTipo) { __typename id name iconIos } branches( first: 15 tipo: $branchTipoEnum radiusKm: $radiusKm productCategoryId: $categoryId ) { __typename edges { __typename node { __typename id businessId name avatarUrl coverUrl address distanceKm } } } activeTutorials { __typename id title description videoUrl videoUrlSigned duration appTarget thumbnailUrl thumbnailUrlSigned order tags } allCombos(availableOnly: true) { __typename id branchId name description imageUrl currency availability discountType discountValue basePrice finalPrice savings representativeProducts { __typename id name imageUrl } slots { __typename id } branch { __typename id name avatarUrl } } }"#
+        #"query GetCompleteFeed($jwt: String, $first: Int, $sections: [String!], $branchTipo: String!, $branchTipoEnum: BranchTipo, $radiusKm: Float, $categoryId: String) { getFeed( jwt: $jwt first: $first sections: $sections branchTipo: $branchTipo productCategoryId: $categoryId ) { __typename sections { __typename sectionId title description totalCount products { __typename id name price currency imageUrlBaja imageUrlMedia branchId categoryId branch { __typename name address tipos } categoryName availability score description } } sectionDiagnostics { __typename sectionId title status reason totalBeforeDedup totalAfterDedup } timestamp } productCategories(branchType: $branchTipo) { __typename id name iconIos } branches( first: 15 tipo: $branchTipoEnum radiusKm: $radiusKm productCategoryId: $categoryId ) { __typename edges { __typename node { __typename id businessId name avatarUrl coverUrl address distanceKm } } } activeTutorials { __typename id title description videoUrl videoUrlSigned duration appTarget thumbnailUrl thumbnailUrlSigned order tags } allCombos(availableOnly: true) { __typename id branchId name description imageUrl currency availability discountType discountValue basePrice finalPrice savings representativeProducts { __typename id name imageUrl } slots { __typename id } branch { __typename id name avatarUrl } } }"#
       ))
 
     public var jwt: GraphQLNullable<String>
@@ -148,7 +148,8 @@ public extension LlegoAPI {
               .field("name", String.self),
               .field("price", Double.self),
               .field("currency", String.self),
-              .field("imageUrl", String.self),
+              .field("imageUrlBaja", String.self),
+              .field("imageUrlMedia", String.self),
               .field("branchId", String.self),
               .field("categoryId", String?.self),
               .field("branch", Branch?.self),
@@ -165,8 +166,10 @@ public extension LlegoAPI {
             public var name: String { __data["name"] }
             public var price: Double { __data["price"] }
             public var currency: String { __data["currency"] }
-            /// Presigned URL for the product image
-            public var imageUrl: String { __data["imageUrl"] }
+            /// Presigned URL for the low quality product image (100x100)
+            public var imageUrlBaja: String { __data["imageUrlBaja"] }
+            /// Presigned URL for the medium quality product image (500x500)
+            public var imageUrlMedia: String { __data["imageUrlMedia"] }
             public var branchId: String { __data["branchId"] }
             public var categoryId: String? { __data["categoryId"] }
             /// Branch associated with this product
@@ -414,7 +417,7 @@ public extension LlegoAPI {
         public var finalPrice: Double { __data["finalPrice"] }
         /// Amount saved with discount
         public var savings: Double { __data["savings"] }
-        /// Representative products for frontend composition (one per slot)
+        /// Representative products for frontend composition (max 4 products)
         public var representativeProducts: [RepresentativeProduct] { __data["representativeProducts"] }
         public var slots: [Slot] { __data["slots"] }
         /// Branch associated with this combo

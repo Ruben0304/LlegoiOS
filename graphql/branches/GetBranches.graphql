@@ -23,7 +23,7 @@ query GetBranches($first: Int! = 20, $after: String, $businessId: String, $tipo:
           name
           price
           currency
-          imageUrl
+          imageUrlBaja
         }
       }
       cursor

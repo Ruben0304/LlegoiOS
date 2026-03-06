@@ -25,7 +25,8 @@ query GetCompleteFeed(
         name
         price
         currency
-        imageUrl
+        imageUrlBaja
+        imageUrlMedia
         branchId
         categoryId
         branch {

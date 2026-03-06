@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetFeed"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetFeed($jwt: String, $first: Int = 10, $sections: [String!], $branchTipo: String!, $productCategoryId: String) { getFeed( first: $first jwt: $jwt sections: $sections branchTipo: $branchTipo productCategoryId: $productCategoryId ) { __typename sections { __typename sectionId title description totalCount products { __typename id branchId name description price currency availability score imageUrl categoryId categoryName branch { __typename id name address tipos } } } sectionDiagnostics { __typename sectionId title status reason totalBeforeDedup totalAfterDedup } timestamp } }"#
+        #"query GetFeed($jwt: String, $first: Int = 10, $sections: [String!], $branchTipo: String!, $productCategoryId: String) { getFeed( first: $first jwt: $jwt sections: $sections branchTipo: $branchTipo productCategoryId: $productCategoryId ) { __typename sections { __typename sectionId title description totalCount products { __typename id branchId name description price currency availability score imageUrlBaja imageUrlMedia categoryId categoryName branch { __typename id name address tipos } } } sectionDiagnostics { __typename sectionId title status reason totalBeforeDedup totalAfterDedup } timestamp } }"#
       ))
 
     public var jwt: GraphQLNullable<String>
@@ -127,7 +127,8 @@ public extension LlegoAPI {
               .field("currency", String.self),
               .field("availability", Bool.self),
               .field("score", Double.self),
-              .field("imageUrl", String.self),
+              .field("imageUrlBaja", String.self),
+              .field("imageUrlMedia", String.self),
               .field("categoryId", String?.self),
               .field("categoryName", String?.self),
               .field("branch", Branch?.self),
@@ -144,8 +145,10 @@ public extension LlegoAPI {
             public var currency: String { __data["currency"] }
             public var availability: Bool { __data["availability"] }
             public var score: Double { __data["score"] }
-            /// Presigned URL for the product image
-            public var imageUrl: String { __data["imageUrl"] }
+            /// Presigned URL for the low quality product image (100x100)
+            public var imageUrlBaja: String { __data["imageUrlBaja"] }
+            /// Presigned URL for the medium quality product image (500x500)
+            public var imageUrlMedia: String { __data["imageUrlMedia"] }
             public var categoryId: String? { __data["categoryId"] }
             /// Product category name
             public var categoryName: String? { __data["categoryName"] }

@@ -23,7 +23,7 @@ query SearchBranches($query: String!, $first: Int! = 20, $after: String, $useVec
           name
           price
           currency
-          imageUrl
+          imageUrlBaja
           availability
         }
       }

@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetProductFeed"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetProductFeed($branchTipo: String, $radiusKm: Float, $jwt: String) { productCategories(branchType: $branchTipo) { __typename id name iconIos } branches(first: 15, radiusKm: $radiusKm, jwt: $jwt) { __typename edges { __typename node { __typename id businessId name avatarUrl coverUrl address distanceKm status } } } featuredProducts: products( first: 6 radiusKm: $radiusKm availableOnly: true jwt: $jwt ) { __typename edges { __typename node { __typename id name price currency imageUrl distanceKm branch { __typename id name avatarUrl } business { __typename name } } } } recentProducts: products( first: 10 radiusKm: $radiusKm availableOnly: true jwt: $jwt ) { __typename edges { __typename node { __typename id name price currency imageUrl distanceKm branch { __typename id name avatarUrl } business { __typename name } } } pageInfo { __typename hasNextPage endCursor } } popularProducts: products( first: 8 radiusKm: $radiusKm availableOnly: true jwt: $jwt ) { __typename edges { __typename node { __typename id name price currency imageUrl distanceKm branch { __typename id name avatarUrl } business { __typename name } } } } activeTutorials { __typename id title description videoUrl videoUrlSigned duration appTarget thumbnailUrl thumbnailUrlSigned order tags } }"#
+        #"query GetProductFeed($branchTipo: String, $radiusKm: Float, $jwt: String) { productCategories(branchType: $branchTipo) { __typename id name iconIos } branches(first: 15, radiusKm: $radiusKm, jwt: $jwt) { __typename edges { __typename node { __typename id businessId name avatarUrl coverUrl address distanceKm status } } } featuredProducts: products( first: 6 radiusKm: $radiusKm availableOnly: true jwt: $jwt ) { __typename edges { __typename node { __typename id name price currency imageUrlMedia distanceKm branch { __typename id name avatarUrl } business { __typename name } } } } recentProducts: products( first: 10 radiusKm: $radiusKm availableOnly: true jwt: $jwt ) { __typename edges { __typename node { __typename id name price currency imageUrlBaja distanceKm branch { __typename id name avatarUrl } business { __typename name } } } pageInfo { __typename hasNextPage endCursor } } popularProducts: products( first: 8 radiusKm: $radiusKm availableOnly: true jwt: $jwt ) { __typename edges { __typename node { __typename id name price currency imageUrlBaja distanceKm branch { __typename id name avatarUrl } business { __typename name } } } } activeTutorials { __typename id title description videoUrl videoUrlSigned duration appTarget thumbnailUrl thumbnailUrlSigned order tags } }"#
       ))
 
     public var branchTipo: GraphQLNullable<String>
@@ -228,7 +228,7 @@ public extension LlegoAPI {
               .field("name", String.self),
               .field("price", Double.self),
               .field("currency", String.self),
-              .field("imageUrl", String.self),
+              .field("imageUrlMedia", String.self),
               .field("distanceKm", Double?.self),
               .field("branch", Branch?.self),
               .field("business", Business?.self),
@@ -241,8 +241,8 @@ public extension LlegoAPI {
             public var name: String { __data["name"] }
             public var price: Double { __data["price"] }
             public var currency: String { __data["currency"] }
-            /// Presigned URL for the product image
-            public var imageUrl: String { __data["imageUrl"] }
+            /// Presigned URL for the medium quality product image (500x500)
+            public var imageUrlMedia: String { __data["imageUrlMedia"] }
             /// Distance in kilometers from user
             public var distanceKm: Double? { __data["distanceKm"] }
             /// Branch associated with this product
@@ -348,7 +348,7 @@ public extension LlegoAPI {
               .field("name", String.self),
               .field("price", Double.self),
               .field("currency", String.self),
-              .field("imageUrl", String.self),
+              .field("imageUrlBaja", String.self),
               .field("distanceKm", Double?.self),
               .field("branch", Branch?.self),
               .field("business", Business?.self),
@@ -361,8 +361,8 @@ public extension LlegoAPI {
             public var name: String { __data["name"] }
             public var price: Double { __data["price"] }
             public var currency: String { __data["currency"] }
-            /// Presigned URL for the product image
-            public var imageUrl: String { __data["imageUrl"] }
+            /// Presigned URL for the low quality product image (100x100)
+            public var imageUrlBaja: String { __data["imageUrlBaja"] }
             /// Distance in kilometers from user
             public var distanceKm: Double? { __data["distanceKm"] }
             /// Branch associated with this product
@@ -487,7 +487,7 @@ public extension LlegoAPI {
               .field("name", String.self),
               .field("price", Double.self),
               .field("currency", String.self),
-              .field("imageUrl", String.self),
+              .field("imageUrlBaja", String.self),
               .field("distanceKm", Double?.self),
               .field("branch", Branch?.self),
               .field("business", Business?.self),
@@ -500,8 +500,8 @@ public extension LlegoAPI {
             public var name: String { __data["name"] }
             public var price: Double { __data["price"] }
             public var currency: String { __data["currency"] }
-            /// Presigned URL for the product image
-            public var imageUrl: String { __data["imageUrl"] }
+            /// Presigned URL for the low quality product image (100x100)
+            public var imageUrlBaja: String { __data["imageUrlBaja"] }
             /// Distance in kilometers from user
             public var distanceKm: Double? { __data["distanceKm"] }
             /// Branch associated with this product

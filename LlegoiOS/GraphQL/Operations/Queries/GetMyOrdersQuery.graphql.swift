@@ -144,6 +144,7 @@ public extension LlegoAPI {
             public var productId: String { __data["productId"] }
             public var name: String { __data["name"] }
             public var quantity: Int { __data["quantity"] }
+            /// Presigned URL for the item image
             public var imageUrl: String? { __data["imageUrl"] }
           }
 

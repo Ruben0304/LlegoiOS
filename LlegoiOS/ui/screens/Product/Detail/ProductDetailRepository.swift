@@ -100,7 +100,7 @@ final class ProductDetailRepository: @unchecked Sendable {
                         convertedPrice: product.convertedPrice,
                         convertedCurrency: product.convertedCurrency,
                         exchangeRate: product.exchangeRate,
-                        imageUrl: product.imageUrl,
+                        imageUrl: product.imageUrlAlta,
                         availability: product.availability,
                         categoryId: product.categoryId,
                         createdAt: product.createdAt,
@@ -177,7 +177,7 @@ final class ProductDetailRepository: @unchecked Sendable {
                                             shopLogoUrl: node.business?.avatarUrl ?? "",
                                             weight: node.weight,
                                             price: "\(node.currency) \(node.price)",
-                                            imageUrl: node.imageUrl
+                                            imageUrl: node.imageUrlBaja
                                         )
                                     }
                                     continuation.resume(returning: mapped)

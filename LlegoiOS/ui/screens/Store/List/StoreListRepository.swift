@@ -66,7 +66,7 @@ class StoreListRepository {
                                 name: product.name,
                                 price: product.price,
                                 currency: product.currency,
-                                imageUrl: product.imageUrl
+                                imageUrl: product.imageUrlBaja
                             )
                         }
 
@@ -132,7 +132,7 @@ class StoreListRepository {
                                                 name: product.name,
                                                 price: product.price,
                                                 currency: product.currency,
-                                                imageUrl: product.imageUrl
+                                                imageUrl: product.imageUrlBaja
                                             )
                                         }
 
@@ -240,7 +240,7 @@ class StoreListRepository {
                             name: edge.node.name,
                             price: edge.node.price,
                             currency: edge.node.currency,
-                            imageUrl: edge.node.imageUrl,
+                            imageUrl: edge.node.imageUrlBaja,
                             availability: edge.node.availability,
                             createdAt: edge.node.createdAt,
                             businessName: edge.node.business?.name ?? "",
@@ -283,7 +283,7 @@ class StoreListRepository {
                                             name: edge.node.name,
                                             price: edge.node.price,
                                             currency: edge.node.currency,
-                                            imageUrl: edge.node.imageUrl,
+                                            imageUrl: edge.node.imageUrlBaja,
                                             availability: edge.node.availability,
                                             createdAt: edge.node.createdAt,
                                             businessName: edge.node.business?.name ?? "",
@@ -447,7 +447,7 @@ class StoreListRepository {
                                                 name: product.name,
                                                 price: product.price,
                                                 currency: product.currency,
-                                                imageUrl: product.imageUrl
+                                                imageUrl: product.imageUrlBaja
                                             )
                                         }
 
@@ -511,7 +511,7 @@ class StoreListRepository {
                                 name: product.name,
                                 price: product.price,
                                 currency: product.currency,
-                                imageUrl: product.imageUrl
+                                imageUrl: product.imageUrlBaja
                             )
                         }
 

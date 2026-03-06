@@ -93,7 +93,7 @@ public extension LlegoAPI {
         public var finalPrice: Double { __data["finalPrice"] }
         /// Amount saved with discount
         public var savings: Double { __data["savings"] }
-        /// Representative products for frontend composition (one per slot)
+        /// Representative products for frontend composition (max 4 products)
         public var representativeProducts: [RepresentativeProduct] { __data["representativeProducts"] }
         public var slots: [Slot] { __data["slots"] }
         /// Branch associated with this combo

@@ -73,7 +73,7 @@ class ProductListRepository {
                         name: edge.node.name,
                         price: edge.node.price,
                         currency: edge.node.currency,
-                        imageUrl: edge.node.imageUrl,
+                        imageUrl: edge.node.imageUrlBaja,
                         availability: edge.node.availability,
                         createdAt: edge.node.createdAt,
                         businessName: edge.node.business?.name ?? "Tienda",
@@ -123,7 +123,7 @@ class ProductListRepository {
                                         name: edge.node.name,
                                         price: edge.node.price,
                                         currency: edge.node.currency,
-                                        imageUrl: edge.node.imageUrl,
+                                        imageUrl: edge.node.imageUrlBaja,
                                         availability: edge.node.availability,
                                         createdAt: edge.node.createdAt,
                                         businessName: edge.node.business?.name ?? "Tienda",
@@ -308,7 +308,7 @@ class ProductListRepository {
                                         name: edge.node.name,
                                         price: edge.node.price,
                                         currency: edge.node.currency,
-                                        imageUrl: edge.node.imageUrl,
+                                        imageUrl: edge.node.imageUrlBaja,
                                         availability: edge.node.availability,
                                         createdAt: edge.node.createdAt,
                                         businessName: edge.node.business?.name ?? "Tienda",
@@ -372,7 +372,7 @@ class ProductListRepository {
                         name: edge.node.name,
                         price: edge.node.price,
                         currency: edge.node.currency,
-                        imageUrl: edge.node.imageUrl,
+                        imageUrl: edge.node.imageUrlBaja,
                         availability: edge.node.availability,
                         createdAt: edge.node.createdAt,
                         businessName: edge.node.business?.name ?? "Tienda",
@@ -509,6 +509,21 @@ struct ProductGraphQL: Identifiable, Sendable {
         self.distanceKm = distanceKm
         self.categoryId = categoryId
         self.categoryName = categoryName
+    }
+
+    /// Convenience initializer that accepts imageUrlBaja from GraphQL and maps to imageUrl
+    init(
+        id: String, branchId: String, name: String, price: Double, currency: String,
+        imageUrlBaja: String, availability: Bool, createdAt: String, businessName: String,
+        businessLogoUrl: String = "", distanceKm: Double?, categoryId: String?,
+        categoryName: String?
+    ) {
+        self.init(
+            id: id, branchId: branchId, name: name, price: price, currency: currency,
+            imageUrl: imageUrlBaja, availability: availability, createdAt: createdAt,
+            businessName: businessName, businessLogoUrl: businessLogoUrl, distanceKm: distanceKm,
+            categoryId: categoryId, categoryName: categoryName
+        )
     }
 
     var formattedPrice: String {

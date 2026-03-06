@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "SearchBoth"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query SearchBoth($query: String!, $firstProducts: Int! = 10, $firstBranches: Int! = 8, $useVectorSearch: Boolean, $jwt: String) { searchProducts( query: $query first: $firstProducts useVectorSearch: $useVectorSearch jwt: $jwt ) { __typename edges { __typename node { __typename id name price currency imageUrl business { __typename id name avatarUrl } } } } searchBranches( query: $query first: $firstBranches useVectorSearch: $useVectorSearch jwt: $jwt ) { __typename edges { __typename node { __typename id name avatarUrl coverUrl address coordinates { __typename type coordinates } deliveryRadius products(limit: 4, availableOnly: false) { __typename id name price currency imageUrl availability } } } } }"#
+        #"query SearchBoth($query: String!, $firstProducts: Int! = 10, $firstBranches: Int! = 8, $useVectorSearch: Boolean, $jwt: String) { searchProducts( query: $query first: $firstProducts useVectorSearch: $useVectorSearch jwt: $jwt ) { __typename edges { __typename node { __typename id name price currency imageUrlBaja business { __typename id name avatarUrl } } } } searchBranches( query: $query first: $firstBranches useVectorSearch: $useVectorSearch jwt: $jwt ) { __typename edges { __typename node { __typename id name avatarUrl coverUrl address coordinates { __typename type coordinates } deliveryRadius products(limit: 4, availableOnly: false) { __typename id name price currency imageUrlBaja availability } } } } }"#
       ))
 
     public var query: String
@@ -118,7 +118,7 @@ public extension LlegoAPI {
               .field("name", String.self),
               .field("price", Double.self),
               .field("currency", String.self),
-              .field("imageUrl", String.self),
+              .field("imageUrlBaja", String.self),
               .field("business", Business?.self),
             ] }
             @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
@@ -129,8 +129,8 @@ public extension LlegoAPI {
             public var name: String { __data["name"] }
             public var price: Double { __data["price"] }
             public var currency: String { __data["currency"] }
-            /// Presigned URL for the product image
-            public var imageUrl: String { __data["imageUrl"] }
+            /// Presigned URL for the low quality product image (100x100)
+            public var imageUrlBaja: String { __data["imageUrlBaja"] }
             /// Business associated with this product (through branch)
             public var business: Business? { __data["business"] }
 
@@ -270,7 +270,7 @@ public extension LlegoAPI {
                 .field("name", String.self),
                 .field("price", Double.self),
                 .field("currency", String.self),
-                .field("imageUrl", String.self),
+                .field("imageUrlBaja", String.self),
                 .field("availability", Bool.self),
               ] }
               @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
@@ -281,8 +281,8 @@ public extension LlegoAPI {
               public var name: String { __data["name"] }
               public var price: Double { __data["price"] }
               public var currency: String { __data["currency"] }
-              /// Presigned URL for the product image
-              public var imageUrl: String { __data["imageUrl"] }
+              /// Presigned URL for the low quality product image (100x100)
+              public var imageUrlBaja: String { __data["imageUrlBaja"] }
               public var availability: Bool { __data["availability"] }
             }
           }

@@ -42,7 +42,7 @@ query GetProductFeed(
         name
         price
         currency
-        imageUrl
+        imageUrlMedia
         distanceKm
         branch {
           id
@@ -55,7 +55,7 @@ query GetProductFeed(
       }
     }
   }
-  
+
   # Productos recientes (cards pequeños)
   recentProducts: products(
     first: 10
@@ -69,7 +69,7 @@ query GetProductFeed(
         name
         price
         currency
-        imageUrl
+        imageUrlBaja
         distanceKm
         branch {
           id
@@ -86,7 +86,7 @@ query GetProductFeed(
       endCursor
     }
   }
-  
+
   # Productos populares (otra sección)
   popularProducts: products(
     first: 8
@@ -100,7 +100,7 @@ query GetProductFeed(
         name
         price
         currency
-        imageUrl
+        imageUrlBaja
         distanceKm
         branch {
           id

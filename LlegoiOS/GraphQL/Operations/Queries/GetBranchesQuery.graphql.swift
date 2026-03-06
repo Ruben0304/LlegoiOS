@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetBranches"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetBranches($first: Int! = 20, $after: String, $businessId: String, $tipo: BranchTipo, $radiusKm: Float, $productCategoryId: String, $jwt: String, $productsLimit: Int = 2) { branches( first: $first after: $after businessId: $businessId tipo: $tipo radiusKm: $radiusKm productCategoryId: $productCategoryId jwt: $jwt ) { __typename edges { __typename node { __typename id businessId name address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius createdAt score distanceKm products(limit: $productsLimit, availableOnly: false) { __typename id name price currency imageUrl } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
+        #"query GetBranches($first: Int! = 20, $after: String, $businessId: String, $tipo: BranchTipo, $radiusKm: Float, $productCategoryId: String, $jwt: String, $productsLimit: Int = 2) { branches( first: $first after: $after businessId: $businessId tipo: $tipo radiusKm: $radiusKm productCategoryId: $productCategoryId jwt: $jwt ) { __typename edges { __typename node { __typename id businessId name address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius createdAt score distanceKm products(limit: $productsLimit, availableOnly: false) { __typename id name price currency imageUrlBaja } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
       ))
 
     public var first: Int32
@@ -201,7 +201,7 @@ public extension LlegoAPI {
                 .field("name", String.self),
                 .field("price", Double.self),
                 .field("currency", String.self),
-                .field("imageUrl", String.self),
+                .field("imageUrlBaja", String.self),
               ] }
               @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
                 GetBranchesQuery.Data.Branches.Edge.Node.Product.self
@@ -211,8 +211,8 @@ public extension LlegoAPI {
               public var name: String { __data["name"] }
               public var price: Double { __data["price"] }
               public var currency: String { __data["currency"] }
-              /// Presigned URL for the product image
-              public var imageUrl: String { __data["imageUrl"] }
+              /// Presigned URL for the low quality product image (100x100)
+              public var imageUrlBaja: String { __data["imageUrlBaja"] }
             }
           }
         }

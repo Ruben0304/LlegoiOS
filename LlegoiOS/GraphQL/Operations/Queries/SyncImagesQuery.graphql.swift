@@ -48,7 +48,7 @@ public extension LlegoAPI {
         SyncImagesQuery.Data.self
       ] }
 
-      /// Sincronizar imágenes con URLs para diferentes calidades (baja 100x100, original)
+      /// Sincronizar imágenes con URLs para diferentes calidades (100x100, 500x500, 1000x1000, original)
       public var syncImages: [SyncImage] { __data["syncImages"] }
 
       /// SyncImage

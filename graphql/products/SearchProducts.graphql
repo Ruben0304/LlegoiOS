@@ -9,7 +9,7 @@ query SearchProducts($query: String!, $first: Int! = 20, $after: String, $useVec
         weight
         price
         currency
-        imageUrl
+        imageUrlBaja
         availability
         createdAt
         distanceKm

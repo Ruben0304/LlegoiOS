@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetProducts"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetProducts($first: Int! = 20, $after: String, $branchId: String, $categoryId: String, $availableOnly: Boolean, $branchTipo: BranchTipo, $radiusKm: Float, $jwt: String) { products( first: $first after: $after branchId: $branchId categoryId: $categoryId availableOnly: $availableOnly branchTipo: $branchTipo radiusKm: $radiusKm jwt: $jwt ) { __typename edges { __typename node { __typename id branchId name price currency imageUrl availability createdAt distanceKm score categoryId categoryName category { __typename id branchType name iconIos iconWeb iconAndroid } business { __typename id name avatarUrl } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
+        #"query GetProducts($first: Int! = 20, $after: String, $branchId: String, $categoryId: String, $availableOnly: Boolean, $branchTipo: BranchTipo, $radiusKm: Float, $jwt: String) { products( first: $first after: $after branchId: $branchId categoryId: $categoryId availableOnly: $availableOnly branchTipo: $branchTipo radiusKm: $radiusKm jwt: $jwt ) { __typename edges { __typename node { __typename id branchId name price currency imageUrlBaja availability createdAt distanceKm score categoryId categoryName category { __typename id branchType name iconIos iconWeb iconAndroid } business { __typename id name avatarUrl } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
       ))
 
     public var first: Int32
@@ -131,7 +131,7 @@ public extension LlegoAPI {
               .field("name", String.self),
               .field("price", Double.self),
               .field("currency", String.self),
-              .field("imageUrl", String.self),
+              .field("imageUrlBaja", String.self),
               .field("availability", Bool.self),
               .field("createdAt", LlegoAPI.DateTime.self),
               .field("distanceKm", Double?.self),
@@ -150,8 +150,8 @@ public extension LlegoAPI {
             public var name: String { __data["name"] }
             public var price: Double { __data["price"] }
             public var currency: String { __data["currency"] }
-            /// Presigned URL for the product image
-            public var imageUrl: String { __data["imageUrl"] }
+            /// Presigned URL for the low quality product image (100x100)
+            public var imageUrlBaja: String { __data["imageUrlBaja"] }
             public var availability: Bool { __data["availability"] }
             public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
             /// Distance in kilometers from user

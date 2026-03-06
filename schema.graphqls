@@ -185,7 +185,7 @@ type Query {
   syncBusinessesWithBranches(jwt: String = null): [BusinessSyncType!]!
   "Sincronizar productos (todos los productos disponibles)"
   syncProducts(branchId: String = null, categoryId: String = null, availableOnly: Boolean! = false, jwt: String = null): [ProductSyncType!]!
-  "Sincronizar imágenes con URLs para diferentes calidades (baja 100x100, original)"
+  "Sincronizar imágenes con URLs para diferentes calidades (100x100, 500x500, 1000x1000, original)"
   syncImages(entityType: String = null, entityIds: [String!] = null, qualities: [ImageQuality!] = null, jwt: String = null): [ImageSyncType!]!
   "Saludo de ejemplo"
   hello(jwt: String = null): String!
@@ -335,6 +335,14 @@ type ProductType {
   createdAt: DateTime!
   "Presigned URL for the product image"
   imageUrl: String!
+  "Presigned URL for the low quality product image (100x100)"
+  imageUrlBaja: String!
+  "Presigned URL for the medium quality product image (500x500)"
+  imageUrlMedia: String!
+  "Presigned URL for the high quality product image (1000x1000)"
+  imageUrlAlta: String!
+  "Presigned URL for the original product image"
+  imageUrlOriginal: String!
   "Precio convertido a la otra moneda (si la sucursal acepta ambas)"
   convertedPrice: Float
   "Moneda del precio convertido"
@@ -544,6 +552,14 @@ type ScoredProductType {
   distanceM: Float
   "Presigned URL for the product image"
   imageUrl: String!
+  "Presigned URL for the low quality product image (100x100)"
+  imageUrlBaja: String!
+  "Presigned URL for the medium quality product image (500x500)"
+  imageUrlMedia: String!
+  "Presigned URL for the high quality product image (1000x1000)"
+  imageUrlAlta: String!
+  "Presigned URL for the original product image"
+  imageUrlOriginal: String!
   "Distance in kilometers from user"
   distanceKm: Float
   "Precio convertido a la otra moneda (si la sucursal acepta ambas)"
@@ -623,7 +639,7 @@ type ComboType {
   updatedAt: DateTime!
   "Presigned URL for combo image (optional)"
   imageUrl: String
-  "Representative products for frontend composition (one per slot)"
+  "Representative products for frontend composition (max 4 products)"
   representativeProducts: [ProductType!]!
   "Base price with default selections (before discount)"
   basePrice: Float!
@@ -882,9 +898,18 @@ type OrderItemType {
   basePrice: Float!
   finalPrice: Float!
   quantity: Int!
-  imageUrl: String
   requestDescription: String
   wasModifiedByStore: Boolean!
+  "Presigned URL for the item image"
+  imageUrl: String
+  "Presigned URL for the low quality item image (100x100)"
+  imageUrlBaja: String
+  "Presigned URL for the medium quality item image (500x500)"
+  imageUrlMedia: String
+  "Presigned URL for the high quality item image (1000x1000)"
+  imageUrlAlta: String
+  "Presigned URL for the original item image"
+  imageUrlOriginal: String
   "Line total (price * quantity)"
   lineTotal: Float!
 }
@@ -993,9 +1018,18 @@ type DashboardStatsType {
 type TopProductType {
   productId: String!
   name: String!
-  imageUrl: String!
   totalQuantity: Int!
   totalRevenue: Float!
+  "Presigned URL for the product image"
+  imageUrl: String!
+  "Presigned URL for the low quality product image (100x100)"
+  imageUrlBaja: String!
+  "Presigned URL for the medium quality product image (500x500)"
+  imageUrlMedia: String!
+  "Presigned URL for the high quality product image (1000x1000)"
+  imageUrlAlta: String!
+  "Presigned URL for the original product image"
+  imageUrlOriginal: String!
 }
 type BusinessTypeConfigType {
   id: String!
@@ -1292,6 +1326,14 @@ type FeedProductType {
   distanceM: Float
   "Presigned URL for the product image"
   imageUrl: String!
+  "Presigned URL for the low quality product image (100x100)"
+  imageUrlBaja: String!
+  "Presigned URL for the medium quality product image (500x500)"
+  imageUrlMedia: String!
+  "Presigned URL for the high quality product image (1000x1000)"
+  imageUrlAlta: String!
+  "Presigned URL for the original product image"
+  imageUrlOriginal: String!
   "Product category name"
   categoryName: String
   "Branch associated with this product"
@@ -1407,6 +1449,8 @@ type ImageSyncType {
 }
 type ImageUrlType {
   baja: String
+  media: String
+  alta: String
   original: String
 }
 type Mutation {
@@ -1683,6 +1727,8 @@ type Subscription {
   newBranchOrder(branchId: String!): OrderType!
   "Cambios en pedidos de una sucursal"
   branchOrderUpdated(branchId: String!): OrderType!
+  "Stream de seguimiento de pedido en tiempo real"
+  orderTrackingStream(orderId: String!, jwt: String = null): OrderTrackingStreamPayload!
   "Stream AI assistant responses in real-time with RAG support"
   aiChatStream(input: AiAssistantChatInput!, jwt: String = null): AiChatStreamChunk!
 }
@@ -1692,6 +1738,18 @@ type DeliveryLocationUpdateType {
   timestamp: DateTime!
   estimatedMinutesRemaining: Int
   distanceRemainingKm: Float
+}
+type OrderTrackingStreamPayload {
+  estimatedMinutes: Int
+  distanceKm: Float
+  deliveryPersonLocation: CoordinatesType
+  "Order summary"
+  order: OrderSummaryType!
+}
+type OrderSummaryType {
+  id: String!
+  status: OrderStatusEnum!
+  estimatedMinutesRemaining: Int
 }
 type AiChatStreamChunk {
   "Incremental text delta for this chunk"
@@ -1851,6 +1909,8 @@ enum AppTarget {
 }
 enum ImageQuality {
   BAJA
+  MEDIA
+  ALTA
   ORIGINAL
 }
 enum OrderItemTypeInput {

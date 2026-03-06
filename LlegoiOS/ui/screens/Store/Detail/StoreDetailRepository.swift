@@ -257,7 +257,7 @@ class StoreDetailRepository {
                             name: edge.node.name,
                             price: edge.node.price,
                             currency: edge.node.currency,
-                            imageUrl: edge.node.imageUrl,
+                            imageUrl: edge.node.imageUrlBaja,
                             availability: edge.node.availability,
                             createdAt: edge.node.createdAt
                         )
