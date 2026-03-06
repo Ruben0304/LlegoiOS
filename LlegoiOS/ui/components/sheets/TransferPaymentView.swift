@@ -738,6 +738,7 @@ struct TransferPaymentView: View {
         let userAvatarUrl = AuthManager.shared.currentUser?.avatarUrl
 
         OrderManager.shared.startOrder(
+            orderId: order.id,
             products: testProducts,
             totalAmount: order.total,
             currency: order.currency,

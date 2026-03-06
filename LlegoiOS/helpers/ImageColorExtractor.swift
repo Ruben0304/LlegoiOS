@@ -1,6 +1,8 @@
 import SwiftUI
 import UIKit
 import CoreGraphics
+import CoreImage
+import Metal
 
 // MARK: - Extracted Gradient Result
 struct ExtractedGradient: Sendable, Equatable {
@@ -38,9 +40,15 @@ final class ImageColorExtractor: @unchecked Sendable {
 
     private let cache = NSCache<NSString, CachedGradient>()
     private let processingQueue = DispatchQueue(label: "com.llego.colorextractor", qos: .userInitiated)
+    private let ciContext: CIContext?
 
     private init() {
         cache.countLimit = 100
+        if let device = MTLCreateSystemDefaultDevice() {
+            ciContext = CIContext(mtlDevice: device)
+        } else {
+            ciContext = nil
+        }
     }
 
     // MARK: - Cache wrapper (class for NSCache)
@@ -52,6 +60,16 @@ final class ImageColorExtractor: @unchecked Sendable {
     }
 
     // MARK: - Public API
+
+    /// Return a cached gradient if available, without doing any work
+    func cachedGradient(for key: String) -> ExtractedGradient? {
+        cache.object(forKey: key as NSString)?.gradient
+    }
+
+    /// Store a gradient result in cache
+    func cacheGradient(_ gradient: ExtractedGradient, for key: String) {
+        cache.setObject(CachedGradient(gradient), forKey: key as NSString)
+    }
 
     /// Extract dominant colors from UIImage synchronously
     func extractColors(from image: UIImage, colorCount: Int = 2) -> ExtractedGradient {
@@ -118,30 +136,80 @@ final class ImageColorExtractor: @unchecked Sendable {
     // MARK: - Core Algorithm
 
     private func extractDominantColors(from image: UIImage, count: Int) -> [Color] {
-        guard let cgImage = image.cgImage else {
-            return []
+        if let fastColors = extractDominantColorsCI(from: image) {
+            return fastColors.map { Color(uiColor: $0) }
+        }
+        return []
+    }
+
+    private func extractDominantColorsCI(from image: UIImage) -> [UIColor]? {
+        guard let ciContext else { return nil }
+
+        let ciImage: CIImage
+        if let cgImage = image.cgImage {
+            ciImage = CIImage(cgImage: cgImage)
+        } else {
+            return nil
         }
 
-        // Resize to small size for faster processing
-        let targetSize = CGSize(width: 50, height: 50)
-        let resizedImage = resizeImage(cgImage, to: targetSize)
+        let extent = ciImage.extent
+        guard extent.width > 2, extent.height > 2 else { return nil }
 
-        guard let pixelData = getPixelData(from: resizedImage) else {
-            return []
+        let rectA = CGRect(
+            x: extent.minX,
+            y: extent.midY,
+            width: extent.width * 0.55,
+            height: extent.height * 0.45
+        )
+        let rectB = CGRect(
+            x: extent.midX - (extent.width * 0.1),
+            y: extent.minY,
+            width: extent.width * 0.6,
+            height: extent.height * 0.55
+        )
+
+        guard let colorA = averageColor(in: ciImage, rect: rectA, context: ciContext),
+              let colorB = averageColor(in: ciImage, rect: rectB, context: ciContext) else {
+            return nil
         }
 
-        // Extract colors using k-means-like clustering
-        let colors = clusterColors(pixelData: pixelData, clusterCount: count)
-
-        // Sort by vibrancy/saturation to get most visually appealing colors first
-        let sortedColors = colors.sorted { color1, color2 in
-            let hsb1 = color1.hsb
-            let hsb2 = color2.hsb
-            // Prefer saturated and bright colors
-            return (hsb1.saturation * hsb1.brightness) > (hsb2.saturation * hsb2.brightness)
+        return [colorA, colorB].sorted {
+            let a = $0.hsb
+            let b = $1.hsb
+            return (a.saturation * a.brightness) > (b.saturation * b.brightness)
         }
+    }
 
-        return sortedColors.map { Color(uiColor: $0) }
+    private func averageColor(in image: CIImage, rect: CGRect, context: CIContext) -> UIColor? {
+        let cropRect = rect.intersection(image.extent)
+        guard !cropRect.isEmpty else { return nil }
+
+        let region = image.cropped(to: cropRect)
+        guard let filter = CIFilter(name: "CIAreaAverage") else { return nil }
+        filter.setValue(region, forKey: kCIInputImageKey)
+        filter.setValue(CIVector(cgRect: region.extent), forKey: kCIInputExtentKey)
+
+        guard let outputImage = filter.outputImage else { return nil }
+
+        var bitmap = [UInt8](repeating: 0, count: 4)
+        context.render(
+            outputImage,
+            toBitmap: &bitmap,
+            rowBytes: 4,
+            bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
+            format: .RGBA8,
+            colorSpace: CGColorSpaceCreateDeviceRGB()
+        )
+
+        let alpha = CGFloat(bitmap[3]) / 255.0
+        guard alpha > 0.05 else { return nil }
+
+        return UIColor(
+            red: CGFloat(bitmap[0]) / 255.0,
+            green: CGFloat(bitmap[1]) / 255.0,
+            blue: CGFloat(bitmap[2]) / 255.0,
+            alpha: 1.0
+        )
     }
 
     private func resizeImage(_ cgImage: CGImage, to size: CGSize) -> CGImage? {

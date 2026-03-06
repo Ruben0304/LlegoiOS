@@ -55,6 +55,11 @@ struct ComboDetailView: View {
             .fullScreenCover(isPresented: $showCart) {
                 CartView()
             }
+            .onReceive(NotificationCenter.default.publisher(for: .prepareOpenOrdersFromCart)) { _ in
+                // Si este detalle está presentado como fullScreen, cerrarlo para que
+                // MainAppView pueda presentar OrderListView.
+                dismiss()
+            }
         }
     }
 

@@ -1,4 +1,5 @@
 import AudioToolbox
+import CoreLocation
 import LocalAuthentication
 import StripePaymentSheet
 import SwiftUI
@@ -31,6 +32,7 @@ struct CartView: View {
     @State private var selectedPaymentMethod: PaymentMethod?
     @State private var showPaymentMethodPicker = false
     @State private var navigateToPlans = false
+    @State private var showOrdersFromCart = false
 
     // MARK: - Stripe PaymentSheet
     @State private var paymentSheet: PaymentSheet?
@@ -42,7 +44,6 @@ struct CartView: View {
     @State private var showPaymentLinkSheet = false
     @State private var showBankTransferSheet = false
     @State private var showOrderConfirmation = false
-    @State private var navigateToOrders = false
     @State private var showTransferSmsSheet = false
     @State private var pendingTransferPaymentMethodId: String?
     @State private var preInitiatedPaymentResult: InitiatePaymentResultModel?
@@ -143,6 +144,7 @@ struct CartView: View {
                                     VStack(spacing: 0) {
                                         CartItemCard(
                                             item: item,
+                                            selectedCurrency: selectedCurrency.rawValue,
                                             onIncrement: {
                                                 withAnimation(
                                                     .spring(response: 0.6, dampingFraction: 0.8)
@@ -293,6 +295,9 @@ struct CartView: View {
                                     preInitiatedPaymentResult = nil
                                     switch result {
                                     case .success:
+                                        if let createdOrder = viewModel.createdOrder {
+                                            startOrderTracking(for: createdOrder)
+                                        }
                                         viewModel.clearCart()
                                         showOrderConfirmation = true
                                     case .failure(let error):
@@ -323,6 +328,9 @@ struct CartView: View {
                         totalAmount: viewModel.formattedTotal,
                         onPaymentConfirmed: { _ in
                             showTransferSmsSheet = false
+                            if let createdOrder = viewModel.createdOrder {
+                                startOrderTracking(for: createdOrder)
+                            }
                             viewModel.clearCart()
                             showOrderConfirmation = true
                         },
@@ -403,26 +411,39 @@ struct CartView: View {
             .onAppear {
                 viewModel.loadCart()
                 ensureSelectedCurrencyIsValid()
+                viewModel.selectedCurrency = selectedCurrency.rawValue
+            }
+            .onChange(of: selectedCurrency) { _, newValue in
+                viewModel.selectedCurrency = newValue.rawValue
             }
             .onChange(of: viewModel.cartItems) { _, _ in
                 ensureSelectedCurrencyIsValid()
             }
             .fullScreenCover(isPresented: $showOrderConfirmation) {
-                NavigationStack {
-                    OrderConfirmationView(
-                        deliveryLocation: "Calle 23 #456, Vedado, La Habana",  //TODO: Usar ubicación real del usuario
-                        selectedPaymentMethod: selectedPaymentMethod?.name ?? "Método de Pago",
-                        onDismiss: {
-                            navigateToOrders = true
-                        }
-                    )
-                    .navigationDestination(isPresented: $navigateToOrders) {
-                        OrderListView()
+                OrderConfirmationView(
+                    deliveryLocation: "Calle 23 #456, Vedado, La Habana",  //TODO: Usar ubicación real del usuario
+                    selectedPaymentMethod: selectedPaymentMethod?.name ?? "Método de Pago",
+                    onDismiss: {
+                        showOrderConfirmation = false
+                        dismiss()
                     }
-                }
+                )
             }
             .navigationDestination(isPresented: $navigateToPlans) {
                 PlansAndPricingView()
+            }
+            .fullScreenCover(isPresented: $showOrdersFromCart) {
+                NavigationStack {
+                    OrderListView()
+                        .toolbar {
+                            ToolbarItem(placement: .navigationBarLeading) {
+                                Button(action: { showOrdersFromCart = false }) {
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 16, weight: .semibold))
+                                }
+                            }
+                        }
+                }
             }
         }
 
@@ -738,6 +759,7 @@ struct CartView: View {
                 switch result {
                 case .success(let order):
                     print("✅ Pedido creado: \(order.orderNumber)")
+                    self.startOrderTracking(for: order)
 
                     // Limpiar carrito
                     self.viewModel.clearCart()
@@ -753,6 +775,54 @@ struct CartView: View {
                 }
             }
         }
+    }
+
+    private func startOrderTracking(for order: CreatedOrder) {
+        if OrderManager.shared.currentOrder?.id == order.id {
+            return
+        }
+
+        let userLocationManager = UserLocationManager.shared
+        let deliveryCoordinate: CLLocationCoordinate2D
+        if let selectedAddress = viewModel.selectedAddress {
+            deliveryCoordinate = CLLocationCoordinate2D(
+                latitude: selectedAddress.latitude,
+                longitude: selectedAddress.longitude
+            )
+        } else if let userLocation = userLocationManager.userLocation {
+            deliveryCoordinate = userLocation
+        } else {
+            deliveryCoordinate = CLLocationCoordinate2D(latitude: 23.1136, longitude: -82.3666)
+        }
+
+        let restaurantCoordinate = CLLocationCoordinate2D(
+            latitude: deliveryCoordinate.latitude + 0.0025,
+            longitude: deliveryCoordinate.longitude - 0.0025
+        )
+
+        let products = order.items.map { item in
+            ActiveOrder.OrderProduct(
+                id: item.productId,
+                name: item.name,
+                imageUrl: item.imageUrl,
+                quantity: item.quantity,
+                price: item.price
+            )
+        }
+
+        OrderManager.shared.startRealtimeOrder(
+            orderId: order.id,
+            products: products,
+            totalAmount: order.total,
+            currency: order.currency,
+            deliveryLocation: order.deliveryStreet,
+            deliveryCoordinates: deliveryCoordinate,
+            restaurantLocation: order.branchName,
+            restaurantCoordinates: restaurantCoordinate,
+            paymentMethod: order.paymentMethod,
+            storeImageUrl: order.branchImageUrl,
+            userAvatarUrl: AuthManager.shared.currentUser?.avatarUrl
+        )
     }
 
     // MARK: - Generate Payment Link (LEGACY - NEEDS UPDATE)
@@ -1182,11 +1252,11 @@ struct CartView: View {
             }
             .padding(.horizontal, 18)
 
-            Button(action: { dismiss() }) {
+            Button(action: openMyOrdersFromCart) {
                 HStack(spacing: 8) {
-                    Image(systemName: "storefront")
+                    Image(systemName: "bag")
                         .font(.system(size: 14, weight: .semibold))
-                    Text("Explorar tiendas")
+                    Text("Ver mis pedidos")
                         .font(.system(size: 15, weight: .bold, design: .rounded))
                 }
                 .frame(height: 44)
@@ -1218,6 +1288,10 @@ struct CartView: View {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(Color.orange.opacity(0.12))
         )
+    }
+
+    private func openMyOrdersFromCart() {
+        showOrdersFromCart = true
     }
 
     private var bottomPaymentMethodAction: some View {
@@ -1655,6 +1729,7 @@ struct PaymentMethodPickerView: View {
 
 struct CartItemCard: View {
     let item: CartItem
+    let selectedCurrency: String
     let onIncrement: () -> Void
     let onDecrement: () -> Void
     let onRemove: () -> Void
@@ -1755,7 +1830,7 @@ struct CartItemCard: View {
                     }
                 } else {
                     HStack(spacing: 6) {
-                        Text(item.formattedPrice)
+                        Text(item.formattedPrice(for: selectedCurrency))
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.secondary)
 
@@ -1767,7 +1842,7 @@ struct CartItemCard: View {
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(.secondary)
 
-                        Text(item.formattedItemTotal)
+                        Text(item.formattedItemTotal(for: selectedCurrency))
                             .font(.system(size: 15, weight: .bold, design: .rounded))
                             .foregroundColor(.llegoPrimary)
                     }

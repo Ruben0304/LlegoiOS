@@ -151,38 +151,41 @@ struct ProductCard: View {
         .animation(.easeInOut(duration: 0.2), value: isPressed)
     }
 
+    @ViewBuilder
     private var imageSection: some View {
-        RoundedRectangle(cornerRadius: 20, style: .continuous)
+        let baseImageSection = RoundedRectangle(cornerRadius: 20, style: .continuous)
             .fill(Color.clear)
             .overlay(
                 CachedAsyncImage(
                     url: URL(string: product.imageUrl),
-                    cacheKey: "product_\(product.id)", // Cache key específica para productos
+                    cacheKey: "product_\(product.id)",
+                    displaySize: CGSize(width: 200, height: 150),
                     content: { image in
                         image
                             .resizable()
                             .scaledToFill()
                     },
                     placeholder: {
-                        ZStack {
-                            Color(red: 240/255, green: 242/255, blue: 246/255)
-                            ProgressView()
-                                .tint(.llegoPrimary)
-                        }
+                        AdaptiveShimmerView(cornerRadius: 20)
                     },
                     failure: {
-                        ZStack {
-                            Color(red: 240/255, green: 242/255, blue: 246/255)
-                            Image(systemName: "photo")
-                                .font(.system(size: 40))
-                                .foregroundColor(.gray.opacity(0.3))
-                        }
+                        AdaptiveShimmerView(cornerRadius: 20)
                     }
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             )
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             .frame(height: 150)
+
+        if #available(iOS 17.0, *) {
+            baseImageSection
+                .colorEffect(
+                    Shader(function: ShaderFunction(library: .default, name: "llegoImagePop"), arguments: []),
+                    isEnabled: true
+                )
+        } else {
+            baseImageSection
+        }
     }
 
     private var favoriteButton: some View {

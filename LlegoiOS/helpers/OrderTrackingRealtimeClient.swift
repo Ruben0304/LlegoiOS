@@ -126,11 +126,12 @@ actor OrderTrackingRealtimeClient {
 
 private extension OrderTrackingRealtimeClient {
     static let orderTrackingSubscription = """
-    subscription OrderTrackingStream($orderId: ID!, $jwt: String!) {
+    subscription OrderTrackingStream($orderId: String!, $jwt: String) {
       orderTrackingStream(orderId: $orderId, jwt: $jwt) {
         estimatedMinutes
         distanceKm
         deliveryPersonLocation {
+          type
           coordinates
         }
         order {
@@ -268,6 +269,7 @@ private struct OrderTrackingPayload: Decodable {
     }
 
     struct LocationNode: Decodable {
+        let type: String?
         let coordinates: [Double]?
     }
 

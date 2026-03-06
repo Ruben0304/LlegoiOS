@@ -101,7 +101,7 @@ struct StoreListView: View {
                 } else if viewMode == .list {
                     // MODO LISTADO: Lista de tiendas con productos o resultados de búsqueda
                     ScrollView {
-                        VStack(spacing: 24) {
+                        LazyVStack(spacing: 24) {
                             // Mostrar resultados de búsqueda si está buscando
                             if !searchText.isEmpty {
                                 if isSearchLoading {
@@ -812,6 +812,7 @@ private struct StoreListCard: View {
         CachedAsyncImage(
             url: URL(string: store.logoUrl),
             cacheKey: "store_logo_list_\(store.id)",
+            displaySize: CGSize(width: 48, height: 48),
             content: { image in
                 image
                     .resizable()
@@ -880,6 +881,7 @@ private struct FullScreenMapView: View {
                             CachedAsyncImage(
                                 url: URL(string: store.logoUrl),
                                 cacheKey: "store_logo_map_\(store.id)",
+                                displaySize: CGSize(width: 42, height: 42),
                                 content: { image in
                                     image
                                         .resizable()

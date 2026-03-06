@@ -35,22 +35,28 @@ struct RecentOrderCard: View {
     private var headerSection: some View {
         HStack(spacing: 12) {
             // Store Image
-            AsyncImage(url: URL(string: order.storeImageUrl ?? "")) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                case .failure, .empty:
-                    ZStack {
-                        gradientManager.currentAccentColor.opacity(0.1)
+            CachedAsyncImage(
+                url: ImageURLResolver.resolve(order.storeImageUrl),
+                cacheKey: order.id + "_store"
+            ) { image in
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } placeholder: {
+                ZStack {
+                    gradientManager.currentAccentColor.opacity(0.1)
 
-                        Image(systemName: "storefront")
-                            .font(.system(size: 20, weight: .medium))
-                            .foregroundColor(gradientManager.currentAccentColor)
-                    }
-                @unknown default:
-                    Color.gray.opacity(0.2)
+                    Image(systemName: "storefront")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundColor(gradientManager.currentAccentColor)
+                }
+            } failure: {
+                ZStack {
+                    gradientManager.currentAccentColor.opacity(0.1)
+
+                    Image(systemName: "storefront")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundColor(gradientManager.currentAccentColor)
                 }
             }
             .frame(width: 52, height: 52)
@@ -111,21 +117,26 @@ struct RecentOrderCard: View {
             HStack(spacing: -8) {
                 ForEach(Array(order.items.prefix(3).enumerated()), id: \.element.id) {
                     index, item in
-                    AsyncImage(url: URL(string: item.imageUrl ?? "")) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                        case .failure, .empty:
-                            ZStack {
-                                Color.gray.opacity(0.2)
-                                Image(systemName: "photo")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(.gray)
-                            }
-                        @unknown default:
+                    CachedAsyncImage(
+                        url: ImageURLResolver.resolve(item.imageUrl),
+                        cacheKey: "order_item_\(item.id)"
+                    ) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        ZStack {
                             Color.gray.opacity(0.2)
+                            Image(systemName: "photo")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.gray)
+                        }
+                    } failure: {
+                        ZStack {
+                            Color.gray.opacity(0.2)
+                            Image(systemName: "photo")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.gray)
                         }
                     }
                     .frame(width: 48, height: 48)

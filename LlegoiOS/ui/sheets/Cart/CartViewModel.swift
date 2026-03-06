@@ -20,6 +20,9 @@ class CartViewModel: ObservableObject {
     @Published var createdOrder: CreatedOrder?
     @Published var orderError: String?
 
+    // Moneda seleccionada en el toolbar (sincronizada desde CartView)
+    @Published var selectedCurrency: String = "CUP"
+
     // Payment Methods
     @Published var paymentMethods: [PaymentMethodModel] = []
     @Published var isLoadingPaymentMethods: Bool = false
@@ -138,7 +141,7 @@ class CartViewModel: ObservableObject {
     }
 
     var formattedSubtotal: String {
-        formatPrice(subtotal)
+        formatPrice(subtotal, currency: selectedCurrency)
     }
 
     var formattedDeliveryFee: String {
@@ -173,15 +176,15 @@ class CartViewModel: ObservableObject {
     }
 
     var formattedServiceFee: String {
-        formatPrice(serviceFee)
+        formatPrice(serviceFee, currency: selectedCurrency)
     }
 
     var formattedAdSavings: String {
-        formatPrice(adSavings)
+        formatPrice(adSavings, currency: selectedCurrency)
     }
 
     var formattedTotal: String {
-        formatPrice(total)
+        formatPrice(total, currency: selectedCurrency)
     }
 
     /// Total si viera los anuncios (para mostrar incentivo)
@@ -190,7 +193,7 @@ class CartViewModel: ObservableObject {
     }
 
     var formattedTotalWithDiscount: String {
-        formatPrice(totalWithDiscount)
+        formatPrice(totalWithDiscount, currency: selectedCurrency)
     }
 
     /// Ahorro potencial si ve los anuncios
@@ -199,7 +202,7 @@ class CartViewModel: ObservableObject {
     }
 
     var formattedPotentialSavings: String {
-        formatPrice(potentialSavings)
+        formatPrice(potentialSavings, currency: selectedCurrency)
     }
 
     /// Activar descuento por ver anuncios
@@ -1176,8 +1179,12 @@ class CartViewModel: ObservableObject {
         return productItems + showcaseItems
     }
 
-    private func formatPrice(_ price: Double) -> String {
+    func formatPrice(_ price: Double) -> String {
         return String(format: "$%.2f", price)
+    }
+
+    func formatPrice(_ price: Double, currency: String) -> String {
+        return String(format: "%.2f %@", price, currency.uppercased())
     }
 
     private func formatPriceWithCurrency(_ price: Double, currency: String) -> String {
@@ -1241,6 +1248,10 @@ struct CartItem: Identifiable, Hashable {
         "\(currencySymbol) \(String(format: "%.2f", finalUnitPrice))"
     }
 
+    func formattedPrice(for selectedCurrency: String) -> String {
+        "\(currencySymbol(for: selectedCurrency)) \(String(format: "%.2f", finalUnitPrice))"
+    }
+
     var formattedBasePrice: String {
         String(format: "$%.2f", basePrice)
     }
@@ -1251,6 +1262,10 @@ struct CartItem: Identifiable, Hashable {
 
     var formattedItemTotal: String {
         "\(currencySymbol) \(String(format: "%.2f", itemTotal))"
+    }
+
+    func formattedItemTotal(for selectedCurrency: String) -> String {
+        "\(currencySymbol(for: selectedCurrency)) \(String(format: "%.2f", itemTotal))"
     }
 
     var isShowcase: Bool {
@@ -1299,6 +1314,15 @@ struct CartItem: Identifiable, Hashable {
         default:
             return currency.uppercased()
         }
+    }
+
+    private func currencySymbol(for selectedCurrency: String) -> String {
+        if supportsUSD && !supportsCUP { return "USD" }
+        if supportsCUP && !supportsUSD { return "CUP" }
+        // BOTH: usar la moneda seleccionada en el toolbar
+        let code = selectedCurrency.uppercased()
+        if code == "USD" || code == "CUP" { return code }
+        return currency.uppercased()
     }
 
     private var canonicalCurrencyForDisplay: String {

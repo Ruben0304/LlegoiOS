@@ -127,9 +127,21 @@ struct OrderDetailView: View {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .top, spacing: 12) {
                     // Store image
-                    AsyncImage(url: URL(string: order.branchImageUrl ?? "")) { image in
-                        image.resizable().aspectRatio(contentMode: .fill)
+                    CachedAsyncImage(
+                        url: ImageURLResolver.resolve(order.branchImageUrl),
+                        cacheKey: order.branchId + "_branch"
+                    ) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
                     } placeholder: {
+                        ZStack {
+                            gradientManager.currentAccentColor.opacity(0.1)
+                            Image(systemName: "storefront")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundColor(gradientManager.currentAccentColor)
+                        }
+                    } failure: {
                         ZStack {
                             gradientManager.currentAccentColor.opacity(0.1)
                             Image(systemName: "storefront")
@@ -219,9 +231,21 @@ struct OrderDetailView: View {
 
     private func itemRow(_ item: OrderDetailItem) -> some View {
         HStack(spacing: 12) {
-            AsyncImage(url: URL(string: item.imageUrl ?? "")) { image in
-                image.resizable().aspectRatio(contentMode: .fill)
+            CachedAsyncImage(
+                url: ImageURLResolver.resolve(item.imageUrl),
+                cacheKey: "order_detail_item_\(item.productId)"
+            ) { image in
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
             } placeholder: {
+                ZStack {
+                    Color.gray.opacity(0.1)
+                    Image(systemName: "photo")
+                        .font(.system(size: 16))
+                        .foregroundColor(.gray)
+                }
+            } failure: {
                 ZStack {
                     Color.gray.opacity(0.1)
                     Image(systemName: "photo")

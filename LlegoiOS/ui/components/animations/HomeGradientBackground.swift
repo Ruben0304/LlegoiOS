@@ -75,9 +75,27 @@ struct HomeGradientBackground: View {
     }
 
     var body: some View {
+        if #available(iOS 17.0, *) {
+            gradientCore
+                .compositingGroup()
+                .layerEffect(
+                    Shader(function: ShaderFunction(library: .default, name: "llegoSoftBloom"), arguments: []),
+                    maxSampleOffset: CGSize(width: 1.2, height: 1.2),
+                    isEnabled: true
+                )
+                .colorEffect(
+                    Shader(function: ShaderFunction(library: .default, name: "llegoFilmGrain"), arguments: []),
+                    isEnabled: true
+                )
+        } else {
+            gradientCore
+        }
+    }
+
+    private var gradientCore: some View {
         let palette = colorPalette
 
-        ZStack {
+        return ZStack {
             // Base gradient - dynamic colors based on category
             RadialGradient(
                 gradient: Gradient(stops: [

@@ -10,6 +10,12 @@ class StoreMapViewModel: ObservableObject {
     
     private var hasLoaded: Bool = false
     private let repository = StoreListRepository()
+    private let branchTypeManager = BranchTypeManager.shared
+    private var cancellables = Set<AnyCancellable>()
+
+    init() {
+        setupBranchTypeObserver()
+    }
     
     func loadStores(isRefreshing: Bool = false) {
         if hasLoaded && !isRefreshing {
@@ -57,6 +63,15 @@ class StoreMapViewModel: ObservableObject {
                 }
             }
         }
+    }
+
+    private func setupBranchTypeObserver() {
+        branchTypeManager.$selectedType
+            .dropFirst()
+            .sink { [weak self] _ in
+                self?.loadStores(isRefreshing: true)
+            }
+            .store(in: &cancellables)
     }
     
     private func calculateETA(deliveryRadius: Double?) -> Int {

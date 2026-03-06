@@ -9,6 +9,7 @@ private enum StoreMapDisplayMode: String, CaseIterable {
 struct StoreMapView: View {
     @StateObject private var viewModel = StoreMapViewModel()
     @StateObject private var listViewModel = StoreListViewModel()
+    @ObservedObject private var gradientManager = GradientStateManager.shared
     @State private var selectedStore: StoreWithCoordinates? = nil
     @State private var navigationDestination: StoreMapDestination? = nil
     @State private var pendingDestination: StoreMapDestination? = nil
@@ -38,7 +39,7 @@ struct StoreMapView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .navigationTitle("Lugares")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
@@ -116,7 +117,7 @@ struct StoreMapView: View {
                         VStack(spacing: 0) {
                         ZStack {
                             Circle()
-                                .fill(Color.llegoPrimary)
+                                .fill(gradientManager.currentAccentColor)
                                 .frame(width: 50, height: 50)
 
                             CachedAsyncImage(
@@ -150,10 +151,10 @@ struct StoreMapView: View {
                                 }
                             )
                         }
-                        .shadow(color: Color.llegoPrimary.opacity(0.4), radius: 8, x: 0, y: 4)
+                        .shadow(color: gradientManager.currentAccentColor.opacity(0.4), radius: 8, x: 0, y: 4)
 
                         PinTriangle()
-                            .fill(Color.llegoPrimary)
+                            .fill(gradientManager.currentAccentColor)
                             .frame(width: 16, height: 12)
                             .offset(y: -1)
 
@@ -192,7 +193,7 @@ struct StoreMapView: View {
             } else {
                 ScrollView {
                     LazyVStack(spacing: 24) {
-                        ForEach(listViewModel.stores) { store in
+                        ForEach(listViewModel.stores, id: \.id) { store in
                             StoreProductsCard(
                                 store: store,
                                 products: listViewModel.products(for: store.id),

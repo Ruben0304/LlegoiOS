@@ -221,108 +221,103 @@ struct StoreDetailView: View {
                         VStack(spacing: 0) {
                             // Banner and Profile Section
                             ZStack(alignment: .bottomLeading) {
-                                // Banner Image
-                                AsyncImage(url: URL(string: store.bannerUrl)) { phase in
-                                    switch phase {
-                                    case .empty:
-                                        ZStack {
-                                            Color.gray.opacity(0.1)
-                                            CircularLoadingIndicator(color: .llegoPrimary, lineWidth: 5, size: 50, useHDR: true)
+                                // Cover photo: full width, fixed height, always cropped to fill
+                                GeometryReader { bannerGeo in
+                                    AsyncImage(url: URL(string: store.bannerUrl)) { phase in
+                                        switch phase {
+                                        case .empty:
+                                            Image("generic_cover")
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(width: bannerGeo.size.width, height: 260)
+                                                .clipped()
+                                                .overlay(
+                                                    CircularLoadingIndicator(color: .llegoPrimary, lineWidth: 5, size: 50, useHDR: true)
+                                                )
+                                        case .success(let image):
+                                            image
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(width: bannerGeo.size.width, height: 260)
+                                                .clipped()
+                                        case .failure:
+                                            Image("generic_cover")
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(width: bannerGeo.size.width, height: 260)
+                                                .clipped()
+                                        @unknown default:
+                                            Image("generic_cover")
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(width: bannerGeo.size.width, height: 260)
+                                                .clipped()
                                         }
-                                        .frame(width: geometry.size.width, height: 280)
-                                    case .success(let image):
-                                        image
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: geometry.size.width, height: 280)
-                                            .clipped()
-                                    case .failure:
-                                        Image("generic_cover")
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: geometry.size.width, height: 280)
-                                            .clipped()
-                                    @unknown default:
-                                        Image("generic_cover")
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: geometry.size.width, height: 280)
-                                            .clipped()
                                     }
                                 }
-                                .frame(width: geometry.size.width, height: 280)
+                                .frame(height: 260)
 
-                                // Gradient overlay for better contrast
                                 LinearGradient(
                                     colors: [Color.clear, Color.black.opacity(0.3)],
                                     startPoint: .top,
                                     endPoint: .bottom
                                 )
-                                .frame(width: geometry.size.width, height: 280)
+                                .frame(height: 260)
 
-                                // Profile Logo (overlapping)
-                                HStack(spacing: 16) {
-                                    AsyncImage(url: URL(string: store.logoUrl)) { phase in
-                                        switch phase {
-                                        case .empty:
-                                            ZStack {
-                                                Circle()
-                                                    .fill(Color.white)
-                                                CircularLoadingIndicator(color: .llegoPrimary, lineWidth: 4, size: 30, useHDR: true)
-                                            }
+                                AsyncImage(url: URL(string: store.logoUrl)) { phase in
+                                    switch phase {
+                                    case .empty:
+                                        ZStack {
+                                            Circle()
+                                                .fill(Color.white)
+                                            CircularLoadingIndicator(color: .llegoPrimary, lineWidth: 4, size: 30, useHDR: true)
+                                        }
+                                        .frame(width: 110, height: 110)
+                                        .overlay(
+                                            Circle()
+                                                .stroke(Color.white, lineWidth: 5)
+                                        )
+                                        .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
+                                    case .success(let image):
+                                        image
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
                                             .frame(width: 110, height: 110)
+                                            .clipShape(Circle())
                                             .overlay(
                                                 Circle()
                                                     .stroke(Color.white, lineWidth: 5)
                                             )
                                             .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
-                                        case .success(let image):
-                                            image
-                                                .resizable()
-                                                .aspectRatio(contentMode: .fill)
-                                                .frame(width: 110, height: 110)
-                                                .clipShape(Circle())
-                                                .overlay(
-                                                    Circle()
-                                                        .stroke(Color.white, lineWidth: 5)
-                                                )
-                                                .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
-                                        case .failure:
-                                            Image("generic_logo")
-                                                .resizable()
-                                                .aspectRatio(contentMode: .fill)
-                                                .frame(width: 110, height: 110)
-                                                .clipShape(Circle())
-                                                .overlay(
-                                                    Circle()
-                                                        .stroke(Color.white, lineWidth: 5)
-                                                )
-                                                .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
-                                        @unknown default:
-                                            Image("generic_logo")
-                                                .resizable()
-                                                .aspectRatio(contentMode: .fill)
-                                                .frame(width: 110, height: 110)
-                                                .clipShape(Circle())
-                                                .overlay(
-                                                    Circle()
-                                                        .stroke(Color.white, lineWidth: 5)
-                                                )
-                                                .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
-                                        }
+                                    case .failure:
+                                        Image("generic_logo")
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(width: 110, height: 110)
+                                            .clipShape(Circle())
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(Color.white, lineWidth: 5)
+                                            )
+                                            .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
+                                    @unknown default:
+                                        Image("generic_logo")
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(width: 110, height: 110)
+                                            .clipShape(Circle())
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(Color.white, lineWidth: 5)
+                                            )
+                                            .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
                                     }
-
-                                    Spacer()
                                 }
-                                .padding(.horizontal, 20)
-                                .padding(.bottom, -55)
+                                .padding(.leading, 20)
+                                .offset(y: 55)
                             }
-                            .frame(width: geometry.size.width)
-                            .padding(.bottom, 20)
-
-                            // Add space to show full profile logo + shadow
-                            Spacer()
-                                .frame(height: 65) // Space for logo (55) + reduced shadow (10)
+                            .frame(maxWidth: .infinity)
+                            .padding(.bottom, 75)
 
                             // Main Content
                             VStack(alignment: .leading, spacing: 20) {

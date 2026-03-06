@@ -15,9 +15,6 @@ struct StoreProductsCard: View {
 
     @State private var isFlipped = false
     @State private var flipDegrees: Double = 0
-    @State private var cardScale: CGFloat = 1.0
-    @State private var shadowOffset: CGFloat = 8
-    @State private var perspectiveTilt: Double = 0
 
     var body: some View {
         ZStack {
@@ -57,32 +54,7 @@ struct StoreProductsCard: View {
             )
             .opacity(isFlipped ? 0 : 1)
         }
-        // 3D Depth effect - Multiple layered shadows
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color.black.opacity(0.04))
-                .offset(x: 0, y: shadowOffset + 4)
-                .blur(radius: 20)
-        )
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color.black.opacity(0.08))
-                .offset(x: 0, y: shadowOffset + 2)
-                .blur(radius: 12)
-        )
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color.black.opacity(0.12))
-                .offset(x: 0, y: shadowOffset)
-                .blur(radius: 6)
-        )
-        .scaleEffect(cardScale)
-        // Subtle 3D tilt based on flip state
-        .rotation3DEffect(
-            .degrees(perspectiveTilt),
-            axis: (x: 1, y: 0, z: 0),
-            perspective: 0.5
-        )
+        .shadow(color: Color.black.opacity(0.14), radius: 12, x: 0, y: 8)
     }
 
     private func performFlip() {
@@ -91,23 +63,9 @@ struct StoreProductsCard: View {
         impactFeedback.prepare()
         impactFeedback.impactOccurred()
 
-        // Animate the flip with 3D depth effects
-        withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
-            cardScale = 0.95
-            shadowOffset = 4
-            perspectiveTilt = isFlipped ? 3 : -3
-        }
-
-        withAnimation(.spring(response: 0.7, dampingFraction: 0.75).delay(0.05)) {
+        withAnimation(.spring(response: 0.7, dampingFraction: 0.75)) {
             flipDegrees += 180
             isFlipped.toggle()
-        }
-
-        // Reset scale and shadow
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.7).delay(0.35)) {
-            cardScale = 1.0
-            shadowOffset = 8
-            perspectiveTilt = 0
         }
     }
 }
@@ -132,9 +90,9 @@ private struct StoreProductsCardFront: View {
         GridItem(.flexible(), spacing: 8),
         GridItem(.flexible(), spacing: 8)
     ]
-
+    
     var body: some View {
-        VStack(spacing: 0) {
+        let cardCore = VStack(spacing: 0) {
             // Header
             storeHeader
                 .padding(.horizontal, 12)
@@ -153,7 +111,10 @@ private struct StoreProductsCardFront: View {
         }
         .background(
             ZStack {
-                // Base gradient from store logo
+                // Keep a stable white base so the card is always readable.
+                Color.white
+
+                // Store gradient from extracted colors.
                 storeGradient.linearGradient
 
                 // Smooth dark overlay for header legibility
@@ -169,52 +130,14 @@ private struct StoreProductsCardFront: View {
                     endPoint: .bottom
                 )
 
-                // 3D lighting effect - top highlight
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(0.15),
-                        Color.white.opacity(0.05),
-                        Color.clear
-                    ],
-                    startPoint: .top,
-                    endPoint: .center
-                )
             }
         )
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
-            // 3D Edge lighting effect
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .strokeBorder(
-                    LinearGradient(
-                        stops: [
-                            .init(color: Color.white.opacity(0.4), location: 0),
-                            .init(color: Color.white.opacity(0.15), location: 0.3),
-                            .init(color: storeGradient.primaryColor.opacity(0.2), location: 0.5),
-                            .init(color: storeGradient.secondaryColor.opacity(0.3), location: 0.7),
-                            .init(color: Color.black.opacity(0.1), location: 1.0)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1.5
-                )
-        )
-        // Inner shadow for depth
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.black.opacity(0.1), lineWidth: 1)
-                .blur(radius: 1)
-                .offset(x: 0, y: 1)
-                .mask(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.black, Color.clear],
-                                startPoint: .bottom,
-                                endPoint: .top
-                            )
-                        )
+                    Color.white.opacity(0.16),
+                    lineWidth: 1
                 )
         )
 
@@ -225,6 +148,8 @@ private struct StoreProductsCardFront: View {
                 }
             }
         }
+
+        cardCore
     }
 
     // MARK: - Products Content
@@ -277,7 +202,7 @@ private struct StoreProductsCardFront: View {
             if let description = store.description {
                 Text(description)
                     .font(.system(size: 14, weight: .regular))
-                    .foregroundColor(.white.opacity(0.85))
+                    .foregroundColor(.primary.opacity(0.85))
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -288,15 +213,23 @@ private struct StoreProductsCardFront: View {
             HStack(spacing: 7) {
                 Text("Ver detalles")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(.black.opacity(0.78))
 
                 Image(systemName: "arrow.right")
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(.black.opacity(0.78))
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .glassEffect(.clear)
+            .background(
+                Capsule()
+                    .fill(Color.white.opacity(0.95))
+            )
+            .overlay(
+                Capsule()
+                    .stroke(Color.black.opacity(0.1), lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.06), radius: 4, x: 0, y: 2)
             .contentShape(Rectangle())
             .onTapGesture {
                 onStoreTap(storeGradient)
@@ -311,24 +244,15 @@ private struct StoreProductsCardFront: View {
             GradientAsyncImage(
                 url: URL(string: store.logoUrl),
                 cacheKey: "store_logo_\(store.id)",
+                displaySize: CGSize(width: 70, height: 70),
                 extractedGradient: $storeGradient,
                 fallbackGradient: .fromAsset(named: "generic_cover")
             ) { image, extractedGradient in
                 image
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .onAppear {
-                         if storeGradient != .placeholder {
-                             onGradientExtracted?(storeGradient)
-                         } else {
-                             // Retry extraction if needed
-                             // Trigger a state change to force re-evaluation if view recycles
-                         }
-                    }
                     .onChange(of: extractedGradient) { _, newGradient in
-                        withAnimation(.easeOut(duration: 0.5)) {
-                            onGradientExtracted?(newGradient)
-                        }
+                        onGradientExtracted?(newGradient)
                     }
             } placeholder: {
                 Image("generic_logo")
@@ -361,7 +285,7 @@ private struct StoreProductsCardFront: View {
                         lineWidth: 2
                     )
             )
-            .shadow(color: storeGradient.primaryColor.opacity(0.4), radius: 8, x: 0, y: 4) // Stronger shadow
+            .shadow(color: storeGradient.primaryColor.opacity(0.22), radius: 4, x: 0, y: 2)
             .id("logo_\(store.id)") // Force refresh when store changes
 
             // Info
@@ -483,7 +407,7 @@ private struct StoreProductsCardBack: View {
     let onFlipBack: () -> Void
 
     @State private var mapRegion: MKCoordinateRegion
-    @State private var isPulsing = false
+    @State private var showFullMap = false
 
     // Default Havana coordinates as fallback
     private static let defaultHavanaCoordinate = CLLocationCoordinate2D(
@@ -524,21 +448,38 @@ private struct StoreProductsCardBack: View {
             // Full screen map
             Map(position: mapPositionBinding) {
                 Annotation("", coordinate: effectiveCoordinate) {
-                    StoreMapPin(store: store, isPulsing: isPulsing)
+                    StoreMapPin(store: store)
                 }
             }
             .disabled(true)
+            // Tap anywhere on the map to open full screen
+            .contentShape(Rectangle())
+            .onTapGesture {
+                showFullMap = true
+            }
 
-            // Flip button floating on top
+            // Buttons floating on top
             VStack {
                 HStack {
+                    // Expand button
+                    Button(action: { showFullMap = true }) {
+                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                            .font(.system(size: 14, weight: .bold))
+                            .frame(width: 36, height: 36)
+                            .foregroundColor(.black)
+                    }
+                    .glassEffect(.regular.interactive())
+                    .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
+                    .buttonStyle(.borderless)
+
                     Spacer()
 
+                    // Flip back button
                     Button(action: onFlipBack) {
                         Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
                             .font(.system(size: 14, weight: .bold))
                             .frame(width: 36, height: 36)
-                            .foregroundColor(.white)
+                            .foregroundColor(.black)
                     }
                     .glassEffect(.regular.interactive())
                     .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
@@ -552,9 +493,9 @@ private struct StoreProductsCardBack: View {
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .onAppear {
             mapRegion.center = effectiveCoordinate
-            withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
-                isPulsing = true
-            }
+        }
+        .fullScreenCover(isPresented: $showFullMap) {
+            StoreFullMapView(store: store)
         }
     }
 
@@ -571,7 +512,6 @@ private struct StoreProductsCardBack: View {
 // MARK: - Store Map Pin (Same style as FullScreenMapView)
 private struct StoreMapPin: View {
     let store: StoreWithCoordinates
-    let isPulsing: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -581,15 +521,15 @@ private struct StoreMapPin: View {
                 Circle()
                     .fill(Color.llegoPrimary.opacity(0.2))
                     .frame(width: 70, height: 70)
-                    .scaleEffect(isPulsing ? 1.3 : 1.0)
-                    .opacity(isPulsing ? 0 : 0.6)
+                    .scaleEffect(1.0)
+                    .opacity(0.45)
 
                 // Inner pulse
                 Circle()
                     .fill(Color.llegoPrimary.opacity(0.3))
                     .frame(width: 60, height: 60)
-                    .scaleEffect(isPulsing ? 1.15 : 1.0)
-                    .opacity(isPulsing ? 0.2 : 0.5)
+                    .scaleEffect(1.0)
+                    .opacity(0.45)
 
                 // Pin head with logo
                 ZStack {
@@ -611,6 +551,7 @@ private struct StoreMapPin: View {
                     CachedAsyncImage(
                         url: URL(string: store.logoUrl),
                         cacheKey: "store_logo_pin_\(store.id)",
+                        displaySize: CGSize(width: 42, height: 42),
                         content: { image in
                             image
                                 .resizable()
@@ -691,32 +632,9 @@ struct ProductFullCoverCard: View {
                 Color.white
 
                 // Product Image - Full Cover with Cache
-                CachedAsyncImage(
-                    url: URL(string: product.imageUrl),
-                    cacheKey: "shop_product_\(product.id)", // Cache key específica para productos de tienda
-                    content: { image in
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    },
-                    placeholder: {
-                        ZStack {
-                            Color.gray.opacity(0.1)
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .llegoPrimary))
-                                .scaleEffect(1.2)
-                        }
-                    },
-                    failure: {
-                        Image("generic_logo")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: 40, height: 40)
-                            .opacity(0.4)
-                    }
-                )
-                .frame(height: 140)
-                .clipped()
+                productImage
+                    .frame(height: 140)
+                    .clipped()
 
                 // Gradient overlay for text readability
                 LinearGradient(
@@ -766,9 +684,100 @@ struct ProductFullCoverCard: View {
             }
             .frame(height: 140)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
+            .shadow(color: Color.black.opacity(0.12), radius: 4, x: 0, y: 2)
         }
         .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var productImage: some View {
+        let imageView = CachedAsyncImage(
+                    url: URL(string: product.imageUrl),
+                    cacheKey: "shop_product_\(product.id)",
+                    displaySize: CGSize(width: 160, height: 140),
+                    content: { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    },
+                    placeholder: {
+                        AdaptiveShimmerView(cornerRadius: 12)
+                    },
+                    failure: {
+                        AdaptiveShimmerView(cornerRadius: 12)
+                    }
+                )
+
+        imageView
+    }
+}
+
+// MARK: - Full Screen Map View
+private struct StoreFullMapView: View {
+    let store: StoreWithCoordinates
+    @Environment(\.dismiss) private var dismiss
+
+    private static let defaultHavanaCoordinate = CLLocationCoordinate2D(
+        latitude: 23.1136,
+        longitude: -82.3666
+    )
+
+    private var effectiveCoordinate: CLLocationCoordinate2D {
+        let c = store.coordinate
+        guard c.latitude != 0 && c.longitude != 0 &&
+              c.latitude >= -90 && c.latitude <= 90 &&
+              c.longitude >= -180 && c.longitude <= 180
+        else { return Self.defaultHavanaCoordinate }
+        return c
+    }
+
+    @State private var position: MapCameraPosition = .automatic
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            Map(position: $position) {
+                Annotation("", coordinate: effectiveCoordinate) {
+                    StoreMapPin(store: store)
+                }
+            }
+            .ignoresSafeArea()
+            .onAppear {
+                position = .region(MKCoordinateRegion(
+                    center: effectiveCoordinate,
+                    span: MKCoordinateSpan(latitudeDelta: 0.004, longitudeDelta: 0.004)
+                ))
+            }
+
+            // Store name label at the top
+            VStack(spacing: 0) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(store.name)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.primary)
+                        if let address = store.address, !address.isEmpty {
+                            Text(address)
+                                .font(.system(size: 13))
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    Spacer()
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .bold))
+                            .frame(width: 36, height: 36)
+                            .foregroundColor(.primary)
+                    }
+                    .glassEffect(.regular.interactive())
+                    .buttonStyle(.borderless)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(.ultraThinMaterial)
+                Spacer()
+            }
+        }
     }
 }
 

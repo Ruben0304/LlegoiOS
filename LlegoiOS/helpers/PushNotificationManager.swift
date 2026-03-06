@@ -15,9 +15,13 @@ final class PushNotificationManager: NSObject, ObservableObject {
     @Published private(set) var permissionStatus: UNAuthorizationStatus = .notDetermined
     
     private let apolloClient = ApolloClientManager.shared.apollo
+    private let tokenStorageKey = "deviceToken"
+    private var cancellables = Set<AnyCancellable>()
     
     private override init() {
         super.init()
+        observeAuthChanges()
+        loadStoredToken()
     }
     
     // MARK: - Public Methods
@@ -48,6 +52,7 @@ final class PushNotificationManager: NSObject, ObservableObject {
     func registerDeviceToken(_ tokenData: Data) {
         let token = tokenData.map { String(format: "%02.2hhx", $0) }.joined()
         self.deviceToken = token
+        UserDefaults.standard.set(token, forKey: tokenStorageKey)
         
         print("📱 Device Token: \(token)")
         
@@ -57,12 +62,19 @@ final class PushNotificationManager: NSObject, ObservableObject {
     
     /// Procesa una notificación recibida
     func handleNotification(userInfo: [AnyHashable: Any]) {
-        guard let data = userInfo["data"] as? [String: Any],
-              let type = data["type"] as? String else {
+        let payload = parseNotificationPayload(from: userInfo)
+        guard let type = payload.type else {
             return
         }
         
         switch type {
+        case "order_status_update":
+            guard let orderId = payload.orderId else { return }
+            NotificationCenter.default.post(name: .openOrderFromPush, object: orderId)
+
+        case "new_order":
+            NotificationCenter.default.post(name: .openOrdersFromCheckout, object: nil)
+
         case "NEW_BUSINESS_TYPE":
             // Nuevo tipo de negocio disponible - sincronizar
             Task {
@@ -78,6 +90,37 @@ final class PushNotificationManager: NSObject, ObservableObject {
     
     private func registerForRemoteNotifications() {
         UIApplication.shared.registerForRemoteNotifications()
+    }
+
+    private func observeAuthChanges() {
+        AuthManager.shared.$isAuthenticated
+            .removeDuplicates()
+            .sink { [weak self] isAuthenticated in
+                guard isAuthenticated else { return }
+                self?.registerStoredTokenIfNeeded()
+            }
+            .store(in: &cancellables)
+    }
+
+    private func loadStoredToken() {
+        if let token = UserDefaults.standard.string(forKey: tokenStorageKey), !token.isEmpty {
+            deviceToken = token
+        }
+    }
+
+    private func registerStoredTokenIfNeeded() {
+        guard let token = deviceToken, !token.isEmpty else { return }
+        sendTokenToBackend(token)
+    }
+
+    private func parseNotificationPayload(from userInfo: [AnyHashable: Any]) -> (type: String?, orderId: String?) {
+        let dataPayload = userInfo["data"] as? [String: Any]
+        let type = (dataPayload?["type"] as? String) ?? (userInfo["type"] as? String)
+        let orderId = (dataPayload?["orderId"] as? String)
+            ?? (dataPayload?["order_id"] as? String)
+            ?? (userInfo["orderId"] as? String)
+            ?? (userInfo["order_id"] as? String)
+        return (type, orderId)
     }
     
     private func sendTokenToBackend(_ token: String) {

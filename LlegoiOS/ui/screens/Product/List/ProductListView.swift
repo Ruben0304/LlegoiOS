@@ -7,7 +7,7 @@ extension String: @retroactive Identifiable {
 struct ProductListView: View {
     @ObservedObject var viewModel: ProductListViewModel
     @StateObject private var favoritesManager = FavoritesManager.shared
-    @StateObject private var cartManager = CartManager.shared
+    @ObservedObject private var cartManager = CartManager.shared
     @StateObject private var gradientManager = GradientStateManager.shared
     @State private var productCounts: [String: Int] = [:]
     @State private var showFiltersSheet = false
@@ -191,6 +191,7 @@ struct ProductListView: View {
                                 .foregroundColor(gradientManager.currentAccentColor)
                         }
                         .badge(favoritesManager.favoriteItemCount)
+                        .id("favorites-toolbar-badge-\(favoritesManager.favoriteItemCount)")
                         .accessibilityLabel("Favoritos")
                     }
 
@@ -206,6 +207,7 @@ struct ProductListView: View {
                                 .foregroundColor(gradientManager.currentAccentColor)
                         }
                         .badge(cartManager.cartItemCount)
+                        .id("cart-toolbar-badge-\(cartManager.cartItemCount)")
                         .accessibilityLabel("Carrito")
                     }
                 }
@@ -221,6 +223,7 @@ struct ProductListView: View {
                                 .foregroundColor(.llegoPrimary)
                         }
                         .badge(favoritesManager.favoriteItemCount)
+                        .id("favorites-toolbar-badge-\(favoritesManager.favoriteItemCount)")
                         .accessibilityLabel("Favoritos")
                     }
                 }

@@ -77,12 +77,12 @@ struct MainAppView: View {
     @ObservedObject private var branchTypeManager = BranchTypeManager.shared
     @ObservedObject private var appUpdateViewModel = AppUpdateViewModel.shared
     @State private var searchText = ""
-    @State private var showTrackingView = false
-    @State private var showTrackingFullScreen = false
+    @State private var selectedOrderId = ""
+    @State private var showOrdersFromCheckout = false
 
     // Determinar si hay un pedido activo
     private var hasActiveOrder: Bool {
-        orderManager.currentOrder?.paymentCompleted == true && orderManager.orderStatus != .idle
+        orderManager.currentOrder != nil && orderManager.orderStatus != .idle
             && orderManager.orderStatus != .cancelled && orderManager.orderStatus != .delivered
     }
 
@@ -115,7 +115,7 @@ struct MainAppView: View {
                         hasActiveOrder: hasActiveOrder,
                         orderManager: orderManager
                     ) {
-                        showTrackingFullScreen = true
+                        selectedOrderId = orderManager.currentOrder?.id ?? ""
                     }
                     // .searchToolbarBehavior(.minimize)
                     .tabBarMinimizeBehavior(.onScrollDown)
@@ -179,16 +179,43 @@ struct MainAppView: View {
         }
         .animation(.easeInOut(duration: 0.3), value: userLocationManager.hasLocation)
         .animation(.easeInOut(duration: 0.3), value: appUpdateViewModel.showUpdateAlert)
-        .fullScreenCover(isPresented: $showTrackingFullScreen) {
-            if #available(iOS 26.0, *) {
-                NavigationStack {
-                    LiveOrderTrackingView(orderManager: orderManager)
+        .fullScreenCover(isPresented: Binding(
+            get: { !selectedOrderId.isEmpty },
+            set: { if !$0 { selectedOrderId = "" } }
+        )) {
+            NavigationStack {
+                OrderDetailView(orderId: selectedOrderId)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            CloseButton {
+                                selectedOrderId = ""
+                            }
+                        }
                 }
             }
         }
+        .fullScreenCover(isPresented: $showOrdersFromCheckout) {
+            NavigationStack {
+                OrderListView()
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            CloseButton {
+                                showOrdersFromCheckout = false
+                            }
+                        }
+                    }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openOrdersFromCheckout)) { _ in
+            showOrdersFromCheckout = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openOrderFromPush)) { notification in
+            guard let orderId = notification.object as? String, !orderId.isEmpty else { return }
+            selectedOrderId = orderId
+        }
         .onChange(of: hasActiveOrder) { _, isActive in
             if !isActive {
-                showTrackingFullScreen = false
+                selectedOrderId = ""
             }
         }
         .onAppear {
@@ -210,12 +237,37 @@ extension View {
         orderManager: OrderManager,
         onTap: @escaping () -> Void
     ) -> some View {
-        if hasActiveOrder {
+        let showOrderStatusCard = orderManager.orderStatus == .pending
+            || orderManager.orderStatus == .confirmed
+            || orderManager.orderStatus == .preparing
+
+        if #available(iOS 26.1, *) {
+            self.tabViewBottomAccessory(isEnabled: hasActiveOrder) {
+                if showOrderStatusCard {
+                    OrderPendingAccessoryCard(
+                        orderManager: orderManager,
+                        onTap: onTap
+                    )
+                } else {
+                    OrderTrackingCard(
+                        orderManager: orderManager,
+                        onTap: onTap
+                    )
+                }
+            }
+        } else if hasActiveOrder {
             self.tabViewBottomAccessory {
-                OrderTrackingCard(
-                    orderManager: orderManager,
-                    onTap: onTap
-                )
+                if showOrderStatusCard {
+                    OrderPendingAccessoryCard(
+                        orderManager: orderManager,
+                        onTap: onTap
+                    )
+                } else {
+                    OrderTrackingCard(
+                        orderManager: orderManager,
+                        onTap: onTap
+                    )
+                }
             }
         } else {
             self

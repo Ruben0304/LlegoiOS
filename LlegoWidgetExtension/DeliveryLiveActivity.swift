@@ -13,32 +13,67 @@ struct DeliveryLiveActivity: Widget {
                 // MARK: - Expanded Dynamic Island
 
                 DynamicIslandExpandedRegion(.leading) {
-                    HStack(spacing: 6) {
-                        appLogoView(size: 18)
-                        Text(headlineStatusText(context))
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
-                            .lineLimit(1)
-                            .foregroundStyle(.white)
+                    if isStatusPhase(context) {
+                        HStack(spacing: 6) {
+                            activityAvatar(
+                                imageData: context.attributes.storeImageData,
+                                imageURL: context.attributes.storeImageUrl,
+                                placeholderSystemName: "storefront.fill",
+                                size: 18,
+                                foreground: Color(red: 124 / 255, green: 65 / 255, blue: 43 / 255)
+                            )
+                            Text("Pedido")
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .lineLimit(1)
+                                .foregroundStyle(.white)
+                        }
+                    } else {
+                        HStack(spacing: 6) {
+                            activityAvatar(
+                                imageData: context.attributes.storeImageData,
+                                imageURL: context.attributes.storeImageUrl,
+                                placeholderSystemName: "storefront.fill",
+                                size: 18,
+                                foreground: Color(red: 124 / 255, green: 65 / 255, blue: 43 / 255)
+                            )
+                            Text(headlineStatusText(context))
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                .lineLimit(1)
+                                .foregroundStyle(.white)
+                        }
                     }
                 }
 
                 DynamicIslandExpandedRegion(.trailing) {
-                    VStack(alignment: .trailing, spacing: 2) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "location.fill")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(
-                                    Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255))
+                    if isStatusPhase(context) {
+                        Text(context.state.statusDisplayText)
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .lineLimit(1)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
+                            .background(
+                                Capsule()
+                                    .fill(statusColor(context).opacity(0.28))
+                            )
+                            .foregroundStyle(statusColor(context))
+                    } else {
+                        VStack(alignment: .trailing, spacing: 2) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "location.fill")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundStyle(
+                                        Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255))
 
-                            Text(context.state.remainingDistance)
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
-                                .foregroundStyle(.white)
-                        }
+                                Text(context.state.remainingDistance)
+                                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.white)
+                            }
 
-                        if context.state.estimatedMinutes > 0 {
-                            Text("~\(context.state.estimatedMinutes) min")
-                                .font(.system(size: 11, weight: .medium, design: .rounded))
-                                .foregroundStyle(.secondary)
+                            if context.state.estimatedMinutes > 0 {
+                                Text("~\(context.state.estimatedMinutes) min")
+                                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
                 }
@@ -48,93 +83,106 @@ struct DeliveryLiveActivity: Widget {
                 }
 
                 DynamicIslandExpandedRegion(.bottom) {
-                    VStack(spacing: 8) {
-                        // Progress bar with icons
-                        HStack(spacing: 0) {
-                            // Store icon
-                            activityAvatar(
-                                imageData: context.attributes.storeImageData,
-                                imageURL: context.attributes.storeImageUrl,
-                                placeholderSystemName: "storefront.fill",
-                                size: 20,
-                                foreground: Color(red: 124 / 255, green: 65 / 255, blue: 43 / 255)
-                            )
-                            .frame(width: 20)
+                    if isStatusPhase(context) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "clock.fill")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(statusColor(context))
+                            Text(context.state.statusDisplayText)
+                                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.white)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.top, 4)
+                    } else {
+                        VStack(spacing: 8) {
+                            // Progress bar with icons
+                            HStack(spacing: 0) {
+                                // Store icon
+                                activityAvatar(
+                                    imageData: context.attributes.storeImageData,
+                                    imageURL: context.attributes.storeImageUrl,
+                                    placeholderSystemName: "storefront.fill",
+                                    size: 20,
+                                    foreground: Color(red: 124 / 255, green: 65 / 255, blue: 43 / 255)
+                                )
+                                .frame(width: 20)
 
-                            // Progress track
-                            GeometryReader { geometry in
-                                ZStack(alignment: .leading) {
-                                    // Background track
-                                    Capsule()
-                                        .fill(.white.opacity(0.15))
-                                        .frame(height: 3)
+                                // Progress track
+                                GeometryReader { geometry in
+                                    ZStack(alignment: .leading) {
+                                        // Background track
+                                        Capsule()
+                                            .fill(.white.opacity(0.15))
+                                            .frame(height: 3)
 
-                                    // Filled progress
-                                    Capsule()
-                                        .fill(
-                                            LinearGradient(
-                                                colors: [
-                                                    Color(
-                                                        red: 2 / 255, green: 49 / 255,
-                                                        blue: 51 / 255),
-                                                    Color(
-                                                        red: 178 / 255, green: 214 / 255,
-                                                        blue: 154 / 255),
-                                                ],
-                                                startPoint: .leading,
-                                                endPoint: .trailing
-                                            )
-                                        )
-                                        .frame(
-                                            width: geometry.size.width
-                                                * CGFloat(context.state.progressValue),
-                                            height: 3
-                                        )
-
-                                    // Bicycle indicator
-                                    Image(systemName: "bicycle")
-                                        .font(.system(size: 14, weight: .bold))
-                                        .foregroundStyle(
-                                            Color(
-                                                red: 178 / 255, green: 214 / 255,
-                                                blue: 154 / 255)
-                                        )
-                                        .offset(
-                                            x: max(
-                                                0,
-                                                min(
-                                                    geometry.size.width
-                                                        * CGFloat(
-                                                            context.state.progressValue) - 7,
-                                                    geometry.size.width - 14
+                                        // Filled progress
+                                        Capsule()
+                                            .fill(
+                                                LinearGradient(
+                                                    colors: [
+                                                        Color(
+                                                            red: 2 / 255, green: 49 / 255,
+                                                            blue: 51 / 255),
+                                                        Color(
+                                                            red: 178 / 255, green: 214 / 255,
+                                                            blue: 154 / 255),
+                                                    ],
+                                                    startPoint: .leading,
+                                                    endPoint: .trailing
                                                 )
                                             )
-                                        )
+                                            .frame(
+                                                width: geometry.size.width
+                                                    * CGFloat(context.state.progressValue),
+                                                height: 3
+                                            )
+
+                                        // Bicycle indicator
+                                        Image(systemName: "bicycle")
+                                            .font(.system(size: 14, weight: .bold))
+                                            .foregroundStyle(
+                                                Color(
+                                                    red: 178 / 255, green: 214 / 255,
+                                                    blue: 154 / 255)
+                                            )
+                                            .offset(
+                                                x: max(
+                                                    0,
+                                                    min(
+                                                        geometry.size.width
+                                                            * CGFloat(
+                                                                context.state.progressValue) - 7,
+                                                        geometry.size.width - 14
+                                                    )
+                                                )
+                                            )
+                                    }
+                                    .frame(height: 18)
                                 }
                                 .frame(height: 18)
+                                .padding(.horizontal, 6)
+
+                                // House icon
+                                activityAvatar(
+                                    imageData: context.attributes.userAvatarData,
+                                    imageURL: context.attributes.userAvatarUrl,
+                                    placeholderSystemName: "house.fill",
+                                    size: 20,
+                                    foreground: context.state.progressValue >= 1.0
+                                        ? Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255)
+                                        : .gray
+                                )
+                                .frame(width: 20)
                             }
-                            .frame(height: 18)
-                            .padding(.horizontal, 6)
 
-                            // House icon
-                            activityAvatar(
-                                imageData: context.attributes.userAvatarData,
-                                imageURL: context.attributes.userAvatarUrl,
-                                placeholderSystemName: "house.fill",
-                                size: 20,
-                                foreground: context.state.progressValue >= 1.0
-                                    ? Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255)
-                                    : .gray
-                            )
-                            .frame(width: 20)
+                            // Status text
+                            Text(context.state.statusDisplayText)
+                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .foregroundStyle(.secondary)
                         }
-
-                        // Status text
-                        Text(context.state.statusDisplayText)
-                            .font(.system(size: 12, weight: .medium, design: .rounded))
-                            .foregroundStyle(.secondary)
+                        .padding(.top, 4)
                     }
-                    .padding(.top, 4)
                 }
             } compactLeading: {
                 // MARK: - Compact Leading
@@ -147,22 +195,29 @@ struct DeliveryLiveActivity: Widget {
                         foreground: Color(red: 124 / 255, green: 65 / 255, blue: 43 / 255)
                     )
 
-                    Image(systemName: "bicycle")
+                    Image(systemName: isStatusPhase(context) ? "clock.fill" : "bicycle")
                         .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255))
+                        .foregroundStyle(isStatusPhase(context) ? statusColor(context) : Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255))
                         .symbolEffect(.pulse)
                 }
             } compactTrailing: {
                 // MARK: - Compact Trailing
-                Text(context.state.remainingDistance)
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                    .foregroundStyle(Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255))
-                    .minimumScaleFactor(0.7)
+                if isStatusPhase(context) {
+                    Text(compactStatusText(context))
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .foregroundStyle(statusColor(context))
+                        .minimumScaleFactor(0.7)
+                } else {
+                    Text(context.state.remainingDistance)
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255))
+                        .minimumScaleFactor(0.7)
+                }
             } minimal: {
                 // MARK: - Minimal (when multiple activities)
-                Image(systemName: "bicycle")
+                Image(systemName: isStatusPhase(context) ? "clock.fill" : "bicycle")
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255))
+                    .foregroundStyle(isStatusPhase(context) ? statusColor(context) : Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255))
             }
         }
     }
@@ -173,103 +228,153 @@ struct DeliveryLiveActivity: Widget {
     private func lockScreenView(context: ActivityViewContext<DeliveryActivityAttributes>)
         -> some View
     {
-        VStack(spacing: 12) {
-            // Header: app logo + status + distance
-            HStack {
+        if isStatusPhase(context) {
+            lockScreenStatusView(context: context)
+        } else {
+            VStack(spacing: 12) {
+                // Header: app logo + status + distance
+                HStack {
                 HStack(spacing: 8) {
-                    appLogoView(size: 24)
+                    activityAvatar(
+                        imageData: context.attributes.storeImageData,
+                        imageURL: context.attributes.storeImageUrl,
+                        placeholderSystemName: "storefront.fill",
+                        size: 24,
+                        foreground: Color(red: 124 / 255, green: 65 / 255, blue: 43 / 255)
+                    )
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text(headlineStatusText(context))
                             .font(.system(size: 15, weight: .bold, design: .rounded))
                             .lineLimit(1)
+                        }
+                    }
+
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 2) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "location.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(
+                                    Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255))
+
+                            Text(context.state.remainingDistance)
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                        }
+
+                        if context.state.estimatedMinutes > 0 {
+                            Text("~\(context.state.estimatedMinutes) min")
+                                .font(.system(size: 11, weight: .medium, design: .rounded))
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
 
-                Spacer()
+                // Progress bar with store → bicycle → house
+                HStack(spacing: 0) {
+                    activityAvatar(
+                        imageData: context.attributes.storeImageData,
+                        imageURL: context.attributes.storeImageUrl,
+                        placeholderSystemName: "storefront.fill",
+                        size: 24,
+                        foreground: Color(red: 124 / 255, green: 65 / 255, blue: 43 / 255)
+                    )
+                    .frame(width: 24)
 
-                VStack(alignment: .trailing, spacing: 2) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "location.fill")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(
-                                Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255))
+                    GeometryReader { geometry in
+                        ZStack(alignment: .leading) {
+                            Capsule()
+                                .fill(.gray.opacity(0.25))
+                                .frame(height: 3)
 
-                        Text(context.state.remainingDistance)
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            Capsule()
+                                .fill(
+                                    LinearGradient(
+                                        colors: [
+                                            Color(red: 2 / 255, green: 49 / 255, blue: 51 / 255),
+                                            Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255),
+                                        ],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .frame(
+                                    width: geometry.size.width
+                                        * CGFloat(context.state.progressValue),
+                                    height: 3
+                                )
+
+                            Image(systemName: "bicycle")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundStyle(Color(red: 2 / 255, green: 49 / 255, blue: 51 / 255))
+                                .offset(
+                                    x: max(
+                                        0,
+                                        min(
+                                            geometry.size.width
+                                                * CGFloat(context.state.progressValue) - 8,
+                                            geometry.size.width - 16
+                                        )
+                                    )
+                                )
+                        }
+                        .frame(height: 20)
                     }
+                    .frame(height: 20)
+                    .padding(.horizontal, 8)
 
-                    if context.state.estimatedMinutes > 0 {
-                        Text("~\(context.state.estimatedMinutes) min")
-                            .font(.system(size: 11, weight: .medium, design: .rounded))
-                            .foregroundStyle(.secondary)
-                    }
+                    activityAvatar(
+                        imageData: context.attributes.userAvatarData,
+                        imageURL: context.attributes.userAvatarUrl,
+                        placeholderSystemName: "house.fill",
+                        size: 24,
+                        foreground: context.state.progressValue >= 1.0
+                            ? Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255)
+                            : .gray
+                    )
+                    .frame(width: 24)
                 }
             }
+            .padding(16)
+            .activityBackgroundTint(Color(red: 15 / 255, green: 15 / 255, blue: 15 / 255))
+            .activitySystemActionForegroundColor(.white)
+        }
+    }
 
-            // Progress bar with store → bicycle → house
-            HStack(spacing: 0) {
+    @ViewBuilder
+    private func lockScreenStatusView(context: ActivityViewContext<DeliveryActivityAttributes>) -> some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 10) {
                 activityAvatar(
                     imageData: context.attributes.storeImageData,
                     imageURL: context.attributes.storeImageUrl,
                     placeholderSystemName: "storefront.fill",
-                    size: 24,
+                    size: 28,
                     foreground: Color(red: 124 / 255, green: 65 / 255, blue: 43 / 255)
                 )
-                .frame(width: 24)
 
-                GeometryReader { geometry in
-                    ZStack(alignment: .leading) {
-                        Capsule()
-                            .fill(.gray.opacity(0.25))
-                            .frame(height: 3)
-
-                        Capsule()
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        Color(red: 2 / 255, green: 49 / 255, blue: 51 / 255),
-                                        Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255),
-                                    ],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                            .frame(
-                                width: geometry.size.width
-                                    * CGFloat(context.state.progressValue),
-                                height: 3
-                            )
-
-                        Image(systemName: "bicycle")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(Color(red: 2 / 255, green: 49 / 255, blue: 51 / 255))
-                            .offset(
-                                x: max(
-                                    0,
-                                    min(
-                                        geometry.size.width
-                                            * CGFloat(context.state.progressValue) - 8,
-                                        geometry.size.width - 16
-                                    )
-                                )
-                            )
-                    }
-                    .frame(height: 20)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Pedido")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                    Text(context.attributes.storeName)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
-                .frame(height: 20)
-                .padding(.horizontal, 8)
 
-                activityAvatar(
-                    imageData: context.attributes.userAvatarData,
-                    imageURL: context.attributes.userAvatarUrl,
-                    placeholderSystemName: "house.fill",
-                    size: 24,
-                    foreground: context.state.progressValue >= 1.0
-                        ? Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255)
-                        : .gray
-                )
-                .frame(width: 24)
+                Spacer()
+
+                Text(context.state.statusDisplayText)
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(
+                        Capsule()
+                            .fill(statusColor(context).opacity(0.28))
+                    )
+                    .foregroundStyle(statusColor(context))
             }
         }
         .padding(16)
@@ -326,6 +431,51 @@ struct DeliveryLiveActivity: Widget {
             return "Entrega completada"
         }
         return "Pedido en camino"
+    }
+
+    private func isStatusPhase(_ context: ActivityViewContext<DeliveryActivityAttributes>) -> Bool {
+        let status = normalizedStatus(context)
+        return status == "pending" || status == "confirmed" || status == "preparing"
+    }
+
+    private func compactStatusText(_ context: ActivityViewContext<DeliveryActivityAttributes>) -> String {
+        let status = normalizedStatus(context)
+        switch status {
+        case "pending":
+            return "Pend."
+        case "confirmed":
+            return "Conf."
+        case "preparing":
+            return "Prep."
+        default:
+            return context.state.statusDisplayText
+        }
+    }
+
+    private func statusColor(_ context: ActivityViewContext<DeliveryActivityAttributes>) -> Color {
+        let status = normalizedStatus(context)
+        switch status {
+        case "pending":
+            return .orange
+        case "confirmed":
+            return .blue
+        case "preparing":
+            return .purple
+        case "in_transit", "on_the_way":
+            return Color(red: 178 / 255, green: 214 / 255, blue: 154 / 255)
+        case "near_destination":
+            return .mint
+        case "delivered":
+            return .green
+        case "cancelled":
+            return .red
+        default:
+            return .secondary
+        }
+    }
+
+    private func normalizedStatus(_ context: ActivityViewContext<DeliveryActivityAttributes>) -> String {
+        context.state.status.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     @ViewBuilder

@@ -84,6 +84,18 @@ struct ActiveOrder: Codable, Identifiable {
 class OrderManager: ObservableObject {
     static let shared = OrderManager()
 
+    private struct PersistedActiveOrderState: Codable {
+        let order: ActiveOrder
+        let orderStatusRaw: String
+        let estimatedMinutesRemaining: Int
+        let remainingDistanceMeters: Double
+        let driverLatitude: Double?
+        let driverLongitude: Double?
+        let savedAt: Date
+    }
+
+    private static let persistedActiveOrderKey = "order_manager.persisted_active_order"
+
     // Published properties
     @Published var currentOrder: ActiveOrder?
     @Published var driverLocation: CLLocationCoordinate2D?
@@ -100,9 +112,15 @@ class OrderManager: ObservableObject {
     private let simulationDuration: TimeInterval = 30  // 30 segundos para prueba rápida
     private var routePoints: [CLLocationCoordinate2D] = []
     private var currentRouteIndex: Int = 0
+    private var realtimeSubscriptionTask: Task<Void, Never>?
+    private var realtimePollingTask: Task<Void, Never>?
+    private var activeRealtimeOrderId: String?
+    private let trackingRepository = OrderTrackingRepository()
+    private let realtimeClient = OrderTrackingRealtimeClient(baseURL: ApolloClientManager.baseURL)
 
     private init() {
         requestNotificationPermission()
+        restorePersistedActiveOrderIfNeeded()
     }
 
     private func requestNotificationPermission() {
@@ -123,6 +141,7 @@ class OrderManager: ObservableObject {
 
     /// Inicia un nuevo pedido con simulación de 2 minutos
     func startOrder(
+        orderId: String? = nil,
         products: [ActiveOrder.OrderProduct],
         totalAmount: Double,
         currency: String,
@@ -137,7 +156,7 @@ class OrderManager: ObservableObject {
     ) {
         // Crear el pedido
         let order = ActiveOrder(
-            id: UUID().uuidString,
+            id: orderId ?? UUID().uuidString,
             products: products,
             totalAmount: totalAmount,
             currency: currency,
@@ -176,11 +195,66 @@ class OrderManager: ObservableObject {
         startLiveActivity(for: order)
 
         print("✅ OrderManager: Pedido iniciado - ID: \(order.id)")
+        persistActiveOrderState()
+    }
+
+    /// Inicia un pedido real conectado a backend (subscription + polling fallback).
+    func startRealtimeOrder(
+        orderId: String,
+        products: [ActiveOrder.OrderProduct],
+        totalAmount: Double,
+        currency: String,
+        deliveryLocation: String,
+        deliveryCoordinates: CLLocationCoordinate2D,
+        restaurantLocation: String,
+        restaurantCoordinates: CLLocationCoordinate2D,
+        paymentMethod: String,
+        storeImageUrl: String? = nil,
+        userAvatarUrl: String? = nil
+    ) {
+        stopSimulation()
+        stopRealtimeSync()
+
+        let order = ActiveOrder(
+            id: orderId,
+            products: products,
+            totalAmount: totalAmount,
+            currency: currency,
+            deliveryLocation: deliveryLocation,
+            deliveryCoordinates: ActiveOrder.LocationCoordinate(
+                latitude: deliveryCoordinates.latitude,
+                longitude: deliveryCoordinates.longitude
+            ),
+            restaurantLocation: restaurantLocation,
+            restaurantCoordinates: ActiveOrder.LocationCoordinate(
+                latitude: restaurantCoordinates.latitude,
+                longitude: restaurantCoordinates.longitude
+            ),
+            estimatedDeliveryMinutes: 30,
+            paymentMethod: paymentMethod,
+            paymentCompleted: true,
+            createdAt: Date(),
+            status: .pending,
+            storeImageUrl: storeImageUrl,
+            userAvatarUrl: userAvatarUrl
+        )
+
+        currentOrder = order
+        orderStatus = .pending
+        estimatedMinutesRemaining = order.estimatedDeliveryMinutes
+        remainingDistanceMeters = 0
+        driverLocation = nil
+        startLiveActivity(for: order)
+        startRealtimeSync(orderId: orderId)
+
+        print("🛰️ OrderManager: Pedido real-time iniciado - ID: \(orderId)")
+        persistActiveOrderState()
     }
 
     /// Detiene el pedido actual
     func stopOrder() {
         stopSimulation()
+        stopRealtimeSync()
         endLiveActivity()
         currentOrder = nil
         driverLocation = nil
@@ -188,6 +262,7 @@ class OrderManager: ObservableObject {
         estimatedMinutesRemaining = 0
         remainingDistanceMeters = 0
         print("⏹️ OrderManager: Pedido detenido")
+        clearPersistedActiveOrderState()
     }
 
     /// Cancela el pedido actual
@@ -199,9 +274,11 @@ class OrderManager: ObservableObject {
         orderStatus = .cancelled
 
         stopSimulation()
+        stopRealtimeSync()
         endLiveActivity()
 
         print("❌ OrderManager: Pedido cancelado - ID: \(order.id)")
+        clearPersistedActiveOrderState()
     }
 
     // MARK: - Private Methods
@@ -210,8 +287,7 @@ class OrderManager: ObservableObject {
         simulationStartTime = Date()
         currentRouteIndex = 0
 
-        // Actualizar estado inicial
-        orderStatus = .confirmed
+        // Mantener "pending" al inicio para que el accessory muestre estado de pedido
         estimatedMinutesRemaining = 1
 
         // Iniciar ubicación del conductor en el restaurante
@@ -227,6 +303,197 @@ class OrderManager: ObservableObject {
         }
 
         print("▶️ OrderManager: Simulación iniciada")
+    }
+
+    private func startRealtimeSync(orderId: String) {
+        activeRealtimeOrderId = orderId
+
+        realtimeSubscriptionTask = Task { [weak self] in
+            guard let self else { return }
+            guard let jwt = AuthManager.shared.getAccessToken() else { return }
+
+            do {
+                try await self.realtimeClient.streamOrderUpdates(orderId: orderId, jwt: jwt) { [weak self] event in
+                    await MainActor.run {
+                        self?.applyRealtimeEvent(event)
+                    }
+                }
+            } catch {
+                print("⚠️ Subscription order-tracking desconectada: \(error.localizedDescription)")
+            }
+        }
+
+        realtimePollingTask = Task { [weak self] in
+            guard let self else { return }
+            while !Task.isCancelled {
+                await self.refreshTrackingSnapshot(orderId: orderId)
+                try? await Task.sleep(nanoseconds: 6_000_000_000)
+            }
+        }
+    }
+
+    private func stopRealtimeSync() {
+        realtimeSubscriptionTask?.cancel()
+        realtimeSubscriptionTask = nil
+        realtimePollingTask?.cancel()
+        realtimePollingTask = nil
+        activeRealtimeOrderId = nil
+    }
+
+    private func refreshTrackingSnapshot(orderId: String) async {
+        guard activeRealtimeOrderId == orderId else { return }
+        let result = await withCheckedContinuation { continuation in
+            trackingRepository.fetchTracking(orderId: orderId) { fetchResult in
+                continuation.resume(returning: fetchResult)
+            }
+        }
+
+        switch result {
+        case .success(let tracking):
+            applyTrackingSnapshot(tracking)
+        case .failure(let error):
+            print("ℹ️ Polling tracking fallo (se reintentará): \(error.localizedDescription)")
+        }
+    }
+
+    private func applyTrackingSnapshot(_ tracking: OrderTracking) {
+        guard let existingOrder = currentOrder, tracking.order.id == existingOrder.id else { return }
+
+        driverLocation = tracking.deliveryPersonLocation
+        if let km = tracking.distanceKm {
+            remainingDistanceMeters = max(0, km * 1000)
+        } else {
+            updateRemainingDistance()
+        }
+        estimatedMinutesRemaining = tracking.estimatedMinutes ?? estimatedMinutesRemaining
+
+        let mappedStatus = mapGraphQLStatusToDeliveryStatus(tracking.order.status, distanceKm: tracking.distanceKm)
+        if mappedStatus != orderStatus {
+            orderStatus = mappedStatus
+            currentOrder?.status = mappedStatus
+            updateLiveActivity(progress: progressValue(for: mappedStatus))
+            if mappedStatus == .delivered {
+                sendDeliveryNotification()
+                endLiveActivity(delivered: true)
+                stopRealtimeSync()
+                clearPersistedActiveOrderState()
+            } else if mappedStatus == .cancelled {
+                endLiveActivity(delivered: false)
+                stopRealtimeSync()
+                clearPersistedActiveOrderState()
+            } else {
+                persistActiveOrderState()
+            }
+        } else {
+            updateLiveActivity(progress: progressValue(for: mappedStatus))
+            persistActiveOrderState()
+        }
+    }
+
+    private func applyRealtimeEvent(_ event: OrderTrackingRealtimeEvent) {
+        guard let existingOrder = currentOrder, existingOrder.id == event.orderId else { return }
+
+        if let coords = event.deliveryPersonCoordinates, coords.count >= 2 {
+            driverLocation = CLLocationCoordinate2D(latitude: coords[1], longitude: coords[0])
+        }
+        if let km = event.distanceKm {
+            remainingDistanceMeters = max(0, km * 1000)
+        }
+        if let estimated = event.estimatedMinutes {
+            estimatedMinutesRemaining = estimated
+        }
+
+        guard let statusRaw = event.statusRaw else {
+            updateLiveActivity(progress: progressValue(for: orderStatus))
+            return
+        }
+
+        let mappedStatus = mapRawStatusToDeliveryStatus(statusRaw, distanceKm: event.distanceKm)
+        if mappedStatus != orderStatus {
+            orderStatus = mappedStatus
+            currentOrder?.status = mappedStatus
+            if mappedStatus == .delivered {
+                sendDeliveryNotification()
+                endLiveActivity(delivered: true)
+                stopRealtimeSync()
+                clearPersistedActiveOrderState()
+            } else if mappedStatus == .cancelled {
+                endLiveActivity(delivered: false)
+                stopRealtimeSync()
+                clearPersistedActiveOrderState()
+            } else {
+                persistActiveOrderState()
+            }
+        }
+        updateLiveActivity(progress: progressValue(for: mappedStatus))
+        if mappedStatus != .delivered && mappedStatus != .cancelled {
+            persistActiveOrderState()
+        }
+    }
+
+    private func progressValue(for status: DeliveryStatus) -> Double {
+        switch status {
+        case .idle, .pending:
+            return 0.05
+        case .confirmed:
+            return 0.2
+        case .preparing:
+            return 0.45
+        case .inTransit:
+            return 0.75
+        case .nearDestination:
+            return 0.9
+        case .delivered:
+            return 1.0
+        case .cancelled:
+            return 0.0
+        }
+    }
+
+    private func mapGraphQLStatusToDeliveryStatus(_ status: OrderStatusEnum, distanceKm: Double?) -> DeliveryStatus {
+        switch status {
+        case .pendingAcceptance, .modifiedByStore:
+            return .pending
+        case .accepted:
+            return .confirmed
+        case .preparing:
+            return .preparing
+        case .readyForPickup:
+            return .inTransit
+        case .onTheWay:
+            if let distanceKm, distanceKm <= 0.35 {
+                return .nearDestination
+            }
+            return .inTransit
+        case .delivered:
+            return .delivered
+        case .cancelled:
+            return .cancelled
+        }
+    }
+
+    private func mapRawStatusToDeliveryStatus(_ rawStatus: String, distanceKm: Double?) -> DeliveryStatus {
+        switch rawStatus.uppercased() {
+        case "PENDING_ACCEPTANCE", "MODIFIED_BY_STORE":
+            return .pending
+        case "ACCEPTED":
+            return .confirmed
+        case "PREPARING":
+            return .preparing
+        case "READY_FOR_PICKUP":
+            return .inTransit
+        case "ON_THE_WAY":
+            if let distanceKm, distanceKm <= 0.35 {
+                return .nearDestination
+            }
+            return .inTransit
+        case "DELIVERED":
+            return .delivered
+        case "CANCELLED":
+            return .cancelled
+        default:
+            return orderStatus
+        }
     }
 
     private func stopSimulation() {
@@ -351,6 +618,7 @@ class OrderManager: ObservableObject {
         sendDeliveryNotification()
 
         print("✅ OrderManager: Pedido entregado - ID: \(order.id)")
+        clearPersistedActiveOrderState()
     }
 
     private func sendDeliveryNotification() {
@@ -414,8 +682,8 @@ class OrderManager: ObservableObject {
             orderID: order.id,
             storeName: trimmedForActivity(order.restaurantLocation, max: 56),
             storeIcon: "storefront.fill",
-            storeImageUrl: nil,
-            userAvatarUrl: nil,
+            storeImageUrl: order.storeImageUrl,
+            userAvatarUrl: order.userAvatarUrl,
             storeImageData: storeImageDataLarge,
             userAvatarData: userAvatarDataSmall,
             totalAmount: "\(order.currency) \(String(format: "%.2f", order.totalAmount))",
@@ -433,8 +701,8 @@ class OrderManager: ObservableObject {
             orderID: order.id,
             storeName: trimmedForActivity(order.restaurantLocation, max: 48),
             storeIcon: "storefront.fill",
-            storeImageUrl: nil,
-            userAvatarUrl: nil,
+            storeImageUrl: order.storeImageUrl,
+            userAvatarUrl: order.userAvatarUrl,
             storeImageData: storeImageDataSmall,
             userAvatarData: nil,
             totalAmount: "\(order.currency) \(String(format: "%.2f", order.totalAmount))",
@@ -451,8 +719,8 @@ class OrderManager: ObservableObject {
             orderID: order.id,
             storeName: trimmedForActivity(order.restaurantLocation, max: 36),
             storeIcon: "storefront.fill",
-            storeImageUrl: nil,
-            userAvatarUrl: nil,
+            storeImageUrl: order.storeImageUrl,
+            userAvatarUrl: order.userAvatarUrl,
             storeImageData: nil,
             userAvatarData: nil,
             totalAmount: "\(order.currency) \(String(format: "%.2f", order.totalAmount))",
@@ -557,6 +825,77 @@ class OrderManager: ObservableObject {
         Task {
             await activity.update(.init(state: updatedState, staleDate: nil))
         }
+    }
+
+    private func persistActiveOrderState() {
+        guard let order = currentOrder else {
+            clearPersistedActiveOrderState()
+            return
+        }
+        guard Calendar.current.isDateInToday(order.createdAt) else {
+            clearPersistedActiveOrderState()
+            return
+        }
+        guard orderStatus != .delivered, orderStatus != .cancelled, orderStatus != .idle else {
+            clearPersistedActiveOrderState()
+            return
+        }
+
+        let snapshot = PersistedActiveOrderState(
+            order: order,
+            orderStatusRaw: orderStatus.rawValue,
+            estimatedMinutesRemaining: estimatedMinutesRemaining,
+            remainingDistanceMeters: remainingDistanceMeters,
+            driverLatitude: driverLocation?.latitude,
+            driverLongitude: driverLocation?.longitude,
+            savedAt: Date()
+        )
+
+        do {
+            let data = try JSONEncoder().encode(snapshot)
+            UserDefaults.standard.set(data, forKey: Self.persistedActiveOrderKey)
+        } catch {
+            print("⚠️ No se pudo persistir pedido activo: \(error.localizedDescription)")
+        }
+    }
+
+    private func restorePersistedActiveOrderIfNeeded() {
+        guard let data = UserDefaults.standard.data(forKey: Self.persistedActiveOrderKey) else {
+            return
+        }
+
+        do {
+            let snapshot = try JSONDecoder().decode(PersistedActiveOrderState.self, from: data)
+            guard Calendar.current.isDateInToday(snapshot.order.createdAt) else {
+                clearPersistedActiveOrderState()
+                return
+            }
+
+            let restoredStatus = DeliveryStatus(rawValue: snapshot.orderStatusRaw) ?? snapshot.order.status
+            guard restoredStatus != .delivered, restoredStatus != .cancelled, restoredStatus != .idle else {
+                clearPersistedActiveOrderState()
+                return
+            }
+
+            currentOrder = snapshot.order
+            orderStatus = restoredStatus
+            estimatedMinutesRemaining = snapshot.estimatedMinutesRemaining
+            remainingDistanceMeters = snapshot.remainingDistanceMeters
+            if let lat = snapshot.driverLatitude, let lon = snapshot.driverLongitude {
+                driverLocation = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+            } else {
+                driverLocation = nil
+            }
+
+            startRealtimeSync(orderId: snapshot.order.id)
+        } catch {
+            clearPersistedActiveOrderState()
+            print("⚠️ No se pudo restaurar pedido persistido: \(error.localizedDescription)")
+        }
+    }
+
+    private func clearPersistedActiveOrderState() {
+        UserDefaults.standard.removeObject(forKey: Self.persistedActiveOrderKey)
     }
 
     private func endLiveActivity(delivered: Bool = false) {
@@ -681,8 +1020,9 @@ extension OrderManager {
             paymentCompleted: true,
             createdAt: Date(),
             status: .pending,
-            storeImageUrl: nil,
-            userAvatarUrl: nil
+            storeImageUrl:
+                "https://bucket-production-435ad.up.railway.app:443/branches-assets/branch-avatar.png",
+            userAvatarUrl: AuthManager.shared.currentUser?.avatarUrl
         )
     }
 }

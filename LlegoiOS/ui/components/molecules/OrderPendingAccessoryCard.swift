@@ -17,6 +17,27 @@ struct OrderPendingAccessoryCard: View {
         orderManager.currentOrder?.restaurantLocation ?? "Tienda"
     }
 
+    private var statusColor: Color {
+        switch orderManager.orderStatus {
+        case .pending:
+            return .orange
+        case .confirmed:
+            return .blue
+        case .preparing:
+            return .purple
+        case .inTransit:
+            return .llegoPrimary
+        case .nearDestination:
+            return .llegoAccent
+        case .delivered:
+            return .green
+        case .cancelled:
+            return .red
+        case .idle:
+            return .secondary
+        }
+    }
+
     var body: some View {
         HStack(spacing: 10) {
             storeImage
@@ -47,9 +68,15 @@ struct OrderPendingAccessoryCard: View {
             Spacer(minLength: 8)
 
             Text(orderManager.orderStatus.displayText)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(.llegoPrimary)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundColor(statusColor)
                 .lineLimit(1)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(
+                    Capsule()
+                        .fill(statusColor.opacity(0.14))
+                )
 
             Image(systemName: "chevron.right")
                 .font(.system(size: 11, weight: .semibold))

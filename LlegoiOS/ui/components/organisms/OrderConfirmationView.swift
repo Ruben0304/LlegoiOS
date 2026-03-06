@@ -10,11 +10,8 @@ struct OrderConfirmationView: View {
     @State private var ringRotation: CGFloat = 0
     @State private var showBadge = false
     @State private var showTitle = false
-    @State private var showButton = false
-    @State private var navigateToOrders = false
 
     private let titleColor = Color.black
-    private let accentColor = Color(red: 0.42, green: 1.0, blue: 0.66)
 
     var body: some View {
         ZStack {
@@ -25,8 +22,7 @@ struct OrderConfirmationView: View {
                 Spacer(minLength: 40)
                 checkBadge
                 titleBlock
-                Spacer(minLength: 20)
-                closeButton
+                Spacer(minLength: 40)
             }
             .padding(.horizontal, 28)
             .padding(.vertical, 28)
@@ -36,7 +32,6 @@ struct OrderConfirmationView: View {
             ringRotation = 0
             showBadge = false
             showTitle = false
-            showButton = false
             withAnimation(.linear(duration: 3.0).repeatForever(autoreverses: false)) {
                 ringRotation = 360
             }
@@ -49,8 +44,8 @@ struct OrderConfirmationView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                 showTitle = true
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) {
-                showButton = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                onDismiss()
             }
         }
     }
@@ -92,26 +87,6 @@ struct OrderConfirmationView: View {
             .animation(.easeOut(duration: 0.6), value: showTitle)
     }
 
-    private var closeButton: some View {
-        Button(action: goToOrders) {
-            Text("Ver mis pedidos")
-                .font(.system(size: 16, weight: .bold, design: .rounded))
-                .foregroundColor(titleColor)
-                .frame(maxWidth: .infinity)
-                .frame(height: 52)
-                .background(accentColor)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-        }
-        .padding(.top, 4)
-        .accessibilityLabel("Ver mis pedidos")
-        .opacity(showButton ? 1 : 0)
-        .offset(y: showButton ? 0 : 12)
-        .animation(.easeOut(duration: 0.5), value: showButton)
-    }
-
-    private func goToOrders() {
-        onDismiss()
-    }
 }
 
 private struct AnimatedGreenBackground: View {

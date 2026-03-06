@@ -1,5 +1,6 @@
 import SwiftUI
 import CryptoKit
+import ImageIO
 
 // MARK: - Image Cache Manager
 final class ImageCacheManager: @unchecked Sendable {
@@ -24,6 +25,7 @@ final class ImageCacheManager: @unchecked Sendable {
     private let maxMemoryCacheSize = 100 * 1024 * 1024 // 100 MB
     private let maxDiskCacheSize = 300 * 1024 * 1024 // 300 MB
     private let defaultCacheExpiration: TimeInterval = 7 * 24 * 60 * 60 // 7 días
+    private let defaultMaxPixelSize: CGFloat = 1400
 
     private init() {
         // Configure memory cache
@@ -56,34 +58,34 @@ final class ImageCacheManager: @unchecked Sendable {
 
     // MARK: - Public Interface
 
-    /// Get image from cache (memory or disk)
+    /// Get image from cache (memory or disk) — may do disk I/O, avoid on main thread
     func getImage(for key: String) -> UIImage? {
-        let cacheKey = key as NSString
+        if let mem = getMemoryImage(for: key) { return mem }
+        return getImageFromDisk(for: key, maxPixelSize: nil)
+    }
 
-        // 1. Check memory cache first (fastest)
+    /// Get image from memory cache only — safe to call on main thread
+    func getMemoryImage(for key: String) -> UIImage? {
+        let cacheKey = key as NSString
         if let cachedImage = memoryCache.object(forKey: cacheKey) {
-            // Check if expired
             if cachedImage.expirationDate > Date() {
                 return cachedImage.image
             } else {
-                // Remove expired image from memory
                 memoryCache.removeObject(forKey: cacheKey)
             }
         }
-
-        // 2. Check disk cache
-        if let diskImage = loadImageFromDisk(key: key) {
-            // Store in memory cache for faster access next time
-            let cost = diskImage.jpegData(compressionQuality: 1.0)?.count ?? 0
-            let cachedImage = CachedImage(
-                image: diskImage,
-                expirationDate: Date().addingTimeInterval(defaultCacheExpiration)
-            )
-            memoryCache.setObject(cachedImage, forKey: cacheKey, cost: cost)
-            return diskImage
-        }
-
         return nil
+    }
+
+    /// Get image from disk cache, decoding at the given pixel size — call on background thread
+    func getImageFromDisk(for key: String, maxPixelSize: CGFloat?) -> UIImage? {
+        guard let diskImage = loadImageFromDisk(key: key, maxPixelSize: maxPixelSize) else { return nil }
+        // Promote to memory cache for future fast access
+        let nsKey = key as NSString
+        let cost = diskImage.jpegData(compressionQuality: 1.0)?.count ?? 0
+        let cached = CachedImage(image: diskImage, expirationDate: Date().addingTimeInterval(defaultCacheExpiration))
+        memoryCache.setObject(cached, forKey: nsKey, cost: cost)
+        return diskImage
     }
 
     /// Store image in cache with optional expiration
@@ -165,24 +167,16 @@ final class ImageCacheManager: @unchecked Sendable {
 
     // MARK: - Private Methods
 
-    private func loadImageFromDisk(key: String) -> UIImage? {
+    private func loadImageFromDisk(key: String, maxPixelSize: CGFloat? = nil) -> UIImage? {
         let fileURL = diskCacheURL.appendingPathComponent(hash(key))
 
-        // Check if file exists
-        guard FileManager.default.fileExists(atPath: fileURL.path) else {
-            return nil
-        }
+        guard FileManager.default.fileExists(atPath: fileURL.path) else { return nil }
 
-        // NO eliminar imágenes expiradas - permitir uso offline
-        // Solo marcar para refresh en background si hay conexión
-        // Las imágenes vencidas se limpian solo durante cleanExpiredCache() al iniciar
-
-        // Load image
+        // Load and decode — caller is responsible for calling on a background thread
         guard let data = try? Data(contentsOf: fileURL),
-              let image = UIImage(data: data) else {
+              let image = decodeImageForDisplay(from: data, maxPixelSize: maxPixelSize) else {
             return nil
         }
-
         return image
     }
 
@@ -203,6 +197,25 @@ final class ImageCacheManager: @unchecked Sendable {
 
         // Clean cache if too large
         checkDiskCacheSize()
+    }
+
+    func decodeImageForDisplay(from data: Data, maxPixelSize: CGFloat? = nil) -> UIImage? {
+        let targetPixelSize = maxPixelSize ?? defaultMaxPixelSize
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
+            return UIImage(data: data)
+        }
+
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: Int(targetPixelSize)
+        ]
+
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            return UIImage(data: data)
+        }
+        return UIImage(cgImage: cgImage)
     }
 
     private func checkDiskCacheSize() {
@@ -308,6 +321,10 @@ private struct ImageMetadata: Codable {
 struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
     let url: URL?
     let cacheKey: String? // Custom cache key (optional)
+    /// Target display size in points - used to decode at the right pixel density and avoid waste.
+    /// Pass the render size of the image container (e.g. CGSize(width: 140, height: 100)).
+    /// Defaults to nil which uses the cache manager's default (1400px).
+    let displaySize: CGSize?
     @ViewBuilder let content: (Image) -> Content
     @ViewBuilder let placeholder: () -> Placeholder
     @ViewBuilder let failure: () -> Failure
@@ -319,7 +336,18 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
     @State private var loadTask: URLSessionDataTask?
 
     private var effectiveCacheKey: String {
-        cacheKey ?? url?.absoluteString ?? ""
+        let urlKey = url?.absoluteString ?? ""
+        if let cacheKey, !cacheKey.isEmpty {
+            return urlKey.isEmpty ? cacheKey : "\(cacheKey)|\(urlKey)"
+        }
+        return urlKey
+    }
+
+    /// Pixel size to decode at: max(width, height) * screen scale, capped at 1400px.
+    var maxPixelSize: CGFloat {
+        guard let size = displaySize else { return 1400 }
+        let scale = UIScreen.main.scale
+        return min(max(size.width, size.height) * scale, 1400)
     }
 
     var body: some View {
@@ -327,7 +355,7 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
             if let image = image {
                 content(Image(uiImage: image))
             } else if loadFailed && !isNetworkError {
-                // Solo mostrar failure si NO es error de red
+                // Failure: mostrar shimmer en lugar del ícono raro
                 failure()
             } else {
                 placeholder()
@@ -336,9 +364,19 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
                     }
             }
         }
+        .onAppear {
+            // Resetear estado de error al reaparecer (ej: scroll de vuelta)
+            if loadFailed && image == nil {
+                loadFailed = false
+                isNetworkError = false
+            }
+        }
         .onDisappear {
             // Cancel ongoing download if view disappears
             loadTask?.cancel()
+        }
+        .onChange(of: effectiveCacheKey) { _, _ in
+            resetAndReloadImage()
         }
     }
 
@@ -349,100 +387,121 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
             return
         }
 
-
         // Resetear estados al intentar cargar de nuevo
         loadFailed = false
         isNetworkError = false
 
-        // 1. Check cache first (memory + disk)
-        if let cachedImage = ImageCacheManager.shared.getImage(for: effectiveCacheKey) {
-            // Mostrar imagen cacheada inmediatamente
-            self.image = cachedImage
+        let cacheKey = effectiveCacheKey
+        let targetPixelSize = maxPixelSize
 
-            // Background refresh SOLO si necesita refresh Y no está expirada hace más de 7 días
-            // (para evitar recargar en modo offline)
-            if ImageCacheManager.shared.needsRefresh(for: effectiveCacheKey) &&
-               !ImageCacheManager.shared.isExpiredBeyondGracePeriod(for: effectiveCacheKey) {
+        // 1. Memory cache — fast, sync on main thread (no disk/decode cost)
+        if let memImage = ImageCacheManager.shared.getMemoryImage(for: cacheKey) {
+            self.image = memImage
+            if ImageCacheManager.shared.needsRefresh(for: cacheKey) &&
+               !ImageCacheManager.shared.isExpiredBeyondGracePeriod(for: cacheKey) {
                 downloadImageInBackground(from: url)
             }
             return
         }
 
-        // 2. If not in cache, download
+        // 2. Disk cache + network — both potentially slow, do on background thread
         guard !isLoading else { return }
         isLoading = true
-        downloadImage(from: url)
+
+        let capturedUrl = url
+        DispatchQueue.global(qos: .userInitiated).async {
+            // Check disk cache (decode on background thread)
+            if let diskImage = ImageCacheManager.shared.getImageFromDisk(for: cacheKey, maxPixelSize: targetPixelSize) {
+                let needsRefresh = ImageCacheManager.shared.needsRefresh(for: cacheKey) &&
+                                   !ImageCacheManager.shared.isExpiredBeyondGracePeriod(for: cacheKey)
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                    self.image = diskImage
+                    if needsRefresh {
+                        self.downloadImageInBackground(from: capturedUrl)
+                    }
+                }
+                return
+            }
+            // Not in any cache — download from network
+            DispatchQueue.main.async {
+                self.downloadImage(from: capturedUrl)
+            }
+        }
+    }
+
+    private func resetAndReloadImage() {
+        loadTask?.cancel()
+        image = nil
+        isLoading = false
+        loadFailed = false
+        isNetworkError = false
+        loadImage()
     }
 
     private func downloadImage(from url: URL) {
-        var request = URLRequest(url: url)
-        request.timeoutInterval = 10 // Timeout de 10 segundos
+        // Capture actor-isolated values before entering the URLSession closure
+        let cacheKey = effectiveCacheKey
+        let pixelSize = maxPixelSize
 
-        // Add conditional request headers if we have an ETag
-        if let etag = ImageCacheManager.shared.getETag(for: effectiveCacheKey) {
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 10
+
+        if let etag = ImageCacheManager.shared.getETag(for: cacheKey) {
             request.setValue(etag, forHTTPHeaderField: "If-None-Match")
         }
 
         loadTask = URLSession.shared.dataTask(with: request) { data, response, error in
-            DispatchQueue.main.async {
-                self.isLoading = false
-
-                // Si hay error de red (offline), intentar cargar desde caché aunque esté "expirada"
-                if let error = error as NSError? {
-
-                    // Errores de conexión (offline, timeout, etc)
-                    if error.domain == NSURLErrorDomain &&
-                       (error.code == NSURLErrorNotConnectedToInternet ||
-                        error.code == NSURLErrorTimedOut ||
-                        error.code == NSURLErrorCannotConnectToHost ||
-                        error.code == NSURLErrorNetworkConnectionLost) {
-
-                        // Marcar como error de red
+            // Handle errors on background thread before touching UI
+            if let error = error as NSError? {
+                if error.domain == NSURLErrorDomain &&
+                   (error.code == NSURLErrorNotConnectedToInternet ||
+                    error.code == NSURLErrorTimedOut ||
+                    error.code == NSURLErrorCannotConnectToHost ||
+                    error.code == NSURLErrorNetworkConnectionLost) {
+                    let cached = ImageCacheManager.shared.getImage(for: cacheKey)
+                    DispatchQueue.main.async {
+                        self.isLoading = false
                         self.isNetworkError = true
                         self.loadFailed = true
-
-                        // Intentar cargar desde caché sin importar expiración
-                        if let cachedImage = ImageCacheManager.shared.getImage(for: self.effectiveCacheKey) {
+                        if let cachedImage = cached {
                             self.image = cachedImage
                             self.loadFailed = false
-                            return
                         }
-
-                        // Si no hay caché, quedarse en estado de loading/placeholder
-                        // (no mostrar failure para errores de red sin caché)
-                        return
                     }
-
-                    // Otros errores (no de red) -> marcar como failed
+                    return
+                }
+                DispatchQueue.main.async {
+                    self.isLoading = false
                     self.isNetworkError = false
                     self.loadFailed = true
-                    return
                 }
+                return
+            }
 
-                // Check for 304 Not Modified
-                if let httpResponse = response as? HTTPURLResponse,
-                   httpResponse.statusCode == 304 {
-                    // Image hasn't changed, use cached version
-                    if let cachedImage = ImageCacheManager.shared.getImage(for: self.effectiveCacheKey) {
-                        self.image = cachedImage
-                    }
-                    return
+            // 304 Not Modified
+            if let httpResponse = response as? HTTPURLResponse,
+               httpResponse.statusCode == 304 {
+                let cached = ImageCacheManager.shared.getImage(for: cacheKey)
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                    if let cachedImage = cached { self.image = cachedImage }
                 }
+                return
+            }
 
-                if let data = data, let downloadedImage = UIImage(data: data) {
-
-                    // Extract ETag from response
-                    let etag = (response as? HTTPURLResponse)?.allHeaderFields["Etag"] as? String
-
-                    // Cache the image with ETag
-                    ImageCacheManager.shared.setImage(
-                        downloadedImage,
-                        for: self.effectiveCacheKey,
-                        etag: etag
-                    )
-
+            // Decode on background thread (expensive — keeps main thread free)
+            if let data = data,
+               let downloadedImage = ImageCacheManager.shared.decodeImageForDisplay(from: data, maxPixelSize: pixelSize) {
+                let etag = (response as? HTTPURLResponse)?.allHeaderFields["Etag"] as? String
+                ImageCacheManager.shared.setImage(downloadedImage, for: cacheKey, etag: etag)
+                DispatchQueue.main.async {
+                    self.isLoading = false
                     self.image = downloadedImage
-                } else {
+                }
+            } else {
+                DispatchQueue.main.async {
+                    self.isLoading = false
                     self.loadFailed = true
                 }
             }
@@ -451,39 +510,34 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
     }
 
     private func downloadImageInBackground(from url: URL) {
-        var request = URLRequest(url: url)
-        request.timeoutInterval = 5 // Timeout más corto para background refresh
+        // Capture actor-isolated values before entering the URLSession closure
+        let cacheKey = effectiveCacheKey
+        let pixelSize = maxPixelSize
 
-        if let etag = ImageCacheManager.shared.getETag(for: effectiveCacheKey) {
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 5
+
+        if let etag = ImageCacheManager.shared.getETag(for: cacheKey) {
             request.setValue(etag, forHTTPHeaderField: "If-None-Match")
         }
 
         URLSession.shared.dataTask(with: request) { data, response, error in
-            // Si hay error de conexión, no hacer nada (silenciar el error)
             if let error = error as NSError?,
                error.domain == NSURLErrorDomain &&
                (error.code == NSURLErrorNotConnectedToInternet ||
                 error.code == NSURLErrorTimedOut ||
                 error.code == NSURLErrorCannotConnectToHost ||
                 error.code == NSURLErrorNetworkConnectionLost) {
-                // No hacer nada - ya tenemos la imagen cacheada mostrada
                 return
             }
 
-            // Don't update UI, just update cache
+            // Decode on background thread, update cache and UI
             if let data = data,
-               let downloadedImage = UIImage(data: data),
                let httpResponse = response as? HTTPURLResponse,
-               httpResponse.statusCode != 304 {
-
+               httpResponse.statusCode != 304,
+               let downloadedImage = ImageCacheManager.shared.decodeImageForDisplay(from: data, maxPixelSize: pixelSize) {
                 let etag = httpResponse.allHeaderFields["Etag"] as? String
-                ImageCacheManager.shared.setImage(
-                    downloadedImage,
-                    for: self.effectiveCacheKey,
-                    etag: etag
-                )
-
-                // Actualizar la imagen mostrada con la nueva versión
+                ImageCacheManager.shared.setImage(downloadedImage, for: cacheKey, etag: etag)
                 DispatchQueue.main.async {
                     self.image = downloadedImage
                 }
@@ -496,12 +550,14 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
     init(
         url: URL?,
         cacheKey: String? = nil,
+        displaySize: CGSize? = nil,
         @ViewBuilder content: @escaping (Image) -> Content,
         @ViewBuilder placeholder: @escaping () -> Placeholder,
         @ViewBuilder failure: @escaping () -> Failure
     ) {
         self.url = url
         self.cacheKey = cacheKey
+        self.displaySize = displaySize
         self.content = content
         self.placeholder = placeholder
         self.failure = failure
@@ -513,11 +569,13 @@ extension CachedAsyncImage where Failure == EmptyView {
     init(
         url: URL?,
         cacheKey: String? = nil,
+        displaySize: CGSize? = nil,
         @ViewBuilder content: @escaping (Image) -> Content,
         @ViewBuilder placeholder: @escaping () -> Placeholder
     ) {
         self.url = url
         self.cacheKey = cacheKey
+        self.displaySize = displaySize
         self.content = content
         self.placeholder = placeholder
         self.failure = { EmptyView() }
@@ -526,9 +584,10 @@ extension CachedAsyncImage where Failure == EmptyView {
 
 // MARK: - Convenience initializer to match AsyncImage API
 extension CachedAsyncImage where Content == Image, Placeholder == AnyView, Failure == EmptyView {
-    init(url: URL?, cacheKey: String? = nil, @ViewBuilder content: @escaping (Image) -> Image) {
+    init(url: URL?, cacheKey: String? = nil, displaySize: CGSize? = nil, @ViewBuilder content: @escaping (Image) -> Image) {
         self.url = url
         self.cacheKey = cacheKey
+        self.displaySize = displaySize
         self.content = content
         self.placeholder = {
             AnyView(ProgressView())

@@ -6,7 +6,7 @@ struct ProductDetailView: View {
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = ProductDetailViewModel()
-    @StateObject private var cartManager = CartManager.shared
+    @ObservedObject private var cartManager = CartManager.shared
     @StateObject private var favoritesManager = FavoritesManager.shared
     @StateObject private var gradientManager = GradientStateManager.shared
 
@@ -77,40 +77,56 @@ struct ProductDetailView: View {
             .navigationBarBackButtonHidden(true)
             .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button(action: { dismiss() }) {
                         Image(systemName: "xmark")
                             .font(.system(size: 18, weight: .semibold))
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button(action: { toggleFavorite() }) {
-                        Image(
-                            systemName: favoritesManager.isFavorite(productId: productId)
-                                ? "heart.fill" : "heart"
-                        )
+                        ZStack(alignment: .bottomTrailing) {
+                            Image(systemName: favoritesManager.isFavorite(productId: productId) ? "heart.fill" : "heart")
+                                .font(.system(size: 17, weight: .semibold))
+                            if !favoritesManager.isFavorite(productId: productId) {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .background(Circle().fill(Color.white))
+                                    .offset(x: 2, y: 2)
+                            }
+                        }
                         .foregroundColor(gradientManager.currentAccentColor)
                     }
+                    .accessibilityLabel(
+                        favoritesManager.isFavorite(productId: productId)
+                            ? "Quitar de favoritos" : "Agregar a favoritos"
+                    )
+                    .accessibilityHint("Este botón agrega o quita este producto de favoritos")
                 }
 
-                ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
+                ToolbarSpacer(.fixed, placement: .topBarTrailing)
 
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        showCart = true
-                    }) {
-                        Image(systemName: "cart")
-                            .foregroundColor(gradientManager.currentAccentColor)
-                    }
-                    .badge(
-                        cartManager.cartItemCount > 0
-                            ? Text("\(cartManager.cartItemCount)")
-                                .monospacedDigit()
+                ToolbarItem(placement: .topBarTrailing) {
+                    if cartManager.cartItemCount > 0 {
+                        Button(action: {
+                            showCart = true
+                        }) {
+                            Image(systemName: "cart")
                                 .foregroundColor(gradientManager.currentAccentColor)
-                                .bold() : nil
-                    )
-                    .accessibilityLabel("Carrito")
+                        }
+                        .badge(cartManager.cartItemCount)
+                        .id("cart-toolbar-badge-\(cartManager.cartItemCount)")
+                        .accessibilityLabel("Carrito")
+                    } else {
+                        Button(action: {
+                            showCart = true
+                        }) {
+                            Image(systemName: "cart")
+                                .foregroundColor(gradientManager.currentAccentColor)
+                        }
+                        .accessibilityLabel("Carrito")
+                    }
                 }
 
                 // Bottom bar flotante - Quantity control
@@ -139,6 +155,11 @@ struct ProductDetailView: View {
             }
             .fullScreenCover(isPresented: $showCart) {
                 CartView()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .prepareOpenOrdersFromCart)) { _ in
+                // Si este detalle está presentado como fullScreen, cerrarlo para que
+                // MainAppView pueda presentar OrderListView.
+                dismiss()
             }
         }
     }

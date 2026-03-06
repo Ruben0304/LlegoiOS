@@ -4,7 +4,7 @@ import SwiftUI
 struct ProductFeedView: View {
     @StateObject private var viewModel = ProductFeedViewModel()
     @StateObject private var favoritesManager = FavoritesManager.shared
-    @StateObject private var cartManager = CartManager.shared
+    @ObservedObject private var cartManager = CartManager.shared
     @StateObject private var gradientManager = GradientStateManager.shared
     @State private var showFavoritesSheet = false
     @State private var selectedTutorial: Tutorial? = nil
@@ -46,18 +46,21 @@ struct ProductFeedView: View {
 
                 // Botón de favoritos
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showFavoritesSheet = true }) {
-                        Image(systemName: "heart")
-                            .font(.system(size: 16, weight: .semibold))
+                    if favoritesManager.favoriteItemCount > 0 {
+                        Button(action: { showFavoritesSheet = true }) {
+                            Image(systemName: "heart")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .badge(favoritesManager.favoriteItemCount)
+                        .id("favorites-toolbar-badge-\(favoritesManager.favoriteItemCount)")
+                        .accessibilityLabel("Favoritos")
+                    } else {
+                        Button(action: { showFavoritesSheet = true }) {
+                            Image(systemName: "heart")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .accessibilityLabel("Favoritos")
                     }
-                    .badge(
-                        favoritesManager.favoriteItemCount > 0
-                            ? Text("\(favoritesManager.favoriteItemCount)")
-                                .monospacedDigit()
-                                .foregroundColor(gradientManager.currentAccentColor)
-                                .bold() : nil
-                    )
-                    .accessibilityLabel("Favoritos")
                 }
 
                 // Spacer entre favoritos y carrito
@@ -65,20 +68,25 @@ struct ProductFeedView: View {
 
                 // Botón de carrito
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        showCart = true
-                    }) {
-                        Image(systemName: "cart")
-                            .font(.system(size: 16, weight: .semibold))
+                    if cartManager.cartItemCount > 0 {
+                        Button(action: {
+                            showCart = true
+                        }) {
+                            Image(systemName: "cart")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .badge(cartManager.cartItemCount)
+                        .id("cart-toolbar-badge-\(cartManager.cartItemCount)")
+                        .accessibilityLabel("Carrito")
+                    } else {
+                        Button(action: {
+                            showCart = true
+                        }) {
+                            Image(systemName: "cart")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .accessibilityLabel("Carrito")
                     }
-                    .badge(
-                        cartManager.cartItemCount > 0
-                            ? Text("\(cartManager.cartItemCount)")
-                                .monospacedDigit()
-                                .foregroundColor(gradientManager.currentAccentColor)
-                                .bold() : nil
-                    )
-                    .accessibilityLabel("Carrito")
                 }
             }
             .sheet(isPresented: $showFavoritesSheet) {
@@ -569,29 +577,7 @@ struct FeaturedProductCard: View {
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
-            CachedAsyncImage(
-                url: URL(string: product.imageUrl),
-                cacheKey: "featured_\(product.id)",
-                content: { image in
-                    image.resizable().scaledToFill()
-                },
-                placeholder: {
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.2))
-                        .overlay(ProgressView())
-                },
-                failure: {
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.2))
-                        .overlay(
-                            Image(systemName: "photo")
-                                .font(.system(size: 40))
-                                .foregroundColor(.gray)
-                        )
-                }
-            )
-            .frame(width: 280, height: 350)
-            .clipped()
+            featuredImage
 
             LinearGradient(
                 colors: [.clear, .black.opacity(0.7)],
@@ -646,6 +632,28 @@ struct FeaturedProductCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: Color.black.opacity(0.15), radius: 10, x: 0, y: 5)
     }
+
+    @ViewBuilder
+    private var featuredImage: some View {
+        let imageView = CachedAsyncImage(
+            url: URL(string: product.imageUrl),
+            cacheKey: "featured_\(product.id)",
+            displaySize: CGSize(width: 280, height: 350),
+            content: { image in
+                image.resizable().scaledToFill()
+            },
+            placeholder: {
+                AdaptiveShimmerView(cornerRadius: 16)
+            },
+            failure: {
+                AdaptiveShimmerView(cornerRadius: 16)
+            }
+        )
+        .frame(width: 280, height: 350)
+        .clipped()
+
+        imageView
+    }
 }
 
 // MARK: - Small Product Card
@@ -658,23 +666,7 @@ struct SmallProductCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             ZStack(alignment: .topTrailing) {
-                CachedAsyncImage(
-                    url: URL(string: product.imageUrl),
-                    cacheKey: "small_\(product.id)",
-                    content: { image in image.resizable().scaledToFill() },
-                    placeholder: {
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.2))
-                            .overlay(ProgressView().scaleEffect(0.7))
-                    },
-                    failure: {
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.2))
-                            .overlay(Image(systemName: "photo").foregroundColor(.gray))
-                    }
-                )
-                .frame(width: 140, height: 100)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                smallCardImage
 
                 // Badge overlay
                 if let badge = badge {
@@ -716,6 +708,26 @@ struct SmallProductCard: View {
         if badge == "Nuevo" { return .green }
         return accentColor
     }
+
+    @ViewBuilder
+    private var smallCardImage: some View {
+        let imageView = CachedAsyncImage(
+            url: URL(string: product.imageUrl),
+            cacheKey: "small_\(product.id)",
+            displaySize: CGSize(width: 140, height: 100),
+            content: { image in image.resizable().scaledToFill() },
+            placeholder: {
+                AdaptiveShimmerView(cornerRadius: 12)
+            },
+            failure: {
+                AdaptiveShimmerView(cornerRadius: 12)
+            }
+        )
+        .frame(width: 140, height: 100)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+
+        imageView
+    }
 }
 
 // MARK: - Compact Product Card
@@ -732,20 +744,13 @@ struct CompactProductCard: View {
                 CachedAsyncImage(
                     url: URL(string: product.imageUrl),
                     cacheKey: "compact_\(product.id)",
+                    displaySize: CGSize(width: 180, height: 130),
                     content: { image in image.resizable().scaledToFill() },
                     placeholder: {
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.15))
-                            .overlay(ProgressView().scaleEffect(0.8))
+                        AdaptiveShimmerView(cornerRadius: 14)
                     },
                     failure: {
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.15))
-                            .overlay(
-                                Image(systemName: "photo")
-                                    .font(.system(size: 30))
-                                    .foregroundColor(.gray.opacity(0.4))
-                            )
+                        AdaptiveShimmerView(cornerRadius: 14)
                     }
                 )
                 .frame(height: 130)

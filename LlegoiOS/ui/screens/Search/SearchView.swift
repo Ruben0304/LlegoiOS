@@ -523,7 +523,7 @@ struct SearchView: View {
 
     private var storesGrid: some View {
         LazyVStack(spacing: 24) {
-            ForEach(viewModel.stores) { store in
+            ForEach(viewModel.stores, id: \.id) { store in
                 StoreProductsCard(
                     store: store,
                     products: viewModel.storeProducts[store.id] ?? [],

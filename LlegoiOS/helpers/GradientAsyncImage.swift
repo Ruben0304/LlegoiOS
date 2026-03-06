@@ -5,6 +5,7 @@ import SwiftUI
 struct GradientAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
     let url: URL?
     let cacheKey: String?
+    let maxPixelSize: CGFloat
     @Binding var extractedGradient: ExtractedGradient
     @ViewBuilder let content: (Image, ExtractedGradient) -> Content
     @ViewBuilder let placeholder: () -> Placeholder
@@ -20,6 +21,7 @@ struct GradientAsyncImage<Content: View, Placeholder: View, Failure: View>: View
     init(
         url: URL?,
         cacheKey: String? = nil,
+        displaySize: CGSize? = nil,
         extractedGradient: Binding<ExtractedGradient>,
         fallbackImage: UIImage? = nil,
         fallbackGradient: ExtractedGradient? = nil,
@@ -35,6 +37,12 @@ struct GradientAsyncImage<Content: View, Placeholder: View, Failure: View>: View
         self.content = content
         self.placeholder = placeholder
         self.failure = failure
+        if let size = displaySize {
+            let scale = UIScreen.main.scale
+            self.maxPixelSize = min(max(size.width, size.height) * scale, 1400)
+        } else {
+            self.maxPixelSize = 800
+        }
     }
 
     var body: some View {
@@ -71,26 +79,34 @@ struct GradientAsyncImage<Content: View, Placeholder: View, Failure: View>: View
         guard !isLoading else { return }
         isLoading = true
 
+        let pixelSize = maxPixelSize
+
         URLSession.shared.dataTask(with: url) { data, _, error in
-            DispatchQueue.main.async {
-                isLoading = false
-
-                if let error = error {
+            if let error = error {
+                DispatchQueue.main.async {
+                    self.isLoading = false
                     self.loadError = error
-                    self.extractedGradient = fallbackGradient
-                    return
+                    self.extractedGradient = self.fallbackGradient
                 }
+                return
+            }
 
-                guard let data = data, let downloadedImage = UIImage(data: data) else {
+            guard let data = data,
+                  let downloadedImage = ImageCacheManager.shared.decodeImageForDisplay(from: data, maxPixelSize: pixelSize) else {
+                DispatchQueue.main.async {
+                    self.isLoading = false
                     self.loadError = URLError(.cannotDecodeContentData)
-                    self.extractedGradient = fallbackGradient
-                    return
+                    self.extractedGradient = self.fallbackGradient
                 }
+                return
+            }
 
-                // Cache the image
-                ImageCacheManager.shared.setImage(downloadedImage, for: urlString)
+            // Cache and display on main thread
+            ImageCacheManager.shared.setImage(downloadedImage, for: urlString)
+            DispatchQueue.main.async {
+                self.isLoading = false
                 self.loadedImage = downloadedImage
-                extractColorsFromImage(downloadedImage)
+                self.extractColorsFromImage(downloadedImage)
             }
         }.resume()
     }
@@ -112,6 +128,7 @@ extension GradientAsyncImage where Failure == EmptyView {
     init(
         url: URL?,
         cacheKey: String? = nil,
+        displaySize: CGSize? = nil,
         extractedGradient: Binding<ExtractedGradient>,
         fallbackGradient: ExtractedGradient? = nil,
         @ViewBuilder content: @escaping (Image, ExtractedGradient) -> Content,
@@ -120,6 +137,7 @@ extension GradientAsyncImage where Failure == EmptyView {
         self.init(
             url: url,
             cacheKey: cacheKey,
+            displaySize: displaySize,
             extractedGradient: extractedGradient,
             fallbackImage: nil,
             fallbackGradient: fallbackGradient,
@@ -135,12 +153,14 @@ extension GradientAsyncImage where Placeholder == ProgressView<EmptyView, EmptyV
     init(
         url: URL?,
         cacheKey: String? = nil,
+        displaySize: CGSize? = nil,
         extractedGradient: Binding<ExtractedGradient>,
         @ViewBuilder content: @escaping (Image, ExtractedGradient) -> Content
     ) {
         self.init(
             url: url,
             cacheKey: cacheKey,
+            displaySize: displaySize,
             extractedGradient: extractedGradient,
             fallbackImage: nil,
             fallbackGradient: nil,
@@ -157,6 +177,7 @@ extension GradientAsyncImage where Placeholder == ProgressView<EmptyView, EmptyV
 struct SimpleGradientAsyncImage<Content: View>: View {
     let url: URL?
     let cacheKey: String?
+    let maxPixelSize: CGFloat
     @ViewBuilder let content: (Image, ExtractedGradient) -> Content
 
     @State private var loadedImage: UIImage?
@@ -166,11 +187,18 @@ struct SimpleGradientAsyncImage<Content: View>: View {
     init(
         url: URL?,
         cacheKey: String? = nil,
+        displaySize: CGSize? = nil,
         @ViewBuilder content: @escaping (Image, ExtractedGradient) -> Content
     ) {
         self.url = url
         self.cacheKey = cacheKey ?? url?.absoluteString
         self.content = content
+        if let size = displaySize {
+            let scale = UIScreen.main.scale
+            self.maxPixelSize = min(max(size.width, size.height) * scale, 1400)
+        } else {
+            self.maxPixelSize = 800
+        }
     }
 
     var body: some View {
@@ -197,14 +225,19 @@ struct SimpleGradientAsyncImage<Content: View>: View {
         guard !isLoading else { return }
         isLoading = true
 
+        let pixelSize = maxPixelSize
+
         URLSession.shared.dataTask(with: url) { data, _, _ in
+            guard let data = data,
+                  let image = ImageCacheManager.shared.decodeImageForDisplay(from: data, maxPixelSize: pixelSize) else {
+                DispatchQueue.main.async { self.isLoading = false }
+                return
+            }
+            ImageCacheManager.shared.setImage(image, for: urlString)
             DispatchQueue.main.async {
-                isLoading = false
-                if let data = data, let image = UIImage(data: data) {
-                    ImageCacheManager.shared.setImage(image, for: urlString)
-                    self.loadedImage = image
-                    extractColors(from: image)
-                }
+                self.isLoading = false
+                self.loadedImage = image
+                self.extractColors(from: image)
             }
         }.resume()
     }
@@ -247,11 +280,11 @@ struct GradientAsyncBackground: View {
         }
 
         URLSession.shared.dataTask(with: url) { data, _, _ in
+            guard let data = data,
+                  let image = ImageCacheManager.shared.decodeImageForDisplay(from: data, maxPixelSize: 200) else { return }
+            ImageCacheManager.shared.setImage(image, for: urlString)
             DispatchQueue.main.async {
-                if let data = data, let image = UIImage(data: data) {
-                    ImageCacheManager.shared.setImage(image, for: urlString)
-                    extractColors(from: image)
-                }
+                extractColors(from: image)
             }
         }.resume()
     }
@@ -269,12 +302,19 @@ struct GradientAsyncBackground: View {
 // MARK: - Gradient Extraction from Asset
 
 extension ExtractedGradient {
-    /// Extract gradient from a named asset image
+    /// Extract gradient from a named asset image (result is cached after first call)
     static func fromAsset(named name: String) -> ExtractedGradient {
+        let cacheKey = "asset_\(name)"
+        // Use the extractor's own cache — avoids recomputing on every card creation
+        if let cached = ImageColorExtractor.shared.cachedGradient(for: cacheKey) {
+            return cached
+        }
         guard let image = UIImage(named: name) else {
             return .placeholder
         }
-        return ImageColorExtractor.shared.extractColors(from: image)
+        let gradient = ImageColorExtractor.shared.extractColors(from: image)
+        ImageColorExtractor.shared.cacheGradient(gradient, for: cacheKey)
+        return gradient
     }
 
     /// Extract gradient asynchronously from asset

@@ -28,6 +28,12 @@ class StoreListViewModel: ObservableObject {
     private var hasLoaded: Bool = false
 
     private let repository = StoreListRepository()
+    private let branchTypeManager = BranchTypeManager.shared
+    private var cancellables = Set<AnyCancellable>()
+
+    init() {
+        setupBranchTypeObserver()
+    }
 
     // Load all branches/stores
     func loadStores(isRefreshing: Bool = false) {
@@ -118,6 +124,15 @@ class StoreListViewModel: ObservableObject {
                 }
             }
         }
+    }
+
+    private func setupBranchTypeObserver() {
+        branchTypeManager.$selectedType
+            .dropFirst()
+            .sink { [weak self] _ in
+                self?.loadStores(isRefreshing: true)
+            }
+            .store(in: &cancellables)
     }
 
     func loadMoreStores() {
