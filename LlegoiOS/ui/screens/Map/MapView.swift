@@ -3,6 +3,7 @@ import MapKit
 
 struct MapView: View {
     @StateObject private var viewModel = MapViewModel()
+    @ObservedObject private var gradientManager = GradientStateManager.shared
     @State private var selectedStore: Store? = nil
     @State private var showStoreDetail = false
     @State private var cameraPosition: MapCameraPosition = .automatic
@@ -19,7 +20,7 @@ struct MapView: View {
                             }) {
                                 ZStack {
                                     Circle()
-                                        .fill(Color.llegoPrimary)
+                                        .fill(gradientManager.currentAccentColor)
                                         .frame(width: 40, height: 40)
                                         .shadow(radius: 4)
 
@@ -128,6 +129,7 @@ struct StoreInfoSheet: View {
     let store: Store
     let onViewStore: () -> Void
     let onDismiss: () -> Void
+    @ObservedObject private var gradientManager = GradientStateManager.shared
 
     var body: some View {
         VStack(spacing: 0) {
@@ -203,7 +205,7 @@ struct StoreInfoSheet: View {
                         .padding(.vertical, 14)
                         .background(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.llegoPrimary, lineWidth: 2)
+                                .stroke(gradientManager.currentAccentColor, lineWidth: 2)
                         )
                 }
 
@@ -213,7 +215,7 @@ struct StoreInfoSheet: View {
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Color.llegoPrimary)
+                        .background(gradientManager.currentAccentColor)
                         .cornerRadius(12)
                 }
             }

@@ -9,6 +9,7 @@ import SwiftUI
 
 struct AIStoreCard: View {
     let branch: AIChatBranchEntity
+    @ObservedObject private var gradientManager = GradientStateManager.shared
 
     // Calcular ETA basado en coordenadas (placeholder por ahora)
     private var etaMinutes: Int {
@@ -46,7 +47,7 @@ struct AIStoreCard: View {
                         .fill(Color(red: 240/255, green: 242/255, blue: 246/255))
                         .overlay(
                             ProgressView()
-                                .tint(.llegoPrimary)
+                                .tint(gradientManager.currentAccentColor)
                         )
                 }
                 .frame(height: bannerHeight)
@@ -65,7 +66,7 @@ struct AIStoreCard: View {
                     if let reason = branch.reason, !reason.isEmpty {
                         Text(reason)
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(gradientManager.currentAccentColor)
                             .lineLimit(2)
                     }
 
@@ -151,7 +152,7 @@ struct AIStoreCard: View {
                             .fill(Color.llegoBackground)
                         Image(systemName: "storefront")
                             .font(.system(size: 24))
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(gradientManager.currentAccentColor)
                     }
                 @unknown default:
                     EmptyView()

@@ -153,7 +153,7 @@ public extension LlegoAPI {
             public var weight: String { __data["weight"] }
             public var price: Double { __data["price"] }
             public var currency: String { __data["currency"] }
-            /// Presigned URL for the low quality product image (100x100)
+            /// Presigned URL for the low quality product image (720x540)
             public var imageUrlBaja: String { __data["imageUrlBaja"] }
             public var availability: Bool { __data["availability"] }
             public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }

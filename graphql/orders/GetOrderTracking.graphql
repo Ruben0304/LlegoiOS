@@ -13,6 +13,7 @@ query GetOrderTracking($orderId: String!, $jwt: String!) {
         name
         quantity
         price
+        imageUrlMuyBaja
         imageUrl
       }
       deliveryPerson {

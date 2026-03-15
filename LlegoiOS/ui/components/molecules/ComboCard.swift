@@ -60,6 +60,7 @@ struct ComboCard: View {
     let combo: Combo
     var onTap: (() -> Void)? = nil
 
+    @ObservedObject private var gradientManager = GradientStateManager.shared
     @State private var isPressed = false
 
     var body: some View {
@@ -189,7 +190,7 @@ struct ComboCard: View {
             placeholder: {
                 ZStack {
                     Color(red: 240/255, green: 242/255, blue: 246/255)
-                    ProgressView().tint(.llegoPrimary)
+                    ProgressView().tint(gradientManager.currentAccentColor)
                 }
             },
             failure: {

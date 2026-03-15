@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetMyOrders"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetMyOrders($status: OrderStatusEnum, $limit: Int, $offset: Int, $jwt: String!) { myOrders(status: $status, limit: $limit, offset: $offset, jwt: $jwt) { __typename orders { __typename id orderNumber status total currency paymentStatus createdAt lastStatusAt estimatedMinutesRemaining items { __typename productId name quantity imageUrl } branch { __typename id name avatarUrl } business { __typename id name } } totalCount hasMore } }"#
+        #"query GetMyOrders($status: OrderStatusEnum, $limit: Int, $offset: Int, $jwt: String!) { myOrders(status: $status, limit: $limit, offset: $offset, jwt: $jwt) { __typename orders { __typename id orderNumber status total currency paymentStatus createdAt lastStatusAt estimatedMinutesRemaining items { __typename productId name quantity imageUrlMuyBaja imageUrl } branch { __typename id name avatarUrl } business { __typename id name } } totalCount hasMore } }"#
       ))
 
     public var status: GraphQLNullable<GraphQLEnum<OrderStatusEnum>>
@@ -135,6 +135,7 @@ public extension LlegoAPI {
               .field("productId", String.self),
               .field("name", String.self),
               .field("quantity", Int.self),
+              .field("imageUrlMuyBaja", String?.self),
               .field("imageUrl", String?.self),
             ] }
             @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
@@ -144,6 +145,8 @@ public extension LlegoAPI {
             public var productId: String { __data["productId"] }
             public var name: String { __data["name"] }
             public var quantity: Int { __data["quantity"] }
+            /// Presigned URL for the very low quality item image (200x200)
+            public var imageUrlMuyBaja: String? { __data["imageUrlMuyBaja"] }
             /// Presigned URL for the item image
             public var imageUrl: String? { __data["imageUrl"] }
           }

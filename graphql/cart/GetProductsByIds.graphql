@@ -1,0 +1,18 @@
+query GetProductsByIds($ids: [String!]!, $jwt: String) {
+  productsByIds(ids: $ids, jwt: $jwt) {
+    id
+    branchId
+    name
+    weight
+    price
+    currency
+    convertedPrice
+    convertedCurrency
+    exchangeRate
+    imageUrlMuyBaja
+    availability
+    business {
+      name
+    }
+  }
+}

@@ -9,6 +9,7 @@ import SwiftUI
 
 struct AIPaymentMethodCard: View {
     let paymentMethod: AIChatPaymentEntity
+    @ObservedObject private var gradientManager = GradientStateManager.shared
 
     // Icono según el tipo de método de pago
     private var paymentIcon: String {
@@ -42,7 +43,7 @@ struct AIPaymentMethodCard: View {
         case "apple_pay":
             return .black
         default:
-            return .llegoPrimary
+            return gradientManager.currentAccentColor
         }
     }
 

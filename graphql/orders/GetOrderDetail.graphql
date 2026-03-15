@@ -21,6 +21,7 @@ query GetOrderDetail($id: String!, $jwt: String!) {
       name
       price
       quantity
+      imageUrlMuyBaja
       imageUrl
       wasModifiedByStore
       lineTotal

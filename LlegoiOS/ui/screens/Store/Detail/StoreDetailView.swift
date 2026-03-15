@@ -8,6 +8,7 @@ struct StoreDetailView: View {
 
     @StateObject private var viewModel = StoreDetailViewModel()
     @StateObject private var branchLikesManager = BranchLikesManager.shared
+    @ObservedObject private var gradientManager = GradientStateManager.shared
     @Environment(\.dismiss) private var dismiss
     @State private var region: MKCoordinateRegion
     @State private var selectedProductId: String?
@@ -96,11 +97,11 @@ struct StoreDetailView: View {
             return (
                 "USD y CUP",
                 "arrow.left.arrow.right.circle.fill",
-                Color.llegoPrimary.opacity(0.08),
-                Color.llegoPrimary.opacity(0.25),
-                Color.llegoPrimary,
-                Color.llegoPrimary.opacity(0.75),
-                Color.llegoPrimary
+                gradientManager.currentAccentColor.opacity(0.08),
+                gradientManager.currentAccentColor.opacity(0.25),
+                gradientManager.currentAccentColor,
+                gradientManager.currentAccentColor.opacity(0.75),
+                gradientManager.currentAccentColor
             )
         default:
             return (
@@ -184,7 +185,7 @@ struct StoreDetailView: View {
                         VStack(spacing: 20) {
                             ProgressView()
                                 .scaleEffect(1.5)
-                                .tint(.llegoPrimary)
+                                .tint(gradientManager.currentAccentColor)
 
                             Text("Cargando información...")
                                 .font(.system(size: 16, weight: .medium))
@@ -210,7 +211,7 @@ struct StoreDetailView: View {
                                 viewModel.loadBranchDetail(id: storeId)
                             }
                             .buttonStyle(.borderedProminent)
-                            .tint(.llegoPrimary)
+                            .tint(gradientManager.currentAccentColor)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
@@ -333,7 +334,7 @@ struct StoreDetailView: View {
                                                 HStack(spacing: 6) {
                                                     Image(systemName: "mappin.circle.fill")
                                                         .font(.system(size: 14, weight: .semibold))
-                                                        .foregroundColor(.llegoPrimary)
+                                                        .foregroundColor(gradientManager.currentAccentColor)
                                                     Text(address)
                                                         .font(.system(size: 14, weight: .medium))
                                                         .foregroundColor(.secondary)
@@ -512,7 +513,7 @@ struct StoreDetailView: View {
                                                     Image(systemName: "chevron.right")
                                                         .font(.system(size: 11, weight: .bold))
                                                 }
-                                                .foregroundColor(.llegoPrimary)
+                                                .foregroundColor(gradientManager.currentAccentColor)
                                             }
                                         }
 
@@ -652,7 +653,7 @@ struct StoreDetailView: View {
             HStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.llegoPrimary)
+                    .foregroundColor(gradientManager.currentAccentColor)
                 Text(title)
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
@@ -740,11 +741,11 @@ struct StoreDetailView: View {
                                 if let items = showcase.items, !items.isEmpty {
                                     Text("\(min(items.count, 3)) items sugeridos")
                                         .font(.system(size: 11, weight: .semibold))
-                                        .foregroundColor(.llegoPrimary)
+                                        .foregroundColor(gradientManager.currentAccentColor)
                                 } else {
                                     Text("Pide por descripción libre")
                                         .font(.system(size: 11, weight: .semibold))
-                                        .foregroundColor(.llegoPrimary)
+                                        .foregroundColor(gradientManager.currentAccentColor)
                                 }
 
                                 Button(action: {
@@ -757,7 +758,7 @@ struct StoreDetailView: View {
                                         .padding(.vertical, 10)
                                         .background(
                                             RoundedRectangle(cornerRadius: 12)
-                                                .fill(Color.llegoPrimary)
+                                                .fill(gradientManager.currentAccentColor)
                                         )
                                 }
                             }
@@ -970,6 +971,7 @@ struct SocialButton: View {
 struct SiblingBranchCard: View {
     let branch: BranchGraphQL
     let eta: Int
+    @ObservedObject private var gradientManager = GradientStateManager.shared
 
     var body: some View {
         HStack(spacing: 0) {
@@ -1019,14 +1021,14 @@ struct SiblingBranchCard: View {
                 HStack(spacing: 4) {
                     Image(systemName: "bolt.fill")
                         .font(.system(size: 10))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(gradientManager.currentAccentColor)
                     Text("\(eta) min")
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(gradientManager.currentAccentColor)
                 }
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(Color.llegoPrimary.opacity(0.1))
+                .background(gradientManager.currentAccentColor.opacity(0.1))
                 .cornerRadius(6)
             }
             .padding(12)

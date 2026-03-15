@@ -571,6 +571,12 @@ struct StoreCircleCard: View {
     }
 }
 
+private extension FeedProduct {
+    var cachedKeyBaja: String { "product_baja_\(id)" }
+    var cachedKeyMedia: String { "product_media_\(id)" }
+    var cachedBranchAvatarKey: String { "branch_avatar_\(branchId)" }
+}
+
 // MARK: - Featured Product Card
 struct FeaturedProductCard: View {
     let product: FeedProduct
@@ -593,7 +599,7 @@ struct FeaturedProductCard: View {
                         if let avatarUrl = product.branchAvatarUrl, !avatarUrl.isEmpty {
                             CachedAsyncImage(
                                 url: URL(string: avatarUrl),
-                                cacheKey: "branch_\(product.branchId)",
+                                cacheKey: product.cachedBranchAvatarKey,
                                 content: { image in image.resizable().scaledToFill() },
                                 placeholder: { Circle().fill(Color.white.opacity(0.3)) }
                             )
@@ -637,7 +643,7 @@ struct FeaturedProductCard: View {
     private var featuredImage: some View {
         let imageView = CachedAsyncImage(
             url: URL(string: product.imageUrlMedia),
-            cacheKey: "featured_\(product.id)",
+            cacheKey: product.cachedKeyMedia,
             displaySize: CGSize(width: 280, height: 350),
             content: { image in
                 image.resizable().scaledToFill()
@@ -713,8 +719,8 @@ struct SmallProductCard: View {
     private var smallCardImage: some View {
         let imageView = CachedAsyncImage(
             url: URL(string: product.imageUrlBaja),
-            cacheKey: "small_\(product.id)",
-            displaySize: CGSize(width: 140, height: 100),
+            cacheKey: product.cachedKeyBaja,
+            displaySize: CGSize(width: 180, height: 130),
             content: { image in image.resizable().scaledToFill() },
             placeholder: {
                 AdaptiveShimmerView(cornerRadius: 12)
@@ -743,7 +749,7 @@ struct CompactProductCard: View {
             ZStack(alignment: .topTrailing) {
                 CachedAsyncImage(
                     url: URL(string: product.imageUrlBaja),
-                    cacheKey: "compact_\(product.id)",
+                    cacheKey: product.cachedKeyBaja,
                     displaySize: CGSize(width: 180, height: 130),
                     content: { image in image.resizable().scaledToFill() },
                     placeholder: {
@@ -792,7 +798,7 @@ struct CompactProductCard: View {
                     if let avatarUrl = product.branchAvatarUrl, !avatarUrl.isEmpty {
                         CachedAsyncImage(
                             url: URL(string: avatarUrl),
-                            cacheKey: "branch_small_\(product.branchId)",
+                            cacheKey: product.cachedBranchAvatarKey,
                             content: { image in image.resizable().scaledToFill() },
                             placeholder: { Circle().fill(Color.gray.opacity(0.2)) }
                         )

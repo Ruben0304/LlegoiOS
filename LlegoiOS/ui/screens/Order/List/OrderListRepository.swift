@@ -72,7 +72,7 @@ final class OrderListRepository {
                                     id: item.productId,
                                     name: item.name,
                                     quantity: item.quantity,
-                                    imageUrl: item.imageUrl
+                                    imageUrl: item.imageUrlMuyBaja ?? item.imageUrl
                                 )
                             }
 

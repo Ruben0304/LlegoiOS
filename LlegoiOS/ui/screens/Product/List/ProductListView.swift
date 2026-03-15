@@ -174,7 +174,7 @@ struct ProductListView: View {
 
                                 if activeViewModel.maxDistance < 50 {
                                     Circle()
-                                        .fill(Color.llegoPrimary)
+                                        .fill(gradientManager.currentAccentColor)
                                         .frame(width: 6, height: 6)
                                 }
                             }
@@ -220,7 +220,7 @@ struct ProductListView: View {
                             Image(systemName: "heart")
                                 .font(.system(size: 16, weight: .semibold))
                                 .frame(width: 30, height: 30)
-                                .foregroundColor(.llegoPrimary)
+                                .foregroundColor(gradientManager.currentAccentColor)
                         }
                         .badge(favoritesManager.favoriteItemCount)
                         .id("favorites-toolbar-badge-\(favoritesManager.favoriteItemCount)")
@@ -437,7 +437,7 @@ struct ProductListView: View {
                         Text("Limpiar filtros")
                             .font(.system(size: 16, weight: .semibold))
                     }
-                    .foregroundColor(.llegoPrimary)
+                    .foregroundColor(gradientManager.currentAccentColor)
                     .frame(height: 50)
                     .frame(maxWidth: 220)
                 }
@@ -491,7 +491,7 @@ struct ProductListView: View {
             .frame(height: 50)
             .frame(maxWidth: 200)
             .buttonStyle(.glassProminent)
-            .tint(.llegoPrimary)
+            .tint(gradientManager.currentAccentColor)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -504,6 +504,7 @@ private struct FiltersSheet: View {
     let onApply: () -> Void
     @State private var tempDistance: Double
     @ObservedObject private var userLocationManager = UserLocationManager.shared
+    @ObservedObject private var gradientManager = GradientStateManager.shared
 
     init(maxDistance: Binding<Double>, onApply: @escaping () -> Void) {
         self._maxDistance = maxDistance
@@ -552,7 +553,7 @@ private struct FiltersSheet: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(tempDistance < 50 ? "\(Int(tempDistance)) km" : "Sin límite")
                                         .font(.system(size: 20, weight: .bold, design: .rounded))
-                                        .foregroundColor(.llegoPrimary)
+                                        .foregroundColor(gradientManager.currentAccentColor)
                                     Text("Radio actual")
                                         .font(.system(size: 12, weight: .medium))
                                         .foregroundColor(.secondary)
@@ -568,7 +569,7 @@ private struct FiltersSheet: View {
                                 HStack(spacing: 12) {
                                     Image(systemName: "minus.circle.fill")
                                         .font(.system(size: 18))
-                                        .foregroundColor(tempDistance > 1 ? .llegoPrimary : .gray.opacity(0.3))
+                                        .foregroundColor(tempDistance > 1 ? gradientManager.currentAccentColor : .gray.opacity(0.3))
                                         .onTapGesture {
                                             if tempDistance > 1 {
                                                 withAnimation(.spring(response: 0.3)) {
@@ -581,7 +582,7 @@ private struct FiltersSheet: View {
                                         .tint(
                                             LinearGradient(
                                                 gradient: Gradient(colors: [
-                                                    Color.llegoPrimary,
+                                                    gradientManager.currentAccentColor,
                                                     Color.llegoAccent
                                                 ]),
                                                 startPoint: .leading,
@@ -591,7 +592,7 @@ private struct FiltersSheet: View {
 
                                     Image(systemName: "plus.circle.fill")
                                         .font(.system(size: 18))
-                                        .foregroundColor(tempDistance < 50 ? .llegoPrimary : .gray.opacity(0.3))
+                                        .foregroundColor(tempDistance < 50 ? gradientManager.currentAccentColor : .gray.opacity(0.3))
                                         .onTapGesture {
                                             if tempDistance < 50 {
                                                 withAnimation(.spring(response: 0.3)) {
@@ -672,7 +673,7 @@ private struct FiltersSheet: View {
                             .frame(height: 44)
                     }
                     .buttonStyle(.glassProminent)
-                    .tint(.llegoPrimary)
+                    .tint(gradientManager.currentAccentColor)
                 }
                 .padding(16)
             }
@@ -683,12 +684,12 @@ private struct FiltersSheet: View {
         Button(action: action) {
             Text(title)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(.llegoPrimary)
+                .foregroundColor(gradientManager.currentAccentColor)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
                 .background(
                     Capsule()
-                        .fill(Color.llegoPrimary.opacity(0.12))
+                        .fill(gradientManager.currentAccentColor.opacity(0.12))
                 )
         }
         .buttonStyle(.plain)

@@ -8,6 +8,7 @@ struct PaymentMethodRow: View {
     let onTap: () -> Void
     let animationDelay: Double
 
+    @ObservedObject private var gradientManager = GradientStateManager.shared
     @State private var didAppear = false
 
     var body: some View {
@@ -63,7 +64,7 @@ struct PaymentMethodRow: View {
         Group {
             if isSelected {
                 Capsule()
-                    .fill(Color.llegoPrimary.opacity(0.12))
+                    .fill(gradientManager.currentAccentColor.opacity(0.12))
                     .frame(height: 22)
                     .overlay(
                         HStack(spacing: 6) {
@@ -72,7 +73,7 @@ struct PaymentMethodRow: View {
                             Text("Seleccionado")
                                 .font(.system(size: 12, weight: .semibold))
                         }
-                        .foregroundColor(Color.llegoPrimary)
+                        .foregroundColor(gradientManager.currentAccentColor)
                         .padding(.horizontal, 8)
                     )
             }
@@ -131,7 +132,7 @@ struct PaymentMethodRow: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(isSelected ? Color.llegoPrimary : Color.primary.opacity(method.isEnabled ? 0.06 : 0.03), lineWidth: isSelected ? 1.6 : 1)
+                .stroke(isSelected ? gradientManager.currentAccentColor : Color.primary.opacity(method.isEnabled ? 0.06 : 0.03), lineWidth: isSelected ? 1.6 : 1)
         )
         .scaleEffect(isSelected ? 1.01 : 1.0)
         .opacity(method.isEnabled ? 1.0 : 0.5)

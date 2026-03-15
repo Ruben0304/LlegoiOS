@@ -38,6 +38,7 @@ enum NavigationDestination: Identifiable, Hashable {
 
 struct StoreListView: View {
     @ObservedObject var viewModel: StoreListViewModel
+    @ObservedObject private var gradientManager = GradientStateManager.shared
     @State private var searchText = ""
     @FocusState private var isSearchFocused: Bool
     @State private var isMapFullScreen = false
@@ -93,7 +94,7 @@ struct StoreListView: View {
                     VStack(spacing: 20) {
                         ProgressView()
                             .controlSize(.large)
-                            .tint(.llegoPrimary)
+                            .tint(gradientManager.currentAccentColor)
                         Text("Cargando tiendas...")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(.secondary)
@@ -109,7 +110,7 @@ struct StoreListView: View {
                                     VStack(spacing: 16) {
                                         ProgressView()
                                             .controlSize(.large)
-                                            .tint(.llegoPrimary)
+                                            .tint(gradientManager.currentAccentColor)
                                         Text("Cargando tiendas...")
                                             .font(.system(size: 16, weight: .medium))
                                             .foregroundColor(.secondary)
@@ -146,7 +147,7 @@ struct StoreListView: View {
 
                                         Text("No se encontraron vendedores")
                                             .font(.system(size: 18, weight: .semibold))
-                                            .foregroundColor(.llegoPrimary)
+                                            .foregroundColor(gradientManager.currentAccentColor)
 
                                         Text("Intenta con otra búsqueda")
                                             .font(.system(size: 14))
@@ -202,7 +203,7 @@ struct StoreListView: View {
                                     HStack {
                                         Spacer()
                                         ProgressView()
-                                            .tint(Color.llegoPrimary)
+                                            .tint(gradientManager.currentAccentColor)
                                             .padding()
                                         Spacer()
                                     }
@@ -242,7 +243,7 @@ struct StoreListView: View {
                     }) {
                         Image(systemName: viewMode == .list ? "map.fill" : "list.bullet")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(gradientManager.currentAccentColor)
                             .frame(width: 30, height: 30)
                     }
                 }
@@ -390,7 +391,7 @@ struct StoreListView: View {
                 }) {
                     Text("Cancelar")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(gradientManager.currentAccentColor)
                 }
                 .transition(.move(edge: .trailing).combined(with: .opacity))
             }
@@ -466,7 +467,7 @@ private struct RadialShopMapView: View {
                 // Mapa rectangular con máscara radial condicional
                 Map(position: mapPositionBinding) {
                     ForEach(shopPins) { pin in
-                        Annotation("", coordinate: pin.coordinate) {
+                        Annotation("", coordinate: pin.coordinate, anchor: .bottom) {
                             ShopMapPinView(
                                 pin: pin,
                                 action: {
@@ -670,21 +671,6 @@ private struct ShopMapPinView: View {
                     .frame(width: 16, height: 12)
                     .offset(y: -1)
 
-                // Shadow
-                Ellipse()
-                    .fill(
-                        RadialGradient(
-                            gradient: Gradient(colors: [
-                                Color.black.opacity(0.25),
-                                Color.black.opacity(0)
-                            ]),
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: 15
-                        )
-                    )
-                    .frame(width: 30, height: 8)
-                    .offset(y: 4)
             }
         }
         .scaleEffect(isPressed ? 0.9 : 1.0)
@@ -695,11 +681,12 @@ private struct ShopMapPinView: View {
 
 private struct ShopMapCenterIndicator: View {
     let isPulsing: Bool
+    @ObservedObject private var gradientManager = GradientStateManager.shared
 
     var body: some View {
         ZStack {
             Circle()
-                .fill(Color.llegoPrimary.opacity(0.18))
+                .fill(gradientManager.currentAccentColor.opacity(0.18))
                 .scaleEffect(isPulsing ? 1.2 : 0.9)
                 .opacity(isPulsing ? 0 : 0.6)
 
@@ -707,8 +694,8 @@ private struct ShopMapCenterIndicator: View {
                 .fill(
                     LinearGradient(
                         gradient: Gradient(colors: [
-                            Color.llegoPrimary,
-                            Color.llegoPrimary.opacity(0.8)
+                            gradientManager.currentAccentColor,
+                            gradientManager.currentAccentColor.opacity(0.8)
                         ]),
                         startPoint: .top,
                         endPoint: .bottom
@@ -719,7 +706,7 @@ private struct ShopMapCenterIndicator: View {
                     Circle()
                         .stroke(Color.white, lineWidth: 4)
                 )
-                .shadow(color: Color.llegoPrimary.opacity(0.4), radius: 10, x: 0, y: 5)
+                .shadow(color: gradientManager.currentAccentColor.opacity(0.4), radius: 10, x: 0, y: 5)
         }
         .animation(.easeInOut(duration: 1.8).repeatForever(autoreverses: false), value: isPulsing)
     }
@@ -863,11 +850,12 @@ private struct FullScreenMapView: View {
     @Binding var mapRegion: MKCoordinateRegion
     let stores: [StoreWithCoordinates]
     let onStoreSelected: (StoreWithCoordinates) -> Void
+    @ObservedObject private var gradientManager = GradientStateManager.shared
 
     var body: some View {
         Map(position: mapPositionBinding) {
             ForEach(stores) { store in
-                Annotation("", coordinate: store.coordinate) {
+                Annotation("", coordinate: store.coordinate, anchor: .bottom) {
                     Button(action: {
                         onStoreSelected(store)
                     }) {
@@ -875,7 +863,7 @@ private struct FullScreenMapView: View {
                         // Pin head con logo
                         ZStack {
                             Circle()
-                                .fill(Color.llegoPrimary)
+                                .fill(gradientManager.currentAccentColor)
                                 .frame(width: 50, height: 50)
 
                             CachedAsyncImage(
@@ -908,29 +896,14 @@ private struct FullScreenMapView: View {
                                 }
                             )
                         }
-                        .shadow(color: Color.llegoPrimary.opacity(0.4), radius: 8, x: 0, y: 4)
+                        .shadow(color: gradientManager.currentAccentColor.opacity(0.4), radius: 8, x: 0, y: 4)
 
                         // Pin point
                         PinTriangle()
-                            .fill(Color.llegoPrimary)
+                            .fill(gradientManager.currentAccentColor)
                             .frame(width: 16, height: 12)
                             .offset(y: -1)
 
-                        // Shadow
-                        Ellipse()
-                            .fill(
-                                RadialGradient(
-                                    gradient: Gradient(colors: [
-                                        Color.black.opacity(0.25),
-                                        Color.black.opacity(0)
-                                    ]),
-                                    center: .center,
-                                    startRadius: 0,
-                                    endRadius: 15
-                                )
-                            )
-                            .frame(width: 30, height: 8)
-                            .offset(y: 4)
                         }
                     }
                     .buttonStyle(PlainButtonStyle())

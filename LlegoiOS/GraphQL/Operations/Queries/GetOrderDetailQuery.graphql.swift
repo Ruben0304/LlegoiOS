@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetOrderDetail"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetOrderDetail($id: String!, $jwt: String!) { order(id: $id, jwt: $jwt) { __typename id orderNumber status subtotal deliveryFee total currency paymentMethod paymentStatus createdAt updatedAt lastStatusAt isEditable canCancel estimatedDeliveryTime estimatedMinutesRemaining items { __typename productId name price quantity imageUrl wasModifiedByStore lineTotal } discounts { __typename id title amount type } deliveryAddress { __typename street city reference addressType buildingName floor apartment deliveryInstructions coordinates { __typename type coordinates } } deliveryPerson { __typename id name phone rating vehicleType vehiclePlate profileImageUrl isOnline } timeline { __typename status timestamp message actor } comments { __typename id author message timestamp } branch { __typename id name address phone avatarUrl coordinates { __typename type coordinates } } business { __typename id name avatarUrl } } }"#
+        #"query GetOrderDetail($id: String!, $jwt: String!) { order(id: $id, jwt: $jwt) { __typename id orderNumber status subtotal deliveryFee total currency paymentMethod paymentStatus createdAt updatedAt lastStatusAt isEditable canCancel estimatedDeliveryTime estimatedMinutesRemaining items { __typename productId name price quantity imageUrlMuyBaja imageUrl wasModifiedByStore lineTotal } discounts { __typename id title amount type } deliveryAddress { __typename street city reference addressType buildingName floor apartment deliveryInstructions coordinates { __typename type coordinates } } deliveryPerson { __typename id name phone rating vehicleType vehiclePlate profileImageUrl isOnline } timeline { __typename status timestamp message actor } comments { __typename id author message timestamp } branch { __typename id name address phone avatarUrl coordinates { __typename type coordinates } } business { __typename id name avatarUrl } } }"#
       ))
 
     public var id: String
@@ -135,6 +135,7 @@ public extension LlegoAPI {
             .field("name", String.self),
             .field("price", Double.self),
             .field("quantity", Int.self),
+            .field("imageUrlMuyBaja", String?.self),
             .field("imageUrl", String?.self),
             .field("wasModifiedByStore", Bool.self),
             .field("lineTotal", Double.self),
@@ -147,6 +148,8 @@ public extension LlegoAPI {
           public var name: String { __data["name"] }
           public var price: Double { __data["price"] }
           public var quantity: Int { __data["quantity"] }
+          /// Presigned URL for the very low quality item image (200x200)
+          public var imageUrlMuyBaja: String? { __data["imageUrlMuyBaja"] }
           /// Presigned URL for the item image
           public var imageUrl: String? { __data["imageUrl"] }
           public var wasModifiedByStore: Bool { __data["wasModifiedByStore"] }

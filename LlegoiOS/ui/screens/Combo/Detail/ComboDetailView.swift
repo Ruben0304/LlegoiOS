@@ -4,6 +4,7 @@ struct ComboDetailView: View {
     let comboId: String
 
     @StateObject private var viewModel = ComboDetailViewModel()
+    @ObservedObject private var gradientManager = GradientStateManager.shared
     @Environment(\.dismiss) private var dismiss
     @State private var showCart = false
     @State private var addedToCartPulse = false
@@ -42,7 +43,7 @@ struct ComboDetailView: View {
                     } label: {
                         Image(systemName: "cart")
                             .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(gradientManager.currentAccentColor)
                     }
                 }
             }
@@ -69,7 +70,7 @@ struct ComboDetailView: View {
         VStack(spacing: 20) {
             ProgressView()
                 .controlSize(.large)
-                .tint(.llegoPrimary)
+                .tint(gradientManager.currentAccentColor)
             Text("Cargando combo...")
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.secondary)
@@ -95,7 +96,7 @@ struct ComboDetailView: View {
             .frame(height: 50)
             .frame(maxWidth: 200)
             .buttonStyle(.glass)
-            .tint(.llegoPrimary)
+            .tint(gradientManager.currentAccentColor)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -172,7 +173,7 @@ struct ComboDetailView: View {
                     placeholder: {
                         ZStack {
                             Color.gray.opacity(0.1)
-                            ProgressView().tint(.llegoPrimary)
+                            ProgressView().tint(gradientManager.currentAccentColor)
                         }
                     },
                     failure: {
@@ -199,7 +200,7 @@ struct ComboDetailView: View {
                 LinearGradient(
                     colors: [
                         Color.llegoAccent.opacity(0.22),
-                        Color.llegoPrimary.opacity(0.12),
+                        gradientManager.currentAccentColor.opacity(0.12),
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -345,7 +346,7 @@ struct ComboDetailView: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 7)
                                 .padding(.vertical, 3)
-                                .background(Capsule().fill(Color.llegoPrimary))
+                                .background(Capsule().fill(gradientManager.currentAccentColor))
                         }
                     }
 
@@ -432,7 +433,7 @@ struct ComboDetailView: View {
                             "+\(viewModel.formatPrice(option.priceAdjustment, currency: combo.currency))"
                         )
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(gradientManager.currentAccentColor)
                     } else if option.priceAdjustment < 0 {
                         Text(
                             "\(viewModel.formatPrice(option.priceAdjustment, currency: combo.currency))"
@@ -454,28 +455,28 @@ struct ComboDetailView: View {
                         // Radio button style
                         Circle()
                             .stroke(
-                                isSelected ? Color.llegoPrimary : Color.gray.opacity(0.3),
+                                isSelected ? gradientManager.currentAccentColor : Color.gray.opacity(0.3),
                                 lineWidth: 2
                             )
                             .frame(width: 22, height: 22)
 
                         if isSelected {
                             Circle()
-                                .fill(Color.llegoPrimary)
+                                .fill(gradientManager.currentAccentColor)
                                 .frame(width: 12, height: 12)
                         }
                     } else {
                         // Checkbox style
                         RoundedRectangle(cornerRadius: 6, style: .continuous)
                             .stroke(
-                                isSelected ? Color.llegoPrimary : Color.gray.opacity(0.3),
+                                isSelected ? gradientManager.currentAccentColor : Color.gray.opacity(0.3),
                                 lineWidth: 2
                             )
                             .frame(width: 22, height: 22)
 
                         if isSelected {
                             RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                .fill(Color.llegoPrimary)
+                                .fill(gradientManager.currentAccentColor)
                                 .frame(width: 22, height: 22)
                             Image(systemName: "checkmark")
                                 .font(.system(size: 12, weight: .bold))
@@ -535,7 +536,7 @@ struct ComboDetailView: View {
                         Capsule()
                             .fill(
                                 viewModel.isReadyToAdd
-                                    ? Color.llegoPrimary : Color.gray.opacity(0.4))
+                                    ? gradientManager.currentAccentColor : Color.gray.opacity(0.4))
                     )
                 }
                 .disabled(!viewModel.isReadyToAdd)

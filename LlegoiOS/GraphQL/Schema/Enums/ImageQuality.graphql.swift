@@ -5,6 +5,7 @@
 
 public extension LlegoAPI {
   enum ImageQuality: String, EnumType {
+    case muyBaja = "MUY_BAJA"
     case baja = "BAJA"
     case media = "MEDIA"
     case alta = "ALTA"

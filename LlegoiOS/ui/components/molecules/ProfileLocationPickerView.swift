@@ -7,6 +7,7 @@ import CoreLocation
 struct ProfileLocationPickerView: View {
     @Environment(\.dismiss) var dismiss
     @ObservedObject private var userLocationManager = UserLocationManager.shared
+    @ObservedObject private var gradientManager = GradientStateManager.shared
 
     @State private var mapPosition: MapCameraPosition = .region(MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 23.1136, longitude: -82.3666),
@@ -27,10 +28,10 @@ struct ProfileLocationPickerView: View {
                             VStack(spacing: 0) {
                                 Image(systemName: "mappin.circle.fill")
                                     .font(.system(size: 40))
-                                    .foregroundColor(.llegoPrimary)
+                                    .foregroundColor(gradientManager.currentAccentColor)
                                 Image(systemName: "arrowtriangle.down.fill")
                                     .font(.system(size: 14))
-                                    .foregroundColor(.llegoPrimary)
+                                    .foregroundColor(gradientManager.currentAccentColor)
                                     .offset(y: -6)
                             }
                         }
@@ -78,7 +79,7 @@ struct ProfileLocationPickerView: View {
                     }) {
                         Image(systemName: "location.fill")
                             .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(gradientManager.currentAccentColor)
                             .frame(width: 44, height: 44)
                             .background(.ultraThinMaterial, in: Circle())
                     }
@@ -94,7 +95,7 @@ struct ProfileLocationPickerView: View {
                     HStack(spacing: 12) {
                         Image(systemName: "mappin.circle.fill")
                             .font(.system(size: 24))
-                            .foregroundColor(showConfirmation ? .llegoAccent : .llegoPrimary)
+                            .foregroundColor(showConfirmation ? .llegoAccent : gradientManager.currentAccentColor)
                         
                         Text(showConfirmation ? "¡Ubicación guardada!" : addressText)
                             .font(.system(size: 15, weight: .medium))
@@ -122,7 +123,7 @@ struct ProfileLocationPickerView: View {
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
-                        .background(showConfirmation ? Color.llegoAccent : (selectedCoordinate == nil ? Color.gray : Color.llegoPrimary))
+                        .background(showConfirmation ? Color.llegoAccent : (selectedCoordinate == nil ? Color.gray : gradientManager.currentAccentColor))
                         .cornerRadius(16)
                     }
                     .disabled(selectedCoordinate == nil || isConfirming || userLocationManager.isUpdatingLocation)

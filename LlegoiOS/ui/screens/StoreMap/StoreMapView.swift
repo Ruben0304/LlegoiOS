@@ -55,7 +55,7 @@ struct StoreMapView: View {
                         }
                     } label: {
                         Text("Ver como")
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(gradientManager.currentAccentColor)
                     }
                 }
             }
@@ -110,7 +110,7 @@ struct StoreMapView: View {
     private var mapContent: some View {
         Map(position: mapPositionBinding) {
             ForEach(viewModel.stores) { store in
-                Annotation("", coordinate: store.coordinate) {
+                Annotation("", coordinate: store.coordinate, anchor: .bottom) {
                     Button(action: {
                         selectedStore = store
                     }) {
@@ -158,20 +158,6 @@ struct StoreMapView: View {
                             .frame(width: 16, height: 12)
                             .offset(y: -1)
 
-                        Ellipse()
-                            .fill(
-                                RadialGradient(
-                                    gradient: Gradient(colors: [
-                                        Color.black.opacity(0.25),
-                                        Color.black.opacity(0),
-                                    ]),
-                                    center: .center,
-                                    startRadius: 0,
-                                    endRadius: 15
-                                )
-                            )
-                            .frame(width: 30, height: 8)
-                            .offset(y: 4)
                         }
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -224,7 +210,7 @@ struct StoreMapView: View {
 
                         if listViewModel.isLoadingMore {
                             ProgressView()
-                                .tint(.llegoPrimary)
+                                .tint(gradientManager.currentAccentColor)
                                 .padding(.vertical, 8)
                         }
                     }
@@ -241,7 +227,7 @@ struct StoreMapView: View {
         VStack(spacing: 20) {
             ProgressView()
                 .controlSize(.large)
-                .tint(.llegoPrimary)
+                .tint(gradientManager.currentAccentColor)
             Text("Cargando tiendas...")
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.secondary)
@@ -300,6 +286,7 @@ private struct StoreMapOptionsModal: View {
     let onViewProducts: () -> Void
 
     @State private var isAnimated = false
+    @ObservedObject private var gradientManager = GradientStateManager.shared
 
     var body: some View {
         VStack(spacing: 0) {
@@ -414,23 +401,17 @@ private struct StoreMapOptionsModal: View {
                     HStack(spacing: 10) {
                         Image(systemName: "bag.fill")
                             .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.white)
                         Text("Ver Productos")
                             .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(.white)
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
-                    .background(
-                        LinearGradient(
-                            colors: [Color.llegoPrimary, Color.llegoPrimary.opacity(0.9)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .foregroundColor(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .shadow(color: Color.llegoPrimary.opacity(0.3), radius: 8, x: 0, y: 4)
                 }
-                .buttonStyle(ScaleButtonStyle())
+                .buttonStyle(.glassProminent)
+                .buttonBorderShape(.roundedRectangle(radius: 14))
+                .tint(gradientManager.currentAccentColor)
 
                 Button(action: onViewProfile) {
                     HStack(spacing: 10) {

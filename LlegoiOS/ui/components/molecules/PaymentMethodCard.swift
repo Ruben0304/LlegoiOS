@@ -4,7 +4,8 @@ struct PaymentMethodCard: View {
     let paymentMethod: PaymentMethodModel
     let isSelected: Bool
     let onTap: () -> Void
-    
+    @ObservedObject private var gradientManager = GradientStateManager.shared
+
     // Computed property para verificar si es Stripe
     private var isStripe: Bool {
         paymentMethod.method.lowercased() == "stripe" || paymentMethod.method.lowercased() == "card"
@@ -142,14 +143,14 @@ struct PaymentMethodCard: View {
         case "stripe", "card":
             return .llegoTertiary
         case "cash":
-            return .llegoPrimary
+            return gradientManager.currentAccentColor
         default:
             if paymentMethod.code.contains("qvapay") {
                 return Color(red: 0.2, green: 0.6, blue: 0.9)
             } else if paymentMethod.code.contains("tropipay") {
                 return Color(red: 0.9, green: 0.4, blue: 0.1)
             }
-            return .llegoPrimary
+            return gradientManager.currentAccentColor
         }
     }
     

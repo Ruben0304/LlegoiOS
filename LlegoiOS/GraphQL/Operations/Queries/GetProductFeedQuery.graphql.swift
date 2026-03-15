@@ -241,7 +241,7 @@ public extension LlegoAPI {
             public var name: String { __data["name"] }
             public var price: Double { __data["price"] }
             public var currency: String { __data["currency"] }
-            /// Presigned URL for the medium quality product image (500x500)
+            /// Presigned URL for the medium quality product image (1080x1350)
             public var imageUrlMedia: String { __data["imageUrlMedia"] }
             /// Distance in kilometers from user
             public var distanceKm: Double? { __data["distanceKm"] }
@@ -361,7 +361,7 @@ public extension LlegoAPI {
             public var name: String { __data["name"] }
             public var price: Double { __data["price"] }
             public var currency: String { __data["currency"] }
-            /// Presigned URL for the low quality product image (100x100)
+            /// Presigned URL for the low quality product image (720x540)
             public var imageUrlBaja: String { __data["imageUrlBaja"] }
             /// Distance in kilometers from user
             public var distanceKm: Double? { __data["distanceKm"] }
@@ -500,7 +500,7 @@ public extension LlegoAPI {
             public var name: String { __data["name"] }
             public var price: Double { __data["price"] }
             public var currency: String { __data["currency"] }
-            /// Presigned URL for the low quality product image (100x100)
+            /// Presigned URL for the low quality product image (720x540)
             public var imageUrlBaja: String { __data["imageUrlBaja"] }
             /// Distance in kilometers from user
             public var distanceKm: Double? { __data["distanceKm"] }

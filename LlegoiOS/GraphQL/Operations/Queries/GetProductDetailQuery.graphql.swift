@@ -92,7 +92,7 @@ public extension LlegoAPI {
         public var convertedCurrency: String? { __data["convertedCurrency"] }
         /// Tasa de cambio de la sucursal (si acepta ambas monedas)
         public var exchangeRate: Int? { __data["exchangeRate"] }
-        /// Presigned URL for the high quality product image (1000x1000)
+        /// Presigned URL for the high quality product image (1440x1800)
         public var imageUrlAlta: String { __data["imageUrlAlta"] }
         public var availability: Bool { __data["availability"] }
         public var categoryId: String? { __data["categoryId"] }

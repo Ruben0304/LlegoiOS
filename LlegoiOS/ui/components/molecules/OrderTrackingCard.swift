@@ -4,6 +4,7 @@ import SwiftUI
 struct OrderTrackingCard: View {
     @Environment(\.tabViewBottomAccessoryPlacement) var placement
     @ObservedObject var orderManager: OrderManager
+    @ObservedObject private var gradientManager = GradientStateManager.shared
     var onTap: () -> Void
 
     // URLs capturadas una sola vez para evitar que AsyncImage se recargue
@@ -233,7 +234,7 @@ struct OrderTrackingCard: View {
                         .fill(
                             LinearGradient(
                                 gradient: Gradient(colors: [
-                                    Color.llegoPrimary,
+                                    gradientManager.currentAccentColor,
                                     Color.llegoAccent,
                                 ]),
                                 startPoint: .leading,
@@ -246,7 +247,7 @@ struct OrderTrackingCard: View {
                     // Bicicleta animada
                     Image(systemName: "bicycle")
                         .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(gradientManager.currentAccentColor)
                         .offset(
                             x: max(
                                 0,
@@ -298,7 +299,7 @@ struct OrderTrackingCard: View {
                         .foregroundColor(.llegoAccent)
                     Text(formattedDistance)
                         .font(.system(size: 11, weight: .bold, design: .rounded))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(gradientManager.currentAccentColor)
                 }
                 .frame(width: 55)
             }
@@ -332,7 +333,7 @@ struct OrderTrackingCard: View {
                         .fill(
                             LinearGradient(
                                 gradient: Gradient(colors: [
-                                    Color.llegoPrimary,
+                                    gradientManager.currentAccentColor,
                                     Color.llegoAccent,
                                 ]),
                                 startPoint: .leading,
@@ -344,7 +345,7 @@ struct OrderTrackingCard: View {
 
                     Image(systemName: "bicycle")
                         .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(gradientManager.currentAccentColor)
                         .offset(
                             x: max(
                                 0,

@@ -171,7 +171,7 @@ final class OrderDetailRepository {
                 name: item.name,
                 price: item.price,
                 quantity: item.quantity,
-                imageUrl: item.imageUrl,
+                imageUrl: item.imageUrlMuyBaja ?? item.imageUrl,
                 wasModifiedByStore: item.wasModifiedByStore
             )
         }

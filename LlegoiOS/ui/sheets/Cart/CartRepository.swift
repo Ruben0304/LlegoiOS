@@ -28,14 +28,20 @@ class CartRepository {
             return
         }
 
-        let productIds = Array(Set(localItems.map { $0.productId }))
+        let productIds = localItems.reduce(into: (ids: [String](), seen: Set<String>())) {
+            partial, item in
+            if partial.seen.insert(item.productId).inserted {
+                partial.ids.append(item.productId)
+            }
+        }.ids
         print("🔎 Querying GraphQL for product IDs: \(productIds)")
 
+        let jwt = authManager.getAccessToken()
+
         apolloClient.fetchCompat(
-            query: LlegoAPI.GetCartProductsQuery(
-                first: Int32(100),
-                after: .none,
-                ids: productIds
+            query: LlegoAPI.GetProductsByIdsQuery(
+                ids: productIds,
+                jwt: jwt.map { .some($0) } ?? .none
             ),
             cachePolicy: .fetchIgnoringCacheData  // Siempre datos frescos para el carrito
         ) { result in
@@ -52,7 +58,8 @@ class CartRepository {
                     return
                 }
 
-                guard let data = graphQLResult.data?.products else {
+                let data = graphQLResult.data?.productsByIds ?? []
+                guard !data.isEmpty else {
                     completion(.success([]))
                     return
                 }
@@ -60,7 +67,7 @@ class CartRepository {
                 // Mapear GraphQL products y combinar con cantidades locales.
                 // Soporta múltiples líneas para el mismo productId con variantes distintas.
                 let productsById = Dictionary(
-                    uniqueKeysWithValues: data.edges.map { ($0.node.id, $0.node) })
+                    uniqueKeysWithValues: data.map { ($0.id, $0) })
                 let mappedProducts = localItems.compactMap { localItem -> CartProductGraphQL? in
                     guard let productNode = productsById[localItem.productId] else {
                         print(
@@ -90,13 +97,16 @@ class CartRepository {
                         comboComponentOrder: localItem.comboComponentOrder,
                         branchId: productNode.branchId,
                         name: productNode.name,
-                        description: productNode.description,
+                        description: "",
                         weight: productNode.weight,
                         basePrice: resolvedBase,
                         finalUnitPrice: resolvedUnit,
                         finalTotalPrice: resolvedTotal,
                         currency: productNode.currency,
-                        image: productNode.imageUrlBaja,
+                        convertedPrice: productNode.convertedPrice,
+                        convertedCurrency: productNode.convertedCurrency,
+                        exchangeRate: productNode.exchangeRate,
+                        image: productNode.imageUrlMuyBaja,
                         availability: productNode.availability,
                         quantity: localItem.quantity,
                         businessName: productNode.business?.name ?? "Tienda",
@@ -917,6 +927,9 @@ struct CartProductGraphQL: Identifiable, Sendable {
     let finalUnitPrice: Double
     let finalTotalPrice: Double
     let currency: String
+    let convertedPrice: Double?
+    let convertedCurrency: String?
+    let exchangeRate: Int?
     let image: String
     let availability: Bool
     let quantity: Int  // Cantidad del carrito (desde local storage)

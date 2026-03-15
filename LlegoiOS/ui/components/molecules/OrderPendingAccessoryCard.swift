@@ -4,6 +4,7 @@ import SwiftUI
 struct OrderPendingAccessoryCard: View {
     @Environment(\.tabViewBottomAccessoryPlacement) private var placement
     @ObservedObject var orderManager: OrderManager
+    @ObservedObject private var gradientManager = GradientStateManager.shared
     var onTap: () -> Void
 
     private var storeImageURL: URL? {
@@ -26,7 +27,7 @@ struct OrderPendingAccessoryCard: View {
         case .preparing:
             return .purple
         case .inTransit:
-            return .llegoPrimary
+            return gradientManager.currentAccentColor
         case .nearDestination:
             return .llegoAccent
         case .delivered:

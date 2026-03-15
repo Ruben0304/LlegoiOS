@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetOrderTracking"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetOrderTracking($orderId: String!, $jwt: String!) { orderTracking(orderId: $orderId, jwt: $jwt) { __typename order { __typename id orderNumber status total currency estimatedDeliveryTime estimatedMinutesRemaining items { __typename productId name quantity price imageUrl } deliveryPerson { __typename id name phone rating vehicleType vehiclePlate profileImageUrl currentLocation { __typename type coordinates } isOnline } timeline { __typename status timestamp message actor } branch { __typename id name avatarUrl } } deliveryPersonLocation { __typename type coordinates } storeLocation { __typename type coordinates } deliveryLocation { __typename type coordinates } estimatedMinutes distanceKm routePolyline } }"#
+        #"query GetOrderTracking($orderId: String!, $jwt: String!) { orderTracking(orderId: $orderId, jwt: $jwt) { __typename order { __typename id orderNumber status total currency estimatedDeliveryTime estimatedMinutesRemaining items { __typename productId name quantity price imageUrlMuyBaja imageUrl } deliveryPerson { __typename id name phone rating vehicleType vehiclePlate profileImageUrl currentLocation { __typename type coordinates } isOnline } timeline { __typename status timestamp message actor } branch { __typename id name avatarUrl } } deliveryPersonLocation { __typename type coordinates } storeLocation { __typename type coordinates } deliveryLocation { __typename type coordinates } estimatedMinutes distanceKm routePolyline } }"#
       ))
 
     public var orderId: String
@@ -133,6 +133,7 @@ public extension LlegoAPI {
               .field("name", String.self),
               .field("quantity", Int.self),
               .field("price", Double.self),
+              .field("imageUrlMuyBaja", String?.self),
               .field("imageUrl", String?.self),
             ] }
             @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
@@ -143,6 +144,8 @@ public extension LlegoAPI {
             public var name: String { __data["name"] }
             public var quantity: Int { __data["quantity"] }
             public var price: Double { __data["price"] }
+            /// Presigned URL for the very low quality item image (200x200)
+            public var imageUrlMuyBaja: String? { __data["imageUrlMuyBaja"] }
             /// Presigned URL for the item image
             public var imageUrl: String? { __data["imageUrl"] }
           }

@@ -84,6 +84,7 @@ private struct StoreProductsCardFront: View {
     var onGradientExtracted: ((ExtractedGradient) -> Void)? = nil
 
     @ObservedObject private var favoritesManager = FavoritesManager.shared
+    @ObservedObject private var gradientManager = GradientStateManager.shared
     @State private var storeGradient: ExtractedGradient = .placeholder
 
     private let columns = [
@@ -512,6 +513,7 @@ private struct StoreProductsCardBack: View {
 // MARK: - Store Map Pin (Same style as FullScreenMapView)
 private struct StoreMapPin: View {
     let store: StoreWithCoordinates
+    @ObservedObject private var gradientManager = GradientStateManager.shared
 
     var body: some View {
         VStack(spacing: 0) {
@@ -519,14 +521,14 @@ private struct StoreMapPin: View {
             ZStack {
                 // Outer pulse
                 Circle()
-                    .fill(Color.llegoPrimary.opacity(0.2))
+                    .fill(gradientManager.currentAccentColor.opacity(0.2))
                     .frame(width: 70, height: 70)
                     .scaleEffect(1.0)
                     .opacity(0.45)
 
                 // Inner pulse
                 Circle()
-                    .fill(Color.llegoPrimary.opacity(0.3))
+                    .fill(gradientManager.currentAccentColor.opacity(0.3))
                     .frame(width: 60, height: 60)
                     .scaleEffect(1.0)
                     .opacity(0.45)
@@ -538,8 +540,8 @@ private struct StoreMapPin: View {
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    Color.llegoPrimary,
-                                    Color.llegoPrimary.opacity(0.85)
+                                    gradientManager.currentAccentColor,
+                                    gradientManager.currentAccentColor.opacity(0.85)
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
@@ -578,12 +580,12 @@ private struct StoreMapPin: View {
                         }
                     )
                 }
-                .shadow(color: Color.llegoPrimary.opacity(0.4), radius: 8, x: 0, y: 4)
+                .shadow(color: gradientManager.currentAccentColor.opacity(0.4), radius: 8, x: 0, y: 4)
             }
 
             // Pin point
             StoreMapPinTriangle()
-                .fill(Color.llegoPrimary)
+                .fill(gradientManager.currentAccentColor)
                 .frame(width: 16, height: 12)
                 .offset(y: -1)
 

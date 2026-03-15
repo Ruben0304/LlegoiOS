@@ -67,8 +67,7 @@ struct TutorialsView: View {
                                             TutorialCard(
                                                 tutorial: tutorial,
                                                 cardWidth: 272,
-                                                cardHeight: 156,
-                                                accentColor: .llegoPrimary
+                                                cardHeight: 156
                                             ) {
                                             viewModel.selectTutorial(tutorial)
                                         }

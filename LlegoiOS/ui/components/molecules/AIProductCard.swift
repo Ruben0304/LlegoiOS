@@ -10,6 +10,7 @@ import SwiftUI
 struct AIProductCard: View {
     let product: AIChatProductEntity
     @ObservedObject private var cartManager = CartManager.shared
+    @ObservedObject private var gradientManager = GradientStateManager.shared
 
     private var count: Int {
         cartManager.getQuantity(for: product.id)
@@ -46,7 +47,7 @@ struct AIProductCard: View {
                                 .fill(Color.llegoBackground)
                             Image(systemName: "photo")
                                 .font(.system(size: 28))
-                                .foregroundColor(.llegoPrimary)
+                                .foregroundColor(gradientManager.currentAccentColor)
                         }
                     @unknown default:
                         EmptyView()
@@ -65,7 +66,7 @@ struct AIProductCard: View {
                         .fill(Color.llegoBackground)
                     Image(systemName: "photo")
                         .font(.system(size: 28))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(gradientManager.currentAccentColor)
                 }
                 .frame(width: 80, height: 80)
                 .clipShape(Circle())
@@ -121,7 +122,7 @@ struct AIProductCard: View {
                 if let reason = product.reason, !reason.isEmpty {
                     Text(reason)
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(gradientManager.currentAccentColor)
                         .lineLimit(4)
                 }
 
@@ -131,11 +132,11 @@ struct AIProductCard: View {
                     HStack(spacing: 4) {
                         Text(currencySymbol)
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.llegoPrimary.opacity(0.8))
+                            .foregroundColor(gradientManager.currentAccentColor.opacity(0.8))
 
                         Text(priceValue)
                             .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(gradientManager.currentAccentColor)
                     }
 
                     Spacer()
@@ -175,7 +176,7 @@ struct AIProductCard: View {
                         }) {
                             Image(systemName: "minus")
                                 .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.llegoPrimary)
+                                .foregroundColor(gradientManager.currentAccentColor)
                                 .frame(width: 28, height: 28)
                                 .background(
                                     Circle()
@@ -185,7 +186,7 @@ struct AIProductCard: View {
 
                         Text("\(count)")
                             .font(.system(size: 14, weight: .bold, design: .rounded))
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(gradientManager.currentAccentColor)
                             .frame(width: 24)
 
                         Button(action: {
@@ -200,7 +201,7 @@ struct AIProductCard: View {
                                 .frame(width: 28, height: 28)
                                 .background(
                                     Circle()
-                                        .fill(Color.llegoPrimary)
+                                        .fill(gradientManager.currentAccentColor)
                                 )
                         }
                     }
@@ -214,7 +215,7 @@ struct AIProductCard: View {
                     }) {
                         Image(systemName: "cart.fill.badge.plus")
                             .font(.system(size: 28, weight: .semibold))
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(gradientManager.currentAccentColor)
                     }
                 }
             }

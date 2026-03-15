@@ -86,7 +86,7 @@ struct ProductCard: View {
                     .fill(Color.clear)
                     .overlay(
                         HDRGlowView(
-                            color: .llegoPrimary,
+                            color: gradientManager.currentAccentColor,
                             intensity: 1.5,
                             radius: 0.5
                         )

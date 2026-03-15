@@ -95,7 +95,7 @@ struct FavoritesView: View {
         VStack(spacing: 16) {
             ProgressView()
                 .controlSize(.large)
-                .tint(.llegoPrimary)
+                .tint(gradientManager.currentAccentColor)
             Text("Cargando favoritos...")
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.gray)
@@ -182,6 +182,7 @@ struct FavoriteItemCard: View {
     let item: FavoriteItem
     let onAddToCart: () -> Void
     let onRemove: () -> Void
+    @ObservedObject private var gradientManager = GradientStateManager.shared
 
     var body: some View {
         HStack(spacing: 12) {
@@ -225,7 +226,7 @@ struct FavoriteItemCard: View {
 
                 Text(item.formattedPrice)
                     .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundColor(.llegoPrimary)
+                    .foregroundColor(gradientManager.currentAccentColor)
             }
 
             Spacer()
@@ -245,7 +246,7 @@ struct FavoriteItemCard: View {
                 Button(action: onAddToCart) {
                     Image(systemName: "cart.badge.plus")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(gradientManager.currentAccentColor)
                         .frame(width: 28, height: 28)
                         .background(
                             Circle()

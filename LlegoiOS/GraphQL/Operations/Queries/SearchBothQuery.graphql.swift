@@ -129,7 +129,7 @@ public extension LlegoAPI {
             public var name: String { __data["name"] }
             public var price: Double { __data["price"] }
             public var currency: String { __data["currency"] }
-            /// Presigned URL for the low quality product image (100x100)
+            /// Presigned URL for the low quality product image (720x540)
             public var imageUrlBaja: String { __data["imageUrlBaja"] }
             /// Business associated with this product (through branch)
             public var business: Business? { __data["business"] }
@@ -281,7 +281,7 @@ public extension LlegoAPI {
               public var name: String { __data["name"] }
               public var price: Double { __data["price"] }
               public var currency: String { __data["currency"] }
-              /// Presigned URL for the low quality product image (100x100)
+              /// Presigned URL for the low quality product image (720x540)
               public var imageUrlBaja: String { __data["imageUrlBaja"] }
               public var availability: Bool { __data["availability"] }
             }

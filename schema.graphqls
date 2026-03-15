@@ -41,6 +41,8 @@ type Query {
   products(first: Int = null, after: String = null, ids: [String!] = null, branchId: String = null, categoryId: String = null, availableOnly: Boolean! = false, branchTipo: BranchTipo = null, radiusKm: Float = null, jwt: String = null): ProductConnection!
   "Obtener producto por ID"
   product(id: String!, jwt: String = null): ProductType
+  "Obtener múltiples productos por lista de IDs (findMany)"
+  productsByIds(ids: [String!]!, jwt: String = null): [ProductType!]!
   "Buscar productos con scoring por cercanía (paginado)"
   searchProducts(query: String!, first: Int = null, after: String = null, useVectorSearch: Boolean! = true, branchTipo: BranchTipo = null, categoryId: String = null, radiusKm: Float = null, jwt: String = null): ProductConnection!
   "Obtener recomendaciones de productos complementarios basadas en items del carrito"
@@ -185,7 +187,7 @@ type Query {
   syncBusinessesWithBranches(jwt: String = null): [BusinessSyncType!]!
   "Sincronizar productos (todos los productos disponibles)"
   syncProducts(branchId: String = null, categoryId: String = null, availableOnly: Boolean! = false, jwt: String = null): [ProductSyncType!]!
-  "Sincronizar imágenes con URLs para diferentes calidades (100x100, 500x500, 1000x1000, original)"
+  "Sincronizar imágenes con URLs para diferentes calidades (200x200, 720x540, 1080x1350, 1440x1800, original)"
   syncImages(entityType: String = null, entityIds: [String!] = null, qualities: [ImageQuality!] = null, jwt: String = null): [ImageSyncType!]!
   "Saludo de ejemplo"
   hello(jwt: String = null): String!
@@ -335,11 +337,13 @@ type ProductType {
   createdAt: DateTime!
   "Presigned URL for the product image"
   imageUrl: String!
-  "Presigned URL for the low quality product image (100x100)"
+  "Presigned URL for the very low quality product image (200x200)"
+  imageUrlMuyBaja: String!
+  "Presigned URL for the low quality product image (720x540)"
   imageUrlBaja: String!
-  "Presigned URL for the medium quality product image (500x500)"
+  "Presigned URL for the medium quality product image (1080x1350)"
   imageUrlMedia: String!
-  "Presigned URL for the high quality product image (1000x1000)"
+  "Presigned URL for the high quality product image (1440x1800)"
   imageUrlAlta: String!
   "Presigned URL for the original product image"
   imageUrlOriginal: String!
@@ -552,11 +556,13 @@ type ScoredProductType {
   distanceM: Float
   "Presigned URL for the product image"
   imageUrl: String!
-  "Presigned URL for the low quality product image (100x100)"
+  "Presigned URL for the very low quality product image (200x200)"
+  imageUrlMuyBaja: String!
+  "Presigned URL for the low quality product image (720x540)"
   imageUrlBaja: String!
-  "Presigned URL for the medium quality product image (500x500)"
+  "Presigned URL for the medium quality product image (1080x1350)"
   imageUrlMedia: String!
-  "Presigned URL for the high quality product image (1000x1000)"
+  "Presigned URL for the high quality product image (1440x1800)"
   imageUrlAlta: String!
   "Presigned URL for the original product image"
   imageUrlOriginal: String!
@@ -902,11 +908,13 @@ type OrderItemType {
   wasModifiedByStore: Boolean!
   "Presigned URL for the item image"
   imageUrl: String
-  "Presigned URL for the low quality item image (100x100)"
+  "Presigned URL for the very low quality item image (200x200)"
+  imageUrlMuyBaja: String
+  "Presigned URL for the low quality item image (720x540)"
   imageUrlBaja: String
-  "Presigned URL for the medium quality item image (500x500)"
+  "Presigned URL for the medium quality item image (1080x1350)"
   imageUrlMedia: String
-  "Presigned URL for the high quality item image (1000x1000)"
+  "Presigned URL for the high quality item image (1440x1800)"
   imageUrlAlta: String
   "Presigned URL for the original item image"
   imageUrlOriginal: String
@@ -1022,11 +1030,13 @@ type TopProductType {
   totalRevenue: Float!
   "Presigned URL for the product image"
   imageUrl: String!
-  "Presigned URL for the low quality product image (100x100)"
+  "Presigned URL for the very low quality product image (200x200)"
+  imageUrlMuyBaja: String!
+  "Presigned URL for the low quality product image (720x540)"
   imageUrlBaja: String!
-  "Presigned URL for the medium quality product image (500x500)"
+  "Presigned URL for the medium quality product image (1080x1350)"
   imageUrlMedia: String!
-  "Presigned URL for the high quality product image (1000x1000)"
+  "Presigned URL for the high quality product image (1440x1800)"
   imageUrlAlta: String!
   "Presigned URL for the original product image"
   imageUrlOriginal: String!
@@ -1326,11 +1336,13 @@ type FeedProductType {
   distanceM: Float
   "Presigned URL for the product image"
   imageUrl: String!
-  "Presigned URL for the low quality product image (100x100)"
+  "Presigned URL for the very low quality product image (200x200)"
+  imageUrlMuyBaja: String!
+  "Presigned URL for the low quality product image (720x540)"
   imageUrlBaja: String!
-  "Presigned URL for the medium quality product image (500x500)"
+  "Presigned URL for the medium quality product image (1080x1350)"
   imageUrlMedia: String!
-  "Presigned URL for the high quality product image (1000x1000)"
+  "Presigned URL for the high quality product image (1440x1800)"
   imageUrlAlta: String!
   "Presigned URL for the original product image"
   imageUrlOriginal: String!
@@ -1448,6 +1460,7 @@ type ImageSyncType {
   urls: ImageUrlType!
 }
 type ImageUrlType {
+  muyBaja: String
   baja: String
   media: String
   alta: String
@@ -1908,6 +1921,7 @@ enum AppTarget {
   BOTH
 }
 enum ImageQuality {
+  MUY_BAJA
   BAJA
   MEDIA
   ALTA

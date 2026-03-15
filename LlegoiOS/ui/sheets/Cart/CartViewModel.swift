@@ -92,7 +92,7 @@ class CartViewModel: ObservableObject {
 
     var subtotal: Double {
         cartItems.reduce(0.0) { partial, item in
-            partial + item.finalTotalPrice
+            partial + item.itemTotal(for: selectedCurrency)
         }
     }
 
@@ -249,6 +249,9 @@ class CartViewModel: ObservableObject {
                             finalUnitPrice: product.finalUnitPrice,
                             finalTotalPrice: product.finalTotalPrice,
                             currency: product.currency,
+                            convertedPrice: product.convertedPrice,
+                            convertedCurrency: product.convertedCurrency,
+                            exchangeRate: product.exchangeRate,
                             imageUrl: product.image,
                             quantity: product.quantity,
                             branchId: product.branchId,
@@ -277,6 +280,9 @@ class CartViewModel: ObservableObject {
                             finalUnitPrice: 0,
                             finalTotalPrice: 0,
                             currency: "BOTH",
+                            convertedPrice: nil,
+                            convertedCurrency: nil,
+                            exchangeRate: nil,
                             imageUrl: showcase.imageUrl,
                             quantity: showcase.quantity,
                             branchId: showcase.branchId,
@@ -359,6 +365,9 @@ class CartViewModel: ObservableObject {
                 finalUnitPrice: priceValue,
                 finalTotalPrice: priceValue,
                 currency: "CUP",
+                convertedPrice: nil,
+                convertedCurrency: nil,
+                exchangeRate: nil,
                 imageUrl: product.imageUrl,
                 quantity: 1,
                 branchId: nil,
@@ -1238,6 +1247,9 @@ struct CartItem: Identifiable, Hashable {
     let finalUnitPrice: Double
     let finalTotalPrice: Double
     var currency: String
+    let convertedPrice: Double?
+    let convertedCurrency: String?
+    let exchangeRate: Int?
     let imageUrl: String
     var quantity: Int
     let branchId: String?
@@ -1248,8 +1260,31 @@ struct CartItem: Identifiable, Hashable {
         "\(currencySymbol) \(String(format: "%.2f", finalUnitPrice))"
     }
 
+    /// Precio unitario convertido a la moneda seleccionada
+    func unitPrice(for selectedCurrency: String) -> Double {
+        let selected = selectedCurrency.uppercased()
+        let original = currency.uppercased()
+
+        // Misma moneda o no soporta la seleccionada → precio original
+        if selected == original || !supportsCurrency(selected) {
+            return finalUnitPrice
+        }
+
+        guard let rate = exchangeRate, rate > 0 else {
+            return finalUnitPrice
+        }
+
+        if original == "USD" && selected == "CUP" {
+            return finalUnitPrice * Double(rate)
+        } else if original == "CUP" && selected == "USD" {
+            return finalUnitPrice / Double(rate)
+        }
+
+        return finalUnitPrice
+    }
+
     func formattedPrice(for selectedCurrency: String) -> String {
-        "\(currencySymbol(for: selectedCurrency)) \(String(format: "%.2f", finalUnitPrice))"
+        "\(currencySymbol(for: selectedCurrency)) \(String(format: "%.2f", unitPrice(for: selectedCurrency)))"
     }
 
     var formattedBasePrice: String {
@@ -1260,12 +1295,17 @@ struct CartItem: Identifiable, Hashable {
         finalTotalPrice
     }
 
+    /// Total del item convertido a la moneda seleccionada
+    func itemTotal(for selectedCurrency: String) -> Double {
+        unitPrice(for: selectedCurrency) * Double(quantity)
+    }
+
     var formattedItemTotal: String {
         "\(currencySymbol) \(String(format: "%.2f", itemTotal))"
     }
 
     func formattedItemTotal(for selectedCurrency: String) -> String {
-        "\(currencySymbol(for: selectedCurrency)) \(String(format: "%.2f", itemTotal))"
+        "\(currencySymbol(for: selectedCurrency)) \(String(format: "%.2f", itemTotal(for: selectedCurrency)))"
     }
 
     var isShowcase: Bool {
@@ -1305,6 +1345,15 @@ struct CartItem: Identifiable, Hashable {
         return "Moneda disponible: \(currency.uppercased())"
     }
 
+    /// Info text que solo aparece cuando la moneda seleccionada no es soportada
+    func currencyInfoText(for selectedCurrency: String) -> String? {
+        let selected = selectedCurrency.uppercased()
+        // Si soporta la moneda seleccionada, no mostrar nada
+        if supportsCurrency(selected) { return nil }
+        // No soporta la seleccionada → mostrar en qué moneda se cobra
+        return "Solo disponible en \(currency.uppercased())"
+    }
+
     private var currencySymbol: String {
         switch canonicalCurrencyForDisplay {
         case "USD":
@@ -1336,6 +1385,11 @@ struct CartItem: Identifiable, Hashable {
     }
 
     private var supportedCurrencyCodes: Set<String> {
+        // Si hay convertedPrice y convertedCurrency, el branch acepta ambas monedas
+        if convertedPrice != nil && convertedCurrency != nil {
+            return ["CUP", "USD"]
+        }
+
         let uppercase = currency.uppercased()
         if uppercase.contains("BOTH") {
             return ["CUP", "USD"]

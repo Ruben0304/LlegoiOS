@@ -9,6 +9,7 @@ import SwiftUI
 
 struct TransferSmsConfirmationView: View {
     @ObservedObject var cartViewModel: CartViewModel
+    @ObservedObject private var gradientManager = GradientStateManager.shared
     let paymentMethodId: String
     let totalAmount: String
 
@@ -52,7 +53,7 @@ struct TransferSmsConfirmationView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     if case .askingSms = phase {
                         Button("Cancelar") { onDismiss() }
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(gradientManager.currentAccentColor)
                     }
                 }
             }
@@ -71,7 +72,7 @@ struct TransferSmsConfirmationView: View {
             VStack(spacing: 16) {
                 Image(systemName: "message.badge.filled.fill")
                     .font(.system(size: 56))
-                    .foregroundColor(.llegoPrimary)
+                    .foregroundColor(gradientManager.currentAccentColor)
 
                 Text("¿Tu transferencia enviará SMS?")
                     .font(.system(size: 22, weight: .bold, design: .rounded))
@@ -106,7 +107,7 @@ struct TransferSmsConfirmationView: View {
                     .foregroundColor(.white)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 16)
-                    .background(Color.llegoPrimary)
+                    .background(gradientManager.currentAccentColor)
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
 
@@ -127,14 +128,14 @@ struct TransferSmsConfirmationView: View {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 14, weight: .semibold))
                     }
-                    .foregroundColor(.llegoPrimary)
+                    .foregroundColor(gradientManager.currentAccentColor)
                     .padding(.horizontal, 20)
                     .padding(.vertical, 16)
-                    .background(Color.llegoPrimary.opacity(0.08))
+                    .background(gradientManager.currentAccentColor.opacity(0.08))
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.llegoPrimary.opacity(0.2), lineWidth: 1)
+                            .stroke(gradientManager.currentAccentColor.opacity(0.2), lineWidth: 1)
                     )
                 }
             }
@@ -151,7 +152,7 @@ struct TransferSmsConfirmationView: View {
             ProgressView()
                 .progressViewStyle(.circular)
                 .scaleEffect(1.4)
-                .tint(.llegoPrimary)
+                .tint(gradientManager.currentAccentColor)
             Text("Iniciando pago...")
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.secondary)
@@ -168,12 +169,12 @@ struct TransferSmsConfirmationView: View {
                 // Animación de espera
                 ZStack {
                     Circle()
-                        .stroke(Color.llegoPrimary.opacity(0.1), lineWidth: 6)
+                        .stroke(gradientManager.currentAccentColor.opacity(0.1), lineWidth: 6)
                         .frame(width: 80, height: 80)
 
                     Circle()
                         .trim(from: 0, to: 0.75)
-                        .stroke(Color.llegoPrimary, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                        .stroke(gradientManager.currentAccentColor, style: StrokeStyle(lineWidth: 6, lineCap: .round))
                         .frame(width: 80, height: 80)
                         .rotationEffect(.degrees(-90))
                         .animation(
@@ -183,7 +184,7 @@ struct TransferSmsConfirmationView: View {
 
                     Image(systemName: "arrow.triangle.2.circlepath")
                         .font(.system(size: 28, weight: .medium))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(gradientManager.currentAccentColor)
                 }
 
                 VStack(spacing: 8) {
@@ -204,7 +205,7 @@ struct TransferSmsConfirmationView: View {
                     .foregroundColor(.llegoAccent)
                 Text("Total: \(totalAmount) CUP")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.llegoPrimary)
+                    .foregroundColor(gradientManager.currentAccentColor)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
@@ -227,7 +228,7 @@ struct TransferSmsConfirmationView: View {
                 } label: {
                     Text("Subir comprobante manualmente")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(gradientManager.currentAccentColor)
                         .underline()
                 }
             }
@@ -261,7 +262,7 @@ struct TransferSmsConfirmationView: View {
             }
             .padding(.horizontal, 32)
             .padding(.vertical, 12)
-            .background(Color.llegoPrimary)
+            .background(gradientManager.currentAccentColor)
             .foregroundColor(.white)
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }

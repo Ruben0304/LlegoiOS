@@ -173,19 +173,19 @@ struct SearchView: View {
                 Text(viewModel.isOfflineMode ? "Sin internet" : "Con internet")
                     .font(.system(size: 12, weight: .semibold))
             }
-            .foregroundColor(viewModel.isOfflineMode ? .orange : .llegoPrimary)
+            .foregroundColor(viewModel.isOfflineMode ? .orange : gradientManager.currentAccentColor)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
             .background(
                 Capsule()
                     .fill(viewModel.isOfflineMode
                           ? Color.orange.opacity(0.12)
-                          : Color.llegoPrimary.opacity(0.08))
+                          : gradientManager.currentAccentColor.opacity(0.08))
             )
             .overlay(
                 Capsule()
                     .strokeBorder(
-                        viewModel.isOfflineMode ? Color.orange.opacity(0.35) : Color.llegoPrimary.opacity(0.2),
+                        viewModel.isOfflineMode ? Color.orange.opacity(0.35) : gradientManager.currentAccentColor.opacity(0.2),
                         lineWidth: 1
                     )
             )
@@ -214,7 +214,7 @@ struct SearchView: View {
             }
         } label: {
             Text(categoryLabel)
-                .foregroundColor(.llegoPrimary)
+                .foregroundColor(gradientManager.currentAccentColor)
         }
     }
 
@@ -248,7 +248,7 @@ struct SearchView: View {
         } label: {
             ZStack {
                 Image(systemName: "arrow.clockwise.icloud")
-                    .foregroundColor(syncService.hasLocalData ? .llegoPrimary : .secondary)
+                    .foregroundColor(syncService.hasLocalData ? gradientManager.currentAccentColor : .secondary)
                 if case .syncing = syncService.syncStatus {
                     ProgressView()
                         .scaleEffect(0.5)
@@ -296,7 +296,7 @@ struct SearchView: View {
                 .frame(height: 3)
             }
         }
-        .background(Color.llegoPrimary.opacity(0.88))
+        .background(gradientManager.currentAccentColor.opacity(0.88))
         .transition(.move(edge: .top).combined(with: .opacity))
         .animation(.easeInOut(duration: 0.3), value: syncService.syncStatus)
     }
@@ -336,7 +336,7 @@ struct SearchView: View {
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Color.llegoPrimary)
+                        .background(gradientManager.currentAccentColor)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
                 .disabled(syncService.syncStatus != .idle)
@@ -346,7 +346,7 @@ struct SearchView: View {
                 } label: {
                     Label("Descargar fotos también", systemImage: "photo.badge.arrow.down")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(gradientManager.currentAccentColor)
                 }
                 .disabled(syncService.syncStatus != .idle)
             }
@@ -608,6 +608,7 @@ struct SearchView: View {
 private struct SearchStoreCircleCard: View {
     let store: StoreWithCoordinates
     @Environment(\.colorScheme) private var colorScheme
+    @ObservedObject private var gradientManager = GradientStateManager.shared
 
     var body: some View {
         VStack(spacing: 10) {
@@ -634,7 +635,7 @@ private struct SearchStoreCircleCard: View {
                 } else {
                     Image(systemName: "storefront")
                         .font(.system(size: 28))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(gradientManager.currentAccentColor)
                 }
             }
 
@@ -655,6 +656,7 @@ struct SyncSettingsSheet: View {
     var onDone: () -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var selectedQuality: OfflineImageQuality = .baja
+    @ObservedObject private var gradientManager = GradientStateManager.shared
 
     var body: some View {
         NavigationStack {
@@ -705,7 +707,7 @@ struct SyncSettingsSheet: View {
                             HStack(spacing: 10) {
                                 if phase == .embeddings {
                                     Image(systemName: "brain")
-                                        .foregroundColor(.llegoPrimary)
+                                        .foregroundColor(gradientManager.currentAccentColor)
                                 } else {
                                     ProgressView().scaleEffect(0.85)
                                 }
@@ -715,12 +717,12 @@ struct SyncSettingsSheet: View {
                                 if phase == .embeddings {
                                     Text("\(Int(syncService.embeddingProgress * 100))%")
                                         .font(.system(size: 13, weight: .semibold).monospacedDigit())
-                                        .foregroundColor(.llegoPrimary)
+                                        .foregroundColor(gradientManager.currentAccentColor)
                                 }
                             }
                             if phase == .embeddings {
                                 ProgressView(value: syncService.embeddingProgress)
-                                    .tint(.llegoPrimary)
+                                    .tint(gradientManager.currentAccentColor)
                             }
                         }
                     }

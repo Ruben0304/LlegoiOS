@@ -4,11 +4,15 @@ struct TutorialCard: View {
     let tutorial: Tutorial
     var cardWidth: CGFloat = 240
     var cardHeight: CGFloat = 135
-    var accentColor: Color = .llegoPrimary
     var onTutorialTap: (() -> Void)? = nil
 
+    @ObservedObject private var gradientManager = GradientStateManager.shared
     @State private var isPressed: Bool = false
     @ObservedObject private var downloadManager = TutorialDownloadManager.shared
+
+    var accentColor: Color {
+        gradientManager.currentAccentColor
+    }
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {

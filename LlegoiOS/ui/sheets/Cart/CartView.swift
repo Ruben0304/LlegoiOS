@@ -74,14 +74,10 @@ struct CartView: View {
         }
     }
 
-    /// Monedas válidas para el carrito según los ítems con precio.
+    /// Siempre ofrecer ambas monedas; los items que no soporten la seleccionada
+    /// mostrarán un cartel informativo y mantendrán su precio original.
     var availableCurrencies: [Currency] {
-        let pricedItems = viewModel.cartItems.filter { !$0.isShowcase }
-        guard !pricedItems.isEmpty else { return Currency.allCases }
-
-        return Currency.allCases.filter { currency in
-            pricedItems.allSatisfy { $0.supportsCurrency(currency.rawValue) }
-        }
+        Currency.allCases
     }
 
     var body: some View {
@@ -240,10 +236,10 @@ struct CartView: View {
                                 }
                             }
                         } label: {
-                            currencyToolbarChip(showChevron: true)
+                            Text(selectedCurrency.rawValue)
                         }
                     } else {
-                        currencyToolbarChip(showChevron: false)
+                        Text(selectedCurrency.rawValue)
                     }
                 }
 
@@ -450,10 +446,6 @@ struct CartView: View {
     }
 
     private func ensureSelectedCurrencyIsValid() {
-        guard !availableCurrencies.isEmpty else { return }
-        if !availableCurrencies.contains(selectedCurrency) {
-            selectedCurrency = availableCurrencies[0]
-        }
         if let currentMethod = selectedPaymentMethod,
             !paymentMethodSupportsCurrency(
                 currentMethod.currency,
@@ -472,36 +464,6 @@ struct CartView: View {
         return uppercased.contains(currencyCode.uppercased())
     }
 
-    private func currencyToolbarChip(showChevron: Bool) -> some View {
-        HStack(spacing: 7) {
-            Text(selectedCurrency.flag)
-                .font(.system(size: 17))
-            VStack(alignment: .leading, spacing: 1) {
-                Text(selectedCurrency.rawValue)
-                    .font(.system(size: 13, weight: .bold))
-                Text(selectedCurrency.title)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(.secondary)
-            }
-            .foregroundColor(gradientManager.currentAccentColor)
-
-            if showChevron {
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(gradientManager.currentAccentColor.opacity(0.9))
-            }
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(
-            Capsule()
-                .fill(Color.white.opacity(0.9))
-                .overlay(
-                    Capsule()
-                        .stroke(gradientManager.currentAccentColor.opacity(0.25), lineWidth: 1)
-                )
-        )
-    }
 
     // MARK: - Cart Gradient Background
     private var cartGradientBackground: some View {
@@ -534,7 +496,7 @@ struct CartView: View {
             HStack {
                 Text("Método de Pago")
                     .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundColor(.llegoPrimary)
+                    .foregroundColor(gradientManager.currentAccentColor)
 
                 Spacer()
 
@@ -579,7 +541,7 @@ struct CartView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(method.name)
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(gradientManager.currentAccentColor)
 
                         Text(method.description)
                             .font(.system(size: 13, weight: .medium))
@@ -987,7 +949,7 @@ struct CartView: View {
 
         // MARK: - Appearance (Opcional - personalizar colores)
         var appearance = PaymentSheet.Appearance()
-        appearance.colors.primary = UIColor(Color.llegoPrimary)
+        appearance.colors.primary = UIColor(gradientManager.currentAccentColor)
         appearance.colors.background = UIColor(Color.white)
         appearance.cornerRadius = 16.0
         configuration.appearance = appearance
@@ -1559,10 +1521,10 @@ struct CartView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "creditcard.fill")
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(gradientManager.currentAccentColor)
                         Text("Este negocio acepta")
                             .font(.system(size: 13, weight: .bold))
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(gradientManager.currentAccentColor)
                     }
 
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -1615,10 +1577,10 @@ struct CartView: View {
                 .padding(14)
                 .background(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color.llegoPrimary.opacity(0.04))
+                        .fill(gradientManager.currentAccentColor.opacity(0.04))
                         .overlay(
                             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(Color.llegoPrimary.opacity(0.1), lineWidth: 1)
+                                .stroke(gradientManager.currentAccentColor.opacity(0.1), lineWidth: 1)
                         )
                 )
             }
@@ -1748,7 +1710,7 @@ struct CartItemCard: View {
                 if item.isShowcase && item.imageUrl.isEmpty {
                     Image(systemName: "sparkles.rectangle.stack.fill")
                         .font(.system(size: 22, weight: .medium))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(gradientManager.currentAccentColor)
                 } else {
                     CachedAsyncImage(
                         url: URL(string: item.imageUrl),
@@ -1787,7 +1749,7 @@ struct CartItemCard: View {
                     HStack(spacing: 6) {
                         Text(item.comboName ?? "Combo")
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(gradientManager.currentAccentColor)
                         if let slotName = item.comboComponentSlotName, !slotName.isEmpty {
                             Text("•")
                                 .font(.system(size: 10, weight: .medium))
@@ -1826,7 +1788,7 @@ struct CartItemCard: View {
 
                         Text("Cantidad: \(item.quantity)")
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(gradientManager.currentAccentColor)
                     }
                 } else {
                     HStack(spacing: 6) {
@@ -1836,7 +1798,7 @@ struct CartItemCard: View {
 
                         Text("× \(item.quantity)")
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(gradientManager.currentAccentColor)
 
                         Text("=")
                             .font(.system(size: 11, weight: .medium))
@@ -1844,11 +1806,11 @@ struct CartItemCard: View {
 
                         Text(item.formattedItemTotal(for: selectedCurrency))
                             .font(.system(size: 15, weight: .bold, design: .rounded))
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(gradientManager.currentAccentColor)
                     }
                 }
 
-                if let currencyInfo = item.currencyInfoText {
+                if let currencyInfo = item.currencyInfoText(for: selectedCurrency) {
                     HStack(spacing: 6) {
                         Image(systemName: "info.circle.fill")
                             .font(.system(size: 10, weight: .medium))
@@ -2136,7 +2098,7 @@ struct PaymentLinkSheetView: View {
             colors = [gradientManager.currentAccentColor, gradientManager.currentAccentColor]
         } else {
             colors = [
-                Color.llegoPrimary,
+                gradientManager.currentAccentColor,
                 gradientManager.currentAccentColor,
             ]
         }
@@ -2161,7 +2123,7 @@ struct PaymentLinkSheetView: View {
                                 .fill(
                                     LinearGradient(
                                         gradient: Gradient(colors: [
-                                            Color.llegoPrimary.opacity(0.15),
+                                            gradientManager.currentAccentColor.opacity(0.15),
                                             gradientManager.currentAccentColor.opacity(0.1),
                                         ]),
                                         startPoint: .topLeading,
@@ -2175,7 +2137,7 @@ struct PaymentLinkSheetView: View {
                                 .foregroundStyle(
                                     LinearGradient(
                                         gradient: Gradient(colors: [
-                                            Color.llegoPrimary,
+                                            gradientManager.currentAccentColor,
                                             gradientManager.currentAccentColor,
                                         ]),
                                         startPoint: .topLeading,
@@ -2206,7 +2168,7 @@ struct PaymentLinkSheetView: View {
                             HStack(spacing: 12) {
                                 Image(systemName: "link")
                                     .font(.system(size: 15, weight: .semibold))
-                                    .foregroundColor(.llegoPrimary)
+                                    .foregroundColor(gradientManager.currentAccentColor)
 
                                 Text(paymentLink)
                                     .font(.system(size: 13, weight: .medium, design: .monospaced))
@@ -2248,7 +2210,7 @@ struct PaymentLinkSheetView: View {
                                 .background(copyButtonGradient)
                                 .cornerRadius(16)
                                 .shadow(
-                                    color: Color.llegoPrimary.opacity(0.3),
+                                    color: gradientManager.currentAccentColor.opacity(0.3),
                                     radius: 10,
                                     x: 0,
                                     y: 4
@@ -2267,7 +2229,7 @@ struct PaymentLinkSheetView: View {
                             HStack(spacing: 8) {
                                 Image(systemName: "info.circle.fill")
                                     .font(.system(size: 15, weight: .semibold))
-                                    .foregroundColor(.llegoPrimary)
+                                    .foregroundColor(gradientManager.currentAccentColor)
 
                                 Text("Instrucciones")
                                     .font(.system(size: 15, weight: .bold))
@@ -2304,7 +2266,7 @@ struct PaymentLinkSheetView: View {
                         onDismiss()
                     }
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.llegoPrimary)
+                    .foregroundColor(gradientManager.currentAccentColor)
                 }
             }
         }
@@ -2448,7 +2410,7 @@ struct BankTransferSheetView: View {
                                         .foregroundColor(.gray)
                                     Text(bankName)
                                         .font(.system(size: 16, weight: .bold))
-                                        .foregroundColor(.llegoPrimary)
+                                        .foregroundColor(gradientManager.currentAccentColor)
                                 }
 
                                 Spacer()
@@ -2468,7 +2430,7 @@ struct BankTransferSheetView: View {
                                         .foregroundColor(.gray)
                                     Text(bankAccountNumber)
                                         .font(.system(size: 16, weight: .bold, design: .monospaced))
-                                        .foregroundColor(.llegoPrimary)
+                                        .foregroundColor(gradientManager.currentAccentColor)
                                 }
 
                                 Spacer()
@@ -2500,7 +2462,7 @@ struct BankTransferSheetView: View {
                                         .foregroundColor(.gray)
                                     Text(phoneNumber)
                                         .font(.system(size: 16, weight: .bold, design: .monospaced))
-                                        .foregroundColor(.llegoPrimary)
+                                        .foregroundColor(gradientManager.currentAccentColor)
                                 }
 
                                 Spacer()
@@ -2560,11 +2522,11 @@ struct BankTransferSheetView: View {
                             HStack {
                                 Image(systemName: "number.circle.fill")
                                     .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.llegoPrimary)
+                                    .foregroundColor(gradientManager.currentAccentColor)
 
                                 Text("Identificador de Transferencia")
                                     .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(.llegoPrimary)
+                                    .foregroundColor(gradientManager.currentAccentColor)
 
                                 Spacer()
                             }
@@ -2595,11 +2557,11 @@ struct BankTransferSheetView: View {
                             HStack {
                                 Image(systemName: "photo.badge.plus.fill")
                                     .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.llegoPrimary)
+                                    .foregroundColor(gradientManager.currentAccentColor)
 
                                 Text("Comprobante de Pago")
                                     .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(.llegoPrimary)
+                                    .foregroundColor(gradientManager.currentAccentColor)
 
                                 Spacer()
 
@@ -2656,7 +2618,7 @@ struct BankTransferSheetView: View {
                                             Text("Cambiar imagen")
                                                 .font(.system(size: 14, weight: .semibold))
                                         }
-                                        .foregroundColor(.llegoPrimary)
+                                        .foregroundColor(gradientManager.currentAccentColor)
                                         .padding(.vertical, 8)
                                     }
                                 }
@@ -2686,7 +2648,7 @@ struct BankTransferSheetView: View {
                                         Text("Subir Comprobante")
                                             .font(.system(size: 16, weight: .semibold))
                                             .foregroundColor(
-                                                transferId.isEmpty ? .gray : .llegoPrimary)
+                                                transferId.isEmpty ? .gray : gradientManager.currentAccentColor)
 
                                         Text(
                                             transferId.isEmpty
@@ -2729,7 +2691,7 @@ struct BankTransferSheetView: View {
                                 LinearGradient(
                                     gradient: Gradient(colors: [
                                         gradientManager.currentAccentColor,
-                                        Color.llegoPrimary,
+                                        gradientManager.currentAccentColor,
                                     ]),
                                     startPoint: .leading,
                                     endPoint: .trailing
@@ -2808,7 +2770,7 @@ struct BankTransferSheetView: View {
         VStack(spacing: 8) {
             Text("Transferencia Bancaria")
                 .font(.system(size: 24, weight: .bold, design: .rounded))
-                .foregroundColor(.llegoPrimary)
+                .foregroundColor(gradientManager.currentAccentColor)
 
             Text("Realiza tu transferencia y sube el comprobante")
                 .font(.system(size: 15, weight: .medium))
@@ -2904,7 +2866,7 @@ struct BankTransferSheetView: View {
 
             Text(value)
                 .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                .foregroundColor(.llegoPrimary)
+                .foregroundColor(gradientManager.currentAccentColor)
         }
     }
 

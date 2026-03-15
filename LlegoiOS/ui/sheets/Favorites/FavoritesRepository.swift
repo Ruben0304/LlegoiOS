@@ -5,6 +5,7 @@ import Apollo
 class FavoritesRepository {
     private let apolloClient = ApolloClientManager.shared.apollo
     private let favoritesManager = FavoritesManager.shared
+    private let authManager = AuthManager.shared
 
     func fetchFavoriteProducts(completion: @escaping @Sendable (Result<[FavoriteProductGraphQL], Error>) -> Void) {
         let localItems = favoritesManager.localItems
@@ -18,14 +19,19 @@ class FavoritesRepository {
             return
         }
 
-        let productIds = localItems.map { $0.productId }
+        let productIds = localItems.reduce(into: (ids: [String](), seen: Set<String>())) {
+            partial, item in
+            if partial.seen.insert(item.productId).inserted {
+                partial.ids.append(item.productId)
+            }
+        }.ids
+        let jwt = authManager.getAccessToken()
         print("🔎 Querying GraphQL for favorite IDs: \(productIds)")
 
         apolloClient.fetchCompat(
-            query: LlegoAPI.GetCartProductsQuery(
-                first: Int32(100),
-                after: .none,
-                ids: productIds
+            query: LlegoAPI.GetProductsByIdsQuery(
+                ids: productIds,
+                jwt: jwt.map { .some($0) } ?? .none
             ),
             cachePolicy: .fetchIgnoringCacheData
         ) { result in
@@ -38,22 +44,28 @@ class FavoritesRepository {
                     return
                 }
 
-                guard let data = graphQLResult.data?.products else {
+                let data = graphQLResult.data?.productsByIds ?? []
+                guard !data.isEmpty else {
                     completion(.success([]))
                     return
                 }
 
-                let mappedProducts = data.edges.map { edge in
-                    FavoriteProductGraphQL(
-                        id: edge.node.id,
-                        branchId: edge.node.branchId,
-                        name: edge.node.name,
-                        description: edge.node.description,
-                        weight: edge.node.weight,
-                        price: edge.node.price,
-                        currency: edge.node.currency,
-                        image: edge.node.imageUrlBaja,
-                        availability: edge.node.availability
+                let productsById = Dictionary(uniqueKeysWithValues: data.map { ($0.id, $0) })
+                let mappedProducts: [FavoriteProductGraphQL] = localItems.compactMap {
+                    localItem -> FavoriteProductGraphQL? in
+                    guard let node = productsById[localItem.productId] else {
+                        return nil
+                    }
+
+                    return FavoriteProductGraphQL(
+                        id: node.id,
+                        branchId: node.branchId,
+                        name: node.name,
+                        weight: node.weight,
+                        price: node.price,
+                        currency: node.currency,
+                        image: node.imageUrlMuyBaja,
+                        availability: node.availability
                     )
                 }
 
@@ -76,7 +88,6 @@ struct FavoriteProductGraphQL: Identifiable, Sendable {
     let id: String
     let branchId: String
     let name: String
-    let description: String
     let weight: String
     let price: Double
     let currency: String
