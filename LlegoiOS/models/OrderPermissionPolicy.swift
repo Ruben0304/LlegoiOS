@@ -40,6 +40,7 @@ enum OrderPermissionPolicy {
             return false
         }
 
-        return ["wallet", "stripe"].contains(paymentMethodType.lowercased())
+        let normalizedType = paymentMethodType.lowercased()
+        return ["wallet", "stripe", "qvapay", "usdt"].contains(normalizedType)
     }
 }

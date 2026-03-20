@@ -5,6 +5,10 @@ query GetBranches($first: Int! = 20, $after: String, $businessId: String, $tipo:
         id
         businessId
         name
+        acceptsQvapay
+        acceptsZelle
+        qvapayUsername
+        zelleEmail
         address
         coordinates {
           type

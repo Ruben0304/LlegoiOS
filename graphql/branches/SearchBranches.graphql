@@ -5,6 +5,10 @@ query SearchBranches($query: String!, $first: Int! = 20, $after: String, $useVec
         id
         businessId
         name
+        acceptsQvapay
+        acceptsZelle
+        qvapayUsername
+        zelleEmail
         address
         coordinates {
           type

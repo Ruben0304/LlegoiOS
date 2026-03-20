@@ -88,6 +88,20 @@ struct OrderDetailView: View {
         } message: {
             Text(viewModel.paymentAlertMessage ?? "Error al procesar el pago.")
         }
+        .sheet(isPresented: $viewModel.showTronDealerSheet) {
+            if let paymentInfo = viewModel.tronDealerPaymentInfo {
+                TronDealerPaymentView(
+                    address: paymentInfo.address,
+                    amount: paymentInfo.expectedAmount,
+                    orderId: paymentInfo.orderId,
+                    isPolling: viewModel.isPollingTronDealer,
+                    onDismiss: {
+                        viewModel.stopTronDealerPolling()
+                        viewModel.showTronDealerSheet = false
+                    }
+                )
+            }
+        }
         .background(
             StripePaymentSheetPresenter(
                 isPresented: $viewModel.showStripePaymentSheet,
@@ -338,9 +352,19 @@ struct OrderDetailView: View {
                             Text(paymentMethodLabel(order))
                                 .font(.system(size: 15, weight: .semibold))
                                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
-                            Text(paymentStatusText(order.paymentStatus))
-                                .font(.system(size: 13))
-                                .foregroundColor(.secondary)
+                            HStack(spacing: 6) {
+                                Text(paymentStatusText(order.paymentStatus))
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.secondary)
+                                if viewModel.isPollingQvaPay {
+                                    ProgressView()
+                                        .scaleEffect(0.7)
+                                        .tint(gradientManager.currentAccentColor)
+                                    Text("Verificando...")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(gradientManager.currentAccentColor)
+                                }
+                            }
                         }
 
                         Spacer()
@@ -620,7 +644,17 @@ struct OrderDetailView: View {
                 return "creditcard.fill"
             case "cash":
                 return "banknote.fill"
+            case "qvapay":
+                return "dollarsign.circle.fill"
+            case "usdt":
+                return "bitcoinsign.circle.fill"
             default:
+                if method.code.lowercased().contains("qvapay") {
+                    return "dollarsign.circle.fill"
+                }
+                if method.code.lowercased().contains("usdt") || method.code.lowercased().contains("trondealer") {
+                    return "bitcoinsign.circle.fill"
+                }
                 break
             }
         }
@@ -631,6 +665,12 @@ struct OrderDetailView: View {
         }
         if normalized.contains("stripe") {
             return "creditcard.fill"
+        }
+        if normalized.contains("qvapay") {
+            return "dollarsign.circle.fill"
+        }
+        if normalized.contains("usdt") || normalized.contains("trondealer") {
+            return "bitcoinsign.circle.fill"
         }
 
         return "creditcard.fill"

@@ -700,7 +700,7 @@ struct CartView: View {
             return
         }
 
-        // Todos los demás métodos: solo crear el pedido.
+        // Todos los demás métodos (incluyendo QvaPay): solo crear el pedido.
         // El pago se completa desde la pantalla de detalle del pedido.
         createOrderWithPaymentMethod(paymentMethod.id)
     }

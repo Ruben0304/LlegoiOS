@@ -2,6 +2,9 @@ import SwiftUI
 
 // MARK: - Payment Method Model (Legacy - for UI compatibility)
 struct PaymentMethod: Identifiable, Equatable {
+    static let syntheticQvaPayId = "synthetic_qvapay"
+    static let syntheticTronDealerId = "synthetic_trondealer"
+
     enum ImageType: Equatable {
         case systemIcon(String)
         case assetImage(String)
@@ -30,6 +33,14 @@ struct PaymentMethod: Identifiable, Equatable {
 
     static func == (lhs: PaymentMethod, rhs: PaymentMethod) -> Bool {
         return lhs.id == rhs.id
+    }
+
+    var isSyntheticQvaPay: Bool {
+        id == Self.syntheticQvaPayId
+    }
+
+    var isSyntheticTronDealer: Bool {
+        id == Self.syntheticTronDealerId
     }
     
     // MARK: - Convert from Backend Model
@@ -113,5 +124,42 @@ struct PaymentMethod: Identifiable, Equatable {
             return "Pago digital"
         }
     }
-}
 
+    static func qvaPay(username: String?) -> PaymentMethod {
+        let description: String
+        if let username, !username.isEmpty {
+            description = "Paga online con QvaPay a @\(username)"
+        } else {
+            description = "Paga online con QvaPay"
+        }
+
+        return PaymentMethod(
+            id: syntheticQvaPayId,
+            name: "QvaPay",
+            description: description,
+            imageType: .assetImage("qvapay"),
+            color: Color(red: 0.2, green: 0.6, blue: 0.9),
+            currency: "USD",
+            isEnabled: true
+        )
+    }
+
+    static func tronDealer(contact: String?) -> PaymentMethod {
+        let description: String
+        if let contact, !contact.isEmpty {
+            description = "USDT por TronDealer. Referencia: \(contact)"
+        } else {
+            description = "Paga con USDT en la red TRON"
+        }
+
+        return PaymentMethod(
+            id: syntheticTronDealerId,
+            name: "USDT / TronDealer",
+            description: description,
+            imageType: .systemIcon("bitcoinsign.circle"),
+            color: Color(red: 0.07, green: 0.64, blue: 0.55),
+            currency: "USD",
+            isEnabled: true
+        )
+    }
+}

@@ -1,0 +1,8 @@
+mutation InitiateQvapayPayment($orderId: String!, $jwt: String!) {
+  initiateQvapayPayment(orderId: $orderId, jwt: $jwt) {
+    paymentUrl
+    transactionUuid
+    amount
+    orderId
+  }
+}

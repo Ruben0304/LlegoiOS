@@ -3,6 +3,10 @@ query GetBranchDetail($id: String!) {
     id
     businessId
     name
+    acceptsQvapay
+    acceptsZelle
+    qvapayUsername
+    zelleEmail
     address
     coordinates {
       type

@@ -159,6 +159,16 @@ final class OrderDetailRepository {
             }
         }
     }
+    
+    // MARK: - Fetch Order Async (for polling)
+    
+    func fetchOrderAsync(id: String) async throws -> OrderDetail {
+        return try await withCheckedThrowingContinuation { continuation in
+            fetchOrder(id: id) { result in
+                continuation.resume(with: result)
+            }
+        }
+    }
 
     
     // MARK: - Mapping Helpers

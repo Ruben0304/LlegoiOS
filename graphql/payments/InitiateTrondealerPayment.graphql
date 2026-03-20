@@ -1,0 +1,9 @@
+mutation InitiateTrondealerPayment($orderId: String!, $jwt: String!) {
+  initiateTrondealerPayment(orderId: $orderId, jwt: $jwt) {
+    address
+    expectedAmount
+    token
+    network
+    orderId
+  }
+}

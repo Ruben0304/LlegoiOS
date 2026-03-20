@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetBranches"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetBranches($first: Int! = 20, $after: String, $businessId: String, $tipo: BranchTipo, $radiusKm: Float, $productCategoryId: String, $jwt: String, $productsLimit: Int = 2) { branches( first: $first after: $after businessId: $businessId tipo: $tipo radiusKm: $radiusKm productCategoryId: $productCategoryId jwt: $jwt ) { __typename edges { __typename node { __typename id businessId name address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius createdAt score distanceKm products(limit: $productsLimit, availableOnly: false) { __typename id name price currency imageUrlBaja } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
+        #"query GetBranches($first: Int! = 20, $after: String, $businessId: String, $tipo: BranchTipo, $radiusKm: Float, $productCategoryId: String, $jwt: String, $productsLimit: Int = 2) { branches( first: $first after: $after businessId: $businessId tipo: $tipo radiusKm: $radiusKm productCategoryId: $productCategoryId jwt: $jwt ) { __typename edges { __typename node { __typename id businessId name acceptsQvapay acceptsZelle qvapayUsername zelleEmail address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius createdAt score distanceKm products(limit: $productsLimit, availableOnly: false) { __typename id name price currency imageUrlBaja } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
       ))
 
     public var first: Int32
@@ -128,6 +128,10 @@ public extension LlegoAPI {
               .field("id", String.self),
               .field("businessId", String.self),
               .field("name", String.self),
+              .field("acceptsQvapay", Bool.self),
+              .field("acceptsZelle", Bool.self),
+              .field("qvapayUsername", String?.self),
+              .field("zelleEmail", String?.self),
               .field("address", String?.self),
               .field("coordinates", Coordinates.self),
               .field("phone", String.self),
@@ -150,6 +154,10 @@ public extension LlegoAPI {
             public var id: String { __data["id"] }
             public var businessId: String { __data["businessId"] }
             public var name: String { __data["name"] }
+            public var acceptsQvapay: Bool { __data["acceptsQvapay"] }
+            public var acceptsZelle: Bool { __data["acceptsZelle"] }
+            public var qvapayUsername: String? { __data["qvapayUsername"] }
+            public var zelleEmail: String? { __data["zelleEmail"] }
             public var address: String? { __data["address"] }
             public var coordinates: Coordinates { __data["coordinates"] }
             public var phone: String { __data["phone"] }

@@ -88,10 +88,12 @@ public extension LlegoAPI {
       case "ProductSyncType": return LlegoAPI.Objects.ProductSyncType
       case "ProductType": return LlegoAPI.Objects.ProductType
       case "Query": return LlegoAPI.Objects.Query
+      case "QvaPayPaymentResult": return LlegoAPI.Objects.QvaPayPaymentResult
       case "SavedAddressType": return LlegoAPI.Objects.SavedAddressType
       case "ScoredBranchType": return LlegoAPI.Objects.ScoredBranchType
       case "ScoredProductType": return LlegoAPI.Objects.ScoredProductType
       case "Subscription": return LlegoAPI.Objects.Subscription
+      case "TronDealerPaymentResult": return LlegoAPI.Objects.TronDealerPaymentResult
       case "TutorialType": return LlegoAPI.Objects.TutorialType
       case "UserData": return LlegoAPI.Objects.UserData
       case "UserType": return LlegoAPI.Objects.UserType

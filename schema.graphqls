@@ -290,6 +290,10 @@ type BranchType {
   deliveryRadius: Float
   acceptedCurrency: AcceptedCurrency
   exchangeRate: Int
+  acceptsQvapay: Boolean!
+  acceptsZelle: Boolean!
+  qvapayUsername: String
+  zelleEmail: String
   createdAt: DateTime!
   wallet: WalletBalanceType!
   walletStatus: String!
@@ -457,6 +461,10 @@ type ScoredBranchType {
   deliveryRadius: Float
   acceptedCurrency: AcceptedCurrency
   exchangeRate: Int
+  acceptsQvapay: Boolean!
+  acceptsZelle: Boolean!
+  qvapayUsername: String
+  zelleEmail: String
   createdAt: DateTime!
   score: Float!
   distanceM: Float
@@ -514,6 +522,10 @@ type NearbyBranchType {
   deliveryRadius: Float
   acceptedCurrency: AcceptedCurrency
   exchangeRate: Int
+  acceptsQvapay: Boolean!
+  acceptsZelle: Boolean!
+  qvapayUsername: String
+  zelleEmail: String
   createdAt: DateTime!
   distanceM: Float!
   wallet: WalletBalanceType!
@@ -1599,6 +1611,10 @@ type Mutation {
   confirmTransferByShortcut(paymentAttemptId: String!, jwt: String!, transferId: String = null): PaymentAttemptType!
   "Cancelar un intento de pago pendiente"
   cancelPayment(paymentAttemptId: String!, jwt: String!): PaymentAttemptType!
+  "Iniciar pago con QvaPay para un pedido"
+  initiateQvapayPayment(orderId: String!, jwt: String!): QvaPayPaymentResult!
+  "Iniciar pago con USDT/TronDealer para un pedido"
+  initiateTrondealerPayment(orderId: String!, jwt: String!): TronDealerPaymentResult!
   "Transferir dinero a otro usuario o sucursal"
   transferMoney(input: TransferInput!, jwt: String!): WalletTransactionType!
   "Depositar dinero en la wallet"
@@ -1705,6 +1721,28 @@ type InitiatePaymentResult {
   paymentAttempt: PaymentAttemptType!
   "Instructions for completing payment (for manual methods)"
   instructions: String
+}
+type QvaPayPaymentResult {
+  "URL de pago QvaPay — abrir en WebView o browser"
+  paymentUrl: String!
+  "UUID de la transacción en QvaPay"
+  transactionUuid: String!
+  "Monto a pagar en USD"
+  amount: Float!
+  "ID de la orden asociada"
+  orderId: String!
+}
+type TronDealerPaymentResult {
+  "Dirección de wallet TRON a la que enviar el USDT"
+  address: String!
+  "Monto exacto en USDT a enviar"
+  expectedAmount: Float!
+  "Token a usar, generalmente USDT"
+  token: String!
+  "Red blockchain, generalmente TRON"
+  network: String
+  "ID de la orden asociada"
+  orderId: String!
 }
 type FavoriteCartType {
   id: String!
@@ -2105,6 +2143,10 @@ input UpdateBranchInput {
   accounts: [TransferAccountInput!] = null
   qrPayments: [QrPaymentInput!] = null
   phones: [TransferPhoneInput!] = null
+  acceptsQvapay: Boolean = null
+  acceptsZelle: Boolean = null
+  qvapayUsername: String = null
+  zelleEmail: String = null
 }
 input CreateProductInput {
   name: String!
