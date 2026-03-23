@@ -54,7 +54,7 @@ struct OrderDetailView: View {
                         Button("Reintentar") { viewModel.load() }
                             .frame(height: 48)
                             .frame(maxWidth: 200)
-                            .buttonStyle(.glassProminent)
+                            .modifier(GlassProminentButtonModifier())
                             .tint(gradientManager.currentAccentColor)
                     }
                     .padding(.top, 100)
@@ -527,7 +527,7 @@ struct OrderDetailView: View {
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
                     }
-                    .buttonStyle(.glassProminent)
+                    .modifier(GlassProminentButtonModifier())
                     .tint(.red)
                 }
 
@@ -543,7 +543,7 @@ struct OrderDetailView: View {
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
                     }
-                    .buttonStyle(.glassProminent)
+                    .modifier(GlassProminentButtonModifier())
                     .tint(gradientManager.currentAccentColor)
                 }
 
@@ -568,7 +568,7 @@ struct OrderDetailView: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
                     }
-                    .buttonStyle(.glassProminent)
+                    .modifier(GlassProminentButtonModifier())
                     .tint(gradientManager.currentAccentColor)
                     .disabled(viewModel.isInitiatingPayment || viewModel.isProcessing)
                 }
@@ -580,7 +580,7 @@ struct OrderDetailView: View {
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
                     }
-                    .buttonStyle(.glassProminent)
+                    .modifier(GlassProminentButtonModifier())
                     .tint(gradientManager.currentAccentColor)
                 }
             }
@@ -700,6 +700,16 @@ struct OrderDetailView: View {
                         color: .black.opacity(colorScheme == .dark ? 0.3 : 0.08), radius: 10, x: 0,
                         y: 4)
             )
+    }
+}
+
+private struct GlassProminentButtonModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.buttonStyle(.glassProminent)
+        } else {
+            content.buttonStyle(.borderedProminent)
+        }
     }
 }
 

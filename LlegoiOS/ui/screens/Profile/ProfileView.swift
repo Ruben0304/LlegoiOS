@@ -231,7 +231,6 @@ struct ProfileView: View {
                 // ToolbarItem(placement: .navigationBarTrailing) {
                 //     customerLevelToolbarItem
                 // }
-                ToolbarSpacer(.fixed,placement:.navigationBarTrailing)
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         navigateToPlansAndPricing = true
@@ -845,7 +844,7 @@ struct ProfileView: View {
             .padding(.vertical, 6)
         }
         .tint(level.color)
-        .buttonStyle(.glassProminent)
+        .modifier(GlassProminentButtonModifier())
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Nivel \(level.name)")
         .accessibilityValue("\(effectiveCurrentPoints) de \(effectiveNextLevelPoints) puntos")
@@ -1725,6 +1724,16 @@ struct EditUsernameSheet: View {
             .onAppear {
                 isUsernameFocused = true
             }
+        }
+    }
+}
+
+private struct GlassProminentButtonModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.buttonStyle(.glassProminent)
+        } else {
+            content.buttonStyle(.borderedProminent)
         }
     }
 }

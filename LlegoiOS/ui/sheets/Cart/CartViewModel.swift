@@ -10,6 +10,11 @@ enum CartViewState {
     case error(String)
 }
 
+enum DeliveryFeePaymentMode: String, CaseIterable {
+    case sameCurrency
+    case cashCUP
+}
+
 @MainActor
 class CartViewModel: ObservableObject {
     @Published var state: CartViewState = .idle
@@ -40,6 +45,7 @@ class CartViewModel: ObservableObject {
     @Published var deliveryFeeEstimate: DeliveryFeeEstimate?
     @Published var isLoadingDeliveryFee: Bool = false
     @Published var deliveryFeeError: String?
+    @Published var deliveryFeePaymentMode: DeliveryFeePaymentMode = .sameCurrency
 
     private let repository = CartRepository()
     private let cartManager = CartManager.shared
@@ -101,6 +107,27 @@ class CartViewModel: ObservableObject {
         return deliveryFeeEstimate?.deliveryFee ?? 0.0
     }
 
+    /// Monto de envío incluido en el pago in-app según preferencia del usuario.
+    /// - `sameCurrency`: se incluye convertido a la moneda seleccionada.
+    /// - `cashCUP`: no se incluye en el pago in-app.
+    var payableDeliveryFee: Double {
+        guard !cartItems.isEmpty else { return 0.0 }
+        guard let estimate = deliveryFeeEstimate else {
+            return deliveryFeePaymentMode == .sameCurrency ? deliveryFee : 0.0
+        }
+
+        switch deliveryFeePaymentMode {
+        case .sameCurrency:
+            return convertAmount(
+                estimate.deliveryFee,
+                from: estimate.currency,
+                to: selectedCurrency
+            )
+        case .cashCUP:
+            return 0.0
+        }
+    }
+
     /// Moneda del envío estimado
     var deliveryFeeCurrency: String? {
         deliveryFeeEstimate?.currency
@@ -137,7 +164,7 @@ class CartViewModel: ObservableObject {
     }
 
     var total: Double {
-        subtotal + deliveryFee + serviceFee
+        subtotal + payableDeliveryFee + serviceFee
     }
 
     var formattedSubtotal: String {
@@ -152,9 +179,24 @@ class CartViewModel: ObservableObject {
             return "--"
         }
         if let estimate = deliveryFeeEstimate {
-            return formatPriceWithCurrency(estimate.deliveryFee, currency: estimate.currency)
+            switch deliveryFeePaymentMode {
+            case .sameCurrency:
+                let converted = convertAmount(
+                    estimate.deliveryFee,
+                    from: estimate.currency,
+                    to: selectedCurrency
+                )
+                return formatPriceWithCurrency(converted, currency: selectedCurrency.uppercased())
+            case .cashCUP:
+                let cupAmount = convertAmount(
+                    estimate.deliveryFee,
+                    from: estimate.currency,
+                    to: "CUP"
+                )
+                return formatPriceWithCurrency(cupAmount, currency: "CUP")
+            }
         }
-        return formatPriceWithCurrency(deliveryFee, currency: "CUP")
+        return formatPriceWithCurrency(deliveryFee, currency: selectedCurrency.uppercased())
     }
 
     /// Descripción del envío (distancia + zona)
@@ -189,7 +231,7 @@ class CartViewModel: ObservableObject {
 
     /// Total si viera los anuncios (para mostrar incentivo)
     var totalWithDiscount: Double {
-        subtotal + deliveryFee + (subtotal * discountedServiceFeeRate)
+        subtotal + payableDeliveryFee + (subtotal * discountedServiceFeeRate)
     }
 
     var formattedTotalWithDiscount: String {
@@ -635,7 +677,6 @@ class CartViewModel: ObservableObject {
                 switch result {
                 case .success(let accepted):
                     self.branchAcceptedCurrency = accepted?.uppercased()
-                    self.refreshCartItemCurrencies()
                 case .failure(let error):
                     print("⚠️ Error loading branch accepted currency: \(error.localizedDescription)")
                 }
@@ -643,21 +684,8 @@ class CartViewModel: ObservableObject {
         }
     }
 
-    private func refreshCartItemCurrencies() {
-        guard !hasMultipleBranches else { return }
-        guard let accepted = normalizedAcceptedCurrency else { return }
-        guard accepted == "CUP" || accepted == "USD" || accepted == "BOTH" else { return }
-
-        cartItems = cartItems.map { item in
-            guard item.itemType == .product else { return item }
-            var updated = item
-            updated.currency = accepted
-            return updated
-        }
-    }
-
-    private var normalizedAcceptedCurrency: String? {
-        branchAcceptedCurrency?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+    var includeDeliveryFeeInAppPayment: Bool {
+        deliveryFeePaymentMode == .sameCurrency
     }
 
     // MARK: - Filter Payment Methods
@@ -672,6 +700,7 @@ class CartViewModel: ObservableObject {
     func createOrderAndInitiatePayment(
         paymentMethodId: String,
         sendsSmsNotification: Bool = false,
+        includeDeliveryFee: Bool = true,
         comments: String? = nil,
         completion:
             @escaping @Sendable (Result<(CreatedOrder, InitiatePaymentResultModel), Error>) -> Void
@@ -776,6 +805,7 @@ class CartViewModel: ObservableObject {
                         let paymentResult = try await self.initiatePaymentForOrder(
                             orderId: order.id,
                             paymentMethodId: paymentMethodId,
+                            includeDeliveryFee: includeDeliveryFee,
                             sendsSmsNotification: sendsSmsNotification
                         )
 
@@ -810,6 +840,7 @@ class CartViewModel: ObservableObject {
     private func initiatePaymentForOrder(
         orderId: String,
         paymentMethodId: String,
+        includeDeliveryFee: Bool = true,
         sendsSmsNotification: Bool = false
     ) async throws -> InitiatePaymentResultModel {
         guard let jwt = await authManager.getAccessToken() else {
@@ -827,7 +858,7 @@ class CartViewModel: ObservableObject {
                 orderId: orderId,
                 paymentMethodId: paymentMethodId,
                 jwt: jwt,
-                includeDeliveryFee: true,
+                includeDeliveryFee: includeDeliveryFee,
                 sendsSmsNotification: sendsSmsNotification
             )
 
@@ -1200,6 +1231,28 @@ class CartViewModel: ObservableObject {
         return String(format: "%.2f %@", price, currency)
     }
 
+    private func convertAmount(_ amount: Double, from sourceCurrency: String, to targetCurrency: String)
+        -> Double
+    {
+        let from = sourceCurrency.uppercased()
+        let to = targetCurrency.uppercased()
+        if from == to { return amount }
+
+        guard let rate = cartItems.compactMap(\.exchangeRate).first(where: { $0 > 0 }) else {
+            return amount
+        }
+
+        if from == "USD" && to == "CUP" {
+            return amount * Double(rate)
+        }
+
+        if from == "CUP" && to == "USD" {
+            return amount / Double(rate)
+        }
+
+        return amount
+    }
+
     // MARK: - Wallet Balance Check
 
     /// Verifica si el usuario tiene saldo suficiente en wallet para cubrir el total.
@@ -1263,11 +1316,23 @@ struct CartItem: Identifiable, Hashable {
     /// Precio unitario convertido a la moneda seleccionada
     func unitPrice(for selectedCurrency: String) -> Double {
         let selected = selectedCurrency.uppercased()
-        let original = currency.uppercased()
+        let original = canonicalCurrencyForDisplay
 
         // Misma moneda o no soporta la seleccionada → precio original
         if selected == original || !supportsCurrency(selected) {
             return finalUnitPrice
+        }
+
+        if let convertedCurrency,
+            convertedCurrency.uppercased() == selected,
+            let convertedPrice
+        {
+            if basePrice > 0 {
+                // Preserva ajustes de variantes aplicando el mismo factor sobre el precio convertido base.
+                let variantFactor = finalUnitPrice / basePrice
+                return convertedPrice * variantFactor
+            }
+            return convertedPrice
         }
 
         guard let rate = exchangeRate, rate > 0 else {

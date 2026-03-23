@@ -36,13 +36,22 @@ struct ProductFeedView: View {
             }
             .toolbar {
                 // "Para ti" al lado izquierdo
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Text("Para ti")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundColor(Color.adaptiveOnBackground(colorScheme))
-                        .fixedSize()
+                if #available(iOS 26.0, *) {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Text("Para ti")
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundColor(Color.adaptiveOnBackground(colorScheme))
+                            .fixedSize()
+                    }
+                    .sharedBackgroundVisibility(.hidden)
+                } else {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Text("Para ti")
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundColor(Color.adaptiveOnBackground(colorScheme))
+                            .fixedSize()
+                    }
                 }
-                .sharedBackgroundVisibility(.hidden)
 
                 // Botón de favoritos
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -62,9 +71,6 @@ struct ProductFeedView: View {
                         .accessibilityLabel("Favoritos")
                     }
                 }
-
-                // Spacer entre favoritos y carrito
-                ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
 
                 // Botón de carrito
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -515,7 +521,7 @@ struct ProductFeedView: View {
             Button("Reintentar") { viewModel.loadFeed() }
                 .frame(height: 50)
                 .frame(maxWidth: 200)
-                .buttonStyle(.glassProminent)
+                .modifier(GlassProminentButtonModifier())
                 .tint(gradientManager.currentAccentColor)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -872,7 +878,7 @@ struct TutorialFeedCard: View {
 
                 ZStack {
                     Circle()
-                        .glassEffect(.regular.interactive())
+                        .modifier(CircleGlassEffectModifier())
                         .frame(width: 48, height: 48)
 
                     Image(systemName: "play.fill")
@@ -1152,6 +1158,26 @@ struct PromotionCard: View {
                 .shadow(
                     color: .black.opacity(colorScheme == .dark ? 0.3 : 0.1), radius: 10, x: 0, y: 5)
         )
+    }
+}
+
+private struct GlassProminentButtonModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.buttonStyle(.glassProminent)
+        } else {
+            content.buttonStyle(.borderedProminent)
+        }
+    }
+}
+
+private struct CircleGlassEffectModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.glassEffect(.regular.interactive())
+        } else {
+            content
+        }
     }
 }
 

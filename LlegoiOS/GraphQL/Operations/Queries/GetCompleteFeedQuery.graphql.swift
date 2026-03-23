@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetCompleteFeed"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetCompleteFeed($jwt: String, $first: Int, $sections: [String!], $branchTipo: String!, $branchTipoEnum: BranchTipo, $radiusKm: Float, $categoryId: String) { getFeed( jwt: $jwt first: $first sections: $sections branchTipo: $branchTipo productCategoryId: $categoryId ) { __typename sections { __typename sectionId title description totalCount products { __typename id name price currency imageUrlBaja imageUrlMedia branchId categoryId branch { __typename name address tipos } categoryName availability score description } } sectionDiagnostics { __typename sectionId title status reason totalBeforeDedup totalAfterDedup } timestamp } productCategories(branchType: $branchTipo) { __typename id name iconIos } branches( first: 15 tipo: $branchTipoEnum radiusKm: $radiusKm productCategoryId: $categoryId ) { __typename edges { __typename node { __typename id businessId name avatarUrl coverUrl address distanceKm } } } activeTutorials { __typename id title description videoUrl videoUrlSigned duration appTarget thumbnailUrl thumbnailUrlSigned order tags } allCombos(availableOnly: true) { __typename id branchId name description imageUrl currency availability discountType discountValue basePrice finalPrice savings representativeProducts { __typename id name imageUrl } slots { __typename id } branch { __typename id name avatarUrl } } }"#
+        #"query GetCompleteFeed($jwt: String, $first: Int, $sections: [String!], $branchTipo: String!, $branchTipoEnum: BranchTipo, $radiusKm: Float, $categoryId: String) { getFeed( jwt: $jwt first: $first sections: $sections branchTipo: $branchTipo productCategoryId: $categoryId ) { __typename sections { __typename sectionId title description totalCount products { __typename id name price currency imageUrlBaja imageUrlMedia branchId categoryId branch { __typename name address tipos } categoryName availability score description } } sectionDiagnostics { __typename sectionId title status reason totalBeforeDedup totalAfterDedup } timestamp } productCategories(branchType: $branchTipo) { __typename id name iconIos } branches( first: 15 tipo: $branchTipoEnum radiusKm: $radiusKm productCategoryId: $categoryId ) { __typename edges { __typename node { __typename id businessId name avatarUrl coverUrl address distanceKm } } } activeTutorials { __typename id title description videoUrl videoUrlSigned duration appTarget thumbnailUrl thumbnailUrlSigned order tags } allCombos(availableOnly: true, branchTipo: $branchTipo, productCategoryId: $categoryId) { __typename id branchId name description imageUrl currency availability discountType discountValue basePrice finalPrice savings representativeProducts { __typename id name imageUrl } slots { __typename id } branch { __typename id name avatarUrl } } }"#
       ))
 
     public var jwt: GraphQLNullable<String>
@@ -69,7 +69,11 @@ public extension LlegoAPI {
           "productCategoryId": .variable("categoryId")
         ]),
         .field("activeTutorials", [ActiveTutorial].self),
-        .field("allCombos", [AllCombo].self, arguments: ["availableOnly": true]),
+        .field("allCombos", [AllCombo].self, arguments: [
+          "availableOnly": true,
+          "branchTipo": .variable("branchTipo"),
+          "productCategoryId": .variable("categoryId")
+        ]),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
         GetCompleteFeedQuery.Data.self

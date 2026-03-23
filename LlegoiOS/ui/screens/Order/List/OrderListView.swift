@@ -125,7 +125,7 @@ struct OrderListView: View {
                 .frame(height: 48)
                 .frame(maxWidth: 200)
             }
-            .buttonStyle(.glassProminent)
+            .modifier(GlassProminentButtonModifier())
             .tint(gradientManager.currentAccentColor)
         }
         .padding()
@@ -169,7 +169,7 @@ struct OrderListView: View {
                 .frame(height: 48)
                 .frame(maxWidth: 220)
             }
-            .buttonStyle(.glassProminent)
+            .modifier(GlassProminentButtonModifier())
             .tint(gradientManager.currentAccentColor)
         }
         .padding()
@@ -270,7 +270,7 @@ struct OrderStatusFilterView: View {
             .padding(.horizontal, 3)
             .padding(.vertical, 2)
         }
-        .buttonStyle(.glassProminent)
+        .modifier(GlassProminentButtonModifier())
         .buttonBorderShape(.capsule)
         .clipShape(Capsule())
         .compositingGroup()
@@ -280,6 +280,16 @@ struct OrderStatusFilterView: View {
                 Capsule()
                     .stroke(Color.white.opacity(0.3), lineWidth: 1.2)
             }
+        }
+    }
+}
+
+private struct GlassProminentButtonModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.buttonStyle(.glassProminent)
+        } else {
+            content.buttonStyle(.borderedProminent)
         }
     }
 }

@@ -405,7 +405,10 @@ struct HomeView: View {
                     cartToolbarButton
                 }
 
-                ToolbarSpacer(.fixed,placement: .navigationBarTrailing)
+                if #available(iOS 26.0, *) {
+                    ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
+                }
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
                         guard authManager.getAccessToken() != nil else {
@@ -423,7 +426,10 @@ struct HomeView: View {
                     .accessibilityLabel("Pedidos")
                 }
 
-                ToolbarSpacer(.fixed,placement: .navigationBarTrailing)
+                if #available(iOS 26.0, *) {
+                    ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
+                }
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                 // Avatar
                 Button(action: {

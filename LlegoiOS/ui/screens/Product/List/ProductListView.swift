@@ -159,7 +159,7 @@ struct ProductListView: View {
                     activeViewModel.executeSearch()
                 }
             }
-            .searchFocused($isSearchFocused)
+            .applySearchFocused($isSearchFocused)
             .toolbar {
                 // Show different toolbar items based on context
                 if initialBranchId == nil {
@@ -194,8 +194,6 @@ struct ProductListView: View {
                         .id("favorites-toolbar-badge-\(favoritesManager.favoriteItemCount)")
                         .accessibilityLabel("Favoritos")
                     }
-
-                    ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
 
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button(action: {
@@ -441,7 +439,7 @@ struct ProductListView: View {
                     .frame(height: 50)
                     .frame(maxWidth: 220)
                 }
-                .buttonStyle(.glass)
+                .modifier(GlassButtonStyleModifier())
                 .padding(.top, 12)
             }
 
@@ -490,7 +488,7 @@ struct ProductListView: View {
             }
             .frame(height: 50)
             .frame(maxWidth: 200)
-            .buttonStyle(.glassProminent)
+            .modifier(GlassProminentButtonModifier())
             .tint(gradientManager.currentAccentColor)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -659,7 +657,7 @@ private struct FiltersSheet: View {
                             .frame(maxWidth: .infinity)
                             .frame(height: 44)
                     }
-                    .buttonStyle(.glass)
+                    .modifier(GlassButtonStyleModifier())
 
                     Button(action: {
                         maxDistance = tempDistance
@@ -672,7 +670,7 @@ private struct FiltersSheet: View {
                             .frame(maxWidth: .infinity)
                             .frame(height: 44)
                     }
-                    .buttonStyle(.glassProminent)
+                    .modifier(GlassProminentButtonModifier())
                     .tint(gradientManager.currentAccentColor)
                 }
                 .padding(16)
@@ -693,6 +691,39 @@ private struct FiltersSheet: View {
                 )
         }
         .buttonStyle(.plain)
+    }
+}
+
+
+
+private extension View {
+    @ViewBuilder
+    func applySearchFocused(_ binding: FocusState<Bool>.Binding) -> some View {
+        if #available(iOS 18.0, *) {
+            self.searchFocused(binding)
+        } else {
+            self
+        }
+    }
+}
+
+private struct GlassButtonStyleModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.buttonStyle(.glass)
+        } else {
+            content.buttonStyle(.bordered)
+        }
+    }
+}
+
+private struct GlassProminentButtonModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.buttonStyle(.glassProminent)
+        } else {
+            content.buttonStyle(.borderedProminent)
+        }
     }
 }
 

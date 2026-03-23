@@ -118,7 +118,7 @@ struct FavoritesView: View {
             }
             .frame(height: 50)
             .frame(maxWidth: 200)
-            .buttonStyle(.glassProminent)
+            .modifier(GlassProminentButtonModifier())
             .tint(gradientManager.currentAccentColor)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -169,12 +169,22 @@ struct FavoritesView: View {
                 .frame(height: 44)
                 .frame(maxWidth: 200)
             }
-            .buttonStyle(.glassProminent)
+            .modifier(GlassProminentButtonModifier())
             .tint(gradientManager.currentAccentColor)
 
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+private struct GlassProminentButtonModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.buttonStyle(.glassProminent)
+        } else {
+            content.buttonStyle(.borderedProminent)
+        }
     }
 }
 

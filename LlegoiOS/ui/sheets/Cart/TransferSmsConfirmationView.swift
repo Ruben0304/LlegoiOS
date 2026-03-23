@@ -203,7 +203,7 @@ struct TransferSmsConfirmationView: View {
             HStack {
                 Image(systemName: "banknote")
                     .foregroundColor(.llegoAccent)
-                Text("Total: \(totalAmount) CUP")
+                Text("Total: \(totalAmount)")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(gradientManager.currentAccentColor)
             }
@@ -274,7 +274,8 @@ struct TransferSmsConfirmationView: View {
         phase = .initiating
         cartViewModel.createOrderAndInitiatePayment(
             paymentMethodId: paymentMethodId,
-            sendsSmsNotification: sendsSms
+            sendsSmsNotification: sendsSms,
+            includeDeliveryFee: cartViewModel.includeDeliveryFeeInAppPayment
         ) { result in
             Task { @MainActor in
                 switch result {

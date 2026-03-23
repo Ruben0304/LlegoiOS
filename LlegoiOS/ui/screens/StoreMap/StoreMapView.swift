@@ -409,7 +409,7 @@ private struct StoreMapOptionsModal: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
                 }
-                .buttonStyle(.glassProminent)
+                .modifier(GlassProminentButtonModifier())
                 .buttonBorderShape(.roundedRectangle(radius: 14))
                 .tint(gradientManager.currentAccentColor)
 
@@ -440,6 +440,16 @@ private struct StoreMapOptionsModal: View {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.8).delay(0.1)) {
                 isAnimated = true
             }
+        }
+    }
+}
+
+private struct GlassProminentButtonModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.buttonStyle(.glassProminent)
+        } else {
+            content.buttonStyle(.borderedProminent)
         }
     }
 }

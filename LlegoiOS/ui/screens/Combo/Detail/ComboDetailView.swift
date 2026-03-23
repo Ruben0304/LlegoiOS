@@ -7,8 +7,9 @@ struct ComboDetailView: View {
     @ObservedObject private var gradientManager = GradientStateManager.shared
     @Environment(\.dismiss) private var dismiss
     @State private var showCart = false
-    @State private var addedToCartPulse = false
+    @State private var showAddedToCartFeedback = false
     @State private var contentOffset: CGFloat = 60
+    @State private var quantity: Int = 1
 
     var body: some View {
         NavigationStack {
@@ -23,11 +24,6 @@ struct ComboDetailView: View {
                     } else if let combo = viewModel.comboDetail {
                         comboContent(combo: combo)
                     }
-                }
-
-                // Bottom action bar (shown when data is loaded)
-                if viewModel.comboDetail != nil {
-                    bottomBar
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -44,6 +40,17 @@ struct ComboDetailView: View {
                         Image(systemName: "cart")
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(gradientManager.currentAccentColor)
+                    }
+                }
+
+                // Bottom bar - quantity control (only when data is loaded)
+                if viewModel.comboDetail != nil {
+                    ToolbarItem(placement: .bottomBar) {
+                        quantityControlView
+                    }
+
+                    ToolbarItem(placement: .bottomBar) {
+                        addComboToCartButton
                     }
                 }
             }
@@ -95,7 +102,7 @@ struct ComboDetailView: View {
             }
             .frame(height: 50)
             .frame(maxWidth: 200)
-            .buttonStyle(.glass)
+            .modifier(GlassButtonStyleModifier())
             .tint(gradientManager.currentAccentColor)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -251,23 +258,11 @@ struct ComboDetailView: View {
 
     private func comboHeader(combo: ComboDetailGraphQL) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Store info
-            HStack(spacing: 8) {
-                if let logoUrl = combo.branchLogoUrl, !logoUrl.isEmpty {
-                    CachedAsyncImage(
-                        url: URL(string: logoUrl),
-                        cacheKey: "store_logo_combo_\(combo.branchId)",
-                        content: { image in image.resizable().scaledToFill() },
-                        placeholder: { Circle().fill(Color.gray.opacity(0.2)) },
-                        failure: { Circle().fill(Color.gray.opacity(0.2)) }
-                    )
-                    .frame(width: 28, height: 28)
-                    .clipShape(Circle())
-                }
-                Text(combo.branchName)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.secondary)
+            // Store info - navigates to store detail
+            NavigationLink(destination: StoreDetailView(storeId: combo.branchId)) {
+                storeInfoContent(combo: combo)
             }
+            .buttonStyle(.plain)
 
             // Combo name
             Text(combo.name)
@@ -312,6 +307,31 @@ struct ComboDetailView: View {
                     }
                 }
             }
+        }
+    }
+
+    private func storeInfoContent(combo: ComboDetailGraphQL) -> some View {
+        HStack(spacing: 10) {
+            if let logoUrl = combo.branchLogoUrl, !logoUrl.isEmpty {
+                CachedAsyncImage(
+                    url: URL(string: logoUrl),
+                    cacheKey: "store_logo_combo_\(combo.branchId)",
+                    content: { image in image.resizable().scaledToFill() },
+                    placeholder: { Circle().fill(Color.gray.opacity(0.2)) },
+                    failure: { Circle().fill(Color.gray.opacity(0.2)) }
+                )
+                .frame(width: 28, height: 28)
+                .clipShape(Circle())
+            }
+            HStack(spacing: 6) {
+                Text(combo.branchName)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .regular))
+                .foregroundColor(.secondary)
         }
     }
 
@@ -491,65 +511,85 @@ struct ComboDetailView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Bottom Action Bar
+    // MARK: - Bottom Toolbar Views
 
-    private var bottomBar: some View {
-        VStack(spacing: 0) {
-            Divider()
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Total")
-                        .font(.system(size: 13))
-                        .foregroundColor(.secondary)
-                    Text(viewModel.formattedCalculatedPrice)
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.primary)
-                        .animation(.spring(response: 0.3), value: viewModel.calculatedPrice)
-                }
-
-                Spacer()
-
-                Button {
-                    guard viewModel.isReadyToAdd else { return }
-                    guard viewModel.addCurrentComboToCart() else { return }
-                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                        addedToCartPulse = true
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                        withAnimation { addedToCartPulse = false }
-                    }
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(
-                            systemName: addedToCartPulse
-                                ? "checkmark.circle.fill" : "cart.badge.plus"
-                        )
-                        .font(.system(size: 16, weight: .semibold))
-                        Text(addedToCartPulse ? "Agregado" : "Agregar combo")
-                            .font(.system(size: 16, weight: .semibold))
-                    }
-                    .foregroundColor(.white)
-                    .frame(height: 50)
-                    .padding(.horizontal, 20)
-                    .background(
-                        Capsule()
-                            .fill(
-                                viewModel.isReadyToAdd
-                                    ? gradientManager.currentAccentColor : Color.gray.opacity(0.4))
-                    )
-                }
-                .disabled(!viewModel.isReadyToAdd)
-                .animation(.spring(response: 0.25), value: viewModel.isReadyToAdd)
+    private var quantityControlView: some View {
+        HStack(spacing: 0) {
+            Button(action: decrementQuantity) {
+                Image(systemName: "minus")
+                    .font(.system(size: 16, weight: .medium))
+                    .frame(width: 36, height: 36)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 12)
-            .padding(.bottom, 28)
-            .background(.ultraThinMaterial)
+
+            Text("\(quantity)")
+                .font(.system(size: 17, weight: .semibold))
+                .frame(minWidth: 28)
+
+            Button(action: incrementQuantity) {
+                Image(systemName: "plus")
+                    .font(.system(size: 16, weight: .medium))
+                    .frame(width: 36, height: 36)
+            }
         }
+        .padding(.horizontal, 4)
+        .tint(gradientManager.currentAccentColor)
+    }
+
+    private var addComboToCartButton: some View {
+        Button {
+            guard viewModel.isReadyToAdd else { return }
+            guard viewModel.addCurrentComboToCart(quantity: quantity) else { return }
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+                showAddedToCartFeedback = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                withAnimation(.easeOut(duration: 0.25)) {
+                    showAddedToCartFeedback = false
+                }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: showAddedToCartFeedback ? "checkmark" : "cart")
+                    .contentTransition(.symbolEffect(.replace))
+                Text(showAddedToCartFeedback ? "¡Agregado!" : "Añadir \(formatTotalPrice())")
+            }
+            .font(.system(size: 16, weight: .semibold))
+            .padding(.horizontal, 24)
+            .padding(.vertical, 12)
+        }
+        .modifier(GlassProminentButtonModifier())
+        .tint(showAddedToCartFeedback ? .green : gradientManager.currentAccentColor)
+        .scaleEffect(showAddedToCartFeedback ? 1.05 : 1.0)
+        .animation(.spring(response: 0.35, dampingFraction: 0.6), value: showAddedToCartFeedback)
+        .disabled(!viewModel.isReadyToAdd || showAddedToCartFeedback)
     }
 
     // MARK: - Helpers
+
+    private func formatTotalPrice() -> String {
+        guard let combo = viewModel.comboDetail else {
+            return "$0.00"
+        }
+
+        let totalPrice = viewModel.calculatedPrice * Double(quantity)
+        return viewModel.formatPrice(totalPrice, currency: combo.currency)
+    }
+
+    private func incrementQuantity() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            quantity += 1
+        }
+    }
+
+    private func decrementQuantity() {
+        guard quantity > 1 else { return }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            quantity -= 1
+        }
+    }
 
     private func selectionHintText(slot: ComboSlotGraphQL) -> String {
         if slot.minSelections == slot.maxSelections {
@@ -562,6 +602,18 @@ struct ComboDetailView: View {
             return "Opcional · hasta \(slot.maxSelections)"
         } else {
             return "Elige entre \(slot.minSelections) y \(slot.maxSelections)"
+        }
+    }
+}
+
+// MARK: - Button Style Modifier
+
+private struct GlassProminentButtonModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.buttonStyle(.glassProminent)
+        } else {
+            content.buttonStyle(.borderedProminent)
         }
     }
 }
@@ -594,6 +646,16 @@ extension ComboDetailGraphQL {
             }
             return "-\(String(format: "\(symbol)%.2f", discountValue))"
         default: return ""
+        }
+    }
+}
+
+private struct GlassButtonStyleModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.buttonStyle(.glass)
+        } else {
+            content.buttonStyle(.bordered)
         }
     }
 }

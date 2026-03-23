@@ -234,7 +234,6 @@ struct StoreListView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     searchToolbar
                 }
-                ToolbarSpacer(.fixed)
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: {
                         withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
@@ -722,13 +721,13 @@ private struct StoreListCard: View {
             Button(action: onTap) {
                 cardContent
             }
-            .buttonStyle(.glassProminent)
+            .modifier(GlassProminentRoundedButtonModifier())
             .buttonBorderShape(.roundedRectangle(radius: 20))
             .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             .tint(.white)
         } else {
             cardContent
-                .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 20))
+                .modifier(GlassEffectRoundedModifier())
         }
     }
 
@@ -919,6 +918,26 @@ private struct FullScreenMapView: View {
                 _ = newPosition
             }
         )
+    }
+}
+
+private struct GlassProminentRoundedButtonModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.buttonStyle(.glassProminent)
+        } else {
+            content.buttonStyle(.borderedProminent)
+        }
+    }
+}
+
+private struct GlassEffectRoundedModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.glassEffect(.regular.interactive(), in: .rect(cornerRadius: 20))
+        } else {
+            content
+        }
     }
 }
 

@@ -105,8 +105,6 @@ struct ProductDetailView: View {
                     .accessibilityHint("Este botón agrega o quita este producto de favoritos")
                 }
 
-                ToolbarSpacer(.fixed, placement: .topBarTrailing)
-
                 ToolbarItem(placement: .topBarTrailing) {
                     if cartManager.cartItemCount > 0 {
                         Button(action: {
@@ -133,8 +131,6 @@ struct ProductDetailView: View {
                 ToolbarItem(placement: .bottomBar) {
                     quantityControlView
                 }
-
-                ToolbarSpacer(.fixed, placement: .bottomBar)
 
                 // Bottom bar flotante - Add to cart button
                 ToolbarItem(placement: .bottomBar) {
@@ -634,7 +630,7 @@ struct ProductDetailView: View {
                 .padding(.horizontal, 24)
                 .padding(.vertical, 12)
             }
-            .buttonStyle(.glassProminent)
+            .modifier(GlassProminentButtonModifier())
             .tint(showAddedToCartFeedback ? .green : gradientManager.currentAccentColor)
             .scaleEffect(showAddedToCartFeedback ? 1.05 : 1.0)
             .animation(
@@ -712,6 +708,16 @@ struct ProductDetailView: View {
 
         withAnimation(.spring(response: 0.8, dampingFraction: 0.9).delay(0.08)) {
             contentAppeared = true
+        }
+    }
+}
+
+private struct GlassProminentButtonModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.buttonStyle(.glassProminent)
+        } else {
+            content.buttonStyle(.borderedProminent)
         }
     }
 }

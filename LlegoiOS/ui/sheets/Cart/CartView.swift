@@ -248,8 +248,6 @@ struct CartView: View {
                         bottomPaymentMethodAction
                     }
 
-                    ToolbarSpacer(.fixed, placement: .bottomBar)
-
                     ToolbarItem(placement: .bottomBar) {
                         bottomPlaceOrderAction
                     }
@@ -411,6 +409,9 @@ struct CartView: View {
             }
             .onChange(of: selectedCurrency) { _, newValue in
                 viewModel.selectedCurrency = newValue.rawValue
+                withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+                    normalizeDeliveryFeePaymentMode()
+                }
             }
             .onChange(of: viewModel.cartItems) { _, _ in
                 ensureSelectedCurrencyIsValid()
@@ -454,6 +455,7 @@ struct CartView: View {
         {
             selectedPaymentMethod = nil
         }
+        normalizeDeliveryFeePaymentMode()
     }
 
     private func paymentMethodSupportsCurrency(_ methodCurrency: String, currencyCode: String) -> Bool {
@@ -462,6 +464,16 @@ struct CartView: View {
             return true
         }
         return uppercased.contains(currencyCode.uppercased())
+    }
+
+    private var shouldShowCashCUPDeliveryToggle: Bool {
+        selectedCurrency == .USD
+    }
+
+    private func normalizeDeliveryFeePaymentMode() {
+        if !shouldShowCashCUPDeliveryToggle {
+            viewModel.deliveryFeePaymentMode = .sameCurrency
+        }
     }
 
 
@@ -1224,7 +1236,7 @@ struct CartView: View {
                 .frame(height: 44)
                 .frame(maxWidth: 200)
             }
-            .buttonStyle(.glassProminent)
+            .modifier(GlassProminentButtonModifier())
             .tint(gradientManager.currentAccentColor)
 
             Spacer()
@@ -1295,7 +1307,7 @@ struct CartView: View {
             .frame(minWidth: 140)
             .frame(height: 52)
         }
-        .buttonStyle(.glassProminent)
+        .modifier(GlassProminentButtonModifier())
         .tint(.black)
         .disabled(viewModel.hasMultipleBranches)
         .opacity(viewModel.hasMultipleBranches ? 0.45 : 1.0)
@@ -1321,7 +1333,7 @@ struct CartView: View {
             .frame(minWidth: 150)
             .frame(height: 52)
         }
-        .buttonStyle(.glassProminent)
+        .modifier(GlassProminentButtonModifier())
         .tint(gradientManager.currentAccentColor)
         .disabled(viewModel.hasMultipleBranches)
         .opacity(viewModel.hasMultipleBranches ? 0.45 : 1.0)
@@ -1382,8 +1394,23 @@ struct CartView: View {
                             .foregroundColor(.primary)
                     }
                 }
+                .padding(.top, 13)
                 .padding(.horizontal, 16)
-                .padding(.vertical, 13)
+
+                if shouldShowCashCUPDeliveryToggle {
+                    deliveryFeePaymentPrompt
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 13)
+                        .transition(
+                            .asymmetric(
+                                insertion: .move(edge: .bottom).combined(with: .opacity),
+                                removal: .opacity
+                            )
+                        )
+                } else {
+                    Spacer()
+                        .frame(height: 8)
+                }
 
                 priceDivider
 
@@ -1397,9 +1424,24 @@ struct CartView: View {
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundColor(.primary)
                 }
+                .padding(.top, 14)
                 .padding(.horizontal, 16)
-                .padding(.vertical, 14)
+
+                if shouldShowCashCUPDeliveryToggle,
+                    viewModel.deliveryFeePaymentMode == .cashCUP
+                {
+                    Text("El envío se paga en efectivo CUP al entregar")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 10)
+                } else {
+                    Spacer()
+                        .frame(height: 14)
+                }
             }
+            .animation(.spring(response: 0.42, dampingFraction: 0.86), value: selectedCurrency)
             .background(Color.white)
             .cornerRadius(16)
             .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
@@ -1456,6 +1498,56 @@ struct CartView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 13)
+    }
+
+    private var deliveryFeePaymentPrompt: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("¿Quieres pagar el envío en USD o en efectivo CUP al mensajero?")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 8) {
+                deliveryFeeModeButton(
+                    title: "Pagar en USD",
+                    isSelected: viewModel.deliveryFeePaymentMode == .sameCurrency
+                ) {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        viewModel.deliveryFeePaymentMode = .sameCurrency
+                    }
+                }
+
+                deliveryFeeModeButton(
+                    title: "Efectivo CUP",
+                    isSelected: viewModel.deliveryFeePaymentMode == .cashCUP
+                ) {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        viewModel.deliveryFeePaymentMode = .cashCUP
+                    }
+                }
+            }
+        }
+    }
+
+    private func deliveryFeeModeButton(title: String, isSelected: Bool, action: @escaping () -> Void)
+        -> some View
+    {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(isSelected ? .white : .secondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(
+                    Capsule()
+                        .fill(
+                            isSelected
+                                ? gradientManager.currentAccentColor
+                                : Color(.systemGray5)
+                        )
+                )
+        }
+        .buttonStyle(.plain)
     }
 
     private var priceDivider: some View {
@@ -3259,7 +3351,7 @@ struct AdWatcherView: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 50)
                 }
-                .buttonStyle(.glassProminent)
+                .modifier(GlassProminentButtonModifier())
                 .tint(.green)
                 .padding(.horizontal, 40)
                 .padding(.top, 16)
@@ -3308,6 +3400,16 @@ struct AdWatcherView: View {
         let mins = seconds / 60
         let secs = seconds % 60
         return String(format: "%d:%02d", mins, secs)
+    }
+}
+
+private struct GlassProminentButtonModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.buttonStyle(.glassProminent)
+        } else {
+            content.buttonStyle(.borderedProminent)
+        }
     }
 }
 

@@ -130,8 +130,6 @@ struct ConversationalSearchView: View {
                 messageInputToolbar
             }
 
-            ToolbarSpacer(.fixed, placement: .bottomBar)
-
             // Botón de enviar en el toolbar inferior - estilo estándar
             ToolbarItem(placement: .bottomBar) {
                 Button(action: handleSendAction) {
