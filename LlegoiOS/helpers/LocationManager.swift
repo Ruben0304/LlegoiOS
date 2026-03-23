@@ -49,7 +49,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
 
             let addressString: String
 
-            if let request = MKReverseGeocodingRequest(location: location) {
+            if #available(iOS 26.0, *), let request = MKReverseGeocodingRequest(location: location) {
                 do {
                     let mapItems = try await request.mapItems
                     if let mapItem = mapItems.first, let name = mapItem.name, !name.isEmpty {
@@ -63,7 +63,19 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
                     addressString = "Ubicación seleccionada"
                 }
             } else {
-                addressString = "Ubicación seleccionada"
+                let geocoder = CLGeocoder()
+                do {
+                    let placemarks = try await geocoder.reverseGeocodeLocation(location)
+                    if let placemark = placemarks.first {
+                        let parts = [placemark.name, placemark.locality].compactMap { $0 }
+                        addressString = parts.isEmpty ? "Ubicación seleccionada" : parts.joined(separator: ", ")
+                    } else {
+                        addressString = "Ubicación seleccionada"
+                    }
+                } catch {
+                    print("Error reverse geocoding: \(error.localizedDescription)")
+                    addressString = "Ubicación seleccionada"
+                }
             }
 
             await MainActor.run {

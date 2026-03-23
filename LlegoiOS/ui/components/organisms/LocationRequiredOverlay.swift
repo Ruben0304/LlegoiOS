@@ -139,23 +139,34 @@ struct LocationRequiredOverlay: View {
         Task {
             let resolvedAddress = await Task.detached(priority: .userInitiated) { () -> String in
                 let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
-                guard let request = MKReverseGeocodingRequest(location: location) else {
-                    return "Ubicación seleccionada"
-                }
 
-                do {
-                    let mapItems = try await request.mapItems
-                    if let mapItem = mapItems.first {
-                        var components: [String] = []
-                        if let name = mapItem.name, !name.isEmpty { components.append(name) }
-                        if let locality = mapItem.placemark.locality, !locality.isEmpty { components.append(locality) }
-                        if !components.isEmpty {
-                            return components.joined(separator: ", ")
+                if #available(iOS 26.0, *), let request = MKReverseGeocodingRequest(location: location) {
+                    do {
+                        let mapItems = try await request.mapItems
+                        if let mapItem = mapItems.first {
+                            var components: [String] = []
+                            if let name = mapItem.name, !name.isEmpty { components.append(name) }
+                            if let locality = mapItem.placemark.locality, !locality.isEmpty { components.append(locality) }
+                            if !components.isEmpty {
+                                return components.joined(separator: ", ")
+                            }
                         }
+                        return "Ubicación seleccionada"
+                    } catch {
+                        return "Ubicación seleccionada"
                     }
-                    return "Ubicación seleccionada"
-                } catch {
-                    return "Ubicación seleccionada"
+                } else {
+                    let geocoder = CLGeocoder()
+                    do {
+                        let placemarks = try await geocoder.reverseGeocodeLocation(location)
+                        if let placemark = placemarks.first {
+                            let parts = [placemark.name, placemark.locality].compactMap { $0 }
+                            return parts.isEmpty ? "Ubicación seleccionada" : parts.joined(separator: ", ")
+                        }
+                        return "Ubicación seleccionada"
+                    } catch {
+                        return "Ubicación seleccionada"
+                    }
                 }
             }.value
 

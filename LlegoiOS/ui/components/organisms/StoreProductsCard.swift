@@ -317,7 +317,7 @@ private struct StoreProductsCardFront: View {
                     .contentShape(Rectangle())
                     .foregroundColor(.white)
             }
-            .glassEffect(.clear)
+            .modifier(GlassEffectClearButtonModifier())
             .buttonStyle(.borderless)
 
             // Options Button
@@ -328,7 +328,7 @@ private struct StoreProductsCardFront: View {
                     .contentShape(Rectangle())
                     .foregroundColor(.white)
             }
-            .glassEffect(.clear)
+            .modifier(GlassEffectClearButtonModifier())
             .buttonStyle(.borderless)
         }
     }
@@ -469,7 +469,7 @@ private struct StoreProductsCardBack: View {
                             .frame(width: 36, height: 36)
                             .foregroundColor(.black)
                     }
-                    .glassEffect(.regular.interactive())
+                    .modifier(GlassEffectRegularButtonModifier())
                     .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
                     .buttonStyle(.borderless)
 
@@ -482,7 +482,7 @@ private struct StoreProductsCardBack: View {
                             .frame(width: 36, height: 36)
                             .foregroundColor(.black)
                     }
-                    .glassEffect(.regular.interactive())
+                    .modifier(GlassEffectRegularButtonModifier())
                     .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
                     .buttonStyle(.borderless)
                 }
@@ -771,7 +771,7 @@ private struct StoreFullMapView: View {
                             .frame(width: 36, height: 36)
                             .foregroundColor(.primary)
                     }
-                    .glassEffect(.regular.interactive())
+                    .modifier(GlassEffectRegularButtonModifier())
                     .buttonStyle(.borderless)
                 }
                 .padding(.horizontal, 16)
@@ -779,6 +779,28 @@ private struct StoreFullMapView: View {
                 .background(.ultraThinMaterial)
                 Spacer()
             }
+        }
+    }
+}
+
+// MARK: - Glass Effect Compatibility Modifiers
+
+private struct GlassEffectClearButtonModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.glassEffect(.clear)
+        } else {
+            content
+        }
+    }
+}
+
+private struct GlassEffectRegularButtonModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.glassEffect(.regular.interactive())
+        } else {
+            content
         }
     }
 }

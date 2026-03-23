@@ -126,29 +126,41 @@ class UserLocationManager: NSObject, ObservableObject {
     private func reverseGeocodeAsync(coordinate: CLLocationCoordinate2D) async -> String {
         await Task.detached(priority: .userInitiated) { () -> String in
             let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
-            guard let request = MKReverseGeocodingRequest(location: location) else {
-                return "Ubicación seleccionada"
-            }
 
-            do {
-                let mapItems = try await request.mapItems
-                if let mapItem = mapItems.first {
-                    var addressComponents: [String] = []
-                    if let name = mapItem.name, !name.isEmpty {
-                        addressComponents.append(name)
-                    }
-                    if let locality = mapItem.addressRepresentations?.cityName, !locality.isEmpty {
-                        addressComponents.append(locality)
-                    }
+            if #available(iOS 26.0, *), let request = MKReverseGeocodingRequest(location: location) {
+                do {
+                    let mapItems = try await request.mapItems
+                    if let mapItem = mapItems.first {
+                        var addressComponents: [String] = []
+                        if let name = mapItem.name, !name.isEmpty {
+                            addressComponents.append(name)
+                        }
+                        if let locality = mapItem.addressRepresentations?.cityName, !locality.isEmpty {
+                            addressComponents.append(locality)
+                        }
 
-                    if !addressComponents.isEmpty {
-                        return addressComponents.joined(separator: ", ")
+                        if !addressComponents.isEmpty {
+                            return addressComponents.joined(separator: ", ")
+                        }
                     }
+                    return "Lat: \(String(format: "%.4f", coordinate.latitude)), Lng: \(String(format: "%.4f", coordinate.longitude))"
+                } catch {
+                    print("Error reverse geocoding: \(error.localizedDescription)")
+                    return "Ubicación seleccionada"
                 }
-                return "Lat: \(String(format: "%.4f", coordinate.latitude)), Lng: \(String(format: "%.4f", coordinate.longitude))"
-            } catch {
-                print("Error reverse geocoding: \(error.localizedDescription)")
-                return "Ubicación seleccionada"
+            } else {
+                let geocoder = CLGeocoder()
+                do {
+                    let placemarks = try await geocoder.reverseGeocodeLocation(location)
+                    if let placemark = placemarks.first {
+                        let parts = [placemark.name, placemark.locality].compactMap { $0 }
+                        return parts.isEmpty ? "Ubicación seleccionada" : parts.joined(separator: ", ")
+                    }
+                    return "Ubicación seleccionada"
+                } catch {
+                    print("Error reverse geocoding: \(error.localizedDescription)")
+                    return "Ubicación seleccionada"
+                }
             }
         }.value
     }

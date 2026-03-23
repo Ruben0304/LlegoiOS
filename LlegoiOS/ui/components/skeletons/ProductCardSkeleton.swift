@@ -40,8 +40,18 @@ struct ProductCardSkeleton: View {
                 .shimmer()
         }
         .padding(16)
-        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 26))
+        .modifier(ProductCardSkeletonGlassModifier())
         .shadow(color: Color.black.opacity(0.08), radius: 12, x: 0, y: 6)
+    }
+}
+
+private struct ProductCardSkeletonGlassModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.glassEffect(.regular.interactive(), in: .rect(cornerRadius: 26))
+        } else {
+            content
+        }
     }
 }
 

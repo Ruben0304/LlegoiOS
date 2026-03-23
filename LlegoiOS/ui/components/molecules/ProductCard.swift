@@ -236,7 +236,7 @@ struct ProductCard: View {
                 .scaleEffect(quickAddPulse ? 1.12 : 1.0)
                 .animation(.spring(response: 0.28, dampingFraction: 0.6), value: quickAddPulse)
         }
-        .buttonStyle(.glass)
+        .modifier(GlassButtonStyleModifier())
         .padding(8)
     }
 }
@@ -247,6 +247,16 @@ private struct OptionalTapModifier: ViewModifier {
     func body(content: Content) -> some View {
         if let onTap = onTap {
             content.onTapGesture(perform: onTap)
+        } else {
+            content
+        }
+    }
+}
+
+private struct GlassButtonStyleModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.buttonStyle(.glass)
         } else {
             content
         }

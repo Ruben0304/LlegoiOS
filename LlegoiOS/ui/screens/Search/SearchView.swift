@@ -37,6 +37,9 @@ struct SearchView: View {
                             syncProgressBanner(phase: phase)
                         }
 
+                        // Botones de modo y sincronización
+                        inlineActionButtons
+
                         // Contenido según estado
                         switch viewModel.state {
                         case .idle:
@@ -71,16 +74,8 @@ struct SearchView: View {
             }
             .navigationTitle("Buscar")
             .toolbar {
-                // Leading: toggle de modo con texto elegante
-                ToolbarItem(placement: .navigationBarLeading) {
-                    connectivityToggle
-                }
-                // Spacer
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 12) {
-                        categoryMenu
-                        syncMenu
-                    }
+                    categoryMenu
                 }
             }
             // Online: busca solo al presionar "Buscar"
@@ -159,38 +154,151 @@ struct SearchView: View {
         }
     }
 
-    // MARK: - Connectivity Toggle (elegante)
+    // MARK: - Inline Search Controls
 
-    private var connectivityToggle: some View {
-        Button {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                viewModel.setOfflineMode(!viewModel.isOfflineMode)
+    private var inlineActionButtons: some View {
+        VStack(spacing: 12) {
+            // Picker de modo de búsqueda
+            Picker("Modo de búsqueda", selection: Binding(
+                get: { viewModel.isOfflineMode },
+                set: { newValue in
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        viewModel.setOfflineMode(newValue)
+                    }
+                }
+            )) {
+                Label("Con internet", systemImage: "wifi").tag(false)
+                Label("Sin internet", systemImage: "wifi.slash").tag(true)
             }
-        } label: {
-            HStack(spacing: 5) {
-                Image(systemName: viewModel.isOfflineMode ? "wifi.slash" : "wifi")
-                    .font(.system(size: 12, weight: .semibold))
-                Text(viewModel.isOfflineMode ? "Sin internet" : "Con internet")
-                    .font(.system(size: 12, weight: .semibold))
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 20)
+
+            // Panel de descarga — solo visible en modo sin internet
+            if viewModel.isOfflineMode {
+                offlineSyncPanel
+                    .transition(.move(edge: .top).combined(with: .opacity))
             }
-            .foregroundColor(viewModel.isOfflineMode ? .orange : gradientManager.currentAccentColor)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(
-                Capsule()
-                    .fill(viewModel.isOfflineMode
-                          ? Color.orange.opacity(0.12)
-                          : gradientManager.currentAccentColor.opacity(0.08))
+        }
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: viewModel.isOfflineMode)
+    }
+
+    private var offlineSyncPanel: some View {
+        VStack(spacing: 1) {
+            syncRow(
+                icon: "arrow.down.circle",
+                title: "Datos y fotos",
+                subtitle: "Descarga todo para búsqueda completa sin conexión",
+                isLoading: {
+                    if case .syncing = syncService.syncStatus { return true }
+                    return false
+                }()
+            ) {
+                Task {
+                    await syncService.syncDataOnly()
+                    viewModel.configure(modelContext: modelContext)
+                    viewModel.loadInitialData()
+                    showSyncSheet = true
+                }
+            }
+            .clipShape(
+                .rect(topLeadingRadius: 14, bottomLeadingRadius: 0,
+                      bottomTrailingRadius: 0, topTrailingRadius: 14)
             )
-            .overlay(
-                Capsule()
-                    .strokeBorder(
-                        viewModel.isOfflineMode ? Color.orange.opacity(0.35) : gradientManager.currentAccentColor.opacity(0.2),
-                        lineWidth: 1
-                    )
+
+            Divider()
+                .padding(.leading, 52)
+                .background(.regularMaterial)
+
+            syncRow(
+                icon: "square.and.arrow.down",
+                title: "Solo datos",
+                subtitle: "Productos y negocios · sin imágenes",
+                isLoading: {
+                    if case .syncing(let p) = syncService.syncStatus, p != .images { return true }
+                    return false
+                }()
+            ) {
+                Task {
+                    await syncService.syncDataOnly()
+                    viewModel.configure(modelContext: modelContext)
+                    viewModel.loadInitialData()
+                }
+            }
+            .clipShape(.rect(cornerRadius: 0))
+
+            Divider()
+                .padding(.leading, 52)
+                .background(.regularMaterial)
+
+            syncRow(
+                icon: "photo.stack",
+                title: "Solo fotos",
+                subtitle: "Actualiza las imágenes ya descargadas",
+                isLoading: {
+                    if case .syncing(.images) = syncService.syncStatus { return true }
+                    return false
+                }()
+            ) {
+                showSyncSheet = true
+            }
+            .clipShape(
+                .rect(topLeadingRadius: 0, bottomLeadingRadius: 14,
+                      bottomTrailingRadius: 14, topTrailingRadius: 0)
             )
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: viewModel.isOfflineMode)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(gradientManager.currentAccentColor.opacity(0.12), lineWidth: 1)
+        )
+        .padding(.horizontal, 20)
+        .disabled(syncService.syncStatus != .idle)
+        .opacity(syncService.syncStatus != .idle ? 0.6 : 1)
+    }
+
+    private func syncRow(
+        icon: String,
+        title: String,
+        subtitle: String,
+        isLoading: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                ZStack {
+                    if isLoading {
+                        ProgressView()
+                            .tint(gradientManager.currentAccentColor)
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: icon)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(gradientManager.currentAccentColor)
+                    }
+                }
+                .frame(width: 22)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(isLoading ? "Descargando..." : title)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.primary)
+                    Text(subtitle)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 11)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Category Menu
@@ -218,45 +326,7 @@ struct SearchView: View {
         }
     }
 
-    // MARK: - Sync Menu (simplificado)
 
-    private var syncMenu: some View {
-        Menu {
-            Button {
-                Task {
-                    // Solo datos
-                    await syncService.syncDataOnly()
-                    viewModel.configure(modelContext: modelContext)
-                    viewModel.loadInitialData()
-                }
-            } label: {
-                Label("Actualizar datos", systemImage: "arrow.clockwise")
-            }
-            .disabled(syncService.syncStatus != .idle)
-
-            Button {
-                showSyncSheet = true
-            } label: {
-                Label("Actualizar fotos", systemImage: "photo.stack")
-            }
-            .disabled(syncService.syncStatus != .idle)
-
-            if let date = syncService.lastSyncDate {
-                Divider()
-                Text("Sync: \(date.formatted(.relative(presentation: .named)))")
-            }
-        } label: {
-            ZStack {
-                Image(systemName: "arrow.clockwise.icloud")
-                    .foregroundColor(syncService.hasLocalData ? gradientManager.currentAccentColor : .secondary)
-                if case .syncing = syncService.syncStatus {
-                    ProgressView()
-                        .scaleEffect(0.5)
-                        .offset(x: 8, y: -8)
-                }
-            }
-        }
-    }
 
     // MARK: - Sync Progress Banner
 

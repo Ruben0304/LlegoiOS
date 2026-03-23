@@ -29,7 +29,7 @@ struct CategoryChip: View {
             .padding(.horizontal, 3)
             .padding(.vertical, 2)
         }
-        .buttonStyle(.glassProminent)
+        .modifier(CategoryChipButtonStyleModifier())
         .buttonBorderShape(.capsule)
         .clipShape(Capsule())
         .compositingGroup()
@@ -39,6 +39,16 @@ struct CategoryChip: View {
                 Capsule()
                     .stroke(Color.white, lineWidth: 1.2)
             }
+        }
+    }
+}
+
+private struct CategoryChipButtonStyleModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.buttonStyle(.glassProminent)
+        } else {
+            content.buttonStyle(.plain)
         }
     }
 }
