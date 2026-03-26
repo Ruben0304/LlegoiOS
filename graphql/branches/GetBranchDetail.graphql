@@ -20,5 +20,20 @@ query GetBranchDetail($id: String!) {
     acceptedCurrency
     exchangeRate
     createdAt
+    showcases(activeOnly: true) {
+      id
+      title
+      description
+      imageUrl
+      isActive
+      createdAt
+      items {
+        id
+        name
+        description
+        price
+        availability
+      }
+    }
   }
 }

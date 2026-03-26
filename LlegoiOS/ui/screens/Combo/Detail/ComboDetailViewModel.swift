@@ -49,32 +49,44 @@ class ComboDetailViewModel: ObservableObject {
         return nil
     }
 
-    /// Total price based on current selections
-    var calculatedPrice: Double {
+    /// Subtotal from user-selected options in paid slots only (free slots are excluded)
+    var selectionSubtotal: Double {
         guard let combo = comboDetail else { return 0 }
-        var total = combo.finalPrice  // Start from discounted base price
+        var total = 0.0
 
-        // Add price adjustments for non-default selections
         for slot in combo.slots {
+            guard !slot.isFree else { continue }   // free slots don't add to price
             let selected = slotSelections[slot.id] ?? []
-            for option in slot.options {
-                if selected.contains(option.productId) && !option.isDefault {
-                    total += option.priceAdjustment
-                }
-                // Add modifier adjustments
+            for option in slot.options where selected.contains(option.productId) {
+                total += option.effectivePrice
+
                 let mods = selectedModifiers[option.productId] ?? []
-                for modifier in option.availableModifiers where mods.contains(modifier.name) {
-                    total += modifier.priceAdjustment
-                }
+                total += option.availableModifiers
+                    .filter { mods.contains($0.name) }
+                    .reduce(0.0) { $0 + $1.priceAdjustment }
             }
         }
+
         return total
     }
 
-    /// True if all required slots have at least one selection
+    /// Final price after applying the combo discount to the paid subtotal
+    var calculatedPrice: Double {
+        let subtotal = selectionSubtotal
+        return max(0, subtotal - comboDiscountAmount(for: subtotal))
+    }
+
+    var calculatedDiscountAmount: Double {
+        comboDiscountAmount(for: selectionSubtotal)
+    }
+
+    /// True if all required paid slots have enough selections.
+    /// Gift-only combos (no selectable required slots) are always ready.
     var isReadyToAdd: Bool {
         guard let combo = comboDetail else { return false }
-        for slot in combo.slots where slot.isRequired {
+        let requiredSlots = combo.slots.filter { $0.isRequired }
+        if requiredSlots.isEmpty { return true }
+        for slot in requiredSlots {
             let selected = slotSelections[slot.id] ?? []
             if selected.count < slot.minSelections { return false }
         }
@@ -136,16 +148,19 @@ class ComboDetailViewModel: ObservableObject {
         guard quantity > 0 else { return false }
         guard isReadyToAdd, let combo = comboDetail else { return false }
 
+        let comboGroupId = "combo::\(combo.id)::\(UUID().uuidString)"
+
+        // Collect all components: user-selected slot options + gift products
         let sortedSlots = combo.slots.sorted { $0.displayOrder < $1.displayOrder }
-        var selectedComponents:
-            [(
-                productId: String,
-                slotId: String,
-                slotName: String,
-                unitBasePrice: Double,
-                unitRawFinalPrice: Double,
-                componentOrder: Int
-            )] = []
+        var allComponents: [(
+            productId: String,
+            slotId: String,
+            slotName: String,
+            unitRawFinalPrice: Double,
+            componentOrder: Int,
+            modifierNames: [String],
+            isFree: Bool
+        )] = []
 
         var order = 0
         for slot in sortedSlots {
@@ -160,61 +175,77 @@ class ComboDetailViewModel: ObservableObject {
                     .filter { selectedModifierNames.contains($0.name) }
                     .reduce(0.0) { $0 + $1.priceAdjustment }
 
-                // Valor base para distribuir de forma estable el precio final del combo.
-                let unitRawFinal =
-                    option.productBasePrice + modifierAdjustment
-                    + (option.isDefault ? 0 : option.priceAdjustment)
+                let rawPrice = slot.isFree ? 0.0 : (option.effectivePrice + modifierAdjustment)
 
-                selectedComponents.append(
-                    (
-                        productId: option.productId,
-                        slotId: slot.id,
-                        slotName: slot.name,
-                        unitBasePrice: option.productBasePrice,
-                        unitRawFinalPrice: unitRawFinal,
-                        componentOrder: order
-                    )
-                )
+                allComponents.append((
+                    productId: option.productId,
+                    slotId: slot.id,
+                    slotName: slot.name,
+                    unitRawFinalPrice: rawPrice,
+                    componentOrder: order,
+                    modifierNames: selectedModifierNames.sorted(),
+                    isFree: slot.isFree
+                ))
                 order += 1
             }
         }
 
-        guard !selectedComponents.isEmpty else { return false }
+        // Gift products are always free and added automatically
+        for gift in combo.giftOptions {
+            allComponents.append((
+                productId: gift.productId,
+                slotId: "gift",
+                slotName: "Regalo",
+                unitRawFinalPrice: 0.0,
+                componentOrder: order,
+                modifierNames: [],
+                isFree: true
+            ))
+            order += 1
+        }
 
-        let targetTotalCents = cents(from: calculatedPrice)
-        let totalRaw = selectedComponents.reduce(0.0) { $0 + max(0.01, $1.unitRawFinalPrice) }
+        guard !allComponents.isEmpty else { return false }
 
-        var allocatedCents: [Int] = []
+        // Distribute the discount proportionally across paid components
+        let paidComponents = allComponents.filter { !$0.isFree }
+        let targetPaidCents = cents(from: calculatedPrice)
+        let totalRaw = paidComponents.reduce(0.0) { $0 + max(0.01, $1.unitRawFinalPrice) }
+
+        // Map productId → allocated cents for paid components
+        var paidAllocations: [String: Int] = [:]
         var assigned = 0
-        for (index, component) in selectedComponents.enumerated() {
-            if index == selectedComponents.count - 1 {
-                let remainder = max(0, targetTotalCents - assigned)
-                allocatedCents.append(remainder)
+        for (index, component) in paidComponents.enumerated() {
+            if index == paidComponents.count - 1 {
+                paidAllocations["\(component.componentOrder)_\(component.productId)"] = max(0, targetPaidCents - assigned)
                 continue
             }
             let ratio = max(0.01, component.unitRawFinalPrice) / totalRaw
-            let centsValue = Int((Double(targetTotalCents) * ratio).rounded())
-            allocatedCents.append(centsValue)
+            let centsValue = Int((Double(targetPaidCents) * ratio).rounded())
+            paidAllocations["\(component.componentOrder)_\(component.productId)"] = centsValue
             assigned += centsValue
         }
 
-        let cartComponents = zip(selectedComponents, allocatedCents).map { component, cents in
-            (
+        for component in allComponents {
+            let finalCents = component.isFree
+                ? 0
+                : (paidAllocations["\(component.componentOrder)_\(component.productId)"] ?? 0)
+            let lineCartItemId = "combo-item::\(comboGroupId)::\(component.componentOrder)::\(component.productId)"
+            cartManager.addToCart(
                 productId: component.productId,
-                slotId: component.slotId,
-                slotName: component.slotName,
-                unitBasePrice: component.unitBasePrice,
-                unitFinalPrice: Double(cents) / 100.0,
-                componentOrder: component.componentOrder
+                quantity: quantity,
+                selectedVariants: [],
+                cartItemId: lineCartItemId,
+                comboGroupId: comboGroupId,
+                comboId: combo.id,
+                comboName: combo.name,
+                comboComponentSlotId: component.slotId,
+                comboComponentSlotName: component.slotName,
+                comboComponentOrder: component.componentOrder,
+                comboModifierNames: component.modifierNames,
+                basePrice: component.unitRawFinalPrice,
+                finalUnitPrice: Double(finalCents) / 100.0
             )
         }
-
-        cartManager.addComboToCart(
-            comboId: combo.id,
-            comboName: combo.name,
-            components: cartComponents,
-            quantity: quantity
-        )
         return true
     }
 
@@ -244,5 +275,18 @@ class ComboDetailViewModel: ObservableObject {
 
     private func cents(from value: Double) -> Int {
         Int((value * 100.0).rounded())
+    }
+
+    private func comboDiscountAmount(for subtotal: Double) -> Double {
+        guard let combo = comboDetail, subtotal > 0 else { return 0 }
+
+        switch combo.discountType.uppercased() {
+        case "PERCENTAGE":
+            return subtotal * (combo.discountValue / 100.0)
+        case "FIXED":
+            return min(subtotal, combo.discountValue)
+        default:
+            return 0
+        }
     }
 }

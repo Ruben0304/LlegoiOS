@@ -15,6 +15,8 @@ public extension LlegoAPI {
       quantity: Int32,
       itemType: GraphQLEnum<OrderItemTypeInput>? = nil,
       productId: GraphQLNullable<String> = nil,
+      comboId: GraphQLNullable<String> = nil,
+      comboSelections: [OrderComboSlotSelectionInput]? = nil,
       showcaseId: GraphQLNullable<String> = nil,
       description: GraphQLNullable<String> = nil
     ) {
@@ -22,6 +24,8 @@ public extension LlegoAPI {
         "quantity": quantity,
         "itemType": itemType ?? GraphQLNullable.none,
         "productId": productId,
+        "comboId": comboId,
+        "comboSelections": comboSelections ?? GraphQLNullable.none,
         "showcaseId": showcaseId,
         "description": description
       ])
@@ -40,6 +44,16 @@ public extension LlegoAPI {
     public var productId: GraphQLNullable<String> {
       get { __data["productId"] }
       set { __data["productId"] = newValue }
+    }
+
+    public var comboId: GraphQLNullable<String> {
+      get { __data["comboId"] }
+      set { __data["comboId"] = newValue }
+    }
+
+    public var comboSelections: [OrderComboSlotSelectionInput]? {
+      get { __data["comboSelections"] }
+      set { __data["comboSelections"] = newValue }
     }
 
     public var showcaseId: GraphQLNullable<String> {

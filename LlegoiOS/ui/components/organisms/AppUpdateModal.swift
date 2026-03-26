@@ -3,6 +3,7 @@ import SwiftUI
 struct AppUpdateModal: View {
     @ObservedObject var viewModel: AppUpdateViewModel
     @Environment(\.colorScheme) var colorScheme
+    @ObservedObject private var gradientManager = GradientStateManager.shared
 
     var body: some View {
         ZStack {
@@ -103,12 +104,8 @@ struct AppUpdateModal: View {
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
-                            .background(
-                                RoundedRectangle(cornerRadius: 14)
-                                    .fill(Color.llegoPrimary)
-                            )
                         }
-                        .buttonStyle(ScaleButtonStyle())
+                        .modifier(AppUpdatePrimaryButtonModifier(tint: gradientManager.currentAccentColor))
 
                         // Cancel button (only for optional updates)
                         if viewModel.canDismiss {
@@ -151,6 +148,26 @@ struct AppUpdateModal: View {
             return "wrench.and.screwdriver.fill"
         case .none:
             return "checkmark.circle.fill"
+        }
+    }
+}
+
+private struct AppUpdatePrimaryButtonModifier: ViewModifier {
+    let tint: Color
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .buttonStyle(.glassProminent)
+                .buttonBorderShape(.roundedRectangle(radius: 14))
+                .tint(tint)
+        } else {
+            content
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(tint)
+                )
+                .buttonStyle(ScaleButtonStyle())
         }
     }
 }

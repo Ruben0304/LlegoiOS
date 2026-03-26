@@ -45,8 +45,39 @@ final class CreateOrderRepository {
             
             // Build items input
             let itemsInput = items.compactMap { item -> LlegoAPI.OrderItemInput? in
-                guard let productId = item.productId else { return nil }
-                return LlegoAPI.OrderItemInput(quantity: Int32(item.quantity), productId: .some(productId))
+                switch item.itemType {
+                case .product:
+                    guard let productId = item.productId else { return nil }
+                    return LlegoAPI.OrderItemInput(
+                        quantity: Int32(item.quantity),
+                        itemType: GraphQLEnum(.product),
+                        productId: .some(productId)
+                    )
+                case .combo:
+                    guard let comboId = item.comboId else { return nil }
+                    let comboSelections = item.comboSelections?.map { selection in
+                        LlegoAPI.OrderComboSlotSelectionInput(
+                            slotId: selection.slotId,
+                            selectedOptions: selection.selectedOptions.map { option in
+                                LlegoAPI.OrderComboSelectedOptionInput(
+                                    productId: option.productId,
+                                    quantity: Int32(option.quantity),
+                                    modifiers: option.modifiers.map {
+                                        LlegoAPI.OrderComboModifierInput(name: $0.name)
+                                    }
+                                )
+                            }
+                        )
+                    }
+                    return LlegoAPI.OrderItemInput(
+                        quantity: Int32(item.quantity),
+                        itemType: GraphQLEnum(.combo),
+                        comboId: .some(comboId),
+                        comboSelections: comboSelections
+                    )
+                case .showcase:
+                    return nil
+                }
             }
             
             // Build delivery address input
@@ -140,13 +171,33 @@ final class CreateOrderRepository {
                 paymentStatus
                 createdAt
                 items {
+                  itemType
+                  itemId
                   productId
                   name
+                  price
                   quantity
                   basePrice
                   finalPrice
+                  discountType
+                  discountValue
                   imageUrl
                   lineTotal
+                  comboSelections {
+                    slotId
+                    slotName
+                    selectedOptions {
+                      productId
+                      name
+                      price
+                      quantity
+                      priceAdjustment
+                      modifiers {
+                        name
+                        priceAdjustment
+                      }
+                    }
+                  }
                 }
                 discounts {
                   id
@@ -183,6 +234,19 @@ final class CreateOrderRepository {
                             quantity: item.quantity,
                             itemType: item.itemType.rawValue,
                             productId: item.productId,
+                            comboId: item.comboId,
+                            comboSelections: item.comboSelections?.map { selection in
+                                .init(
+                                    slotId: selection.slotId,
+                                    selectedOptions: selection.selectedOptions.map { option in
+                                        .init(
+                                            productId: option.productId,
+                                            quantity: option.quantity,
+                                            modifiers: option.modifiers.map { .init(name: $0.name) }
+                                        )
+                                    }
+                                )
+                            },
                             showcaseId: item.showcaseId,
                             requestDescription: item.description
                         )
@@ -267,7 +331,7 @@ final class CreateOrderRepository {
             CreatedOrderItem(
                 productId: item.productId,
                 name: item.name,
-                price: item.price,
+                price: item.finalPrice,
                 quantity: item.quantity,
                 imageUrl: item.imageUrl ?? "",
                 lineTotal: item.lineTotal
@@ -376,8 +440,26 @@ struct OrderRequestItem {
     let itemType: CartOrderItemType
     let quantity: Int
     let productId: String?
+    let comboId: String?
+    let comboSelections: [OrderRequestComboSlotSelection]?
     let showcaseId: String?
     let description: String?
+}
+
+struct OrderRequestComboSlotSelection {
+    let slotId: String
+    let slotName: String
+    let selectedOptions: [OrderRequestComboSelectedOption]
+}
+
+struct OrderRequestComboSelectedOption {
+    let productId: String
+    let quantity: Int
+    let modifiers: [OrderRequestComboModifier]
+}
+
+struct OrderRequestComboModifier {
+    let name: String
 }
 
 struct DeliveryAddressInput {
@@ -459,6 +541,8 @@ private struct MixedCreateOrderRequestPayload: Encodable {
         let quantity: Int
         let itemType: String
         let productId: String?
+        let comboId: String?
+        let comboSelections: [ComboSelection]?
         let showcaseId: String?
         let requestDescription: String?
 
@@ -466,9 +550,26 @@ private struct MixedCreateOrderRequestPayload: Encodable {
             case quantity
             case itemType
             case productId
+            case comboId
+            case comboSelections
             case showcaseId
             case requestDescription = "description"
         }
+    }
+
+    struct ComboSelection: Encodable {
+        let slotId: String
+        let selectedOptions: [SelectedOption]
+    }
+
+    struct SelectedOption: Encodable {
+        let productId: String
+        let quantity: Int
+        let modifiers: [Modifier]
+    }
+
+    struct Modifier: Encodable {
+        let name: String
     }
 
     struct DeliveryAddress: Encodable {

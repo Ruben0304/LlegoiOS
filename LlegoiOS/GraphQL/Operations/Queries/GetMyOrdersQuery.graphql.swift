@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetMyOrders"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetMyOrders($status: OrderStatusEnum, $limit: Int, $offset: Int, $jwt: String!) { myOrders(status: $status, limit: $limit, offset: $offset, jwt: $jwt) { __typename orders { __typename id orderNumber status total currency paymentStatus createdAt lastStatusAt estimatedMinutesRemaining items { __typename productId name quantity imageUrlMuyBaja imageUrl } branch { __typename id name avatarUrl } business { __typename id name } } totalCount hasMore } }"#
+        #"query GetMyOrders($status: OrderStatusEnum, $limit: Int, $offset: Int, $jwt: String!) { myOrders(status: $status, limit: $limit, offset: $offset, jwt: $jwt) { __typename orders { __typename id orderNumber status total currency paymentStatus createdAt lastStatusAt estimatedMinutesRemaining items { __typename itemType itemId productId name quantity imageUrlMuyBaja imageUrl basePrice finalPrice discountType discountValue } branch { __typename id name avatarUrl } business { __typename id name } } totalCount hasMore } }"#
       ))
 
     public var status: GraphQLNullable<GraphQLEnum<OrderStatusEnum>>
@@ -132,16 +132,24 @@ public extension LlegoAPI {
             @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.OrderItemType }
             @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
               .field("__typename", String.self),
+              .field("itemType", String.self),
+              .field("itemId", String.self),
               .field("productId", String.self),
               .field("name", String.self),
               .field("quantity", Int.self),
               .field("imageUrlMuyBaja", String?.self),
               .field("imageUrl", String?.self),
+              .field("basePrice", Double.self),
+              .field("finalPrice", Double.self),
+              .field("discountType", String?.self),
+              .field("discountValue", Double?.self),
             ] }
             @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
               GetMyOrdersQuery.Data.MyOrders.Order.Item.self
             ] }
 
+            public var itemType: String { __data["itemType"] }
+            public var itemId: String { __data["itemId"] }
             public var productId: String { __data["productId"] }
             public var name: String { __data["name"] }
             public var quantity: Int { __data["quantity"] }
@@ -149,6 +157,10 @@ public extension LlegoAPI {
             public var imageUrlMuyBaja: String? { __data["imageUrlMuyBaja"] }
             /// Presigned URL for the item image
             public var imageUrl: String? { __data["imageUrl"] }
+            public var basePrice: Double { __data["basePrice"] }
+            public var finalPrice: Double { __data["finalPrice"] }
+            public var discountType: String? { __data["discountType"] }
+            public var discountValue: Double? { __data["discountValue"] }
           }
 
           /// MyOrders.Order.Branch

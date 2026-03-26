@@ -174,25 +174,33 @@ struct OrderTrackingCard: View {
     private func preloadImage(
         url: URL?,
         cacheKey: String,
-        onLoaded: @escaping (UIImage?) -> Void
+        onLoaded: @escaping @MainActor (UIImage?) -> Void
     ) {
         guard let url else {
-            onLoaded(nil)
+            Task { @MainActor in
+                onLoaded(nil)
+            }
             return
         }
 
         if let cached = ImageCacheManager.shared.getImage(for: cacheKey) {
-            onLoaded(cached)
+            Task { @MainActor in
+                onLoaded(cached)
+            }
             return
         }
 
         URLSession.shared.dataTask(with: url) { data, _, _ in
             guard let data, let image = UIImage(data: data) else {
-                DispatchQueue.main.async { onLoaded(nil) }
+                Task { @MainActor in
+                    onLoaded(nil)
+                }
                 return
             }
             ImageCacheManager.shared.setImage(image, for: cacheKey)
-            DispatchQueue.main.async { onLoaded(image) }
+            Task { @MainActor in
+                onLoaded(image)
+            }
         }.resume()
     }
 

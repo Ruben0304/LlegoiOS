@@ -46,6 +46,7 @@ public extension LlegoAPI {
       case "BusinessType": return LlegoAPI.Objects.BusinessType
       case "BusinessTypeConfigType": return LlegoAPI.Objects.BusinessTypeConfigType
       case "CameraConfigType": return LlegoAPI.Objects.CameraConfigType
+      case "ComboGiftOptionType": return LlegoAPI.Objects.ComboGiftOptionType
       case "ComboModifierType": return LlegoAPI.Objects.ComboModifierType
       case "ComboOptionType": return LlegoAPI.Objects.ComboOptionType
       case "ComboSlotType": return LlegoAPI.Objects.ComboSlotType
@@ -69,6 +70,9 @@ public extension LlegoAPI {
       case "IosConfigType": return LlegoAPI.Objects.IosConfigType
       case "MaintenanceConfigType": return LlegoAPI.Objects.MaintenanceConfigType
       case "Mutation": return LlegoAPI.Objects.Mutation
+      case "OrderComboModifierType": return LlegoAPI.Objects.OrderComboModifierType
+      case "OrderComboSelectedOptionType": return LlegoAPI.Objects.OrderComboSelectedOptionType
+      case "OrderComboSelectionType": return LlegoAPI.Objects.OrderComboSelectionType
       case "OrderCommentType": return LlegoAPI.Objects.OrderCommentType
       case "OrderDiscountType": return LlegoAPI.Objects.OrderDiscountType
       case "OrderItemType": return LlegoAPI.Objects.OrderItemType
@@ -92,6 +96,8 @@ public extension LlegoAPI {
       case "SavedAddressType": return LlegoAPI.Objects.SavedAddressType
       case "ScoredBranchType": return LlegoAPI.Objects.ScoredBranchType
       case "ScoredProductType": return LlegoAPI.Objects.ScoredProductType
+      case "ShowcaseItemType": return LlegoAPI.Objects.ShowcaseItemType
+      case "ShowcaseType": return LlegoAPI.Objects.ShowcaseType
       case "Subscription": return LlegoAPI.Objects.Subscription
       case "TronDealerPaymentResult": return LlegoAPI.Objects.TronDealerPaymentResult
       case "TutorialType": return LlegoAPI.Objects.TutorialType

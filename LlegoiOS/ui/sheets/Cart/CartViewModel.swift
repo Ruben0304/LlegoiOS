@@ -284,6 +284,7 @@ class CartViewModel: ObservableObject {
                             comboComponentSlotId: product.comboComponentSlotId,
                             comboComponentSlotName: product.comboComponentSlotName,
                             comboComponentOrder: product.comboComponentOrder,
+                            comboModifierNames: product.comboModifierNames,
                             name: product.name,
                             shop: product.businessName,
                             weight: product.weight,
@@ -315,6 +316,7 @@ class CartViewModel: ObservableObject {
                             comboComponentSlotId: nil,
                             comboComponentSlotName: nil,
                             comboComponentOrder: nil,
+                            comboModifierNames: [],
                             name: showcase.title,
                             shop: showcase.branchName,
                             weight: "Pedido manual",
@@ -400,6 +402,7 @@ class CartViewModel: ObservableObject {
                 comboComponentSlotId: nil,
                 comboComponentSlotName: nil,
                 comboComponentOrder: nil,
+                comboModifierNames: [],
                 name: product.name,
                 shop: product.shop,
                 weight: product.weight,
@@ -1173,7 +1176,9 @@ class CartViewModel: ObservableObject {
 
     private func aggregatedOrderItems() -> [(productId: String, quantity: Int)] {
         let grouped = Dictionary(
-            grouping: cartItems.filter { $0.itemType == .product }, by: \.productId)
+            grouping: cartItems.filter { $0.itemType == .product && $0.comboGroupId == nil },
+            by: \.productId
+        )
         return grouped.map { productId, items in
             let qty = items.reduce(0) { partial, item in
                 partial + item.quantity
@@ -1188,10 +1193,14 @@ class CartViewModel: ObservableObject {
                 itemType: .product,
                 quantity: item.quantity,
                 productId: item.productId,
+                comboId: nil,
+                comboSelections: nil,
                 showcaseId: nil,
                 description: nil
             )
         }
+
+        let comboItems = buildComboOrderRequestItems()
 
         let showcaseItems =
             cartItems
@@ -1211,12 +1220,73 @@ class CartViewModel: ObservableObject {
                     itemType: .showcase,
                     quantity: item.quantity,
                     productId: nil,
+                    comboId: nil,
+                    comboSelections: nil,
                     showcaseId: showcaseId,
                     description: description
                 )
             }
 
-        return productItems + showcaseItems
+        return productItems + comboItems + showcaseItems
+    }
+
+    private func buildComboOrderRequestItems() -> [OrderRequestItem] {
+        let comboGroups = Dictionary(
+            grouping: cartItems.filter { $0.itemType == .product && $0.comboGroupId != nil },
+            by: \.comboGroupId
+        )
+
+        return comboGroups.compactMap { _, groupedItems -> OrderRequestItem? in
+            let sortedItems = groupedItems.sorted {
+                ($0.comboComponentOrder ?? .max) < ($1.comboComponentOrder ?? .max)
+            }
+            guard let firstItem = sortedItems.first, let comboId = firstItem.comboId else {
+                return nil
+            }
+
+            let slotMap = Dictionary(
+                grouping: sortedItems.compactMap { item -> (slotId: String, item: CartItem)? in
+                    guard let slotId = item.comboComponentSlotId else { return nil }
+                    return (slotId: slotId, item: item)
+                },
+                by: \.slotId
+            )
+
+            let comboSelections = slotMap.compactMap {
+                slotId, values -> (order: Int, selection: OrderRequestComboSlotSelection)? in
+                let slotItems = values.map(\.item).sorted {
+                    ($0.comboComponentOrder ?? .max) < ($1.comboComponentOrder ?? .max)
+                }
+                guard let firstSlotItem = slotItems.first else { return nil }
+
+                let selection = OrderRequestComboSlotSelection(
+                    slotId: slotId,
+                    slotName: firstSlotItem.comboComponentSlotName ?? "",
+                    selectedOptions: slotItems.map { slotItem in
+                        OrderRequestComboSelectedOption(
+                            productId: slotItem.productId,
+                            quantity: 1,
+                            modifiers: slotItem.comboModifierNames.map {
+                                OrderRequestComboModifier(name: $0)
+                            }
+                        )
+                    }
+                )
+                return (firstSlotItem.comboComponentOrder ?? .max, selection)
+            }
+            .sorted { $0.order < $1.order }
+            .map(\.selection)
+
+            return OrderRequestItem(
+                itemType: .combo,
+                quantity: firstItem.quantity,
+                productId: nil,
+                comboId: comboId,
+                comboSelections: comboSelections,
+                showcaseId: nil,
+                description: nil
+            )
+        }
     }
 
     func formatPrice(_ price: Double) -> String {
@@ -1293,6 +1363,7 @@ struct CartItem: Identifiable, Hashable {
     let comboComponentSlotId: String?
     let comboComponentSlotName: String?
     let comboComponentOrder: Int?
+    let comboModifierNames: [String]
     let name: String
     let shop: String
     let weight: String
@@ -1354,6 +1425,27 @@ struct CartItem: Identifiable, Hashable {
 
     var formattedBasePrice: String {
         String(format: "$%.2f", basePrice)
+    }
+
+    func baseUnitPrice(for selectedCurrency: String) -> Double {
+        let selected = selectedCurrency.uppercased()
+        let original = canonicalCurrencyForDisplay
+
+        if selected == original || !supportsCurrency(selected) {
+            return basePrice
+        }
+
+        guard let rate = exchangeRate, rate > 0 else {
+            return basePrice
+        }
+
+        if original == "USD" && selected == "CUP" {
+            return basePrice * Double(rate)
+        } else if original == "CUP" && selected == "USD" {
+            return basePrice / Double(rate)
+        }
+
+        return basePrice
     }
 
     var itemTotal: Double {
@@ -1473,5 +1565,6 @@ struct CartItem: Identifiable, Hashable {
 
 enum CartOrderItemType: String, Codable, Hashable {
     case product = "PRODUCT"
+    case combo = "COMBO"
     case showcase = "SHOWCASE"
 }

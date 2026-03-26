@@ -104,9 +104,10 @@ query GetCompleteFeed(
     availability
     discountType
     discountValue
-    basePrice
     finalPrice
     savings
+    startingFinalPrice
+    startingSavings
     representativeProducts {
       id
       name
@@ -114,6 +115,10 @@ query GetCompleteFeed(
     }
     slots {
       id
+      isFree
+    }
+    giftOptions {
+      productId
     }
     branch {
       id

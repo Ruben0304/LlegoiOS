@@ -80,133 +80,47 @@ struct CartView: View {
         Currency.allCases
     }
 
+    var cartDisplayEntries: [CartDisplayEntry] {
+        var entries: [CartDisplayEntry] = []
+        var seenComboGroups = Set<String>()
+
+        for item in viewModel.cartItems {
+            if let comboGroupId = item.comboGroupId {
+                guard seenComboGroups.insert(comboGroupId).inserted else { continue }
+                let components = viewModel.cartItems.filter { $0.comboGroupId == comboGroupId }
+                guard let primaryItem = components.min(by: {
+                    ($0.comboComponentOrder ?? .max) < ($1.comboComponentOrder ?? .max)
+                }) else { continue }
+                entries.append(
+                    CartDisplayEntry(
+                        id: comboGroupId,
+                        kind: .combo(primaryItem: primaryItem, components: components)
+                    )
+                )
+            } else {
+                entries.append(
+                    CartDisplayEntry(
+                        id: item.id,
+                        kind: .single(item)
+                    )
+                )
+            }
+        }
+
+        return entries
+    }
+
     var body: some View {
         NavigationStack {
             ZStack(alignment: .top) {
-                // Fondo gradiente sutil sincronizado
                 cartGradientBackground
                     .ignoresSafeArea()
                     .animation(
                         .easeInOut(duration: 0.8), value: gradientManager.currentCategoryIndex)
 
-                // Flying particles overlay for add-to-cart animation
                 flyingParticlesOverlay
 
-                if case .loading = viewModel.state {
-                    VStack(spacing: 20) {
-                        LottieView(name: "loader")
-                            .frame(width: 150, height: 150)
-                        Text("Cargando carrito...")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.gray)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-                // Error State
-                else if case .error(let message) = viewModel.state {
-                    VStack(spacing: 20) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 60))
-                            .foregroundColor(.red.opacity(0.6))
-                        Text(message)
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.gray)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 40)
-                        Button("Reintentar") {
-                            viewModel.loadCart()
-                        }
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 30)
-                        .padding(.vertical, 12)
-                        .background(gradientManager.currentAccentColor)
-                        .cornerRadius(12)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-                // Empty Cart
-                else if viewModel.cartItems.isEmpty {
-                    emptyCartView
-                }
-                // Cart with items
-                else {
-                    ScrollView(.vertical, showsIndicators: false) {
-                        VStack(spacing: 12) {
-                            // Tarjeta única con todos los items del carrito
-                            VStack(spacing: 0) {
-                                ForEach(Array(viewModel.cartItems.enumerated()), id: \.element.id) {
-                                    index, item in
-                                    VStack(spacing: 0) {
-                                        CartItemCard(
-                                            item: item,
-                                            selectedCurrency: selectedCurrency.rawValue,
-                                            onIncrement: {
-                                                withAnimation(
-                                                    .spring(response: 0.6, dampingFraction: 0.8)
-                                                ) {
-                                                    viewModel.incrementQuantity(cartItemId: item.id)
-                                                }
-                                            },
-                                            onDecrement: {
-                                                withAnimation(
-                                                    .spring(response: 0.6, dampingFraction: 0.8)
-                                                ) {
-                                                    viewModel.decrementQuantity(cartItemId: item.id)
-                                                }
-                                            },
-                                            onRemove: {
-                                                withAnimation(
-                                                    .spring(response: 0.6, dampingFraction: 0.8)
-                                                ) {
-                                                    viewModel.removeFromCart(cartItemId: item.id)
-                                                }
-                                            }
-                                        )
-                                        .transition(
-                                            .asymmetric(
-                                                insertion: .scale.combined(with: .opacity),
-                                                removal: .scale.combined(with: .opacity)
-                                            )
-                                        )
-                                        .animation(
-                                            .easeInOut(duration: 0.3).delay(Double(index) * 0.05),
-                                            value: viewModel.cartItems.count)
-
-                                        if index < viewModel.cartItems.count - 1 {
-                                            Divider()
-                                                .padding(.horizontal, 12)
-                                        }
-                                    }
-                                }
-                            }
-                            .background(
-                                GeometryReader { geo in
-                                    Color.white
-                                        .onAppear {
-                                            cartItemsCardFrame = geo.frame(in: .global)
-                                        }
-                                        .onChange(of: viewModel.cartItems.count) { _, _ in
-                                            cartItemsCardFrame = geo.frame(in: .global)
-                                        }
-                                }
-                            )
-                            .cornerRadius(16)
-                            .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
-
-                            if viewModel.hasMultipleBranches {
-                                multipleBranchesBanner
-                            }
-
-                            // Resumen de precios
-                            priceBreakdown
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
-                        .padding(.bottom, 24)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                }
+                cartContent
             }
             .navigationTitle("Carrito")
             .navigationBarTitleDisplayMode(.inline)
@@ -748,6 +662,155 @@ struct CartView: View {
                     self.showPaymentAlert = true
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var cartContent: some View {
+        if case .loading = viewModel.state {
+            loadingView
+        } else if case .error(let message) = viewModel.state {
+            errorView(message: message)
+        } else if viewModel.cartItems.isEmpty {
+            emptyCartView
+        } else {
+            populatedCartView
+        }
+    }
+
+    private var loadingView: some View {
+        VStack(spacing: 20) {
+            LottieView(name: "loader")
+                .frame(width: 150, height: 150)
+            Text("Cargando carrito...")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.gray)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func errorView(message: String) -> some View {
+        VStack(spacing: 20) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 60))
+                .foregroundColor(.red.opacity(0.6))
+            Text(message)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(.gray)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+            Button("Reintentar") {
+                viewModel.loadCart()
+            }
+            .font(.system(size: 16, weight: .bold))
+            .foregroundColor(.white)
+            .padding(.horizontal, 30)
+            .padding(.vertical, 12)
+            .background(gradientManager.currentAccentColor)
+            .cornerRadius(12)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var populatedCartView: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 12) {
+                cartItemsPanel
+
+                if viewModel.hasMultipleBranches {
+                    multipleBranchesBanner
+                }
+
+                priceBreakdown
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 24)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    private var cartItemsPanel: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(cartDisplayEntries.enumerated()), id: \.element.id) { index, entry in
+                VStack(spacing: 0) {
+                    cartEntryView(entry)
+                        .transition(
+                            .asymmetric(
+                                insertion: .scale.combined(with: .opacity),
+                                removal: .scale.combined(with: .opacity)
+                            )
+                        )
+                        .animation(
+                            .easeInOut(duration: 0.3).delay(Double(index) * 0.05),
+                            value: cartDisplayEntries.count)
+
+                    if index < cartDisplayEntries.count - 1 {
+                        Divider()
+                            .padding(.horizontal, 12)
+                    }
+                }
+            }
+        }
+        .background(
+            GeometryReader { geo in
+                Color.white
+                    .onAppear {
+                        cartItemsCardFrame = geo.frame(in: .global)
+                    }
+                    .onChange(of: cartDisplayEntries.count) { _, _ in
+                        cartItemsCardFrame = geo.frame(in: .global)
+                    }
+            }
+        )
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+    }
+
+    @ViewBuilder
+    private func cartEntryView(_ entry: CartDisplayEntry) -> some View {
+        switch entry.kind {
+        case .single(let item):
+            CartItemCard(
+                item: item,
+                selectedCurrency: selectedCurrency.rawValue,
+                onIncrement: {
+                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                        viewModel.incrementQuantity(cartItemId: item.id)
+                    }
+                },
+                onDecrement: {
+                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                        viewModel.decrementQuantity(cartItemId: item.id)
+                    }
+                },
+                onRemove: {
+                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                        viewModel.removeFromCart(cartItemId: item.id)
+                    }
+                }
+            )
+        case .combo(let primaryItem, let components):
+            ComboCartCard(
+                primaryItem: primaryItem,
+                components: components,
+                selectedCurrency: selectedCurrency.rawValue,
+                onIncrement: {
+                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                        viewModel.incrementQuantity(cartItemId: primaryItem.id)
+                    }
+                },
+                onDecrement: {
+                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                        viewModel.decrementQuantity(cartItemId: primaryItem.id)
+                    }
+                },
+                onRemove: {
+                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                        viewModel.removeFromCart(cartItemId: primaryItem.id)
+                    }
+                }
+            )
         }
     }
 
@@ -1996,6 +2059,315 @@ struct CartItemCard: View {
         }
         .padding(12)
     }
+}
+
+struct CartDisplayEntry: Identifiable {
+    enum Kind {
+        case single(CartItem)
+        case combo(primaryItem: CartItem, components: [CartItem])
+    }
+
+    let id: String
+    let kind: Kind
+}
+
+struct ComboCartCard: View {
+    let primaryItem: CartItem
+    let components: [CartItem]
+    let selectedCurrency: String
+    let onIncrement: () -> Void
+    let onDecrement: () -> Void
+    let onRemove: () -> Void
+
+    @ObservedObject private var gradientManager = GradientStateManager.shared
+
+    private var sortedComponents: [CartItem] {
+        components.sorted { ($0.comboComponentOrder ?? .max) < ($1.comboComponentOrder ?? .max) }
+    }
+
+    private var groupedSlots: [ComboSlotSummary] {
+        Dictionary(grouping: sortedComponents) { item in
+            item.comboComponentSlotId ?? item.id
+        }
+        .values
+        .compactMap { items -> ComboSlotSummary? in
+            let sorted = items.sorted { ($0.comboComponentOrder ?? .max) < ($1.comboComponentOrder ?? .max) }
+            guard let first = sorted.first else { return nil }
+            return ComboSlotSummary(
+                id: first.comboComponentSlotId ?? first.id,
+                title: first.comboComponentSlotName ?? "Selección",
+                items: sorted
+            )
+        }
+        .sorted { lhs, rhs in
+            let lhsOrder = lhs.items.first?.comboComponentOrder ?? .max
+            let rhsOrder = rhs.items.first?.comboComponentOrder ?? .max
+            return lhsOrder < rhsOrder
+        }
+    }
+
+    private var quantity: Int {
+        primaryItem.quantity
+    }
+
+    private var comboUnitPrice: Double {
+        sortedComponents.reduce(0) { $0 + $1.unitPrice(for: selectedCurrency) }
+    }
+
+    private var comboUnitSubtotal: Double {
+        sortedComponents.reduce(0) { $0 + $1.baseUnitPrice(for: selectedCurrency) }
+    }
+
+    private var comboUnitDiscount: Double {
+        max(0, comboUnitSubtotal - comboUnitPrice)
+    }
+
+    private var comboTotalPrice: Double {
+        comboUnitPrice * Double(quantity)
+    }
+
+    private var comboSubtotalPrice: Double {
+        comboUnitSubtotal * Double(quantity)
+    }
+
+    private var comboDiscountTotal: Double {
+        comboUnitDiscount * Double(quantity)
+    }
+
+    private var comboHeaderTitle: String {
+        primaryItem.comboName ?? "Combo"
+    }
+
+    private var comboImageURL: URL? {
+        guard let raw = sortedComponents.first(where: { !$0.imageUrl.isEmpty })?.imageUrl else {
+            return nil
+        }
+        return URL(string: raw)
+    }
+
+    private var currencyLabel: String {
+        let uppercased = selectedCurrency.uppercased()
+        if uppercased == "USD" || uppercased == "CUP" {
+            return uppercased
+        }
+        return primaryItem.currency.uppercased()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                comboArtwork
+
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .center, spacing: 8) {
+                        Text("COMBO")
+                            .font(.system(size: 10, weight: .black, design: .rounded))
+                            .foregroundColor(gradientManager.currentAccentColor)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
+                            .background(
+                                Capsule()
+                                    .fill(gradientManager.currentAccentColor.opacity(0.12))
+                            )
+
+                        Text(comboHeaderTitle)
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundColor(.primary)
+                            .lineLimit(2)
+                    }
+
+                    Text("Configurado como una sola selección del carrito")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        if comboUnitDiscount > 0.009 {
+                            HStack(spacing: 6) {
+                                Text("\(currencyLabel) \(String(format: "%.2f", comboSubtotalPrice))")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(.secondary)
+                                    .strikethrough()
+
+                                Text("Ahorro \(currencyLabel) \(String(format: "%.2f", comboDiscountTotal))")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(.green.opacity(0.9))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color.green.opacity(0.12))
+                                    )
+                            }
+                        }
+
+                        HStack(spacing: 6) {
+                            Text("\(currencyLabel) \(String(format: "%.2f", comboUnitPrice))")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.secondary)
+
+                            Text("× \(quantity)")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundColor(gradientManager.currentAccentColor)
+
+                            Text("=")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(.secondary)
+
+                            Text("\(currencyLabel) \(String(format: "%.2f", comboTotalPrice))")
+                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                                .foregroundColor(gradientManager.currentAccentColor)
+                        }
+                    }
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(groupedSlots) { slot in
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(slot.title)
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.secondary)
+
+                        ForEach(slot.items, id: \.id) { item in
+                            VStack(alignment: .leading, spacing: 3) {
+                                HStack(alignment: .center, spacing: 8) {
+                                    Circle()
+                                        .fill(gradientManager.currentAccentColor.opacity(0.9))
+                                        .frame(width: 6, height: 6)
+
+                                    Text(item.name)
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(.primary)
+
+                                    Spacer(minLength: 8)
+
+                                    Text(item.formattedPrice(for: selectedCurrency))
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundColor(.secondary)
+                                }
+
+                                if !item.comboModifierNames.isEmpty {
+                                    Text(item.comboModifierNames.joined(separator: ", "))
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundColor(.secondary)
+                                        .padding(.leading, 14)
+                                }
+                            }
+                            .padding(.vertical, 2)
+                        }
+                    }
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color(.systemGray6).opacity(0.8))
+                    )
+                }
+            }
+
+            HStack(spacing: 10) {
+                Button(action: onRemove) {
+                    Label("Quitar", systemImage: "trash.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.red.opacity(0.85))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 9)
+                        .background(
+                            Capsule()
+                                .fill(Color.red.opacity(0.08))
+                        )
+                }
+
+                Spacer(minLength: 0)
+
+                HStack(spacing: 6) {
+                    quantityButton(systemName: "minus", action: onDecrement)
+
+                    Text("\(quantity)")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary)
+                        .frame(width: 24)
+
+                    quantityButton(systemName: "plus", action: onIncrement)
+                }
+            }
+        }
+        .padding(14)
+        .background(
+            LinearGradient(
+                colors: [
+                    gradientManager.currentAccentColor.opacity(0.08),
+                    Color.white.opacity(0.98),
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+    }
+
+    private var comboArtwork: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            gradientManager.currentAccentColor.opacity(0.18),
+                            Color(.systemGray5),
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .frame(width: 68, height: 68)
+
+            if let comboImageURL {
+                CachedAsyncImage(
+                    url: comboImageURL,
+                    content: { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 68, height: 68)
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    },
+                    placeholder: {
+                        Image(systemName: "shippingbox.fill")
+                            .font(.system(size: 24, weight: .medium))
+                            .foregroundColor(gradientManager.currentAccentColor)
+                    }
+                )
+            } else {
+                Image(systemName: "shippingbox.fill")
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundColor(gradientManager.currentAccentColor)
+            }
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(gradientManager.currentAccentColor.opacity(0.12), lineWidth: 1)
+        )
+    }
+
+    private func quantityButton(systemName: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 10, weight: .bold))
+                .foregroundColor(.primary)
+                .frame(width: 30, height: 30)
+                .background(
+                    Circle()
+                        .fill(.thinMaterial)
+                )
+        }
+    }
+}
+
+struct ComboSlotSummary: Identifiable {
+    let id: String
+    let title: String
+    let items: [CartItem]
 }
 
 // MARK: - Flying Particle Model & View

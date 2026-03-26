@@ -36,6 +36,7 @@ class CartManager: ObservableObject {
         comboComponentSlotId: String? = nil,
         comboComponentSlotName: String? = nil,
         comboComponentOrder: Int? = nil,
+        comboModifierNames: [String] = [],
         basePrice: Double? = nil,
         finalUnitPrice: Double? = nil
     ) {
@@ -57,6 +58,9 @@ class CartManager: ObservableObject {
                 comboComponentSlotName ?? items[index].comboComponentSlotName
             items[index].comboComponentOrder =
                 comboComponentOrder ?? items[index].comboComponentOrder
+            if !comboModifierNames.isEmpty {
+                items[index].comboModifierNames = comboModifierNames
+            }
             if let basePrice {
                 items[index].basePrice = basePrice
             }
@@ -79,6 +83,7 @@ class CartManager: ObservableObject {
                 comboComponentSlotId: comboComponentSlotId,
                 comboComponentSlotName: comboComponentSlotName,
                 comboComponentOrder: comboComponentOrder,
+                comboModifierNames: comboModifierNames,
                 basePrice: basePrice,
                 finalUnitPrice: finalUnitPrice,
                 finalTotalPrice: nil,
@@ -105,7 +110,8 @@ class CartManager: ObservableObject {
             slotName: String,
             unitBasePrice: Double,
             unitFinalPrice: Double,
-            componentOrder: Int
+            componentOrder: Int,
+            modifierNames: [String]
         )],
         quantity: Int = 1
     ) {
@@ -127,6 +133,7 @@ class CartManager: ObservableObject {
                 comboComponentSlotId: component.slotId,
                 comboComponentSlotName: component.slotName,
                 comboComponentOrder: component.componentOrder,
+                comboModifierNames: component.modifierNames,
                 basePrice: component.unitBasePrice,
                 finalUnitPrice: component.unitFinalPrice
             )

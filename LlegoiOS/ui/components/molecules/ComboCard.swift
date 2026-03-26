@@ -9,36 +9,54 @@ struct Combo: Identifiable, Hashable, Sendable {
     let imageUrl: String?
     let shop: String
     let shopLogoUrl: String
-    let basePrice: Double
     let finalPrice: Double
     let savings: Double
+    let startingFinalPrice: Double?
+    let startingSavings: Double?
     let currency: String
     let discountType: String
     let discountValue: Double
     let slotCount: Int
+    let giftOptionsCount: Int
+    let hasFreeSlots: Bool
     /// One representative image per slot, used when there is no combo image
     let representativeImageUrls: [String]
 
-    var formattedFinalPrice: String {
-        formatPrice(finalPrice, currency: currency)
+    // Computed base prices from finalPrice + savings
+    var basePrice: Double { finalPrice + savings }
+    var startingBasePrice: Double? {
+        guard let f = startingFinalPrice, let s = startingSavings else { return nil }
+        return f + s
     }
 
-    var formattedBasePrice: String {
-        formatPrice(basePrice, currency: currency)
+    var formattedFinalPrice: String { formatPrice(finalPrice, currency: currency) }
+    var formattedFromPrice: String { "Desde \(formatPrice(startingFinalPrice ?? finalPrice, currency: currency))" }
+    var formattedStartingBasePrice: String? {
+        guard let startingBasePrice else { return nil }
+        return formatPrice(startingBasePrice, currency: currency)
     }
+    var formattedBasePrice: String { formatPrice(basePrice, currency: currency) }
 
-    var hasDiscount: Bool {
-        savings > 0
+    var hasDiscount: Bool { savings > 0.009 }
+    var hasStartingDiscount: Bool {
+        guard let f = startingFinalPrice, let s = startingSavings else { return hasDiscount }
+        return s > 0.009 || (f + s) - f > 0.009
     }
 
     var discountLabel: String {
         switch discountType.uppercased() {
-        case "PERCENTAGE":
-            return "-\(Int(discountValue))%"
-        case "FIXED":
-            return "-\(formatPrice(discountValue, currency: currency))"
-        default:
-            return ""
+        case "PERCENTAGE": return "-\(Int(discountValue))%"
+        case "FIXED": return "-\(formatPrice(discountValue, currency: currency))"
+        default: return ""
+        }
+    }
+
+    var comboKind: ComboKind {
+        if giftOptionsCount > 0 { return .withGifts }
+        if hasFreeSlots { return .withFreeSlots }
+        switch discountType.uppercased() {
+        case "PERCENTAGE", "FIXED": return .discounted
+        default: return .bundle
         }
     }
 
@@ -80,7 +98,6 @@ struct ComboCard: View {
             imageSection
 
             VStack(alignment: .leading, spacing: 4) {
-                // Combo name
                 Text(combo.name)
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.primary)
@@ -91,15 +108,12 @@ struct ComboCard: View {
                     .frame(height: ceil(UIFont.systemFont(ofSize: 17, weight: .semibold).lineHeight * 2),
                            alignment: .topLeading)
 
-                // Shop info
                 HStack(spacing: 4) {
                     if !combo.shopLogoUrl.isEmpty {
                         CachedAsyncImage(
                             url: URL(string: combo.shopLogoUrl),
                             cacheKey: "shop_logo_\(combo.shop)",
-                            content: { image in
-                                image.resizable().scaledToFill()
-                            },
+                            content: { image in image.resizable().scaledToFill() },
                             placeholder: { Circle().fill(Color.gray.opacity(0.2)) },
                             failure: { Circle().fill(Color.gray.opacity(0.2)) }
                         )
@@ -111,33 +125,19 @@ struct ComboCard: View {
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
-
-                // Slot count badge
-                HStack(spacing: 4) {
-                    Image(systemName: "square.stack.3d.up.fill")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(.llegoAccent)
-                    Text("\(combo.slotCount) \(combo.slotCount == 1 ? "lote" : "lotes") a elegir")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.llegoAccent)
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(
-                    Capsule()
-                        .fill(Color.llegoAccent.opacity(0.12))
-                )
-                .padding(.top, 2)
             }
+
+            // Combo kind badge
+            comboKindBadge
 
             // Price row
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(combo.formattedFinalPrice)
+                Text(combo.formattedFromPrice)
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(.primary)
 
-                if combo.hasDiscount {
-                    Text(combo.formattedBasePrice)
+                if combo.hasStartingDiscount, let formattedStartingBasePrice = combo.formattedStartingBasePrice {
+                    Text(formattedStartingBasePrice)
                         .font(.system(size: 13, weight: .regular))
                         .foregroundColor(.secondary)
                         .strikethrough(true, color: .secondary)
@@ -145,16 +145,13 @@ struct ComboCard: View {
 
                 Spacer()
 
-                if combo.hasDiscount && !combo.discountLabel.isEmpty {
+                if combo.comboKind == .discounted && combo.hasDiscount && !combo.discountLabel.isEmpty {
                     Text(combo.discountLabel)
                         .font(.system(size: 12, weight: .bold))
                         .foregroundColor(.white)
                         .padding(.horizontal, 7)
                         .padding(.vertical, 3)
-                        .background(
-                            Capsule()
-                                .fill(Color.green)
-                        )
+                        .background(Capsule().fill(Color.green))
                 }
             }
         }
@@ -164,43 +161,100 @@ struct ComboCard: View {
         .animation(.easeInOut(duration: 0.2), value: isPressed)
     }
 
+    @ViewBuilder
+    private var comboKindBadge: some View {
+        switch combo.comboKind {
+        case .discounted:
+            EmptyView()  // discount shown in price row
+
+        case .withGifts:
+            HStack(spacing: 4) {
+                Image(systemName: "gift.fill")
+                    .font(.system(size: 10, weight: .semibold))
+                Text(combo.giftOptionsCount == 1
+                     ? "1 regalo incluido"
+                     : "\(combo.giftOptionsCount) regalos incluidos")
+                    .font(.system(size: 12, weight: .semibold))
+            }
+            .foregroundColor(.purple)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Capsule().fill(Color.purple.opacity(0.1)))
+
+        case .withFreeSlots:
+            HStack(spacing: 4) {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 10, weight: .semibold))
+                Text("Complementos gratis")
+                    .font(.system(size: 12, weight: .semibold))
+            }
+            .foregroundColor(.orange)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Capsule().fill(Color.orange.opacity(0.1)))
+
+        case .bundle:
+            HStack(spacing: 4) {
+                Image(systemName: "square.stack.3d.up.fill")
+                    .font(.system(size: 10, weight: .semibold))
+                Text("\(combo.slotCount) \(combo.slotCount == 1 ? "lote" : "lotes")")
+                    .font(.system(size: 12, weight: .semibold))
+            }
+            .foregroundColor(gradientManager.currentAccentColor)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Capsule().fill(gradientManager.currentAccentColor.opacity(0.1)))
+        }
+    }
+
     // MARK: - Image Section
 
     private var imageSection: some View {
         Group {
             if let imageUrl = combo.imageUrl, !imageUrl.isEmpty {
-                // Single full cover image
                 singleImage(url: imageUrl, cacheKey: "combo_\(combo.id)")
                     .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             } else {
-                // Floating circles over white card background — no clip
                 comboCollageImage
             }
         }
         .frame(height: 150)
+        .overlay(alignment: .topTrailing) {
+            // Kind overlay on image for gift and free slot types
+            if combo.comboKind == .withGifts {
+                Image(systemName: "gift.fill")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(8)
+                    .background(Circle().fill(Color.purple))
+                    .padding(10)
+            } else if combo.comboKind == .withFreeSlots {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(8)
+                    .background(Circle().fill(Color.orange))
+                    .padding(10)
+            }
+        }
     }
 
     private func singleImage(url: String, cacheKey: String) -> some View {
         CachedAsyncImage(
             url: URL(string: url),
             cacheKey: cacheKey,
-            content: { image in
-                image.resizable().scaledToFill()
-            },
+            content: { image in image.resizable().scaledToFill() },
             placeholder: {
                 ZStack {
                     Color(red: 240/255, green: 242/255, blue: 246/255)
                     ProgressView().tint(gradientManager.currentAccentColor)
                 }
             },
-            failure: {
-                comboFallbackImage
-            }
+            failure: { comboFallbackImage }
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// Floating circular images style, similar to Uber Eats bundle UI
     @ViewBuilder
     private var comboCollageImage: some View {
         let images = Array(combo.representativeImageUrls.prefix(3))
@@ -214,7 +268,6 @@ struct ComboCard: View {
         }
     }
 
-    /// Three (or two) circular product images floating over the card's white background
     private func floatingCirclesLayout(images: [String]) -> some View {
         GeometryReader { geo in
             ZStack {
@@ -226,12 +279,10 @@ struct ComboCard: View {
 
                 ForEach(Array(images.enumerated()), id: \.offset) { idx, url in
                     let xOffset = startX + CGFloat(idx) * (circleSize - overlap)
-                    // Slight vertical stagger for depth
                     let yOffset = geo.size.height / 2 + (idx == 1 ? 4 : 0)
 
                     circleCell(url: url, idx: idx, size: circleSize)
                         .position(x: xOffset, y: yOffset)
-                        // Later circles drawn on top via zIndex
                         .zIndex(Double(images.count - idx))
                 }
             }
@@ -242,15 +293,9 @@ struct ComboCard: View {
         CachedAsyncImage(
             url: URL(string: url),
             cacheKey: "combo_rep_\(combo.id)_\(idx)",
-            content: { image in
-                image.resizable().scaledToFill()
-            },
-            placeholder: {
-                Color(red: 240/255, green: 242/255, blue: 246/255)
-            },
-            failure: {
-                Color(red: 240/255, green: 242/255, blue: 246/255)
-            }
+            content: { image in image.resizable().scaledToFill() },
+            placeholder: { Color(red: 240/255, green: 242/255, blue: 246/255) },
+            failure: { Color(red: 240/255, green: 242/255, blue: 246/255) }
         )
         .frame(width: size, height: size)
         .clipShape(Circle())
@@ -261,11 +306,9 @@ struct ComboCard: View {
     private var comboFallbackImage: some View {
         ZStack {
             Color(red: 240/255, green: 242/255, blue: 246/255)
-            VStack(spacing: 6) {
-                Image(systemName: "square.stack.3d.up.fill")
-                    .font(.system(size: 32))
-                    .foregroundColor(.gray.opacity(0.4))
-            }
+            Image(systemName: "square.stack.3d.up.fill")
+                .font(.system(size: 32))
+                .foregroundColor(.gray.opacity(0.4))
         }
     }
 }

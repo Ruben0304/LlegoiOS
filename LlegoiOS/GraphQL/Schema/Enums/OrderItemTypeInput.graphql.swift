@@ -6,6 +6,7 @@
 public extension LlegoAPI {
   enum OrderItemTypeInput: String, EnumType {
     case product = "PRODUCT"
+    case combo = "COMBO"
     case showcase = "SHOWCASE"
   }
 

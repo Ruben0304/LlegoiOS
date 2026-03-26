@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "CreateOrder"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"mutation CreateOrder($input: CreateOrderInput!, $jwt: String!) { createOrder(input: $input, jwt: $jwt) { __typename id orderNumber status subtotal deliveryFee total currency paymentMethod paymentStatus createdAt items { __typename productId name price quantity imageUrl lineTotal } discounts { __typename id title amount type } deliveryAddress { __typename street city reference addressType buildingName floor apartment deliveryInstructions } branch { __typename id name avatarUrl } business { __typename id name } } }"#
+        #"mutation CreateOrder($input: CreateOrderInput!, $jwt: String!) { createOrder(input: $input, jwt: $jwt) { __typename id orderNumber status subtotal deliveryFee total currency paymentMethod paymentStatus createdAt items { __typename itemType itemId productId name basePrice finalPrice price quantity imageUrl lineTotal discountType discountValue comboSelections { __typename slotId slotName selectedOptions { __typename productId name price quantity priceAdjustment modifiers { __typename name priceAdjustment } } } } discounts { __typename id title amount type } deliveryAddress { __typename street city reference addressType buildingName floor apartment deliveryInstructions } branch { __typename id name avatarUrl } business { __typename id name } } }"#
       ))
 
     public var input: CreateOrderInput
@@ -107,25 +107,112 @@ public extension LlegoAPI {
           @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.OrderItemType }
           @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
             .field("__typename", String.self),
+            .field("itemType", String.self),
+            .field("itemId", String.self),
             .field("productId", String.self),
             .field("name", String.self),
+            .field("basePrice", Double.self),
+            .field("finalPrice", Double.self),
             .field("price", Double.self),
             .field("quantity", Int.self),
             .field("imageUrl", String?.self),
             .field("lineTotal", Double.self),
+            .field("discountType", String?.self),
+            .field("discountValue", Double?.self),
+            .field("comboSelections", [ComboSelection]?.self),
           ] }
           @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
             CreateOrderMutation.Data.CreateOrder.Item.self
           ] }
 
+          public var itemType: String { __data["itemType"] }
+          public var itemId: String { __data["itemId"] }
           public var productId: String { __data["productId"] }
           public var name: String { __data["name"] }
+          public var basePrice: Double { __data["basePrice"] }
+          public var finalPrice: Double { __data["finalPrice"] }
           public var price: Double { __data["price"] }
           public var quantity: Int { __data["quantity"] }
           /// Presigned URL for the item image
           public var imageUrl: String? { __data["imageUrl"] }
           /// Line total (price * quantity)
           public var lineTotal: Double { __data["lineTotal"] }
+          public var discountType: String? { __data["discountType"] }
+          public var discountValue: Double? { __data["discountValue"] }
+          public var comboSelections: [ComboSelection]? { __data["comboSelections"] }
+
+          /// CreateOrder.Item.ComboSelection
+          ///
+          /// Parent Type: `OrderComboSelectionType`
+          public struct ComboSelection: LlegoAPI.SelectionSet {
+            @_spi(Unsafe) public let __data: DataDict
+            @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+            @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.OrderComboSelectionType }
+            @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+              .field("__typename", String.self),
+              .field("slotId", String.self),
+              .field("slotName", String.self),
+              .field("selectedOptions", [SelectedOption].self),
+            ] }
+            @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+              CreateOrderMutation.Data.CreateOrder.Item.ComboSelection.self
+            ] }
+
+            public var slotId: String { __data["slotId"] }
+            public var slotName: String { __data["slotName"] }
+            public var selectedOptions: [SelectedOption] { __data["selectedOptions"] }
+
+            /// CreateOrder.Item.ComboSelection.SelectedOption
+            ///
+            /// Parent Type: `OrderComboSelectedOptionType`
+            public struct SelectedOption: LlegoAPI.SelectionSet {
+              @_spi(Unsafe) public let __data: DataDict
+              @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+              @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.OrderComboSelectedOptionType }
+              @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+                .field("__typename", String.self),
+                .field("productId", String.self),
+                .field("name", String.self),
+                .field("price", Double.self),
+                .field("quantity", Int.self),
+                .field("priceAdjustment", Double.self),
+                .field("modifiers", [Modifier].self),
+              ] }
+              @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+                CreateOrderMutation.Data.CreateOrder.Item.ComboSelection.SelectedOption.self
+              ] }
+
+              public var productId: String { __data["productId"] }
+              public var name: String { __data["name"] }
+              public var price: Double { __data["price"] }
+              public var quantity: Int { __data["quantity"] }
+              public var priceAdjustment: Double { __data["priceAdjustment"] }
+              public var modifiers: [Modifier] { __data["modifiers"] }
+
+              /// CreateOrder.Item.ComboSelection.SelectedOption.Modifier
+              ///
+              /// Parent Type: `OrderComboModifierType`
+              public struct Modifier: LlegoAPI.SelectionSet {
+                @_spi(Unsafe) public let __data: DataDict
+                @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+                @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.OrderComboModifierType }
+                @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+                  .field("__typename", String.self),
+                  .field("name", String.self),
+                  .field("priceAdjustment", Double.self),
+                ] }
+                @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+                  CreateOrderMutation.Data.CreateOrder.Item.ComboSelection.SelectedOption.Modifier.self
+                ] }
+
+                public var name: String { __data["name"] }
+                public var priceAdjustment: Double { __data["priceAdjustment"] }
+              }
+            }
+          }
         }
 
         /// CreateOrder.Discount

@@ -493,7 +493,7 @@ struct StoreDetailView: View {
                                     combosSection(store: store)
                                 }
 
-                                if viewModel.isLoadingShowcases || !viewModel.branchShowcases.isEmpty {
+                                if !viewModel.branchShowcases.isEmpty {
                                     showcasesSection()
                                 }
 
@@ -689,93 +689,84 @@ struct StoreDetailView: View {
                 subtitle: "Pide por descripción manual"
             )
 
-            if viewModel.isLoadingShowcases {
-                HStack {
-                    Spacer()
-                    ProgressView()
-                        .padding(.vertical, 12)
-                    Spacer()
-                }
-            } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(viewModel.branchShowcases, id: \.id) { showcase in
-                            VStack(alignment: .leading, spacing: 10) {
-                                AsyncImage(url: URL(string: showcase.imageUrl)) { phase in
-                                    switch phase {
-                                    case .empty:
-                                        ZStack {
-                                            Color.gray.opacity(0.12)
-                                            ProgressView()
-                                        }
-                                    case .success(let image):
-                                        image
-                                            .resizable()
-                                            .scaledToFill()
-                                    case .failure:
-                                        ZStack {
-                                            Color.gray.opacity(0.15)
-                                            Image(systemName: "photo")
-                                                .font(.system(size: 22, weight: .medium))
-                                                .foregroundColor(.secondary)
-                                        }
-                                    @unknown default:
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(viewModel.branchShowcases, id: \.id) { showcase in
+                        VStack(alignment: .leading, spacing: 10) {
+                            AsyncImage(url: URL(string: showcase.imageUrl)) { phase in
+                                switch phase {
+                                case .empty:
+                                    ZStack {
                                         Color.gray.opacity(0.12)
+                                        ProgressView()
                                     }
-                                }
-                                .frame(width: 264, height: 150)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-
-                                Text(showcase.title)
-                                    .font(.system(size: 15, weight: .bold))
-                                    .foregroundColor(.primary)
-                                    .lineLimit(2)
-
-                                if let description = showcase.description, !description.isEmpty {
-                                    Text(description)
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundColor(.secondary)
-                                        .lineLimit(2)
-                                }
-
-                                if let items = showcase.items, !items.isEmpty {
-                                    Text("\(min(items.count, 3)) items sugeridos")
-                                        .font(.system(size: 11, weight: .semibold))
-                                        .foregroundColor(gradientManager.currentAccentColor)
-                                } else {
-                                    Text("Pide por descripción libre")
-                                        .font(.system(size: 11, weight: .semibold))
-                                        .foregroundColor(gradientManager.currentAccentColor)
-                                }
-
-                                Button(action: {
-                                    selectedShowcase = showcase
-                                }) {
-                                    Text("Pedir desde vitrina")
-                                    .font(.system(size: 13, weight: .bold))
-                                        .foregroundColor(.white)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 10)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .fill(gradientManager.currentAccentColor)
-                                        )
+                                case .success(let image):
+                                    image
+                                        .resizable()
+                                        .scaledToFill()
+                                case .failure:
+                                    ZStack {
+                                        Color.gray.opacity(0.15)
+                                        Image(systemName: "photo")
+                                            .font(.system(size: 22, weight: .medium))
+                                            .foregroundColor(.secondary)
+                                    }
+                                @unknown default:
+                                    Color.gray.opacity(0.12)
                                 }
                             }
-                            .padding(12)
-                            .frame(width: 286, alignment: .leading)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(Color.white)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                            .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                            .frame(width: 264, height: 150)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                            Text(showcase.title)
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundColor(.primary)
+                                .lineLimit(2)
+
+                            if let description = showcase.description, !description.isEmpty {
+                                Text(description)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(2)
+                            }
+
+                            if let items = showcase.items, !items.isEmpty {
+                                Text("\(min(items.count, 3)) items sugeridos")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(gradientManager.currentAccentColor)
+                            } else {
+                                Text("Pide por descripción libre")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(gradientManager.currentAccentColor)
+                            }
+
+                            Button(action: {
+                                selectedShowcase = showcase
+                            }) {
+                                Text("Pedir desde vitrina")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(gradientManager.currentAccentColor)
                                     )
-                            )
+                            }
                         }
+                        .padding(12)
+                        .frame(width: 286, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(Color.white)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                                )
+                        )
                     }
-                    .padding(.horizontal, 2)
                 }
+                .padding(.horizontal, 2)
                 .frame(height: 292)
             }
         }
@@ -815,13 +806,16 @@ struct StoreDetailView: View {
                                     imageUrl: combo.imageUrl,
                                     shop: combo.branchName,
                                     shopLogoUrl: combo.branchLogoUrl ?? "",
-                                    basePrice: combo.basePrice,
                                     finalPrice: combo.finalPrice,
                                     savings: combo.savings,
+                                    startingFinalPrice: combo.startingFinalPrice,
+                                    startingSavings: combo.startingSavings,
                                     currency: combo.currency,
                                     discountType: combo.discountType,
                                     discountValue: combo.discountValue,
                                     slotCount: combo.slots.count,
+                                    giftOptionsCount: combo.giftOptions.count,
+                                    hasFreeSlots: combo.hasFreeSlots,
                                     representativeImageUrls: combo.representativeProducts.map { $0.imageUrl }
                                 ),
                                 onTap: {
@@ -862,6 +856,18 @@ struct ShowcaseOrderSheet: View {
     @State private var quantity: Int = 1
     @State private var showValidationError: Bool = false
 
+    private var suggestedRequestDescription: String {
+        guard let items = showcase.items, !items.isEmpty else { return "" }
+
+        return items.map { item in
+            if let description = item.description, !description.isEmpty {
+                return "- \(item.name): \(description)"
+            }
+            return "- \(item.name)"
+        }
+        .joined(separator: "\n")
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -871,6 +877,31 @@ struct ShowcaseOrderSheet: View {
                     Text("Este pedido será confirmado por la tienda según disponibilidad y precio final.")
                         .font(.system(size: 12, weight: .regular))
                         .foregroundColor(.secondary)
+                }
+
+                if let items = showcase.items, !items.isEmpty {
+                    Section("Productos de la vitrina") {
+                        ForEach(items, id: \.id) { item in
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text(item.name)
+                                        .font(.system(size: 14, weight: .semibold))
+                                    Spacer()
+                                    if let price = item.price {
+                                        Text(String(format: "%.2f", price))
+                                            .font(.system(size: 13, weight: .medium))
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+
+                                if let description = item.description, !description.isEmpty {
+                                    Text(description)
+                                        .font(.system(size: 12, weight: .regular))
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                        }
+                    }
                 }
 
                 Section("Qué necesitas") {
@@ -891,6 +922,11 @@ struct ShowcaseOrderSheet: View {
             }
             .navigationTitle("Pedir desde vitrina")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                if requestDescription.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    requestDescription = suggestedRequestDescription
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancelar") { dismiss() }

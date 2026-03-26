@@ -11,12 +11,33 @@ mutation CreateOrder($input: CreateOrderInput!, $jwt: String!) {
     paymentStatus
     createdAt
     items {
+      itemType
+      itemId
       productId
       name
+      basePrice
+      finalPrice
       price
       quantity
       imageUrl
       lineTotal
+      discountType
+      discountValue
+      comboSelections {
+        slotId
+        slotName
+        selectedOptions {
+          productId
+          name
+          price
+          quantity
+          priceAdjustment
+          modifiers {
+            name
+            priceAdjustment
+          }
+        }
+      }
     }
     discounts {
       id

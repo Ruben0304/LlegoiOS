@@ -7,13 +7,34 @@ mutation AcceptOrderModifications($orderId: String!, $jwt: String!) {
     total
     lastStatusAt
     items {
+      itemType
+      itemId
       productId
       name
+      basePrice
+      finalPrice
       price
       quantity
       imageUrl
       wasModifiedByStore
       lineTotal
+      discountType
+      discountValue
+      comboSelections {
+        slotId
+        slotName
+        selectedOptions {
+          productId
+          name
+          price
+          quantity
+          priceAdjustment
+          modifiers {
+            name
+            priceAdjustment
+          }
+        }
+      }
     }
     timeline {
       status

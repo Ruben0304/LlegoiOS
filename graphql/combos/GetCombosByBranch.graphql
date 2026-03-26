@@ -9,9 +9,10 @@ query GetCombosByBranch($branchId: String!, $availableOnly: Boolean! = true) {
     availability
     discountType
     discountValue
-    basePrice
     finalPrice
     savings
+    startingFinalPrice
+    startingSavings
     representativeProducts {
       id
       name
@@ -23,7 +24,7 @@ query GetCombosByBranch($branchId: String!, $availableOnly: Boolean! = true) {
       description
       minSelections
       maxSelections
-      isRequired
+      isFree
       displayOrder
       options {
         productId
@@ -40,6 +41,14 @@ query GetCombosByBranch($branchId: String!, $availableOnly: Boolean! = true) {
           name
           priceAdjustment
         }
+      }
+    }
+    giftOptions {
+      productId
+      product {
+        id
+        name
+        imageUrl
       }
     }
     branch {

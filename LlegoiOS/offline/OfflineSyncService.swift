@@ -69,9 +69,11 @@ final class OfflineSyncService: ObservableObject {
         do {
             let products = try ctx.fetch(FetchDescriptor<LocalProduct>())
             let businesses = try ctx.fetch(FetchDescriptor<LocalBusiness>())
+            let branches = try ctx.fetch(FetchDescriptor<LocalBranch>())
             productCount = products.count
             businessCount = businesses.count
             hasLocalData = productCount > 0 || businessCount > 0
+            print("📊 refreshStats - Productos: \(productCount), Negocios (LocalBusiness): \(businessCount), Sucursales (LocalBranch): \(branches.count), hasLocalData: \(hasLocalData)")
 
             // Cargar fecha de última sincronización
             let productsKey = SyncMetadata.productsKey
@@ -162,72 +164,101 @@ final class OfflineSyncService: ObservableObject {
     // MARK: - Private: Sync Businesses
 
     private func syncBusinesses() async throws {
-        guard modelContext != nil else { throw OfflineError.noContext }
+        print("🏪 syncBusinesses - Iniciando...")
+        guard modelContext != nil else {
+            print("❌ syncBusinesses - modelContext es nil")
+            throw OfflineError.noContext
+        }
 
         return try await withCheckedThrowingContinuation { continuation in
+            print("🏪 syncBusinesses - Lanzando query Apollo...")
             apolloClient.fetchCompat(
                 query: LlegoAPI.SyncBusinessesWithBranchesQuery(),
                 cachePolicy: .fetchIgnoringCacheData
             ) { [weak self] result in
+                print("🏪 syncBusinesses - Callback Apollo recibido, self nil: \(self == nil)")
                 Task { @MainActor in
                     guard let self = self, let ctx = self.modelContext else { return }
                     switch result {
                     case .success(let graphQLResult):
+                        print("🏪 syncBusinesses - graphQLResult recibido, data: \(graphQLResult.data != nil ? "OK" : "nil"), errors: \(graphQLResult.errors?.map { $0.message ?? "" } ?? [])")
                         guard let data = graphQLResult.data else {
+                            print("⚠️ syncBusinesses - data es nil, abortando sin guardar")
                             continuation.resume()
                             return
                         }
 
-                        // Borrar registros existentes
-                        try? ctx.delete(model: LocalBranch.self)
-                        try? ctx.delete(model: LocalBusiness.self)
+                        print("🏪 syncBusinesses - Respuesta recibida: \(data.syncBusinessesWithBranches.count) negocios")
 
-                        for biz in data.syncBusinessesWithBranches {
-                            let localBiz = LocalBusiness(
-                                id: biz.id,
-                                name: biz.name,
-                                globalRating: biz.globalRating,
-                                avatar: biz.avatar,
-                                avatarUrl: biz.avatarUrl,
-                                businessDescription: biz.description,
-                                tags: biz.tags ?? [],
-                                isActive: biz.isActive,
-                                createdAt: "\(biz.createdAt)"
-                            )
-                            ctx.insert(localBiz)
+                        do {
+                            // Borrar uno a uno para respetar relaciones inversas de SwiftData
+                            let oldBranches = try ctx.fetch(FetchDescriptor<LocalBranch>())
+                            oldBranches.forEach { ctx.delete($0) }
+                            let oldBusinesses = try ctx.fetch(FetchDescriptor<LocalBusiness>())
+                            oldBusinesses.forEach { ctx.delete($0) }
+                            try ctx.save()
+                            print("🗑️ syncBusinesses - Borrado previo OK (\(oldBusinesses.count) negocios, \(oldBranches.count) sucursales)")
 
-                            for branch in biz.branches {
-                                let lat = branch.coordinates.coordinates.count > 1
-                                    ? branch.coordinates.coordinates[1] : 0.0
-                                let lon = branch.coordinates.coordinates.count > 0
-                                    ? branch.coordinates.coordinates[0] : 0.0
+                            var totalBranches = 0
 
-                                let localBranch = LocalBranch(
-                                    id: branch.id,
-                                    businessId: branch.businessId,
-                                    name: branch.name,
-                                    address: branch.address,
-                                    latitude: lat,
-                                    longitude: lon,
-                                    phone: branch.phone,
-                                    isActive: branch.isActive,
-                                    status: branch.status,
-                                    avatar: branch.avatar,
-                                    avatarUrl: branch.avatarUrl,
-                                    coverImage: branch.coverImage,
-                                    coverUrl: branch.coverUrl,
-                                    tipos: branch.tipos,
-                                    deliveryRadius: branch.deliveryRadius,
-                                    createdAt: "\(branch.createdAt)"
+                            for biz in data.syncBusinessesWithBranches {
+                                let localBiz = LocalBusiness(
+                                    id: biz.id,
+                                    name: biz.name,
+                                    globalRating: biz.globalRating,
+                                    avatar: biz.avatar,
+                                    avatarUrl: biz.avatarUrl,
+                                    businessDescription: biz.description,
+                                    tags: biz.tags ?? [],
+                                    isActive: biz.isActive,
+                                    createdAt: "\(biz.createdAt)"
                                 )
-                                localBranch.business = localBiz
-                                ctx.insert(localBranch)
-                            }
-                        }
+                                ctx.insert(localBiz)
 
-                        try? ctx.save()
-                        self.updateMetadata(key: SyncMetadata.businessesKey, count: data.syncBusinessesWithBranches.count, ctx: ctx)
-                        continuation.resume()
+                                for branch in biz.branches {
+                                    let lat = branch.coordinates.coordinates.count > 1
+                                        ? branch.coordinates.coordinates[1] : 0.0
+                                    let lon = branch.coordinates.coordinates.count > 0
+                                        ? branch.coordinates.coordinates[0] : 0.0
+
+                                    let localBranch = LocalBranch(
+                                        id: branch.id,
+                                        businessId: branch.businessId,
+                                        name: branch.name,
+                                        address: branch.address,
+                                        latitude: lat,
+                                        longitude: lon,
+                                        phone: branch.phone,
+                                        isActive: branch.isActive,
+                                        status: branch.status,
+                                        avatar: branch.avatar,
+                                        avatarUrl: branch.avatarUrl,
+                                        coverImage: branch.coverImage,
+                                        coverUrl: branch.coverUrl,
+                                        tipos: branch.tipos,
+                                        deliveryRadius: branch.deliveryRadius,
+                                        createdAt: "\(branch.createdAt)"
+                                    )
+                                    localBranch.business = localBiz
+                                    ctx.insert(localBranch)
+                                    totalBranches += 1
+                                }
+                            }
+
+                            try ctx.save()
+                            print("💾 syncBusinesses - Guardado OK: \(data.syncBusinessesWithBranches.count) negocios, \(totalBranches) sucursales")
+
+                            // Verificar lo que quedó en BD
+                            let savedBranches = (try? ctx.fetch(FetchDescriptor<LocalBranch>())) ?? []
+                            let savedBusinesses = (try? ctx.fetch(FetchDescriptor<LocalBusiness>())) ?? []
+                            print("🔍 syncBusinesses - En BD: \(savedBusinesses.count) negocios, \(savedBranches.count) sucursales")
+
+                            self.updateMetadata(key: SyncMetadata.businessesKey, count: data.syncBusinessesWithBranches.count, ctx: ctx)
+                            continuation.resume()
+                        } catch {
+                            print("❌ syncBusinesses - Error al guardar: \(error)")
+                            continuation.resume(throwing: error)
+                        }
 
                     case .failure(let error):
                         continuation.resume(throwing: error)
@@ -256,29 +287,42 @@ final class OfflineSyncService: ObservableObject {
                             return
                         }
 
-                        try? ctx.delete(model: LocalProduct.self)
+                        print("📦 syncProducts - Respuesta recibida: \(data.syncProducts.count) productos")
 
-                        for p in data.syncProducts {
-                            let localProduct = LocalProduct(
-                                id: p.id,
-                                branchId: p.branchId,
-                                name: p.name,
-                                productDescription: p.description,
-                                weight: p.weight,
-                                price: p.price,
-                                currency: p.currency,
-                                image: p.image,
-                                imageUrl: p.imageUrl,
-                                availability: p.availability,
-                                categoryId: p.categoryId,
-                                createdAt: "\(p.createdAt)"
-                            )
-                            ctx.insert(localProduct)
+                        do {
+                            try ctx.delete(model: LocalProduct.self)
+                            try ctx.save()
+
+                            for p in data.syncProducts {
+                                let localProduct = LocalProduct(
+                                    id: p.id,
+                                    branchId: p.branchId,
+                                    name: p.name,
+                                    productDescription: p.description,
+                                    weight: p.weight,
+                                    price: p.price,
+                                    currency: p.currency,
+                                    image: p.image,
+                                    imageUrl: p.imageUrl,
+                                    availability: p.availability,
+                                    categoryId: p.categoryId,
+                                    createdAt: "\(p.createdAt)"
+                                )
+                                ctx.insert(localProduct)
+                            }
+
+                            try ctx.save()
+                            print("💾 syncProducts - Guardado OK: \(data.syncProducts.count) productos")
+
+                            let savedProducts = (try? ctx.fetch(FetchDescriptor<LocalProduct>())) ?? []
+                            print("🔍 syncProducts - En BD: \(savedProducts.count) productos")
+
+                            self.updateMetadata(key: SyncMetadata.productsKey, count: data.syncProducts.count, ctx: ctx)
+                            continuation.resume()
+                        } catch {
+                            print("❌ syncProducts - Error al guardar: \(error)")
+                            continuation.resume(throwing: error)
                         }
-
-                        try? ctx.save()
-                        self.updateMetadata(key: SyncMetadata.productsKey, count: data.syncProducts.count, ctx: ctx)
-                        continuation.resume()
 
                     case .failure(let error):
                         continuation.resume(throwing: error)
@@ -291,7 +335,11 @@ final class OfflineSyncService: ObservableObject {
     // MARK: - Private: Sync Images
 
     private func syncImages(quality: OfflineImageQuality) async throws {
-        guard modelContext != nil else { throw OfflineError.noContext }
+        print("🖼️ syncImages - Iniciando (calidad: \(quality.rawValue))...")
+        guard modelContext != nil else {
+            print("❌ syncImages - modelContext es nil")
+            throw OfflineError.noContext
+        }
 
         let qualities: GraphQLNullable<[GraphQLEnum<LlegoAPI.ImageQuality>]>
         switch quality {
@@ -302,6 +350,7 @@ final class OfflineSyncService: ObservableObject {
         }
 
         return try await withCheckedThrowingContinuation { continuation in
+            print("🖼️ syncImages - Lanzando query Apollo...")
             apolloClient.fetchCompat(
                 query: LlegoAPI.SyncImagesQuery(
                     entityType: .none,
@@ -314,12 +363,17 @@ final class OfflineSyncService: ObservableObject {
                     guard let self = self, let ctx = self.modelContext else { return }
                     switch result {
                     case .success(let graphQLResult):
+                        print("🖼️ syncImages - Callback recibido, data: \(graphQLResult.data != nil ? "OK" : "nil"), errors: \(graphQLResult.errors?.map { $0.message ?? "" } ?? [])")
                         guard let data = graphQLResult.data else {
+                            print("⚠️ syncImages - data es nil, abortando")
                             continuation.resume()
                             return
                         }
 
+                        print("🖼️ syncImages - \(data.syncImages.count) imágenes recibidas")
+
                         // Actualizar/insertar registros de imágenes con URLs
+                        var inserted = 0, updated = 0
                         for img in data.syncImages {
                             let imgId = "\(img.entityId)_\(img.entityType)"
                             let descriptor = FetchDescriptor<LocalImage>(
@@ -328,6 +382,7 @@ final class OfflineSyncService: ObservableObject {
                             if let existing = try? ctx.fetch(descriptor).first {
                                 existing.bajaUrl = img.urls.baja
                                 existing.originalUrl = img.urls.original
+                                updated += 1
                             } else {
                                 let localImg = LocalImage(
                                     entityId: img.entityId,
@@ -337,16 +392,23 @@ final class OfflineSyncService: ObservableObject {
                                     originalUrl: img.urls.original
                                 )
                                 ctx.insert(localImg)
+                                inserted += 1
                             }
                         }
 
-                        try? ctx.save()
+                        do {
+                            try ctx.save()
+                            print("💾 syncImages - URLs guardadas OK (insertadas: \(inserted), actualizadas: \(updated))")
+                        } catch {
+                            print("❌ syncImages - Error al guardar URLs: \(error)")
+                        }
 
                         // Descargar los datos de imagen en background
                         let imagesCopy = data.syncImages.map { img in
                             (entityId: img.entityId, entityType: img.entityType,
                              bajaUrl: img.urls.baja, originalUrl: img.urls.original)
                         }
+                        print("🖼️ syncImages - Iniciando descarga de \(imagesCopy.count) imágenes en background...")
                         Task {
                             await self.downloadImageData(from: imagesCopy, quality: quality)
                         }
@@ -355,6 +417,7 @@ final class OfflineSyncService: ObservableObject {
                         continuation.resume()
 
                     case .failure(let error):
+                        print("❌ syncImages - Error de red: \(error)")
                         continuation.resume(throwing: error)
                     }
                 }
@@ -369,6 +432,7 @@ final class OfflineSyncService: ObservableObject {
         quality: OfflineImageQuality
     ) async {
         guard let ctx = modelContext else { return }
+        var downloaded = 0, failed = 0
         for img in images {
             let urlString: String?
             switch quality {
@@ -376,7 +440,10 @@ final class OfflineSyncService: ObservableObject {
             case .original: urlString = img.originalUrl
             }
 
-            guard let urlStr = urlString, let url = URL(string: urlStr) else { continue }
+            guard let urlStr = urlString, let url = URL(string: urlStr) else {
+                failed += 1
+                continue
+            }
 
             do {
                 let (data, _) = try await URLSession.shared.data(from: url)
@@ -390,11 +457,13 @@ final class OfflineSyncService: ObservableObject {
                     case .original: localImg.originalData = data
                     }
                     try? ctx.save()
+                    downloaded += 1
                 }
             } catch {
-                // Continuar con la siguiente imagen si falla una descarga
+                failed += 1
             }
         }
+        print("🖼️ downloadImageData - Completado: \(downloaded) descargadas, \(failed) fallidas de \(images.count) totales")
     }
 
     // MARK: - Private: Build Embeddings

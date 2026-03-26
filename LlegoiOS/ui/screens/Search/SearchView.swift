@@ -43,11 +43,7 @@ struct SearchView: View {
                         // Contenido según estado
                         switch viewModel.state {
                         case .idle:
-                            if viewModel.isOfflineMode && !syncService.hasLocalData {
-                                noLocalDataPrompt
-                            } else {
-                                initialContent
-                            }
+                            initialContent
                         case .loading:
                             loadingContent
                         case .success:
@@ -173,8 +169,8 @@ struct SearchView: View {
             .pickerStyle(.segmented)
             .padding(.horizontal, 20)
 
-            // Panel de descarga — solo visible en modo sin internet
-            if viewModel.isOfflineMode {
+            // Panel de descarga — visible en modo sin internet y sin búsqueda activa
+            if viewModel.isOfflineMode && searchText.isEmpty {
                 offlineSyncPanel
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
@@ -369,60 +365,6 @@ struct SearchView: View {
         .background(gradientManager.currentAccentColor.opacity(0.88))
         .transition(.move(edge: .top).combined(with: .opacity))
         .animation(.easeInOut(duration: 0.3), value: syncService.syncStatus)
-    }
-
-    // MARK: - No Local Data Prompt
-
-    private var noLocalDataPrompt: some View {
-        VStack(spacing: 24) {
-            Spacer().frame(height: 20)
-
-            Image(systemName: "arrow.down.circle")
-                .font(.system(size: 56, weight: .ultraLight))
-                .foregroundColor(.orange.opacity(0.7))
-
-            VStack(spacing: 8) {
-                Text("Sin datos locales")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.primary)
-
-                Text("Para buscar sin internet descarga los datos mientras tienes conexión.")
-                    .font(.system(size: 14))
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 32)
-            }
-
-            VStack(spacing: 10) {
-                Button {
-                    Task {
-                        await syncService.syncDataOnly()
-                        viewModel.configure(modelContext: modelContext)
-                        viewModel.loadInitialData()
-                    }
-                } label: {
-                    Label("Descargar datos", systemImage: "arrow.down.circle.fill")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(gradientManager.currentAccentColor)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                }
-                .disabled(syncService.syncStatus != .idle)
-
-                Button {
-                    showSyncSheet = true
-                } label: {
-                    Label("Descargar fotos también", systemImage: "photo.badge.arrow.down")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(gradientManager.currentAccentColor)
-                }
-                .disabled(syncService.syncStatus != .idle)
-            }
-            .padding(.horizontal, 32)
-        }
-        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Category Menu Helpers
@@ -808,10 +750,11 @@ struct SyncSettingsSheet: View {
 
                 Section {
                     Button {
+                        let quality = selectedQuality
+                        dismiss()
                         Task {
-                            await syncService.syncImagesOnly(quality: selectedQuality)
+                            await syncService.syncImagesOnly(quality: quality)
                             onDone()
-                            dismiss()
                         }
                     } label: {
                         HStack {

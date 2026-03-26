@@ -204,13 +204,16 @@ struct FeedCombo: Identifiable, Hashable, Sendable {
     let currency: String
     let discountType: String
     let discountValue: Double
-    let basePrice: Double
     let finalPrice: Double
     let savings: Double
+    let startingFinalPrice: Double?
+    let startingSavings: Double?
     let branchName: String
     let branchLogoUrl: String?
     let representativeImageUrls: [String]
     let slotCount: Int
+    let giftOptionsCount: Int
+    let hasFreeSlots: Bool
 
     func toCombo() -> Combo {
         Combo(
@@ -220,13 +223,16 @@ struct FeedCombo: Identifiable, Hashable, Sendable {
             imageUrl: imageUrl,
             shop: branchName,
             shopLogoUrl: branchLogoUrl ?? "",
-            basePrice: basePrice,
             finalPrice: finalPrice,
             savings: savings,
+            startingFinalPrice: startingFinalPrice,
+            startingSavings: startingSavings,
             currency: currency,
             discountType: discountType,
             discountValue: discountValue,
             slotCount: slotCount,
+            giftOptionsCount: giftOptionsCount,
+            hasFreeSlots: hasFreeSlots,
             representativeImageUrls: representativeImageUrls
         )
     }
@@ -401,13 +407,16 @@ class ProductFeedRepository {
                                 currency: combo.currency,
                                 discountType: combo.discountType.rawValue,
                                 discountValue: combo.discountValue,
-                                basePrice: combo.basePrice,
                                 finalPrice: combo.finalPrice,
                                 savings: combo.savings,
+                                startingFinalPrice: combo.startingFinalPrice,
+                                startingSavings: combo.startingSavings,
                                 branchName: combo.branch?.name ?? "",
                                 branchLogoUrl: combo.branch?.avatarUrl,
                                 representativeImageUrls: combo.representativeProducts.map { $0.imageUrl },
-                                slotCount: combo.slots.count
+                                slotCount: combo.slots.count,
+                                giftOptionsCount: combo.giftOptions.count,
+                                hasFreeSlots: combo.slots.contains { $0.isFree }
                             )
                         }
                         print("🎁 [Feed] Loaded \(combos.count) combos")

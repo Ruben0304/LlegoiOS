@@ -95,6 +95,7 @@ class CartRepository {
                         comboComponentSlotId: localItem.comboComponentSlotId,
                         comboComponentSlotName: localItem.comboComponentSlotName,
                         comboComponentOrder: localItem.comboComponentOrder,
+                        comboModifierNames: localItem.comboModifierNames,
                         branchId: productNode.branchId,
                         name: productNode.name,
                         description: "",
@@ -795,6 +796,7 @@ struct CartItemLocal: Codable, Sendable {
     var comboComponentSlotId: String?
     var comboComponentSlotName: String?
     var comboComponentOrder: Int?
+    var comboModifierNames: [String]
     var basePrice: Double?
     var finalUnitPrice: Double?
     var finalTotalPrice: Double
@@ -810,6 +812,7 @@ struct CartItemLocal: Codable, Sendable {
         case comboComponentSlotId
         case comboComponentSlotName
         case comboComponentOrder
+        case comboModifierNames
         case basePrice
         case finalUnitPrice
         case finalTotalPrice
@@ -825,6 +828,7 @@ struct CartItemLocal: Codable, Sendable {
         comboComponentSlotId: String? = nil,
         comboComponentSlotName: String? = nil,
         comboComponentOrder: Int? = nil,
+        comboModifierNames: [String] = [],
         basePrice: Double? = nil,
         finalUnitPrice: Double? = nil,
         finalTotalPrice: Double? = nil,
@@ -839,6 +843,7 @@ struct CartItemLocal: Codable, Sendable {
         self.comboComponentSlotId = comboComponentSlotId
         self.comboComponentSlotName = comboComponentSlotName
         self.comboComponentOrder = comboComponentOrder
+        self.comboModifierNames = comboModifierNames
         self.basePrice = basePrice
         self.finalUnitPrice = finalUnitPrice
         let resolvedId =
@@ -864,6 +869,8 @@ struct CartItemLocal: Codable, Sendable {
         comboComponentSlotName = try container.decodeIfPresent(
             String.self, forKey: .comboComponentSlotName)
         comboComponentOrder = try container.decodeIfPresent(Int.self, forKey: .comboComponentOrder)
+        comboModifierNames =
+            try container.decodeIfPresent([String].self, forKey: .comboModifierNames) ?? []
         basePrice = try container.decodeIfPresent(Double.self, forKey: .basePrice)
         finalUnitPrice = try container.decodeIfPresent(Double.self, forKey: .finalUnitPrice)
         let decodedId = try container.decodeIfPresent(String.self, forKey: .cartItemId)
@@ -919,6 +926,7 @@ struct CartProductGraphQL: Identifiable, Sendable {
     let comboComponentSlotId: String?
     let comboComponentSlotName: String?
     let comboComponentOrder: Int?
+    let comboModifierNames: [String]
     let branchId: String
     let name: String
     let description: String

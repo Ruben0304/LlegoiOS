@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetComboDetail"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetComboDetail($comboId: String!) { combo(comboId: $comboId) { __typename id branchId name description imageUrl currency availability discountType discountValue basePrice finalPrice savings representativeProducts { __typename id name imageUrl } slots { __typename id name description minSelections maxSelections isRequired displayOrder options { __typename productId isDefault priceAdjustment product { __typename id name imageUrl price currency } availableModifiers { __typename name priceAdjustment } } } branch { __typename id name avatarUrl } createdAt } }"#
+        #"query GetComboDetail($comboId: String!) { combo(comboId: $comboId) { __typename id branchId name description imageUrl currency availability discountType discountValue finalPrice savings startingFinalPrice startingSavings representativeProducts { __typename id name imageUrl } slots { __typename id name description minSelections maxSelections isFree displayOrder options { __typename productId isDefault priceAdjustment product { __typename id name imageUrl price currency } availableModifiers { __typename name priceAdjustment } } } giftOptions { __typename productId product { __typename id name imageUrl } } branch { __typename id name avatarUrl } createdAt } }"#
       ))
 
     public var comboId: String
@@ -54,11 +54,13 @@ public extension LlegoAPI {
           .field("availability", Bool.self),
           .field("discountType", GraphQLEnum<LlegoAPI.DiscountType>.self),
           .field("discountValue", Double.self),
-          .field("basePrice", Double.self),
           .field("finalPrice", Double.self),
           .field("savings", Double.self),
+          .field("startingFinalPrice", Double.self),
+          .field("startingSavings", Double.self),
           .field("representativeProducts", [RepresentativeProduct].self),
           .field("slots", [Slot].self),
+          .field("giftOptions", [GiftOption].self),
           .field("branch", Branch?.self),
           .field("createdAt", LlegoAPI.DateTime.self),
         ] }
@@ -76,15 +78,18 @@ public extension LlegoAPI {
         public var availability: Bool { __data["availability"] }
         public var discountType: GraphQLEnum<LlegoAPI.DiscountType> { __data["discountType"] }
         public var discountValue: Double { __data["discountValue"] }
-        /// Base price with default selections (before discount)
-        public var basePrice: Double { __data["basePrice"] }
         /// Final price with discount applied
         public var finalPrice: Double { __data["finalPrice"] }
         /// Amount saved with discount
         public var savings: Double { __data["savings"] }
+        /// Minimum valid final price after discount (for catalog 'From $X' display)
+        public var startingFinalPrice: Double { __data["startingFinalPrice"] }
+        /// Minimum savings amount (minimum base total - startingFinalPrice)
+        public var startingSavings: Double { __data["startingSavings"] }
         /// Representative products for frontend composition (max 4 products)
         public var representativeProducts: [RepresentativeProduct] { __data["representativeProducts"] }
         public var slots: [Slot] { __data["slots"] }
+        public var giftOptions: [GiftOption] { __data["giftOptions"] }
         /// Branch associated with this combo
         public var branch: Branch? { __data["branch"] }
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
@@ -128,7 +133,7 @@ public extension LlegoAPI {
             .field("description", String?.self),
             .field("minSelections", Int.self),
             .field("maxSelections", Int.self),
-            .field("isRequired", Bool.self),
+            .field("isFree", Bool.self),
             .field("displayOrder", Int.self),
             .field("options", [Option].self),
           ] }
@@ -141,7 +146,7 @@ public extension LlegoAPI {
           public var description: String? { __data["description"] }
           public var minSelections: Int { __data["minSelections"] }
           public var maxSelections: Int { __data["maxSelections"] }
-          public var isRequired: Bool { __data["isRequired"] }
+          public var isFree: Bool { __data["isFree"] }
           public var displayOrder: Int { __data["displayOrder"] }
           public var options: [Option] { __data["options"] }
 
@@ -220,6 +225,52 @@ public extension LlegoAPI {
               public var name: String { __data["name"] }
               public var priceAdjustment: Double { __data["priceAdjustment"] }
             }
+          }
+        }
+
+        /// Combo.GiftOption
+        ///
+        /// Parent Type: `ComboGiftOptionType`
+        public struct GiftOption: LlegoAPI.SelectionSet {
+          @_spi(Unsafe) public let __data: DataDict
+          @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+          @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.ComboGiftOptionType }
+          @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+            .field("__typename", String.self),
+            .field("productId", String.self),
+            .field("product", Product?.self),
+          ] }
+          @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+            GetComboDetailQuery.Data.Combo.GiftOption.self
+          ] }
+
+          public var productId: String { __data["productId"] }
+          /// Gift product details
+          public var product: Product? { __data["product"] }
+
+          /// Combo.GiftOption.Product
+          ///
+          /// Parent Type: `ProductType`
+          public struct Product: LlegoAPI.SelectionSet {
+            @_spi(Unsafe) public let __data: DataDict
+            @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+            @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.ProductType }
+            @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+              .field("__typename", String.self),
+              .field("id", String.self),
+              .field("name", String.self),
+              .field("imageUrl", String.self),
+            ] }
+            @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+              GetComboDetailQuery.Data.Combo.GiftOption.Product.self
+            ] }
+
+            public var id: String { __data["id"] }
+            public var name: String { __data["name"] }
+            /// Presigned URL for the product image
+            public var imageUrl: String { __data["imageUrl"] }
           }
         }
 

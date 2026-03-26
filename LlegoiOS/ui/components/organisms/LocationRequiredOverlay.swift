@@ -17,111 +17,113 @@ struct LocationRequiredOverlay: View {
     @State private var addressText = "Toca en el mapa para seleccionar"
     
     var body: some View {
-        ZStack {
-            // Mapa interactivo
-            MapReader { proxy in
-                Map(position: $mapPosition) {
-                    if let coord = selectedCoordinate {
-                        Annotation("", coordinate: coord) {
-                            VStack(spacing: 0) {
-                                Image(systemName: "mappin.circle.fill")
-                                    .font(.system(size: 40))
-                                    .foregroundColor(gradientManager.currentAccentColor)
-                                Image(systemName: "arrowtriangle.down.fill")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(gradientManager.currentAccentColor)
-                                    .offset(y: -6)
+        NavigationStack {
+            ZStack {
+                // Mapa interactivo
+                MapReader { proxy in
+                    Map(position: $mapPosition) {
+                        if let coord = selectedCoordinate {
+                            Annotation("", coordinate: coord) {
+                                VStack(spacing: 0) {
+                                    Image(systemName: "mappin.circle.fill")
+                                        .font(.system(size: 40))
+                                        .foregroundColor(gradientManager.currentAccentColor)
+                                    Image(systemName: "arrowtriangle.down.fill")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(gradientManager.currentAccentColor)
+                                        .offset(y: -6)
+                                }
                             }
                         }
                     }
-                }
-                .mapStyle(.standard(pointsOfInterest: .excludingAll))
-                .onTapGesture { position in
-                    if let coordinate = proxy.convert(position, from: .local) {
-                        withAnimation(.spring(response: 0.3)) {
-                            selectedCoordinate = coordinate
+                    .mapStyle(.standard(pointsOfInterest: .excludingAll))
+                    .onTapGesture { position in
+                        if let coordinate = proxy.convert(position, from: .local) {
+                            withAnimation(.spring(response: 0.3)) {
+                                selectedCoordinate = coordinate
+                            }
+                            reverseGeocode(coordinate)
                         }
-                        reverseGeocode(coordinate)
                     }
                 }
-            }
-            .ignoresSafeArea()
-            
-            // UI superpuesta
-            VStack {
-                // Header minimalista
-                HStack {
+                .ignoresSafeArea()
+                
+                // UI superpuesta
+                VStack {
+                    if #unavailable(iOS 26.0) {
+                        HStack {
+                            Spacer()
+                            
+                            Button(action: moveToCurrentLocation) {
+                                Image(systemName: "location.fill")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .frame(width: 44, height: 44)
+                            }
+                            .modifier(LocationOverlayCircleButtonModifier(accentColor: gradientManager.currentAccentColor))
+                            .tint(gradientManager.currentAccentColor)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 60)
+                    }
+                    
                     Spacer()
                     
-                    Button(action: {
-                        locationManager.requestPermission()
-                        locationManager.getCurrentDeviceLocation()
-                        if let location = locationManager.userLocation {
-                            withAnimation {
-                                selectedCoordinate = location
-                                mapPosition = .region(MKCoordinateRegion(
-                                    center: location,
-                                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-                                ))
-                            }
-                            reverseGeocode(location)
+                    // Panel inferior
+                    VStack(spacing: 16) {
+                        // Dirección seleccionada
+                        HStack(spacing: 12) {
+                            Image(systemName: "mappin.circle.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(gradientManager.currentAccentColor)
+                            
+                            Text(addressText)
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.primary)
+                                .lineLimit(2)
+                            
+                            Spacer()
                         }
-                    }) {
-                        Image(systemName: "location.fill")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(gradientManager.currentAccentColor)
-                            .frame(width: 44, height: 44)
-                            .background(.ultraThinMaterial, in: Circle())
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 60)
-                
-                Spacer()
-                
-                // Panel inferior
-                VStack(spacing: 16) {
-                    // Dirección seleccionada
-                    HStack(spacing: 12) {
-                        Image(systemName: "mappin.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(gradientManager.currentAccentColor)
+                        .padding(16)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
                         
-                        Text(addressText)
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(.primary)
-                            .lineLimit(2)
-                        
-                        Spacer()
-                    }
-                    .padding(16)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-                    
-                    // Botón confirmar
-                    Button(action: confirmLocation) {
-                        HStack(spacing: 8) {
-                            if isConfirming || locationManager.isUpdatingLocation {
-                                ProgressView()
-                                    .tint(.white)
+                        // Botón confirmar
+                        Button(action: confirmLocation) {
+                            HStack(spacing: 8) {
+                                if isConfirming || locationManager.isUpdatingLocation {
+                                    ProgressView()
+                                        .tint(.white)
+                                }
+                                Text(selectedCoordinate == nil ? "Selecciona una ubicación" : "Confirmar ubicación")
+                                    .font(.system(size: 17, weight: .semibold))
                             }
-                            Text(selectedCoordinate == nil ? "Selecciona una ubicación" : "Confirmar ubicación")
-                                .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(selectedCoordinate == nil ? .black : .white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 54)
                         }
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 54)
-                        .background(selectedCoordinate == nil ? Color.gray : gradientManager.currentAccentColor)
-                        .cornerRadius(16)
+                        .modifier(LocationOverlayPrimaryButtonModifier(
+                            tint: selectedCoordinate == nil ? .gray : gradientManager.currentAccentColor
+                        ))
+                        .disabled(selectedCoordinate == nil || isConfirming || locationManager.isUpdatingLocation)
                     }
-                    .disabled(selectedCoordinate == nil || isConfirming || locationManager.isUpdatingLocation)
+                    .padding(20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 24)
+                            .fill(.regularMaterial)
+                            .shadow(color: .black.opacity(0.1), radius: 20, y: -5)
+                    )
                 }
-                .padding(20)
-                .background(
-                    RoundedRectangle(cornerRadius: 24)
-                        .fill(.regularMaterial)
-                        .shadow(color: .black.opacity(0.1), radius: 20, y: -5)
-                )
             }
+            .toolbar {
+                if #available(iOS 26.0, *) {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(action: moveToCurrentLocation) {
+                            Image(systemName: "location.fill")
+                        }
+                        .tint(gradientManager.currentAccentColor)
+                    }
+                }
+            }
+            .toolbarBackground(.hidden, for: .navigationBar)
         }
     }
     
@@ -132,6 +134,21 @@ struct LocationRequiredOverlay: View {
         Task {
             await locationManager.updateLocation(coordinate: coordinate)
             isConfirming = false
+        }
+    }
+
+    private func moveToCurrentLocation() {
+        locationManager.requestPermission()
+        locationManager.getCurrentDeviceLocation()
+        if let location = locationManager.userLocation {
+            withAnimation {
+                selectedCoordinate = location
+                mapPosition = .region(MKCoordinateRegion(
+                    center: location,
+                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                ))
+            }
+            reverseGeocode(location)
         }
     }
     
@@ -173,6 +190,39 @@ struct LocationRequiredOverlay: View {
             await MainActor.run {
                 addressText = resolvedAddress
             }
+        }
+    }
+}
+
+private struct LocationOverlayCircleButtonModifier: ViewModifier {
+    let accentColor: Color
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .buttonStyle(.glassProminent)
+                .buttonBorderShape(.circle)
+        } else {
+            content
+                .foregroundColor(accentColor)
+                .background(.ultraThinMaterial, in: Circle())
+        }
+    }
+}
+
+private struct LocationOverlayPrimaryButtonModifier: ViewModifier {
+    let tint: Color
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .buttonStyle(.glassProminent)
+                .buttonBorderShape(.roundedRectangle(radius: 16))
+                .tint(tint)
+        } else {
+            content
+                .background(tint)
+                .cornerRadius(16)
         }
     }
 }

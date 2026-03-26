@@ -11,11 +11,17 @@ query GetMyOrders($status: OrderStatusEnum, $limit: Int, $offset: Int, $jwt: Str
       lastStatusAt
       estimatedMinutesRemaining
       items {
+        itemType
+        itemId
         productId
         name
         quantity
         imageUrlMuyBaja
         imageUrl
+        basePrice
+        finalPrice
+        discountType
+        discountValue
       }
       branch {
         id

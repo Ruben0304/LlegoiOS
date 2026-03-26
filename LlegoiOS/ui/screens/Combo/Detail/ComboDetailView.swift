@@ -43,7 +43,6 @@ struct ComboDetailView: View {
                     }
                 }
 
-                // Bottom bar - quantity control (only when data is loaded)
                 if viewModel.comboDetail != nil {
                     ToolbarItem(placement: .bottomBar) {
                         quantityControlView
@@ -64,8 +63,6 @@ struct ComboDetailView: View {
                 CartView()
             }
             .onReceive(NotificationCenter.default.publisher(for: .prepareOpenOrdersFromCart)) { _ in
-                // Si este detalle está presentado como fullScreen, cerrarlo para que
-                // MainAppView pueda presentar OrderListView.
                 dismiss()
             }
         }
@@ -113,17 +110,13 @@ struct ComboDetailView: View {
     private func comboContent(combo: ComboDetailGraphQL) -> some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
-                // Hero image
                 heroImage(combo: combo)
 
-                // Content card
                 VStack(alignment: .leading, spacing: 24) {
-                    // Header
                     comboHeader(combo: combo)
 
                     Divider()
 
-                    // Description
                     if !combo.description.isEmpty {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Descripción")
@@ -139,8 +132,18 @@ struct ComboDetailView: View {
                         Divider()
                     }
 
-                    // Slots
-                    slotsSection(combo: combo)
+                    // Gift products section (non-interactive)
+                    if combo.hasGifts {
+                        giftOptionsSection(combo: combo)
+                        if !combo.slots.isEmpty {
+                            Divider()
+                        }
+                    }
+
+                    // Selectable slots (only show if there are slots)
+                    if !combo.slots.isEmpty {
+                        slotsSection(combo: combo)
+                    }
                 }
                 .padding(20)
                 .background(
@@ -157,7 +160,6 @@ struct ComboDetailView: View {
                 )
                 .offset(y: -28)
 
-                // Bottom padding to clear the action bar
                 Spacer().frame(height: 100)
             }
             .offset(y: contentOffset)
@@ -198,12 +200,10 @@ struct ComboDetailView: View {
         }
     }
 
-    /// Floating circular images over a gradient background for the hero area
     private func comboHeroFallback(combo: ComboDetailGraphQL) -> some View {
         let images = Array(combo.representativeProducts.prefix(3))
         return GeometryReader { geo in
             ZStack {
-                // Soft gradient background
                 LinearGradient(
                     colors: [
                         Color.llegoAccent.opacity(0.22),
@@ -258,54 +258,102 @@ struct ComboDetailView: View {
 
     private func comboHeader(combo: ComboDetailGraphQL) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Store info - navigates to store detail
             NavigationLink(destination: StoreDetailView(storeId: combo.branchId)) {
                 storeInfoContent(combo: combo)
             }
             .buttonStyle(.plain)
 
-            // Combo name
             Text(combo.name)
                 .font(.system(size: 26, weight: .bold))
                 .foregroundColor(.primary)
 
-            // Slots badge
+            // Combo kind badge
+            comboBadge(for: combo)
+
+            // Price row
+            priceRow(combo: combo)
+        }
+    }
+
+    @ViewBuilder
+    private func comboBadge(for combo: ComboDetailGraphQL) -> some View {
+        switch combo.comboKind {
+        case .discounted:
+            HStack(spacing: 6) {
+                Image(systemName: "tag.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                Text(combo.discountLabel)
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Capsule().fill(Color.green))
+
+        case .withGifts:
+            HStack(spacing: 6) {
+                Image(systemName: "gift.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                Text(combo.giftOptions.count == 1
+                     ? "1 producto de regalo"
+                     : "\(combo.giftOptions.count) productos de regalo")
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Capsule().fill(Color.purple))
+
+        case .withFreeSlots:
+            let freeCount = combo.slots.filter { $0.isFree }.count
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                Text(freeCount == 1
+                     ? "1 complemento gratis incluido"
+                     : "\(freeCount) complementos gratis incluidos")
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Capsule().fill(Color.orange))
+
+        case .bundle:
             HStack(spacing: 6) {
                 Image(systemName: "square.stack.3d.up.fill")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.llegoAccent)
-                Text(
-                    "\(combo.slots.count) \(combo.slots.count == 1 ? "lote" : "lotes") a personalizar"
-                )
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.llegoAccent)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(gradientManager.currentAccentColor)
+                Text("\(combo.slots.count) \(combo.slots.count == 1 ? "lote" : "lotes") a personalizar")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(gradientManager.currentAccentColor)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(Capsule().fill(Color.llegoAccent.opacity(0.12)))
+            .background(Capsule().fill(gradientManager.currentAccentColor.opacity(0.12)))
+        }
+    }
 
-            // Price row
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(viewModel.formattedCalculatedPrice)
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(.primary)
-                    .animation(.spring(response: 0.3), value: viewModel.calculatedPrice)
+    @ViewBuilder
+    private func priceRow(combo: ComboDetailGraphQL) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(viewModel.formattedCalculatedPrice)
+                .font(.system(size: 28, weight: .bold))
+                .foregroundColor(.primary)
+                .animation(.spring(response: 0.3), value: viewModel.calculatedPrice)
 
-                if combo.hasDiscount {
-                    Text(combo.formattedBasePrice)
-                        .font(.system(size: 16))
-                        .foregroundColor(.secondary)
-                        .strikethrough(true, color: .secondary)
+            if combo.comboKind == .discounted && combo.hasDiscount {
+                Text(viewModel.formatPrice(viewModel.selectionSubtotal, currency: combo.currency))
+                    .font(.system(size: 16))
+                    .foregroundColor(.secondary)
+                    .strikethrough(true, color: .secondary)
 
-                    if !combo.discountLabel.isEmpty {
-                        Text(combo.discountLabel)
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Capsule().fill(Color.green))
-                    }
-                }
+                Text(combo.discountLabel)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(Color.green))
             }
         }
     }
@@ -323,11 +371,9 @@ struct ComboDetailView: View {
                 .frame(width: 28, height: 28)
                 .clipShape(Circle())
             }
-            HStack(spacing: 6) {
-                Text(combo.branchName)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.secondary)
-            }
+            Text(combo.branchName)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(.secondary)
             Spacer()
             Image(systemName: "chevron.right")
                 .font(.system(size: 13, weight: .regular))
@@ -335,12 +381,108 @@ struct ComboDetailView: View {
         }
     }
 
+    // MARK: - Gift Products Section
+
+    private func giftOptionsSection(combo: ComboDetailGraphQL) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "gift.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.purple)
+                Text("Incluye de regalo")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(.primary)
+            }
+
+            Text("La tienda incluye estos productos gratis con tu combo")
+                .font(.system(size: 13))
+                .foregroundColor(.secondary)
+
+            VStack(spacing: 10) {
+                ForEach(combo.giftOptions) { gift in
+                    giftOptionRow(gift: gift)
+                }
+            }
+        }
+    }
+
+    private func giftOptionRow(gift: ComboGiftOptionGraphQL) -> some View {
+        HStack(spacing: 12) {
+            ZStack(alignment: .topTrailing) {
+                if !gift.productImageUrl.isEmpty {
+                    CachedAsyncImage(
+                        url: URL(string: gift.productImageUrl),
+                        cacheKey: "combo_gift_\(gift.productId)",
+                        content: { image in image.resizable().scaledToFill() },
+                        placeholder: { Color.gray.opacity(0.1) },
+                        failure: { Color.gray.opacity(0.1) }
+                    )
+                    .frame(width: 64, height: 64)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                } else {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.purple.opacity(0.1))
+                        .frame(width: 64, height: 64)
+                        .overlay(
+                            Image(systemName: "gift.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(.purple.opacity(0.5))
+                        )
+                }
+
+                // Gift badge on image
+                Image(systemName: "gift.fill")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(4)
+                    .background(Circle().fill(Color.purple))
+                    .offset(x: 4, y: -4)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(gift.productName)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+
+                Text("Gratis · incluido por la tienda")
+                    .font(.system(size: 13))
+                    .foregroundColor(.purple)
+            }
+
+            Spacer()
+
+            // Non-interactive indicator
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 20))
+                .foregroundColor(.purple.opacity(0.7))
+        }
+        .padding(.vertical, 4)
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.purple.opacity(0.06))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.purple.opacity(0.15), lineWidth: 1)
+                )
+        )
+    }
+
     // MARK: - Slots Section
 
     private func slotsSection(combo: ComboDetailGraphQL) -> some View {
         let sortedSlots = combo.slots.sorted { $0.displayOrder < $1.displayOrder }
+        let sectionTitle: String = {
+            switch combo.comboKind {
+            case .withFreeSlots: return "Elige tus acompañantes"
+            case .bundle: return "Personaliza tu combo"
+            default: return "Personaliza tu combo"
+            }
+        }()
+
         return VStack(alignment: .leading, spacing: 24) {
-            Text("Personaliza tu combo")
+            Text(sectionTitle)
                 .font(.system(size: 20, weight: .bold))
                 .foregroundColor(.primary)
 
@@ -360,7 +502,15 @@ struct ComboDetailView: View {
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(.primary)
 
-                        if slot.isRequired {
+                        // Free slot badge
+                        if slot.isFree {
+                            Text("GRATIS")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(Capsule().fill(Color.orange))
+                        } else if slot.isRequired {
                             Text("Requerido")
                                 .font(.system(size: 11, weight: .bold))
                                 .foregroundColor(.white)
@@ -376,19 +526,24 @@ struct ComboDetailView: View {
                             .foregroundColor(.secondary)
                     }
 
-                    Text(selectionHintText(slot: slot))
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
+                    if slot.isFree {
+                        Text("Incluido · elige \(slot.maxSelections == 1 ? "1 opción" : "hasta \(slot.maxSelections)")")
+                            .font(.system(size: 12))
+                            .foregroundColor(.orange)
+                    } else {
+                        Text(selectionHintText(slot: slot))
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    }
                 }
 
                 Spacer()
 
-                // Checkmark when slot is satisfied
                 let selected = viewModel.slotSelections[slot.id] ?? []
-                if selected.count >= slot.minSelections {
+                if selected.count >= slot.minSelections && !selected.isEmpty {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 20))
-                        .foregroundColor(.green)
+                        .foregroundColor(slot.isFree ? .orange : .green)
                         .transition(.scale.combined(with: .opacity))
                 }
             }
@@ -396,7 +551,6 @@ struct ComboDetailView: View {
                 .spring(response: 0.3, dampingFraction: 0.7),
                 value: viewModel.slotSelections[slot.id]?.count)
 
-            // Options list
             VStack(spacing: 10) {
                 ForEach(slot.options, id: \.productId) { option in
                     optionRow(option: option, slot: slot, combo: combo)
@@ -406,7 +560,14 @@ struct ComboDetailView: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(Color.white)
+                .fill(slot.isFree ? Color.orange.opacity(0.05) : Color.white)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .stroke(
+                            slot.isFree ? Color.orange.opacity(0.2) : Color.clear,
+                            lineWidth: 1
+                        )
+                )
                 .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
         )
     }
@@ -424,7 +585,6 @@ struct ComboDetailView: View {
             }
         } label: {
             HStack(spacing: 12) {
-                // Product image
                 if !option.productImageUrl.isEmpty {
                     CachedAsyncImage(
                         url: URL(string: option.productImageUrl),
@@ -441,25 +601,25 @@ struct ComboDetailView: View {
                         .frame(width: 64, height: 64)
                 }
 
-                // Name + price
                 VStack(alignment: .leading, spacing: 4) {
                     Text(option.productName)
                         .font(.system(size: 15, weight: .medium))
                         .foregroundColor(.primary)
                         .lineLimit(2)
 
-                    if option.priceAdjustment > 0 {
-                        Text(
-                            "+\(viewModel.formatPrice(option.priceAdjustment, currency: combo.currency))"
-                        )
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(gradientManager.currentAccentColor)
+                    if slot.isFree {
+                        // Free slot: show "Gratis" regardless of priceAdjustment
+                        Text("Gratis")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.orange)
+                    } else if option.priceAdjustment > 0 {
+                        Text("+\(viewModel.formatPrice(option.priceAdjustment, currency: combo.currency))")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(gradientManager.currentAccentColor)
                     } else if option.priceAdjustment < 0 {
-                        Text(
-                            "\(viewModel.formatPrice(option.priceAdjustment, currency: combo.currency))"
-                        )
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.green)
+                        Text("\(viewModel.formatPrice(option.priceAdjustment, currency: combo.currency))")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.green)
                     } else {
                         Text("Incluido")
                             .font(.system(size: 13))
@@ -471,32 +631,32 @@ struct ComboDetailView: View {
 
                 // Selection indicator
                 ZStack {
+                    let accentColor = slot.isFree ? Color.orange : gradientManager.currentAccentColor
+
                     if slot.maxSelections == 1 {
-                        // Radio button style
                         Circle()
                             .stroke(
-                                isSelected ? gradientManager.currentAccentColor : Color.gray.opacity(0.3),
+                                isSelected ? accentColor : Color.gray.opacity(0.3),
                                 lineWidth: 2
                             )
                             .frame(width: 22, height: 22)
 
                         if isSelected {
                             Circle()
-                                .fill(gradientManager.currentAccentColor)
+                                .fill(accentColor)
                                 .frame(width: 12, height: 12)
                         }
                     } else {
-                        // Checkbox style
                         RoundedRectangle(cornerRadius: 6, style: .continuous)
                             .stroke(
-                                isSelected ? gradientManager.currentAccentColor : Color.gray.opacity(0.3),
+                                isSelected ? accentColor : Color.gray.opacity(0.3),
                                 lineWidth: 2
                             )
                             .frame(width: 22, height: 22)
 
                         if isSelected {
                             RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                .fill(gradientManager.currentAccentColor)
+                                .fill(accentColor)
                                 .frame(width: 22, height: 22)
                             Image(systemName: "checkmark")
                                 .font(.system(size: 12, weight: .bold))
@@ -593,11 +753,7 @@ struct ComboDetailView: View {
 
     private func selectionHintText(slot: ComboSlotGraphQL) -> String {
         if slot.minSelections == slot.maxSelections {
-            if slot.minSelections == 1 {
-                return "Elige 1 opción"
-            } else {
-                return "Elige \(slot.minSelections) opciones"
-            }
+            return slot.minSelections == 1 ? "Elige 1 opción" : "Elige \(slot.minSelections) opciones"
         } else if slot.minSelections == 0 {
             return "Opcional · hasta \(slot.maxSelections)"
         } else {
@@ -606,7 +762,7 @@ struct ComboDetailView: View {
     }
 }
 
-// MARK: - Button Style Modifier
+// MARK: - Button Style Modifiers
 
 private struct GlassProminentButtonModifier: ViewModifier {
     func body(content: Content) -> some View {
@@ -618,22 +774,19 @@ private struct GlassProminentButtonModifier: ViewModifier {
     }
 }
 
+private struct GlassButtonStyleModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.buttonStyle(.glass)
+        } else {
+            content.buttonStyle(.bordered)
+        }
+    }
+}
+
 // MARK: - Combo extensions used by the view
 
 extension ComboDetailGraphQL {
-    fileprivate var hasDiscount: Bool { savings > 0 }
-
-    fileprivate var formattedBasePrice: String {
-        let symbol: String
-        switch currency.uppercased() {
-        case "USD": symbol = "$"
-        case "EUR": symbol = "€"
-        case "CUP": symbol = "CUP "
-        default: symbol = currency + " "
-        }
-        return String(format: "\(symbol)%.2f", basePrice)
-    }
-
     fileprivate var discountLabel: String {
         switch discountType.uppercased() {
         case "PERCENTAGE": return "-\(Int(discountValue))%"
@@ -646,16 +799,6 @@ extension ComboDetailGraphQL {
             }
             return "-\(String(format: "\(symbol)%.2f", discountValue))"
         default: return ""
-        }
-    }
-}
-
-private struct GlassButtonStyleModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content.buttonStyle(.glass)
-        } else {
-            content.buttonStyle(.bordered)
         }
     }
 }

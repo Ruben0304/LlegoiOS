@@ -9,12 +9,33 @@ query GetOrderTracking($orderId: String!, $jwt: String!) {
       estimatedDeliveryTime
       estimatedMinutesRemaining
       items {
+        itemType
+        itemId
         productId
         name
         quantity
+        basePrice
+        finalPrice
         price
         imageUrlMuyBaja
         imageUrl
+        discountType
+        discountValue
+        comboSelections {
+          slotId
+          slotName
+          selectedOptions {
+            productId
+            name
+            price
+            quantity
+            priceAdjustment
+            modifiers {
+              name
+              priceAdjustment
+            }
+          }
+        }
       }
       deliveryPerson {
         id

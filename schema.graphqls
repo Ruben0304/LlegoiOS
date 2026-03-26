@@ -68,7 +68,7 @@ type Query {
   "Obtener todos los combos de una sucursal"
   combosByBranch(branchId: String!, availableOnly: Boolean! = true): [ComboType!]!
   "Obtener todos los combos"
-  allCombos(availableOnly: Boolean! = false): [ComboType!]!
+  allCombos(availableOnly: Boolean! = false, branchTipo: String = null, productCategoryId: String = null): [ComboType!]!
   "Semantic vector search across products, branches, or businesses. Returns enriched results from Qdrant + MongoDB."
   semanticSearch(query: String!, collection: SemanticSearchCollection!, limit: Int! = 10, jwt: String = null): SemanticSearchResultType!
   "Send a message to the AI assistant and get a response with RAG. Use stream=true for GraphQL subscription streaming."
@@ -307,6 +307,8 @@ type BranchType {
   paymentMethods: [PaymentMethodType!]!
   "Product categories applicable to this branch based on its tipos"
   applicableCategories: [ProductCategoryType!]!
+  "Showcases from this branch"
+  showcases(activeOnly: Boolean! = true): [ShowcaseType!]!
 }
 type CoordinatesType {
   type: String!
@@ -429,6 +431,28 @@ type PaymentMethodType {
   "Last update time"
   updatedAt: DateTime!
 }
+type ShowcaseType {
+  id: String!
+  branchId: String!
+  title: String!
+  image: String!
+  description: String
+  items: [ShowcaseItemType!]
+  isActive: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  "Presigned URL for the showcase image"
+  imageUrl: String!
+  "Branch associated with this showcase"
+  branch: BranchType
+}
+type ShowcaseItemType {
+  id: String!
+  name: String!
+  description: String
+  price: Float
+  availability: Boolean!
+}
 type BranchConnection {
   edges: [BranchEdge!]!
   pageInfo: PageInfo!
@@ -482,6 +506,8 @@ type ScoredBranchType {
   paymentMethods: [PaymentMethodType!]!
   "Product categories applicable to this branch based on its tipos"
   applicableCategories: [ProductCategoryType!]!
+  "Showcases from this branch"
+  showcases(activeOnly: Boolean! = true): [ShowcaseType!]!
 }
 type PageInfo {
   hasNextPage: Boolean!
@@ -542,6 +568,8 @@ type NearbyBranchType {
   paymentMethods: [PaymentMethodType!]!
   "Product categories applicable to this branch based on its tipos"
   applicableCategories: [ProductCategoryType!]!
+  "Showcases from this branch"
+  showcases(activeOnly: Boolean! = true): [ShowcaseType!]!
 }
 type ProductConnection {
   edges: [ProductEdge!]!
@@ -608,28 +636,6 @@ type ProductRecommendationType {
   "Full product details"
   product: ProductType
 }
-type ShowcaseType {
-  id: String!
-  branchId: String!
-  title: String!
-  image: String!
-  description: String
-  items: [ShowcaseItemType!]
-  isActive: Boolean!
-  createdAt: DateTime!
-  updatedAt: DateTime!
-  "Presigned URL for the showcase image"
-  imageUrl: String!
-  "Branch associated with this showcase"
-  branch: BranchType
-}
-type ShowcaseItemType {
-  id: String!
-  name: String!
-  description: String
-  price: Float
-  availability: Boolean!
-}
 type CategoryType {
   id: String!
   name: String!
@@ -650,6 +656,7 @@ type ComboType {
   slots: [ComboSlotType!]!
   discountType: DiscountType!
   discountValue: Float!
+  giftOptions: [ComboGiftOptionType!]!
   currency: String!
   availability: Boolean!
   categoryId: String
@@ -659,12 +666,14 @@ type ComboType {
   imageUrl: String
   "Representative products for frontend composition (max 4 products)"
   representativeProducts: [ProductType!]!
-  "Base price with default selections (before discount)"
-  basePrice: Float!
   "Final price with discount applied"
   finalPrice: Float!
   "Amount saved with discount"
   savings: Float!
+  "Minimum valid final price after discount (for catalog 'From $X' display)"
+  startingFinalPrice: Float!
+  "Minimum savings amount (minimum base total - startingFinalPrice)"
+  startingSavings: Float!
   "Branch associated with this combo"
   branch: BranchType
 }
@@ -675,7 +684,7 @@ type ComboSlotType {
   options: [ComboOptionType!]!
   minSelections: Int!
   maxSelections: Int!
-  isRequired: Boolean!
+  isFree: Boolean!
   displayOrder: Int!
 }
 type ComboOptionType {
@@ -689,6 +698,11 @@ type ComboOptionType {
 type ComboModifierType {
   name: String!
   priceAdjustment: Float!
+}
+type ComboGiftOptionType {
+  productId: String!
+  "Gift product details"
+  product: ProductType
 }
 type SemanticSearchResultType {
   "Collection that was searched: products, branches, or businesses"
@@ -918,6 +932,11 @@ type OrderItemType {
   quantity: Int!
   requestDescription: String
   wasModifiedByStore: Boolean!
+  comboSelections: [OrderComboSelectionType!]
+  hasGift: Boolean!
+  discountType: String
+  discountValue: Float
+  previewProducts: [OrderPreviewProductType!]
   "Presigned URL for the item image"
   imageUrl: String
   "Presigned URL for the very low quality item image (200x200)"
@@ -932,6 +951,29 @@ type OrderItemType {
   imageUrlOriginal: String
   "Line total (price * quantity)"
   lineTotal: Float!
+}
+type OrderComboSelectionType {
+  slotId: String!
+  slotName: String!
+  selectedOptions: [OrderComboSelectedOptionType!]!
+}
+type OrderComboSelectedOptionType {
+  productId: String!
+  name: String!
+  price: Float!
+  quantity: Int!
+  priceAdjustment: Float!
+  modifiers: [OrderComboModifierType!]!
+}
+type OrderComboModifierType {
+  name: String!
+  priceAdjustment: Float!
+}
+type OrderPreviewProductType {
+  productId: String!
+  name: String!
+  "Presigned URL for preview product image"
+  imageUrl: String
 }
 type OrderDiscountType {
   id: String!
@@ -1967,6 +2009,7 @@ enum ImageQuality {
 }
 enum OrderItemTypeInput {
   PRODUCT
+  COMBO
   SHOWCASE
 }
 enum AddressTypeInput {
@@ -2200,6 +2243,7 @@ input CreateComboInput {
   slots: [ComboSlotInput!]!
   discountType: DiscountType! = NONE
   discountValue: Float! = 0
+  giftOptions: [ComboGiftOptionInput!]! = []
   categoryId: String = null
 }
 input ComboSlotInput {
@@ -2208,7 +2252,7 @@ input ComboSlotInput {
   options: [ComboOptionInput!]!
   minSelections: Int! = 1
   maxSelections: Int! = 1
-  isRequired: Boolean! = true
+  isFree: Boolean! = false
   displayOrder: Int! = 0
 }
 input ComboOptionInput {
@@ -2221,6 +2265,9 @@ input ComboModifierInput {
   name: String!
   priceAdjustment: Float! = 0
 }
+input ComboGiftOptionInput {
+  productId: String!
+}
 input UpdateComboInput {
   comboId: String!
   name: String = null
@@ -2229,6 +2276,7 @@ input UpdateComboInput {
   slots: [ComboSlotInput!] = null
   discountType: DiscountType = null
   discountValue: Float = null
+  giftOptions: [ComboGiftOptionInput!] = null
   availability: Boolean = null
   categoryId: String = null
 }
@@ -2245,8 +2293,22 @@ input OrderItemInput {
   quantity: Int!
   itemType: OrderItemTypeInput! = PRODUCT
   productId: String = null
+  comboId: String = null
+  comboSelections: [OrderComboSlotSelectionInput!]! = []
   showcaseId: String = null
   description: String = null
+}
+input OrderComboSlotSelectionInput {
+  slotId: String!
+  selectedOptions: [OrderComboSelectedOptionInput!]!
+}
+input OrderComboSelectedOptionInput {
+  productId: String!
+  quantity: Int! = 1
+  modifiers: [OrderComboModifierInput!]! = []
+}
+input OrderComboModifierInput {
+  name: String!
 }
 input DeliveryAddressInput {
   street: String!

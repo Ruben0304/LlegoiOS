@@ -9,9 +9,10 @@ query GetComboDetail($comboId: String!) {
     availability
     discountType
     discountValue
-    basePrice
     finalPrice
     savings
+    startingFinalPrice
+    startingSavings
     representativeProducts {
       id
       name
@@ -23,7 +24,7 @@ query GetComboDetail($comboId: String!) {
       description
       minSelections
       maxSelections
-      isRequired
+      isFree
       displayOrder
       options {
         productId
@@ -40,6 +41,14 @@ query GetComboDetail($comboId: String!) {
           name
           priceAdjustment
         }
+      }
+    }
+    giftOptions {
+      productId
+      product {
+        id
+        name
+        imageUrl
       }
     }
     branch {

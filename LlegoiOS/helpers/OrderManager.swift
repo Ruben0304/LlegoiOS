@@ -1,4 +1,4 @@
-import ActivityKit
+@preconcurrency import ActivityKit
 import Combine
 import CoreLocation
 import Foundation
@@ -811,8 +811,6 @@ class OrderManager: ObservableObject {
     }
 
     private func updateLiveActivity(progress: Double) {
-        guard let activity = currentActivity else { return }
-
         let updatedState = DeliveryActivityAttributes.ContentState(
             status: orderStatus.rawValue,
             statusDisplayText: orderStatus.displayText,
@@ -822,9 +820,16 @@ class OrderManager: ObservableObject {
             estimatedMinutes: estimatedMinutesRemaining
         )
 
-        Task {
-            await activity.update(.init(state: updatedState, staleDate: nil))
+        Task { @MainActor in
+            await applyLiveActivityUpdate(updatedState)
         }
+    }
+
+    private func applyLiveActivityUpdate(
+        _ updatedState: DeliveryActivityAttributes.ContentState
+    ) async {
+        guard let currentActivity else { return }
+        await currentActivity.update(.init(state: updatedState, staleDate: nil))
     }
 
     private func persistActiveOrderState() {
@@ -899,7 +904,7 @@ class OrderManager: ObservableObject {
     }
 
     private func endLiveActivity(delivered: Bool = false) {
-        guard let activity = currentActivity else { return }
+        guard currentActivity != nil else { return }
 
         let finalState = DeliveryActivityAttributes.ContentState(
             status: delivered
@@ -911,15 +916,22 @@ class OrderManager: ObservableObject {
             estimatedMinutes: 0
         )
 
-        Task {
-            await activity.end(
-                .init(state: finalState, staleDate: nil),
-                dismissalPolicy: .after(.now + 60)
-            )
+        Task { @MainActor in
+            await finishLiveActivity(finalState, delivered: delivered)
             print("🔴 Live Activity finalizada (delivered: \(delivered))")
         }
+    }
 
-        currentActivity = nil
+    private func finishLiveActivity(
+        _ finalState: DeliveryActivityAttributes.ContentState,
+        delivered: Bool
+    ) async {
+        guard let currentActivity else { return }
+        await currentActivity.end(
+            .init(state: finalState, staleDate: nil),
+            dismissalPolicy: .after(.now + 60)
+        )
+        self.currentActivity = nil
     }
 
     /// Distancia restante formateada para la Live Activity

@@ -71,6 +71,7 @@ final class LocalSearchRepository {
         do {
             allBranches = try ctx.fetch(FetchDescriptor<LocalBranch>())
             allProducts = try ctx.fetch(FetchDescriptor<LocalProduct>())
+            print("🔍 searchStores(\"\(query)\") - Total sucursales: \(allBranches.count), productos: \(allProducts.count)")
         } catch {
             print("❌ LocalSearchRepository - Error fetching branches: \(error)")
             return ([], [:])
@@ -88,6 +89,7 @@ final class LocalSearchRepository {
         .sorted { $0.1 > $1.1 }
         .prefix(topK)
         .map { $0.0 }
+        print("🔍 searchStores(\"\(query)\") - Sucursales con score >= \(minScore): \(matchedBranches.count)")
 
         // Agrupar productos por branch
         let productsByBranch = Dictionary(grouping: allProducts, by: { $0.branchId })
@@ -139,7 +141,16 @@ final class LocalSearchRepository {
     }
 
     func loadInitialStores(limit: Int = 20) -> (stores: [StoreWithCoordinates], storeProducts: [String: [ProductGraphQL]]) {
-        guard let ctx = modelContext else { return ([], [:]) }
+        guard let ctx = modelContext else {
+            print("❌ loadInitialStores - modelContext es nil")
+            return ([], [:])
+        }
+        // Debug: total sin filtro
+        let allBranchesTotal = (try? ctx.fetch(FetchDescriptor<LocalBranch>())) ?? []
+        print("🏪 loadInitialStores - Total LocalBranch en BD: \(allBranchesTotal.count)")
+        let inactiveBranches = allBranchesTotal.filter { !$0.isActive }
+        print("🏪 loadInitialStores - Sucursales inactivas: \(inactiveBranches.count)")
+
         var descriptor = FetchDescriptor<LocalBranch>(
             predicate: #Predicate { $0.isActive == true },
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
@@ -147,6 +158,8 @@ final class LocalSearchRepository {
         descriptor.fetchLimit = limit
 
         let branches = (try? ctx.fetch(descriptor)) ?? []
+        print("🏪 loadInitialStores - Sucursales activas encontradas: \(branches.count) (límite: \(limit))")
+
         let allProducts = (try? ctx.fetch(FetchDescriptor<LocalProduct>())) ?? []
         let productsByBranch = Dictionary(grouping: allProducts, by: { $0.branchId })
 

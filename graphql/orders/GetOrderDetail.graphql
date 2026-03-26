@@ -17,14 +17,35 @@ query GetOrderDetail($id: String!, $jwt: String!) {
     estimatedDeliveryTime
     estimatedMinutesRemaining
     items {
+      itemType
+      itemId
       productId
       name
+      basePrice
+      finalPrice
       price
       quantity
       imageUrlMuyBaja
       imageUrl
       wasModifiedByStore
       lineTotal
+      discountType
+      discountValue
+      comboSelections {
+        slotId
+        slotName
+        selectedOptions {
+          productId
+          name
+          price
+          quantity
+          priceAdjustment
+          modifiers {
+            name
+            priceAdjustment
+          }
+        }
+      }
     }
     discounts {
       id
