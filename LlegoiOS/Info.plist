@@ -6,6 +6,8 @@
 	<true/>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Usamos la cámara para capturar documento y selfie en la verificación de pago en efectivo.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

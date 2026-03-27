@@ -1,5 +1,27 @@
-import SwiftUI
+import AVFoundation
+import Combine
+import CryptoKit
 import MapKit
+import SwiftUI
+import UIKit
+
+private struct KycMerchantContext: Identifiable, Hashable {
+    let businessId: String
+    let businessName: String
+    let branchId: String?
+    let branchName: String
+
+    var id: String {
+        "\(businessId)|\(branchId ?? "no_branch")"
+    }
+
+    var displayName: String {
+        if let branchId, !branchId.isEmpty {
+            return "\(businessName) · \(branchName)"
+        }
+        return businessName
+    }
+}
 
 struct ProfileView: View {
     @Environment(\.dismiss) private var dismiss
@@ -17,10 +39,17 @@ struct ProfileView: View {
     @State private var showingImagePicker = false
     @State private var selectedImage: UIImage?
     @State private var selectedOrderId: String = ""
+    @State private var showAccountCashKycSheet = false
+    @State private var kycMerchantContexts: [KycMerchantContext] = []
+    @State private var selectedKycMerchantContext: KycMerchantContext?
+    @State private var isLoadingKycContexts = false
+    @State private var showCashKycAlert = false
+    @State private var cashKycAlertMessage = ""
     private let defaultCustomerLevel: CustomerLevel = .gold
     private let defaultCurrentPoints: Int = 847
     private let defaultNextLevelPoints: Int = 1000
     private let walletBalance: String = "$120.50"
+    private let orderDetailRepository = OrderDetailRepository()
 
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 23.1136, longitude: -82.3666),
@@ -58,7 +87,13 @@ struct ProfileView: View {
                 didTriggerRefresh = true
                 Task {
                     await viewModel.refreshProfile()
+                    await refreshKycMerchantContexts()
                 }
+            }
+        }
+        .onReceive(viewModel.$recentOrders) { _ in
+            Task {
+                await refreshKycMerchantContexts()
             }
         }
         .onReceive(userLocationManager.$userLocation) { newLocation in
@@ -78,10 +113,12 @@ struct ProfileView: View {
         .sheet(isPresented: $showingImagePicker) {
             ProfileImagePicker(image: $selectedImage)
         }
-        .fullScreenCover(isPresented: Binding(
-            get: { !selectedOrderId.isEmpty },
-            set: { if !$0 { selectedOrderId = "" } }
-        )) {
+        .fullScreenCover(
+            isPresented: Binding(
+                get: { !selectedOrderId.isEmpty },
+                set: { if !$0 { selectedOrderId = "" } }
+            )
+        ) {
             NavigationStack {
                 OrderDetailView(orderId: selectedOrderId) {
                     // Recargar los pedidos recientes cuando se cierra el detalle
@@ -164,7 +201,7 @@ struct ProfileView: View {
 
     // MARK: - Authenticated Profile View
     private var authenticatedProfileView: some View {
-        NavigationStack{
+        NavigationStack {
             ZStack {
                 Color.llegoBackground.ignoresSafeArea()
 
@@ -183,6 +220,8 @@ struct ProfileView: View {
 
                             savedAddressesSection
 
+                            cashKycSection
+
                             // TODO: Reactivar en post-MVP (Cliente Oro / niveles)
                             // customerLevelSection
 
@@ -191,7 +230,7 @@ struct ProfileView: View {
 
                                 // Vista previa de pedidos recientes
                                 recentOrdersSection
-                                
+
                                 // Modelos 3D descargados
                                 DownloadedModelsSection()
 
@@ -253,10 +292,11 @@ struct ProfileView: View {
             ProfileLocationPickerView()
         }
         .sheet(isPresented: $showingEditName) {
-            EditNameView(userName: Binding(
-                get: { viewModel.currentUser?.fullName ?? "Usuario" },
-                set: { _ in }
-            ))
+            EditNameView(
+                userName: Binding(
+                    get: { viewModel.currentUser?.fullName ?? "Usuario" },
+                    set: { _ in }
+                ))
         }
         .sheet(isPresented: $showingPaymentMethods) {
             PaymentMethodsSheet()
@@ -264,10 +304,25 @@ struct ProfileView: View {
         .sheet(isPresented: $viewModel.showEditUsernameSheet) {
             EditUsernameSheet(viewModel: viewModel)
         }
+        .sheet(isPresented: $showAccountCashKycSheet) {
+            if let context = selectedKycMerchantContext {
+                AccountCashKycSheet(context: context) { completionMessage in
+                    cashKycAlertMessage = completionMessage
+                    showCashKycAlert = true
+                }
+            } else {
+                Text("No se encontró un comercio para verificar.")
+            }
+        }
         .alert("Onboarding activado", isPresented: $showOnboardingResetConfirmation) {
-            Button("OK", role: .cancel) { }
+            Button("OK", role: .cancel) {}
         } message: {
             Text("Se mostrará al volver a abrir la app.")
+        }
+        .alert("Verificación KYC", isPresented: $showCashKycAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(cashKycAlertMessage)
         }
     }
 
@@ -364,39 +419,39 @@ struct ProfileView: View {
             // Mapa como portada de fondo
             Map(position: .constant(.region(region)), interactionModes: []) {
             }
-                .frame(height: 380)
-                .opacity(0.6) // Opacidad base del mapa
-                .overlay(
-                    // Gradient overlay para efecto de desvanecimiento progresivo
+            .frame(height: 380)
+            .opacity(0.6)  // Opacidad base del mapa
+            .overlay(
+                // Gradient overlay para efecto de desvanecimiento progresivo
+                LinearGradient(
+                    gradient: Gradient(stops: [
+                        .init(color: Color.llegoBackground.opacity(0.3), location: 0.0),
+                        .init(color: Color.clear, location: 0.25),
+                        .init(color: Color.clear, location: 0.5),
+                        .init(color: Color.llegoBackground.opacity(0.4), location: 0.85),
+                        .init(color: Color.llegoBackground, location: 1.0),
+                    ]),
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .overlay(
+                // Efecto de blur sutil en los bordes
+                VStack(spacing: 0) {
                     LinearGradient(
-                        gradient: Gradient(stops: [
-                            .init(color: Color.llegoBackground.opacity(0.3), location: 0.0),
-                            .init(color: Color.clear, location: 0.25),
-                            .init(color: Color.clear, location: 0.5),
-                            .init(color: Color.llegoBackground.opacity(0.4), location: 0.85),
-                            .init(color: Color.llegoBackground, location: 1.0)
+                        gradient: Gradient(colors: [
+                            Color.black.opacity(0.2),
+                            Color.clear,
                         ]),
                         startPoint: .top,
                         endPoint: .bottom
                     )
-                )
-                .overlay(
-                    // Efecto de blur sutil en los bordes
-                    VStack(spacing: 0) {
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color.black.opacity(0.2),
-                                Color.clear
-                            ]),
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                        .frame(height: 100)
+                    .frame(height: 100)
 
-                        Spacer()
-                    }
-                )
-                .disabled(true)
+                    Spacer()
+                }
+            )
+            .disabled(true)
 
             // Contenedor del avatar y nombre (flotante)
             VStack(spacing: 16) {
@@ -415,7 +470,7 @@ struct ProfileView: View {
                             LinearGradient(
                                 gradient: Gradient(colors: [
                                     Color.white,
-                                    Color.llegoBackground.opacity(0.8)
+                                    Color.llegoBackground.opacity(0.8),
                                 ]),
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
@@ -445,7 +500,7 @@ struct ProfileView: View {
                                             LinearGradient(
                                                 gradient: Gradient(colors: [
                                                     Color.llegoAccent.opacity(0.3),
-                                                    Color.llegoPrimary.opacity(0.2)
+                                                    Color.llegoPrimary.opacity(0.2),
                                                 ]),
                                                 startPoint: .topLeading,
                                                 endPoint: .bottomTrailing
@@ -468,7 +523,7 @@ struct ProfileView: View {
                                     LinearGradient(
                                         gradient: Gradient(colors: [
                                             Color.llegoAccent.opacity(0.3),
-                                            Color.llegoPrimary.opacity(0.2)
+                                            Color.llegoPrimary.opacity(0.2),
                                         ]),
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
@@ -482,7 +537,7 @@ struct ProfileView: View {
                                 )
                         }
                     }
-                    
+
                     // Loading overlay
                     if viewModel.isUploadingAvatar {
                         Circle()
@@ -506,11 +561,15 @@ struct ProfileView: View {
                                     Circle()
                                         .fill(Color.llegoPrimary)
                                         .frame(width: 38, height: 38)
-                                        .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
+                                        .shadow(
+                                            color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
 
-                                    Image(systemName: viewModel.isUploadingAvatar ? "hourglass" : "camera.fill")
-                                        .font(.system(size: 16, weight: .bold))
-                                        .foregroundColor(.white)
+                                    Image(
+                                        systemName: viewModel.isUploadingAvatar
+                                            ? "hourglass" : "camera.fill"
+                                    )
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundColor(.white)
                                 }
                             }
                             .disabled(viewModel.isUploadingAvatar)
@@ -544,7 +603,7 @@ struct ProfileView: View {
                             .fill(Color.white.opacity(0.9))
                             .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
                     )
-                    
+
                     // Username section
                     Button(action: {
                         viewModel.editingUsername = viewModel.currentUser?.username ?? ""
@@ -558,7 +617,7 @@ struct ProfileView: View {
                             Text(viewModel.currentUser?.username ?? "")
                                 .font(.system(size: 15, weight: .medium))
                                 .foregroundColor(.gray)
-                            
+
                             Image(systemName: "pencil")
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundColor(.gray.opacity(0.6))
@@ -619,8 +678,176 @@ struct ProfileView: View {
         .buttonStyle(PlainButtonStyle())
     }
 
+    // MARK: - Cash KYC Section
+    private var cashKycSection: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Image(systemName: "person.text.rectangle.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.llegoPrimary)
+                Text("Verificación KYC para Efectivo")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.llegoPrimary)
+                Spacer()
+            }
+
+            Text("Selecciona el negocio para el que deseas verificar tu identidad.")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.gray)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            if isLoadingKycContexts {
+                HStack(spacing: 10) {
+                    ProgressView()
+                    Text("Cargando comercios recientes...")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.gray)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(12)
+            } else if kycMerchantContexts.isEmpty {
+                Text(
+                    "Aún no hay contexto de negocio disponible. Haz un pedido o visita un negocio para poder verificarte."
+                )
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.gray)
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(.systemGray6))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(kycMerchantContexts) { context in
+                        Button {
+                            selectedKycMerchantContext = context
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(
+                                    systemName: selectedKycMerchantContext?.id == context.id
+                                        ? "checkmark.circle.fill" : "circle"
+                                )
+                                .foregroundColor(
+                                    selectedKycMerchantContext?.id == context.id
+                                        ? .llegoPrimary : .gray
+                                )
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(context.businessName)
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(.llegoPrimary)
+                                    Text(context.branchName)
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(.gray)
+                                }
+                                Spacer()
+                            }
+                            .padding(12)
+                            .background(Color(.systemGray6))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
+            Button(action: startCashKycFromAccount) {
+                HStack(spacing: 12) {
+                    Image(systemName: "shield.checkerboard")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(.llegoPrimary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Iniciar verificación de identidad")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.llegoPrimary)
+                        Text("Se pedirá foto del carnet y selfie sosteniendo el carnet")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.gray)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.gray.opacity(0.7))
+                }
+                .padding(16)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.white)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.black.opacity(0.06), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(selectedKycMerchantContext == nil)
+        }
+    }
+
+    private func startCashKycFromAccount() {
+        guard selectedKycMerchantContext != nil else {
+            cashKycAlertMessage = "Selecciona un negocio para continuar."
+            showCashKycAlert = true
+            return
+        }
+        showAccountCashKycSheet = true
+    }
+
+    private func refreshKycMerchantContexts() async {
+        guard !isLoadingKycContexts else { return }
+
+        await MainActor.run {
+            isLoadingKycContexts = true
+        }
+        defer {
+            Task { @MainActor in
+                isLoadingKycContexts = false
+            }
+        }
+
+        let orders = await MainActor.run { viewModel.recentOrders }
+        guard !orders.isEmpty else {
+            await MainActor.run {
+                kycMerchantContexts = []
+                selectedKycMerchantContext = nil
+            }
+            return
+        }
+
+        var contexts: [KycMerchantContext] = []
+        var seen = Set<String>()
+
+        for order in orders.prefix(8) {
+            do {
+                let detail = try await orderDetailRepository.fetchOrderAsync(id: order.id)
+                let context = KycMerchantContext(
+                    businessId: detail.businessId,
+                    businessName: detail.businessName,
+                    branchId: detail.branchId,
+                    branchName: detail.branchName
+                )
+                if seen.insert(context.id).inserted {
+                    contexts.append(context)
+                }
+            } catch {
+                continue
+            }
+        }
+
+        await MainActor.run {
+            self.kycMerchantContexts = contexts
+            if let selected = selectedKycMerchantContext,
+                contexts.contains(selected)
+            {
+                selectedKycMerchantContext = selected
+            } else {
+                selectedKycMerchantContext = contexts.first
+            }
+        }
+    }
+
     private var savedAddressesSection: some View {
-        NavigationLink(destination: SavedAddressesView(isSelectingDeliveryAddress: false, onSelectAddress: nil)) {
+        NavigationLink(
+            destination: SavedAddressesView(isSelectingDeliveryAddress: false, onSelectAddress: nil)
+        ) {
             HStack(spacing: 12) {
                 Image(systemName: "list.bullet.rectangle.portrait")
                     .font(.system(size: 20, weight: .regular))
@@ -717,7 +944,7 @@ struct ProfileView: View {
                                 LinearGradient(
                                     gradient: Gradient(colors: [
                                         Color.llegoSecondary.opacity(0.3),
-                                        Color.llegoSecondary.opacity(0.1)
+                                        Color.llegoSecondary.opacity(0.1),
                                     ]),
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
@@ -761,7 +988,7 @@ struct ProfileView: View {
                             LinearGradient(
                                 gradient: Gradient(colors: [
                                     Color.llegoSecondary,
-                                    Color.llegoAccent
+                                    Color.llegoAccent,
                                 ]),
                                 startPoint: .leading,
                                 endPoint: .trailing
@@ -774,12 +1001,15 @@ struct ProfileView: View {
                         ForEach(CustomerLevel.allCases, id: \.self) { level in
                             VStack(spacing: 4) {
                                 Circle()
-                                    .fill(level.rawValue <= 3 ? level.color : Color.gray.opacity(0.3))
+                                    .fill(
+                                        level.rawValue <= 3 ? level.color : Color.gray.opacity(0.3)
+                                    )
                                     .frame(width: 8, height: 8)
 
                                 Text(level.name)
                                     .font(.system(size: 9, weight: .semibold))
-                                    .foregroundColor(level.rawValue <= 3 ? .llegoPrimary : .gray.opacity(0.6))
+                                    .foregroundColor(
+                                        level.rawValue <= 3 ? .llegoPrimary : .gray.opacity(0.6))
                             }
                             .frame(maxWidth: .infinity)
                         }
@@ -826,9 +1056,12 @@ struct ProfileView: View {
                     HStack(spacing: 0) {
                         ForEach(checkpointLevels.indices, id: \.self) { index in
                             let checkpoint = checkpointLevels[index]
- 
+
                             Circle()
-                                .fill(checkpoint.rawValue <= level.rawValue ? checkpoint.color : Color.black.opacity(0.25))
+                                .fill(
+                                    checkpoint.rawValue <= level.rawValue
+                                        ? checkpoint.color : Color.black.opacity(0.25)
+                                )
                                 .frame(width: 4, height: 4)
 
                             if index != checkpointLevels.count - 1 {
@@ -868,7 +1101,7 @@ struct ProfileView: View {
                         .foregroundColor(.gray)
                 }
             }
-            
+
             if viewModel.isLoadingOrders {
                 HStack(spacing: 12) {
                     ProgressView()
@@ -888,7 +1121,7 @@ struct ProfileView: View {
                     Image(systemName: "bag")
                         .font(.system(size: 32, weight: .light))
                         .foregroundColor(.gray.opacity(0.5))
-                    
+
                     Text("No tienes pedidos aún")
                         .font(.system(size: 15, weight: .medium))
                         .foregroundColor(.gray)
@@ -986,7 +1219,7 @@ struct ProfileView: View {
                                 LinearGradient(
                                     gradient: Gradient(colors: [
                                         Color.gray.opacity(0.5),
-                                        Color.gray.opacity(0.4)
+                                        Color.gray.opacity(0.4),
                                     ]),
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
@@ -1058,7 +1291,10 @@ struct ProfileView: View {
                         HStack(spacing: 12) {
                             Image(systemName: engine.icon)
                                 .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(aiPreferenceManager.selectedEngine == engine ? .llegoAccent : .gray)
+                                .foregroundColor(
+                                    aiPreferenceManager.selectedEngine == engine
+                                        ? .llegoAccent : .gray
+                                )
                                 .frame(width: 24)
 
                             VStack(alignment: .leading, spacing: 4) {
@@ -1087,12 +1323,16 @@ struct ProfileView: View {
                         .padding(12)
                         .background(
                             RoundedRectangle(cornerRadius: 12)
-                                .fill(aiPreferenceManager.selectedEngine == engine ? Color.llegoAccent.opacity(0.08) : Color.clear)
+                                .fill(
+                                    aiPreferenceManager.selectedEngine == engine
+                                        ? Color.llegoAccent.opacity(0.08) : Color.clear)
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
                                 .stroke(
-                                    aiPreferenceManager.selectedEngine == engine ? Color.llegoAccent.opacity(0.3) : Color.black.opacity(0.06),
+                                    aiPreferenceManager.selectedEngine == engine
+                                        ? Color.llegoAccent.opacity(0.3)
+                                        : Color.black.opacity(0.06),
                                     lineWidth: 1
                                 )
                         )
@@ -1104,9 +1344,12 @@ struct ProfileView: View {
                 if aiPreferenceManager.selectedEngine == .appleIntelligence {
                     let status = aiPreferenceManager.getAppleIntelligenceStatus()
                     HStack(spacing: 8) {
-                        Image(systemName: status.isAvailable ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(status.isAvailable ? .green : .orange)
+                        Image(
+                            systemName: status.isAvailable
+                                ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
+                        )
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(status.isAvailable ? .green : .orange)
 
                         Text(status.message)
                             .font(.system(size: 12, weight: .medium))
@@ -1117,7 +1360,9 @@ struct ProfileView: View {
                     .padding(10)
                     .background(
                         RoundedRectangle(cornerRadius: 10)
-                            .fill(status.isAvailable ? Color.green.opacity(0.1) : Color.orange.opacity(0.1))
+                            .fill(
+                                status.isAvailable
+                                    ? Color.green.opacity(0.1) : Color.orange.opacity(0.1))
                     )
                 }
             }
@@ -1279,7 +1524,6 @@ struct ProfileView: View {
 
 }
 
-
 struct EditNameView: View {
     @Binding var userName: String
     @Environment(\.presentationMode) var presentationMode
@@ -1333,7 +1577,9 @@ struct EditNameView: View {
                             .frame(height: 54)
                             .background(
                                 LinearGradient(
-                                    gradient: Gradient(colors: [Color.llegoAccent, Color.llegoPrimary]),
+                                    gradient: Gradient(colors: [
+                                        Color.llegoAccent, Color.llegoPrimary,
+                                    ]),
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
@@ -1399,8 +1645,6 @@ enum CustomerLevel: Int, CaseIterable {
         }
     }
 }
-
-
 
 // MARK: - Payment Methods Sheet
 struct PaymentMethodsSheet: View {
@@ -1535,7 +1779,7 @@ struct PaymentCardView: View {
                     LinearGradient(
                         gradient: Gradient(colors: [
                             cardColor,
-                            cardColor.opacity(0.7)
+                            cardColor.opacity(0.7),
                         ]),
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -1569,7 +1813,10 @@ struct ProfileImagePicker: UIViewControllerRepresentable {
             self.parent = parent
         }
 
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+        func imagePickerController(
+            _ picker: UIImagePickerController,
+            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
+        ) {
             if let uiImage = info[.originalImage] as? UIImage {
                 parent.image = uiImage
             }
@@ -1596,19 +1843,16 @@ struct ProfileImagePicker: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
 }
 
-
-
 #Preview {
     ProfileView()
 }
-
 
 // MARK: - Edit Username Sheet
 struct EditUsernameSheet: View {
     @ObservedObject var viewModel: ProfileViewModel
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isUsernameFocused: Bool
-    
+
     var body: some View {
         NavigationView {
             VStack(spacing: 24) {
@@ -1617,34 +1861,36 @@ struct EditUsernameSheet: View {
                         Circle()
                             .fill(Color.llegoPrimary.opacity(0.15))
                             .frame(width: 80, height: 80)
-                        
+
                         Image(systemName: "at.circle.fill")
                             .font(.system(size: 40))
                             .foregroundColor(.llegoPrimary)
                     }
-                    
+
                     Text("Editar nombre de usuario")
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(.primary)
-                    
-                    Text("Tu nombre de usuario es único y otros usuarios pueden usarlo para enviarte dinero.")
-                        .font(.system(size: 15))
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 32)
+
+                    Text(
+                        "Tu nombre de usuario es único y otros usuarios pueden usarlo para enviarte dinero."
+                    )
+                    .font(.system(size: 15))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
                 }
                 .padding(.top, 20)
-                
+
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Nombre de usuario")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.secondary)
-                    
+
                     HStack(spacing: 8) {
                         Text("@")
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(.gray)
-                        
+
                         TextField("usuario", text: $viewModel.editingUsername)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled(true)
@@ -1657,27 +1903,27 @@ struct EditUsernameSheet: View {
                         RoundedRectangle(cornerRadius: 12)
                             .fill(Color(.systemGray6))
                     )
-                    
+
                     Text("Solo letras, números, puntos y guiones bajos")
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                         .padding(.leading, 4)
                 }
                 .padding(.horizontal)
-                
+
                 if let errorMessage = viewModel.errorMessage {
                     HStack(spacing: 8) {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .font(.system(size: 14))
                             .foregroundColor(.red)
-                        
+
                         Text(errorMessage)
                             .font(.system(size: 13))
                             .foregroundColor(.red)
                     }
                     .padding(.horizontal)
                 }
-                
+
                 Button(action: {
                     Task {
                         await viewModel.updateUsername(newUsername: viewModel.editingUsername)
@@ -1708,7 +1954,7 @@ struct EditUsernameSheet: View {
                 .padding(.top, 8)
                 .disabled(viewModel.editingUsername.isEmpty || viewModel.isUpdatingUsername)
                 .opacity(viewModel.editingUsername.isEmpty ? 0.6 : 1)
-                
+
                 Spacer()
             }
             .padding(.vertical)
@@ -1736,4 +1982,492 @@ private struct GlassProminentButtonModifier: ViewModifier {
             content.buttonStyle(.borderedProminent)
         }
     }
+}
+
+private enum AccountCashKycUIState: Equatable {
+    case idle
+    case loadingPolicy
+    case loadingStatus
+    case readyToStart
+    case capturingDocument
+    case capturingSelfie
+    case submitting
+    case waitingResult
+    case approved
+    case rejected
+    case insufficientData
+    case error
+    case expired
+    case cashAvailableUncovered
+    case cashAvailableCovered
+    case cashBlocked
+}
+
+@MainActor
+private final class AccountCashKycViewModel: ObservableObject {
+    @Published var state: AccountCashKycUIState = .idle
+    @Published var title: String = "Verificación de cuenta"
+    @Published var message: String = "Consulta tu estado KYC para efectivo."
+    @Published var documentImage: UIImage?
+    @Published var selfieImage: UIImage?
+    @Published var merchantDisplay: String = ""
+
+    private let context: KycMerchantContext
+    private let paymentRepository = PaymentRepository()
+
+    init(context: KycMerchantContext) {
+        self.context = context
+        self.merchantDisplay = context.displayName
+    }
+
+    var canSubmitEvidence: Bool { documentImage != nil && selfieImage != nil }
+
+    func load() {
+        Task {
+            guard let jwt = await MainActor.run(body: { AuthManager.shared.getAccessToken() })
+            else {
+                applyError("No hay sesión activa.")
+                return
+            }
+
+            state = .loadingPolicy
+            title = "Consultando política"
+            message = "Verificando requisitos de efectivo para este comercio..."
+
+            do {
+                let policy = try await paymentRepository.cashKycPolicyByMerchant(
+                    merchantId: context.businessId,
+                    branchId: context.branchId,
+                    jwt: jwt
+                )
+                _ = applyDecision(policy)
+
+                state = .loadingStatus
+                let status = try await paymentRepository.cashKycStatusByAccount(
+                    merchantId: context.businessId,
+                    branchId: context.branchId,
+                    jwt: jwt
+                )
+                if applyDecision(status) == .waitingResult {
+                    await pollStatus(jwt: jwt)
+                }
+            } catch {
+                applyError(userFriendlyError(error.localizedDescription))
+            }
+        }
+    }
+
+    func submitAccountVerification() {
+        guard let documentData = documentImage?.jpegData(compressionQuality: 0.8),
+            let selfieData = selfieImage?.jpegData(compressionQuality: 0.8)
+        else {
+            state = .readyToStart
+            title = "Evidencia incompleta"
+            message = "Debes capturar documento y selfie."
+            return
+        }
+
+        Task {
+            guard let jwt = await MainActor.run(body: { AuthManager.shared.getAccessToken() })
+            else {
+                applyError("No hay sesión activa.")
+                return
+            }
+
+            state = .submitting
+            title = "Enviando evidencia"
+            message = "Estamos enviando tus imágenes para evaluación."
+
+            do {
+                let decision = try await paymentRepository.startCashKycEvaluationByAccount(
+                    merchantId: context.businessId,
+                    branchId: context.branchId,
+                    identityDocumentFrontBase64: documentData.base64EncodedString(),
+                    selfieLiveBase64: selfieData.base64EncodedString(),
+                    deviceContext: buildDeviceContext(),
+                    transactionContext: nil,
+                    jwt: jwt
+                )
+                if applyDecision(decision) == .waitingResult {
+                    await pollStatus(jwt: jwt)
+                }
+            } catch {
+                applyError(userFriendlyError(error.localizedDescription))
+            }
+        }
+    }
+
+    func clearEvidence() {
+        documentImage = nil
+        selfieImage = nil
+    }
+
+    @discardableResult
+    private func applyDecision(_ decision: CashKycDecisionSnapshot) -> AccountCashKycUIState {
+        if decision.allowCash {
+            if decision.appCoversCash {
+                state = .cashAvailableCovered
+                title = "Verificación activa"
+                message = "Tu cuenta está aprobada para efectivo en este comercio."
+                return .cashAvailableCovered
+            }
+            state = .cashAvailableUncovered
+            title = "Efectivo permitido"
+            message = "Puedes usar efectivo, pero sin cobertura de la app."
+            return .cashAvailableUncovered
+        }
+
+        switch decision.kycEvalStatus {
+        case .pendingEvidence, .notRequired:
+            state = .readyToStart
+            title = "Verificación requerida"
+            message = "Captura documento y selfie para habilitar efectivo."
+            return .readyToStart
+        case .submitted:
+            state = .waitingResult
+            title = "En revisión"
+            message = "Tu evidencia fue enviada y está siendo evaluada."
+            return .waitingResult
+        case .approved:
+            state = .approved
+            title = "Verificación aprobada"
+            message = "Ya puedes usar efectivo en este comercio."
+            return .approved
+        case .rejected:
+            state = .rejected
+            title = "Verificación rechazada"
+            message = "No es posible habilitar efectivo con la evidencia actual."
+            return .rejected
+        case .insufficientData:
+            state = .insufficientData
+            title = "Evidencia insuficiente"
+            message = "Captura de nuevo documento y selfie."
+            return .insufficientData
+        case .error:
+            state = .error
+            title = "No se pudo completar"
+            message = "Intenta nuevamente en unos minutos."
+            return .error
+        case .expired:
+            state = .expired
+            title = "Verificación expirada"
+            message = "Necesitas enviar evidencia otra vez."
+            return .expired
+        case .needsReview:
+            state = .cashBlocked
+            title = "Revisión manual requerida"
+            message = "Temporalmente no puedes usar efectivo en este comercio."
+            return .cashBlocked
+        case .unknown:
+            state = .error
+            title = "Estado no reconocido"
+            message = "No se pudo validar el estado de forma segura."
+            return .error
+        }
+    }
+
+    private func pollStatus(jwt: String) async {
+        for _ in 0..<8 {
+            do {
+                let status = try await paymentRepository.cashKycStatusByAccount(
+                    merchantId: context.businessId,
+                    branchId: context.branchId,
+                    jwt: jwt
+                )
+                if applyDecision(status) != .waitingResult {
+                    return
+                }
+            } catch {
+                applyError("No se pudo actualizar el estado. Intenta de nuevo.")
+                return
+            }
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+        }
+        state = .error
+        title = "Tiempo de espera agotado"
+        message = "No se recibió un resultado final. Actualiza nuevamente."
+    }
+
+    private func applyError(_ message: String) {
+        state = .error
+        title = "Error de verificación"
+        self.message = message
+    }
+
+    private func userFriendlyError(_ raw: String) -> String {
+        if raw.contains("RETRY_NOT_SUPPORTED_FOR_ACCOUNT_VERIFICATION") {
+            return
+                "Este flujo no permite reintento directo. Envía una nueva evidencia desde esta pantalla."
+        }
+        return raw
+    }
+
+    private func buildDeviceContext() -> [String: Any] {
+        let rawDeviceId = DeviceIDManager.shared.getDeviceId() ?? UUID().uuidString
+        let deviceIdHash = SHA256.hash(data: Data(rawDeviceId.utf8)).compactMap {
+            String(format: "%02x", $0)
+        }.joined()
+        let ipHash = SHA256.hash(data: Data("ip_unavailable".utf8)).compactMap {
+            String(format: "%02x", $0)
+        }.joined()
+        let appVersion =
+            Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
+        let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "unknown"
+        return [
+            "deviceIdHash": deviceIdHash,
+            "ipHash": ipHash,
+            "appVersion": "\(appVersion) (\(buildNumber))",
+            "os": "iOS \(UIDevice.current.systemVersion)",
+        ]
+    }
+}
+
+private struct AccountCashKycSheet: View {
+    let context: KycMerchantContext
+    let onCompleted: (String) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var viewModel: AccountCashKycViewModel
+    @State private var showDocumentCamera = false
+    @State private var showSelfieCamera = false
+    @State private var showPermissionAlert = false
+    @State private var permissionMessage = ""
+
+    init(context: KycMerchantContext, onCompleted: @escaping (String) -> Void) {
+        self.context = context
+        self.onCompleted = onCompleted
+        _viewModel = StateObject(
+            wrappedValue: AccountCashKycViewModel(context: context))
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Comercio")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.secondary)
+                    Text(viewModel.merchantDisplay)
+                        .font(.system(size: 15, weight: .semibold))
+
+                    Text(viewModel.title)
+                        .font(.system(size: 22, weight: .bold))
+                    Text(viewModel.message)
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundColor(.secondary)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Para verificar tu identidad necesitaremos:")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("1. Foto del frente del carnet/documento")
+                            .font(.system(size: 13, weight: .regular))
+                        Text("2. Selfie sosteniendo tu carnet visible")
+                            .font(.system(size: 13, weight: .regular))
+                    }
+                    .padding(12)
+                    .background(Color(.systemGray6))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                    if shouldShowCapture {
+                        capturePanel
+                    }
+
+                    actionsPanel
+                }
+                .padding(20)
+            }
+            .navigationTitle("KYC efectivo")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cerrar") {
+                        viewModel.clearEvidence()
+                        dismiss()
+                    }
+                }
+            }
+            .sheet(isPresented: $showDocumentCamera) {
+                ProfileKycCameraPicker(image: $viewModel.documentImage)
+            }
+            .sheet(isPresented: $showSelfieCamera) {
+                ProfileKycCameraPicker(image: $viewModel.selfieImage)
+            }
+            .alert("Permiso de cámara", isPresented: $showPermissionAlert) {
+                Button("Entendido", role: .cancel) {}
+            } message: {
+                Text(permissionMessage)
+            }
+            .onAppear {
+                viewModel.load()
+            }
+        }
+    }
+
+    private var shouldShowCapture: Bool {
+        [.readyToStart, .capturingDocument, .capturingSelfie, .insufficientData, .error, .expired]
+            .contains(viewModel.state)
+    }
+
+    private var capturePanel: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Evidencia requerida")
+                .font(.system(size: 16, weight: .semibold))
+
+            HStack {
+                Image(
+                    systemName: viewModel.documentImage == nil ? "circle" : "checkmark.circle.fill"
+                )
+                .foregroundColor(viewModel.documentImage == nil ? .secondary : .green)
+                Text("Carnet/documento (frente)")
+                Spacer()
+                Button("Capturar") { openCamera(target: .document) }
+            }
+
+            HStack {
+                Image(systemName: viewModel.selfieImage == nil ? "circle" : "checkmark.circle.fill")
+                    .foregroundColor(viewModel.selfieImage == nil ? .secondary : .green)
+                Text("Selfie sosteniendo el carnet")
+                Spacer()
+                Button("Capturar") { openCamera(target: .selfie) }
+            }
+
+            if viewModel.documentImage != nil || viewModel.selfieImage != nil {
+                HStack(spacing: 10) {
+                    if let doc = viewModel.documentImage {
+                        Image(uiImage: doc)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 70, height: 70)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    if let selfie = viewModel.selfieImage {
+                        Image(uiImage: selfie)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 70, height: 70)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                }
+                .padding(.top, 4)
+            }
+        }
+        .padding(14)
+        .background(Color(.systemGray6))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    @ViewBuilder
+    private var actionsPanel: some View {
+        switch viewModel.state {
+        case .approved, .cashAvailableCovered, .cashAvailableUncovered:
+            Button("Listo") {
+                onCompleted("Verificación consultada correctamente.")
+                dismiss()
+            }
+            .buttonStyle(.borderedProminent)
+        case .rejected, .cashBlocked:
+            Button("Entendido") {
+                onCompleted(
+                    "Actualmente no está habilitado el pago en efectivo para este comercio.")
+                dismiss()
+            }
+            .buttonStyle(.borderedProminent)
+        case .readyToStart, .insufficientData, .error, .expired:
+            Button("Enviar verificación") {
+                viewModel.submitAccountVerification()
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(!viewModel.canSubmitEvidence)
+        case .waitingResult, .loadingPolicy, .loadingStatus, .submitting:
+            HStack(spacing: 10) {
+                ProgressView()
+                Text("Procesando...")
+                    .font(.system(size: 14, weight: .medium))
+            }
+            .padding(.vertical, 6)
+        default:
+            EmptyView()
+        }
+    }
+
+    private enum CameraTarget {
+        case document
+        case selfie
+    }
+
+    private func openCamera(target: CameraTarget) {
+        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        case .authorized:
+            present(target: target)
+        case .notDetermined:
+            AVCaptureDevice.requestAccess(for: .video) { granted in
+                DispatchQueue.main.async {
+                    if granted {
+                        present(target: target)
+                    } else {
+                        permissionMessage = "Debes habilitar el acceso a cámara para continuar."
+                        showPermissionAlert = true
+                    }
+                }
+            }
+        default:
+            permissionMessage = "La cámara está deshabilitada para esta app."
+            showPermissionAlert = true
+        }
+    }
+
+    private func present(target: CameraTarget) {
+        switch target {
+        case .document: showDocumentCamera = true
+        case .selfie: showSelfieCamera = true
+        }
+    }
+}
+
+private struct ProfileKycCameraPicker: UIViewControllerRepresentable {
+    @Binding var image: UIImage?
+    @Environment(\.dismiss) private var dismiss
+
+    final class Coordinator: NSObject, UINavigationControllerDelegate,
+        UIImagePickerControllerDelegate
+    {
+        let parent: ProfileKycCameraPicker
+
+        init(parent: ProfileKycCameraPicker) {
+            self.parent = parent
+        }
+
+        func imagePickerController(
+            _ picker: UIImagePickerController,
+            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
+        ) {
+            if let uiImage = info[.originalImage] as? UIImage {
+                parent.image = uiImage
+            }
+            parent.dismiss()
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.dismiss()
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.delegate = context.coordinator
+        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+            picker.sourceType = .camera
+            picker.cameraCaptureMode = .photo
+        } else {
+            picker.sourceType = .photoLibrary
+        }
+        picker.allowsEditing = false
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
 }

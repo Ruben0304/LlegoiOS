@@ -63,6 +63,8 @@ class CartViewModel: ObservableObject {
     private var cartBranchId: String?
     private var cartProducts: [CartProductGraphQL] = []
     @Published private(set) var branchAcceptedCurrency: String?
+    @Published private(set) var cashKycMerchantId: String?
+    @Published private(set) var cashKycBranchId: String?
 
     // MARK: - AI Suggestions
     @Published var suggestedProducts: [Product] = []
@@ -342,8 +344,12 @@ class CartViewModel: ObservableObject {
                     if let branchId = self.cartBranchId {
                         print("📍 Branch ID: \(branchId)")
                         self.fetchBranchAcceptedCurrency(branchId: branchId)
+                        self.fetchCashKycMerchantContext(branchId: branchId)
                         // Estimar envío usando el branchId del primer producto
                         self.fetchDeliveryFeeEstimate(branchId: branchId)
+                    } else {
+                        self.cashKycMerchantId = nil
+                        self.cashKycBranchId = nil
                     }
 
                     // Check for default saved address
@@ -682,6 +688,23 @@ class CartViewModel: ObservableObject {
                     self.branchAcceptedCurrency = accepted?.uppercased()
                 case .failure(let error):
                     print("⚠️ Error loading branch accepted currency: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    private func fetchCashKycMerchantContext(branchId: String) {
+        repository.fetchBranchBusinessContext(branchId: branchId) { [weak self] result in
+            guard let self = self else { return }
+            Task { @MainActor in
+                switch result {
+                case .success(let context):
+                    self.cashKycMerchantId = context.businessId
+                    self.cashKycBranchId = context.branchId
+                case .failure(let error):
+                    self.cashKycMerchantId = nil
+                    self.cashKycBranchId = nil
+                    print("⚠️ Error loading KYC merchant context: \(error.localizedDescription)")
                 }
             }
         }
@@ -1301,7 +1324,9 @@ class CartViewModel: ObservableObject {
         return String(format: "%.2f %@", price, currency)
     }
 
-    private func convertAmount(_ amount: Double, from sourceCurrency: String, to targetCurrency: String)
+    private func convertAmount(
+        _ amount: Double, from sourceCurrency: String, to targetCurrency: String
+    )
         -> Double
     {
         let from = sourceCurrency.uppercased()

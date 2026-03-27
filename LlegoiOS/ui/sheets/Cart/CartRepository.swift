@@ -151,6 +151,46 @@ class CartRepository {
         }
     }
 
+    /// Obtener businessId + nombre de una sucursal para scope de KYC por merchant.
+    func fetchBranchBusinessContext(
+        branchId: String,
+        completion:
+            @escaping @Sendable (
+                Result<(businessId: String, branchId: String, branchName: String), Error>
+            ) -> Void
+    ) {
+        apolloClient.fetchCompat(
+            query: LlegoAPI.GetBranchDetailQuery(id: branchId),
+            cachePolicy: .fetchIgnoringCacheData
+        ) { result in
+            switch result {
+            case .success(let graphQLResult):
+                if let errors = graphQLResult.errors, let firstError = errors.first {
+                    completion(.failure(firstError))
+                    return
+                }
+                guard let branch = graphQLResult.data?.branch else {
+                    completion(
+                        .failure(
+                            NSError(
+                                domain: "CartRepository",
+                                code: -1,
+                                userInfo: [NSLocalizedDescriptionKey: "No se encontró la sucursal"]
+                            )))
+                    return
+                }
+                completion(
+                    .success(
+                        (
+                            businessId: branch.businessId, branchId: branch.id,
+                            branchName: branch.name
+                        )))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
     /// Estimar el costo de envío para una sucursal
     func estimateDeliveryFee(
         branchId: String,
