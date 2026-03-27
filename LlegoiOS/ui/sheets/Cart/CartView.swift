@@ -683,6 +683,21 @@ struct CartView: View {
             let branchId = await MainActor.run(body: { viewModel.cashKycBranchId })
 
             do {
+                // Nuevo KYC global: si ya está aprobado, reutilizar en checkout automáticamente.
+                if let globalStatus = try? await paymentRepository.globalCashKycStatus(jwt: jwt),
+                    globalStatus.allowCash
+                {
+                    await MainActor.run {
+                        if !globalStatus.appCoversCash {
+                            paymentAlertMessage =
+                                "Pago en efectivo permitido sin cobertura de la app."
+                            showPaymentAlert = true
+                        }
+                        createOrderWithPaymentMethod(paymentMethod.id)
+                    }
+                    return
+                }
+
                 // Política de merchant: si no requiere KYC o efectivo permitido sin cobertura, continuar normal.
                 let policy = try await paymentRepository.cashKycPolicyByMerchant(
                     merchantId: merchantId,

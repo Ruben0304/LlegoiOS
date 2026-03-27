@@ -5,24 +5,6 @@ import MapKit
 import SwiftUI
 import UIKit
 
-private struct KycMerchantContext: Identifiable, Hashable {
-    let businessId: String
-    let businessName: String
-    let branchId: String?
-    let branchName: String
-
-    var id: String {
-        "\(businessId)|\(branchId ?? "no_branch")"
-    }
-
-    var displayName: String {
-        if let branchId, !branchId.isEmpty {
-            return "\(businessName) · \(branchName)"
-        }
-        return businessName
-    }
-}
-
 struct ProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = ProfileViewModel()
@@ -40,17 +22,14 @@ struct ProfileView: View {
     @State private var selectedImage: UIImage?
     @State private var selectedOrderId: String = ""
     @State private var showAccountCashKycSheet = false
-    @State private var kycMerchantContexts: [KycMerchantContext] = []
-    @State private var selectedKycMerchantContext: KycMerchantContext?
-    @State private var isLoadingKycContexts = false
+    @State private var cashKycStatusSnapshot: CashKycDecisionSnapshot?
+    @State private var isLoadingCashKycStatus = false
     @State private var showCashKycAlert = false
     @State private var cashKycAlertMessage = ""
     private let defaultCustomerLevel: CustomerLevel = .gold
     private let defaultCurrentPoints: Int = 847
     private let defaultNextLevelPoints: Int = 1000
     private let walletBalance: String = "$120.50"
-    private let orderDetailRepository = OrderDetailRepository()
-
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 23.1136, longitude: -82.3666),
         span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
@@ -87,13 +66,8 @@ struct ProfileView: View {
                 didTriggerRefresh = true
                 Task {
                     await viewModel.refreshProfile()
-                    await refreshKycMerchantContexts()
+                    await refreshGlobalCashKycStatus()
                 }
-            }
-        }
-        .onReceive(viewModel.$recentOrders) { _ in
-            Task {
-                await refreshKycMerchantContexts()
             }
         }
         .onReceive(userLocationManager.$userLocation) { newLocation in
@@ -305,13 +279,12 @@ struct ProfileView: View {
             EditUsernameSheet(viewModel: viewModel)
         }
         .sheet(isPresented: $showAccountCashKycSheet) {
-            if let context = selectedKycMerchantContext {
-                AccountCashKycSheet(context: context) { completionMessage in
-                    cashKycAlertMessage = completionMessage
-                    showCashKycAlert = true
+            AccountCashKycSheet { completionMessage in
+                cashKycAlertMessage = completionMessage
+                showCashKycAlert = true
+                Task {
+                    await refreshGlobalCashKycStatus()
                 }
-            } else {
-                Text("No se encontró un comercio para verificar.")
             }
         }
         .alert("Onboarding activado", isPresented: $showOnboardingResetConfirmation) {
@@ -685,68 +658,51 @@ struct ProfileView: View {
                 Image(systemName: "person.text.rectangle.fill")
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(.llegoPrimary)
-                Text("Verificación KYC para Efectivo")
+                Text("Verificación de identidad para efectivo")
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.llegoPrimary)
                 Spacer()
             }
 
-            Text("Selecciona el negocio para el que deseas verificar tu identidad.")
+            Text("Verifica tu identidad una vez para habilitar pagos en efectivo cuando aplique.")
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(.gray)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            if isLoadingKycContexts {
+            HStack(spacing: 10) {
+                Circle()
+                    .fill(cashKycStatusColor.opacity(0.16))
+                    .frame(width: 28, height: 28)
+                    .overlay(
+                        Image(systemName: cashKycStatusIcon)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(cashKycStatusColor)
+                    )
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(cashKycStatusTitle)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.llegoPrimary)
+                    Text(cashKycStatusSubtitle)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.gray)
+                }
+
+                Spacer()
+            }
+            .padding(12)
+            .background(Color(.systemGray6))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            if isLoadingCashKycStatus {
                 HStack(spacing: 10) {
                     ProgressView()
-                    Text("Cargando comercios recientes...")
+                    Text("Consultando estado de verificación...")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.gray)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(12)
-            } else if kycMerchantContexts.isEmpty {
-                Text(
-                    "Aún no hay contexto de negocio disponible. Haz un pedido o visita un negocio para poder verificarte."
-                )
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.gray)
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(.systemGray6))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            } else {
-                VStack(spacing: 8) {
-                    ForEach(kycMerchantContexts) { context in
-                        Button {
-                            selectedKycMerchantContext = context
-                        } label: {
-                            HStack(spacing: 10) {
-                                Image(
-                                    systemName: selectedKycMerchantContext?.id == context.id
-                                        ? "checkmark.circle.fill" : "circle"
-                                )
-                                .foregroundColor(
-                                    selectedKycMerchantContext?.id == context.id
-                                        ? .llegoPrimary : .gray
-                                )
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(context.businessName)
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(.llegoPrimary)
-                                    Text(context.branchName)
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundColor(.gray)
-                                }
-                                Spacer()
-                            }
-                            .padding(12)
-                            .background(Color(.systemGray6))
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
             }
 
             Button(action: startCashKycFromAccount) {
@@ -755,10 +711,10 @@ struct ProfileView: View {
                         .font(.system(size: 18, weight: .medium))
                         .foregroundColor(.llegoPrimary)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Iniciar verificación de identidad")
+                        Text(cashKycActionTitle)
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(.llegoPrimary)
-                        Text("Se pedirá foto del carnet y selfie sosteniendo el carnet")
+                        Text("Se solicitará foto del documento y selfie sosteniendo el documento.")
                             .font(.system(size: 12, weight: .medium))
                             .foregroundColor(.gray)
                     }
@@ -778,69 +734,130 @@ struct ProfileView: View {
                 )
             }
             .buttonStyle(.plain)
-            .disabled(selectedKycMerchantContext == nil)
         }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.black.opacity(0.06), lineWidth: 1)
+        )
     }
 
     private func startCashKycFromAccount() {
-        guard selectedKycMerchantContext != nil else {
-            cashKycAlertMessage = "Selecciona un negocio para continuar."
-            showCashKycAlert = true
-            return
-        }
         showAccountCashKycSheet = true
     }
 
-    private func refreshKycMerchantContexts() async {
-        guard !isLoadingKycContexts else { return }
-
-        await MainActor.run {
-            isLoadingKycContexts = true
-        }
-        defer {
-            Task { @MainActor in
-                isLoadingKycContexts = false
-            }
-        }
-
-        let orders = await MainActor.run { viewModel.recentOrders }
-        guard !orders.isEmpty else {
-            await MainActor.run {
-                kycMerchantContexts = []
-                selectedKycMerchantContext = nil
-            }
+    private func refreshGlobalCashKycStatus() async {
+        guard !isLoadingCashKycStatus else { return }
+        guard let jwt = await MainActor.run(body: { AuthManager.shared.getAccessToken() }) else {
             return
         }
+        await MainActor.run { isLoadingCashKycStatus = true }
+        defer { Task { @MainActor in isLoadingCashKycStatus = false } }
 
-        var contexts: [KycMerchantContext] = []
-        var seen = Set<String>()
-
-        for order in orders.prefix(8) {
-            do {
-                let detail = try await orderDetailRepository.fetchOrderAsync(id: order.id)
-                let context = KycMerchantContext(
-                    businessId: detail.businessId,
-                    businessName: detail.businessName,
-                    branchId: detail.branchId,
-                    branchName: detail.branchName
-                )
-                if seen.insert(context.id).inserted {
-                    contexts.append(context)
-                }
-            } catch {
-                continue
+        do {
+            let snapshot = try await PaymentRepository().globalCashKycStatus(jwt: jwt)
+            await MainActor.run {
+                cashKycStatusSnapshot = snapshot
+            }
+        } catch {
+            await MainActor.run {
+                cashKycStatusSnapshot = nil
             }
         }
+    }
 
-        await MainActor.run {
-            self.kycMerchantContexts = contexts
-            if let selected = selectedKycMerchantContext,
-                contexts.contains(selected)
-            {
-                selectedKycMerchantContext = selected
-            } else {
-                selectedKycMerchantContext = contexts.first
-            }
+    private var cashKycStatusTitle: String {
+        guard let snapshot = cashKycStatusSnapshot else { return "Aún no verificada" }
+        if snapshot.allowCash && snapshot.appCoversCash { return "Verificación aprobada" }
+        if snapshot.allowCash && !snapshot.appCoversCash {
+            return "Efectivo permitido sin cobertura"
+        }
+        switch snapshot.kycEvalStatus {
+        case .submitted: return "Verificación en revisión"
+        case .rejected: return "Verificación rechazada"
+        case .insufficientData: return "Se requiere nueva evidencia"
+        case .expired: return "Verificación expirada"
+        case .error: return "No se pudo validar"
+        case .pendingEvidence, .notRequired, .needsReview, .approved, .unknown:
+            return "Aún no verificada"
+        }
+    }
+
+    private var cashKycStatusSubtitle: String {
+        guard let snapshot = cashKycStatusSnapshot else {
+            return "Completa tu verificación para pagos en efectivo."
+        }
+        if snapshot.allowCash {
+            return snapshot.appCoversCash
+                ? "Tu cuenta ya puede usar efectivo cuando esté disponible."
+                : "Puedes usar efectivo, pero sin cobertura de la app."
+        }
+        switch snapshot.kycEvalStatus {
+        case .submitted:
+            return "Tu evidencia fue enviada y está siendo evaluada."
+        case .rejected:
+            return "No fue posible aprobar la evidencia enviada."
+        case .insufficientData:
+            return "Debes subir nuevamente documento y selfie con documento."
+        case .expired:
+            return "Necesitas verificarte otra vez para usar efectivo."
+        case .error:
+            return "Ocurrió un error temporal. Intenta nuevamente."
+        case .pendingEvidence, .notRequired, .needsReview, .approved, .unknown:
+            return "Completa tu verificación para pagos en efectivo."
+        }
+    }
+
+    private var cashKycActionTitle: String {
+        guard let snapshot = cashKycStatusSnapshot else { return "Iniciar verificación" }
+        if snapshot.allowCash && snapshot.appCoversCash { return "Ver estado" }
+        switch snapshot.kycEvalStatus {
+        case .pendingEvidence, .notRequired:
+            return "Iniciar verificación"
+        case .submitted:
+            return "Ver estado"
+        case .insufficientData, .expired, .rejected, .error, .needsReview:
+            return "Verificar nuevamente"
+        case .approved:
+            return "Ver estado"
+        case .unknown:
+            return "Continuar verificación"
+        }
+    }
+
+    private var cashKycStatusIcon: String {
+        guard let snapshot = cashKycStatusSnapshot else {
+            return "person.crop.circle.badge.exclamationmark"
+        }
+        if snapshot.allowCash && snapshot.appCoversCash { return "checkmark.shield.fill" }
+        if snapshot.allowCash { return "exclamationmark.shield.fill" }
+        switch snapshot.kycEvalStatus {
+        case .submitted: return "clock.fill"
+        case .rejected: return "xmark.shield.fill"
+        case .insufficientData, .expired, .pendingEvidence: return "arrow.triangle.2.circlepath"
+        case .error: return "exclamationmark.triangle.fill"
+        case .approved: return "checkmark.shield.fill"
+        case .notRequired, .needsReview, .unknown:
+            return "person.crop.circle.badge.exclamationmark"
+        }
+    }
+
+    private var cashKycStatusColor: Color {
+        guard let snapshot = cashKycStatusSnapshot else { return .orange }
+        if snapshot.allowCash && snapshot.appCoversCash { return .green }
+        if snapshot.allowCash { return .orange }
+        switch snapshot.kycEvalStatus {
+        case .submitted: return .blue
+        case .rejected: return .red
+        case .insufficientData, .expired, .pendingEvidence: return .orange
+        case .error: return .red
+        case .approved: return .green
+        case .notRequired, .needsReview, .unknown:
+            return .orange
         }
     }
 
@@ -2007,18 +2024,10 @@ private enum AccountCashKycUIState: Equatable {
 private final class AccountCashKycViewModel: ObservableObject {
     @Published var state: AccountCashKycUIState = .idle
     @Published var title: String = "Verificación de cuenta"
-    @Published var message: String = "Consulta tu estado KYC para efectivo."
+    @Published var message: String = "Consulta tu estado global para pagos en efectivo."
     @Published var documentImage: UIImage?
     @Published var selfieImage: UIImage?
-    @Published var merchantDisplay: String = ""
-
-    private let context: KycMerchantContext
     private let paymentRepository = PaymentRepository()
-
-    init(context: KycMerchantContext) {
-        self.context = context
-        self.merchantDisplay = context.displayName
-    }
 
     var canSubmitEvidence: Bool { documentImage != nil && selfieImage != nil }
 
@@ -2030,24 +2039,12 @@ private final class AccountCashKycViewModel: ObservableObject {
                 return
             }
 
-            state = .loadingPolicy
-            title = "Consultando política"
-            message = "Verificando requisitos de efectivo para este comercio..."
+            state = .loadingStatus
+            title = "Consultando estado"
+            message = "Verificando estado global para pagos en efectivo..."
 
             do {
-                let policy = try await paymentRepository.cashKycPolicyByMerchant(
-                    merchantId: context.businessId,
-                    branchId: context.branchId,
-                    jwt: jwt
-                )
-                _ = applyDecision(policy)
-
-                state = .loadingStatus
-                let status = try await paymentRepository.cashKycStatusByAccount(
-                    merchantId: context.businessId,
-                    branchId: context.branchId,
-                    jwt: jwt
-                )
+                let status = try await paymentRepository.globalCashKycStatus(jwt: jwt)
                 if applyDecision(status) == .waitingResult {
                     await pollStatus(jwt: jwt)
                 }
@@ -2079,13 +2076,10 @@ private final class AccountCashKycViewModel: ObservableObject {
             message = "Estamos enviando tus imágenes para evaluación."
 
             do {
-                let decision = try await paymentRepository.startCashKycEvaluationByAccount(
-                    merchantId: context.businessId,
-                    branchId: context.branchId,
+                let decision = try await paymentRepository.startGlobalCashKycEvaluation(
                     identityDocumentFrontBase64: documentData.base64EncodedString(),
-                    selfieLiveBase64: selfieData.base64EncodedString(),
+                    selfieWithIdBase64: selfieData.base64EncodedString(),
                     deviceContext: buildDeviceContext(),
-                    transactionContext: nil,
                     jwt: jwt
                 )
                 if applyDecision(decision) == .waitingResult {
@@ -2108,7 +2102,7 @@ private final class AccountCashKycViewModel: ObservableObject {
             if decision.appCoversCash {
                 state = .cashAvailableCovered
                 title = "Verificación activa"
-                message = "Tu cuenta está aprobada para efectivo en este comercio."
+                message = "Tu identidad global está aprobada para pagos en efectivo."
                 return .cashAvailableCovered
             }
             state = .cashAvailableUncovered
@@ -2131,7 +2125,7 @@ private final class AccountCashKycViewModel: ObservableObject {
         case .approved:
             state = .approved
             title = "Verificación aprobada"
-            message = "Ya puedes usar efectivo en este comercio."
+            message = "Tu cuenta quedó verificada para pagos en efectivo."
             return .approved
         case .rejected:
             state = .rejected
@@ -2156,7 +2150,7 @@ private final class AccountCashKycViewModel: ObservableObject {
         case .needsReview:
             state = .cashBlocked
             title = "Revisión manual requerida"
-            message = "Temporalmente no puedes usar efectivo en este comercio."
+            message = "Temporalmente no puedes usar efectivo."
             return .cashBlocked
         case .unknown:
             state = .error
@@ -2169,11 +2163,7 @@ private final class AccountCashKycViewModel: ObservableObject {
     private func pollStatus(jwt: String) async {
         for _ in 0..<8 {
             do {
-                let status = try await paymentRepository.cashKycStatusByAccount(
-                    merchantId: context.businessId,
-                    branchId: context.branchId,
-                    jwt: jwt
-                )
+                let status = try await paymentRepository.globalCashKycStatus(jwt: jwt)
                 if applyDecision(status) != .waitingResult {
                     return
                 }
@@ -2223,7 +2213,6 @@ private final class AccountCashKycViewModel: ObservableObject {
 }
 
 private struct AccountCashKycSheet: View {
-    let context: KycMerchantContext
     let onCompleted: (String) -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -2233,23 +2222,15 @@ private struct AccountCashKycSheet: View {
     @State private var showPermissionAlert = false
     @State private var permissionMessage = ""
 
-    init(context: KycMerchantContext, onCompleted: @escaping (String) -> Void) {
-        self.context = context
+    init(onCompleted: @escaping (String) -> Void) {
         self.onCompleted = onCompleted
-        _viewModel = StateObject(
-            wrappedValue: AccountCashKycViewModel(context: context))
+        _viewModel = StateObject(wrappedValue: AccountCashKycViewModel())
     }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("Comercio")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.secondary)
-                    Text(viewModel.merchantDisplay)
-                        .font(.system(size: 15, weight: .semibold))
-
                     Text(viewModel.title)
                         .font(.system(size: 22, weight: .bold))
                     Text(viewModel.message)
@@ -2368,7 +2349,7 @@ private struct AccountCashKycSheet: View {
         case .rejected, .cashBlocked:
             Button("Entendido") {
                 onCompleted(
-                    "Actualmente no está habilitado el pago en efectivo para este comercio.")
+                    "Actualmente no está habilitado el pago en efectivo para tu cuenta.")
                 dismiss()
             }
             .buttonStyle(.borderedProminent)

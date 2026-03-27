@@ -643,6 +643,204 @@ class PaymentRepository {
         }
     }
 
+    // MARK: - Cash KYC (global account-level)
+
+    func globalCashKycStatus(jwt: String) async throws -> CashKycDecisionSnapshot {
+        let query = """
+            query GlobalCashKycStatus($jwt: String!) {
+              globalCashKycStatus(jwt: $jwt) {
+                verificationId
+                kycEvalStatus
+                cashCoverageStatus
+                allowCash
+                appCoversCash
+                reasonCodes
+                nextAction
+                expiresAt
+              }
+            }
+            """
+        let data = try await performRawGraphQL(
+            query: query,
+            variables: ["jwt": jwt],
+            jwt: jwt
+        )
+        guard let node = data["globalCashKycStatus"] as? [String: Any] else {
+            throw graphQLError("No se recibió estado global KYC")
+        }
+        return parseCashKycDecision(node)
+    }
+
+    func startGlobalCashKycEvaluation(
+        identityDocumentFrontBase64: String,
+        selfieWithIdBase64: String,
+        deviceContext: [String: Any],
+        jwt: String
+    ) async throws -> CashKycDecisionSnapshot {
+        do {
+            try await startGlobalCashKycEvaluationREST(
+                identityDocumentFrontBase64: identityDocumentFrontBase64,
+                selfieWithIdBase64: selfieWithIdBase64,
+                deviceContext: deviceContext,
+                jwt: jwt
+            )
+            return try await globalCashKycStatus(jwt: jwt)
+        } catch let error as NSError
+            where error.domain == "GlobalCashKycREST"
+            && (error.code == 400 || error.code == 404 || error.code == 405 || error.code == 415
+                || error.code == 422)
+        {
+            // Compatibilidad: si REST no está disponible o cambia contrato, usar GraphQL vigente.
+            return try await startGlobalCashKycEvaluationGraphQL(
+                identityDocumentFrontBase64: identityDocumentFrontBase64,
+                selfieWithIdBase64: selfieWithIdBase64,
+                deviceContext: deviceContext,
+                jwt: jwt
+            )
+        }
+    }
+
+    private func startGlobalCashKycEvaluationREST(
+        identityDocumentFrontBase64: String,
+        selfieWithIdBase64: String,
+        deviceContext: [String: Any],
+        jwt: String
+    ) async throws {
+        guard let identityDocumentData = Data(base64Encoded: identityDocumentFrontBase64),
+            let selfieWithIdData = Data(base64Encoded: selfieWithIdBase64)
+        else {
+            throw graphQLError("No se pudo procesar la evidencia para KYC global")
+        }
+
+        guard let url = URL(string: "\(ApolloClientManager.baseURL)/kyc/global/evaluate") else {
+            throw graphQLError("Endpoint global KYC inválido")
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(jwt)", forHTTPHeaderField: "Authorization")
+
+        let boundary = "Boundary-\(UUID().uuidString)"
+        request.setValue(
+            "multipart/form-data; boundary=\(boundary)",
+            forHTTPHeaderField: "Content-Type"
+        )
+
+        var body = Data()
+        appendMultipartImage(
+            to: &body,
+            boundary: boundary,
+            fieldName: "identity_document_front",
+            filename: "identity_document_front.jpg",
+            imageData: identityDocumentData
+        )
+        appendMultipartImage(
+            to: &body,
+            boundary: boundary,
+            fieldName: "selfie_with_id",
+            filename: "selfie_with_id.jpg",
+            imageData: selfieWithIdData
+        )
+
+        appendMultipartField(
+            to: &body, boundary: boundary, name: "device_id_hash",
+            value: string(from: deviceContext, keys: ["deviceIdHash", "device_id_hash"]) ?? "")
+        appendMultipartField(
+            to: &body, boundary: boundary, name: "ip_hash",
+            value: string(from: deviceContext, keys: ["ipHash", "ip_hash"]) ?? "")
+        appendMultipartField(
+            to: &body, boundary: boundary, name: "app_version",
+            value: string(from: deviceContext, keys: ["appVersion", "app_version"]) ?? "")
+        appendMultipartField(
+            to: &body, boundary: boundary, name: "os",
+            value: string(from: deviceContext, keys: ["os"]) ?? "")
+
+        if let latitude = number(from: deviceContext, keys: ["latitude"]) {
+            appendMultipartField(
+                to: &body, boundary: boundary, name: "latitude", value: String(latitude))
+        }
+        if let longitude = number(from: deviceContext, keys: ["longitude"]) {
+            appendMultipartField(
+                to: &body, boundary: boundary, name: "longitude", value: String(longitude))
+        }
+
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = body
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NSError(
+                domain: "GlobalCashKycREST",
+                code: -1,
+                userInfo: [NSLocalizedDescriptionKey: "Respuesta inválida del servidor"]
+            )
+        }
+
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            let message = extractErrorMessage(from: data)
+            throw NSError(
+                domain: "GlobalCashKycREST",
+                code: httpResponse.statusCode,
+                userInfo: [NSLocalizedDescriptionKey: message]
+            )
+        }
+    }
+
+    private func startGlobalCashKycEvaluationGraphQL(
+        identityDocumentFrontBase64: String,
+        selfieWithIdBase64: String,
+        deviceContext: [String: Any],
+        jwt: String
+    ) async throws -> CashKycDecisionSnapshot {
+        let mutation = """
+            mutation StartGlobalCashKycEvaluation($input: StartGlobalCashKycInput!, $jwt: String!) {
+              startGlobalCashKycEvaluation(input: $input, jwt: $jwt) {
+                verificationId
+                allowCash
+                appCoversCash
+                kycEvalStatus
+                cashCoverageStatus
+                reasonCodes
+                nextAction
+                correlationId
+              }
+            }
+            """
+
+        let identityDocumentFrontRef = try await uploadKycEvidenceRef(
+            jpegBase64: identityDocumentFrontBase64,
+            jwt: jwt,
+            label: "global_identity_document_front"
+        )
+        let selfieWithIdRef = try await uploadKycEvidenceRef(
+            jpegBase64: selfieWithIdBase64,
+            jwt: jwt,
+            label: "global_selfie_with_id"
+        )
+
+        let input: [String: Any] = [
+            "identityDocumentFrontRef": identityDocumentFrontRef,
+            "selfieWithIdRef": selfieWithIdRef,
+            "deviceContext": deviceContext,
+        ]
+
+        let data = try await performRawGraphQL(
+            query: mutation,
+            variables: ["input": input, "jwt": jwt],
+            jwt: jwt
+        )
+        guard let payload = data["startGlobalCashKycEvaluation"] as? [String: Any] else {
+            throw graphQLError("No se recibió respuesta al iniciar KYC global")
+        }
+
+        let startDecision = parseCashKycDecision(payload)
+        do {
+            return try await globalCashKycStatus(jwt: jwt)
+        } catch {
+            return startDecision
+        }
+    }
+
     private func performRawGraphQL(
         query: String,
         variables: [String: Any],
@@ -751,6 +949,33 @@ class PaymentRepository {
         throw graphQLError("El upload de evidencia no devolvió referencia válida")
     }
 
+    private func appendMultipartField(
+        to data: inout Data,
+        boundary: String,
+        name: String,
+        value: String
+    ) {
+        data.append("--\(boundary)\r\n".data(using: .utf8)!)
+        data.append("Content-Disposition: form-data; name=\"\(name)\"\r\n\r\n".data(using: .utf8)!)
+        data.append("\(value)\r\n".data(using: .utf8)!)
+    }
+
+    private func appendMultipartImage(
+        to data: inout Data,
+        boundary: String,
+        fieldName: String,
+        filename: String,
+        imageData: Data
+    ) {
+        data.append("--\(boundary)\r\n".data(using: .utf8)!)
+        data.append(
+            "Content-Disposition: form-data; name=\"\(fieldName)\"; filename=\"\(filename)\"\r\n"
+                .data(using: .utf8)!)
+        data.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+        data.append(imageData)
+        data.append("\r\n".data(using: .utf8)!)
+    }
+
     private func parseCashKycDecision(_ node: [String: Any]) -> CashKycDecisionSnapshot {
         let allowCash = bool(from: node, keys: ["allowCash", "allow_cash", "allowCashNow"])
         let appCoversCash = bool(
@@ -830,6 +1055,29 @@ class PaymentRepository {
             }
         }
         return nil
+    }
+
+    private func number(from node: [String: Any], keys: [String]) -> Double? {
+        for key in keys {
+            if let value = node[key] as? Double { return value }
+            if let value = node[key] as? Int { return Double(value) }
+            if let value = node[key] as? NSNumber { return value.doubleValue }
+            if let value = node[key] as? String, let parsed = Double(value) { return parsed }
+        }
+        return nil
+    }
+
+    private func extractErrorMessage(from data: Data) -> String {
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            if let detail = json["detail"] as? String, !detail.isEmpty { return detail }
+            if let message = json["message"] as? String, !message.isEmpty { return message }
+            if let errors = json["errors"] as? [[String: Any]],
+                let first = errors.first?["message"] as? String, !first.isEmpty
+            {
+                return first
+            }
+        }
+        return String(data: data, encoding: .utf8) ?? "Error de verificación"
     }
 
     private func graphQLError(_ message: String) -> NSError {
