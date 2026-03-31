@@ -1,5 +1,5 @@
-import SwiftUI
 import CoreLocation
+import SwiftUI
 
 // MARK: - Order Detail Model
 struct OrderDetail: Identifiable {
@@ -19,14 +19,17 @@ struct OrderDetail: Identifiable {
     let canCancel: Bool
     let estimatedDeliveryTime: Date?
     let estimatedMinutesRemaining: Int?
-    
+    let deliveryMode: FulfillmentMode?
+    let pickupAddress: OrderPickupAddress?
+    let estimatedReadyAt: Date?
+
     var items: [OrderDetailItem]
     var discounts: [OrderDetailDiscount]
-    let deliveryAddress: OrderDeliveryAddress
+    let deliveryAddress: OrderDeliveryAddress?
     let deliveryPerson: OrderDeliveryPerson?
     var timeline: [OrderTimelineEvent]
     var comments: [OrderDetailComment]
-    
+
     // Branch info
     let branchId: String
     let branchName: String
@@ -34,15 +37,16 @@ struct OrderDetail: Identifiable {
     let branchPhone: String?
     let branchImageUrl: String?
     let branchCoordinates: CLLocationCoordinate2D?
-    
+
     // Business info
     let businessId: String
     let businessName: String
     let businessImageUrl: String?
-    
+
     var formattedSubtotal: String { String(format: "$%.2f", subtotal) }
     var formattedDeliveryFee: String { String(format: "$%.2f", deliveryFee) }
     var formattedTotal: String { String(format: "$%.2f", total) }
+    var isPickup: Bool { deliveryMode == .pickup }
 }
 
 // MARK: - Order Detail Item
@@ -54,11 +58,11 @@ struct OrderDetailItem: Identifiable {
     var quantity: Int
     let imageUrl: String?
     let wasModifiedByStore: Bool
-    
+
     var lineTotal: Double {
         Double(quantity) * price
     }
-    
+
     var formattedPrice: String { String(format: "$%.2f", price) }
     var formattedLineTotal: String { String(format: "$%.2f", lineTotal) }
 }
@@ -69,7 +73,7 @@ struct OrderDetailDiscount: Identifiable {
     let title: String
     let amount: Double
     let type: DiscountTypeEnum
-    
+
     var formattedAmount: String { String(format: "-$%.2f", amount) }
 }
 
@@ -84,11 +88,23 @@ struct OrderDeliveryAddress {
     let floor: String?
     let apartment: String?
     let deliveryInstructions: String?
-    
+
     var fullAddress: String {
         var parts = [street]
         if let city = city { parts.append(city) }
         return parts.joined(separator: ", ")
+    }
+}
+
+struct OrderPickupAddress {
+    let street: String?
+    let city: String?
+    let reference: String?
+
+    var displayText: String {
+        if let street, !street.isEmpty { return street }
+        if let city, !city.isEmpty { return city }
+        return "Recogida en tienda"
     }
 }
 
@@ -103,7 +119,7 @@ struct OrderDeliveryPerson: Identifiable {
     let profileImageUrl: String?
     let isOnline: Bool
     var currentLocation: CLLocationCoordinate2D?
-    
+
     var formattedRating: String { String(format: "%.1f", rating) }
 }
 
@@ -114,13 +130,13 @@ struct OrderTimelineEvent: Identifiable {
     let timestamp: Date
     let message: String
     let actor: OrderActorEnum
-    
+
     var formattedTime: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
         return formatter.string(from: timestamp)
     }
-    
+
     var formattedDate: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd MMM, HH:mm"
@@ -135,7 +151,7 @@ struct OrderDetailComment: Identifiable {
     let author: OrderActorEnum
     let message: String
     let timestamp: Date
-    
+
     var formattedTime: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"

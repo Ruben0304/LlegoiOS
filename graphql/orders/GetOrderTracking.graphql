@@ -1,82 +1,89 @@
 query GetOrderTracking($orderId: String!, $jwt: String!) {
-  orderTracking(orderId: $orderId, jwt: $jwt) {
-    order {
-      id
-      orderNumber
-      status
-      total
-      currency
-      estimatedDeliveryTime
-      estimatedMinutesRemaining
-      items {
-        itemType
-        itemId
-        productId
-        name
-        quantity
-        basePrice
-        finalPrice
-        price
-        imageUrlMuyBaja
-        imageUrl
-        discountType
-        discountValue
-        comboSelections {
-          slotId
-          slotName
-          selectedOptions {
-            productId
-            name
-            price
-            quantity
-            priceAdjustment
-            modifiers {
-              name
-              priceAdjustment
+    orderTracking(orderId: $orderId, jwt: $jwt) {
+        order {
+            id
+            orderNumber
+            status
+            total
+            currency
+            deliveryMode
+            estimatedReadyAt
+            estimatedDeliveryTime
+            estimatedMinutesRemaining
+            items {
+                itemType
+                itemId
+                productId
+                name
+                quantity
+                basePrice
+                finalPrice
+                price
+                imageUrlMuyBaja
+                imageUrl
+                discountType
+                discountValue
+                comboSelections {
+                    slotId
+                    slotName
+                    selectedOptions {
+                        productId
+                        name
+                        price
+                        quantity
+                        priceAdjustment
+                        modifiers {
+                            name
+                            priceAdjustment
+                        }
+                    }
+                }
             }
-          }
+            deliveryPerson {
+                id
+                name
+                phone
+                rating
+                vehicleType
+                vehiclePlate
+                profileImageUrl
+                currentLocation {
+                    type
+                    coordinates
+                }
+                isOnline
+            }
+            timeline {
+                status
+                timestamp
+                message
+                actor
+            }
+            branch {
+                id
+                name
+                avatarUrl
+            }
+            pickupAddress {
+                street
+                city
+                reference
+            }
         }
-      }
-      deliveryPerson {
-        id
-        name
-        phone
-        rating
-        vehicleType
-        vehiclePlate
-        profileImageUrl
-        currentLocation {
-          type
-          coordinates
+        deliveryPersonLocation {
+            type
+            coordinates
         }
-        isOnline
-      }
-      timeline {
-        status
-        timestamp
-        message
-        actor
-      }
-      branch {
-        id
-        name
-        avatarUrl
-      }
+        storeLocation {
+            type
+            coordinates
+        }
+        deliveryLocation {
+            type
+            coordinates
+        }
+        estimatedMinutes
+        distanceKm
+        routePolyline
     }
-    deliveryPersonLocation {
-      type
-      coordinates
-    }
-    storeLocation {
-      type
-      coordinates
-    }
-    deliveryLocation {
-      type
-      coordinates
-    }
-    estimatedMinutes
-    distanceKm
-    routePolyline
-  }
 }

@@ -1,12 +1,12 @@
-import SwiftUI
 import CoreLocation
+import SwiftUI
 
 // MARK: - Order Tracking Model
 struct OrderTracking {
     let order: OrderTrackingOrder
     var deliveryPersonLocation: CLLocationCoordinate2D?
-    let storeLocation: CLLocationCoordinate2D
-    let deliveryLocation: CLLocationCoordinate2D
+    let storeLocation: CLLocationCoordinate2D?
+    let deliveryLocation: CLLocationCoordinate2D?
     var estimatedMinutes: Int?
     var distanceKm: Double?
     let routePolyline: String?
@@ -27,9 +27,14 @@ struct OrderTrackingOrder: Identifiable {
     let branchId: String
     let branchName: String
     let branchImageUrl: String?
-    
+    let deliveryMode: FulfillmentMode?
+    let pickupAddress: String?
+    let estimatedReadyAt: Date?
+
+    var isPickup: Bool { deliveryMode == .pickup }
+
     var formattedTotal: String { String(format: "$%.2f", total) }
-    
+
     var formattedETA: String? {
         guard let minutes = estimatedMinutesRemaining else { return nil }
         if minutes < 60 {
@@ -50,7 +55,7 @@ struct OrderTrackingItem: Identifiable {
     let quantity: Int
     let price: Double
     let imageUrl: String?
-    
+
     var formattedPrice: String { String(format: "$%.2f", price) }
 }
 

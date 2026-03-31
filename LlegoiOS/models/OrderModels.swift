@@ -95,6 +95,7 @@ struct RecentOrder: Identifiable {
     let paymentStatus: PaymentStatusEnum
     let itemCount: Int
     let items: [OrderListItem]
+    let fulfillmentMode: FulfillmentMode?
 
     var formattedTotal: String {
         String(format: "$%.2f", total)
@@ -128,7 +129,8 @@ let sampleRecentOrders: [RecentOrder] = [
         status: .pendingAcceptance,
         paymentStatus: .pending,
         itemCount: 3,
-        items: []
+        items: [],
+        fulfillmentMode: nil
     ),
     RecentOrder(
         id: "2",
@@ -141,7 +143,8 @@ let sampleRecentOrders: [RecentOrder] = [
         status: .onTheWay,
         paymentStatus: .completed,
         itemCount: 2,
-        items: []
+        items: [],
+        fulfillmentMode: nil
     ),
     RecentOrder(
         id: "3",
@@ -154,6 +157,7 @@ let sampleRecentOrders: [RecentOrder] = [
         status: .cancelled,
         paymentStatus: .failed,
         itemCount: 4,
-        items: []
+        items: [],
+        fulfillmentMode: nil
     ),
 ]

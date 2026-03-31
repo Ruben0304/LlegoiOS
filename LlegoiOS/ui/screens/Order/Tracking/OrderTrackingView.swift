@@ -1,5 +1,5 @@
-import SwiftUI
 import MapKit
+import SwiftUI
 
 struct OrderTrackingView: View {
     @StateObject private var viewModel: OrderTrackingViewModel
@@ -7,23 +7,28 @@ struct OrderTrackingView: View {
         center: CLLocationCoordinate2D(latitude: 23.1136, longitude: -82.3666),
         span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
     )
-    
+
     init(orderId: String) {
         _viewModel = StateObject(wrappedValue: OrderTrackingViewModel(orderId: orderId))
     }
-    
+
     var body: some View {
         ZStack {
-            // Map
-            Map(position: mapPositionBinding) {
-                ForEach(mapAnnotations) { item in
-                    Annotation("", coordinate: item.coordinate) {
-                        annotationView(for: item)
+            if viewModel.isPickupOrder {
+                Color(.systemGroupedBackground)
+                    .ignoresSafeArea()
+            } else {
+                // Map
+                Map(position: mapPositionBinding) {
+                    ForEach(mapAnnotations) { item in
+                        Annotation("", coordinate: item.coordinate) {
+                            annotationView(for: item)
+                        }
                     }
                 }
+                .ignoresSafeArea(edges: .top)
             }
-            .ignoresSafeArea(edges: .top)
-            
+
             // Bottom sheet
             VStack {
                 Spacer()
@@ -39,55 +44,58 @@ struct OrderTrackingView: View {
             updateMapRegion()
         }
     }
-    
+
     // MARK: - Map Annotations
-    
+
     private var mapAnnotations: [MapAnnotationItem] {
         var items: [MapAnnotationItem] = []
-        
+
         if let store = viewModel.storeLocation {
             items.append(MapAnnotationItem(id: "store", coordinate: store, type: .store))
         }
-        
+
         if let delivery = viewModel.deliveryLocation {
             items.append(MapAnnotationItem(id: "delivery", coordinate: delivery, type: .delivery))
         }
-        
+
         if let driver = viewModel.currentDeliveryLocation {
             items.append(MapAnnotationItem(id: "driver", coordinate: driver, type: .driver))
         }
-        
+
         return items
     }
-    
+
     private func annotationView(for item: MapAnnotationItem) -> some View {
         ZStack {
             Circle()
                 .fill(item.type.color)
                 .frame(width: 36, height: 36)
-            
+
             Image(systemName: item.type.icon)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(.white)
         }
         .shadow(radius: 4)
     }
-    
+
     private func updateMapRegion() {
+        guard !viewModel.isPickupOrder else { return }
         guard let store = viewModel.storeLocation,
-              let delivery = viewModel.deliveryLocation else { return }
-        
+            let delivery = viewModel.deliveryLocation
+        else { return }
+
         let center = CLLocationCoordinate2D(
             latitude: (store.latitude + delivery.latitude) / 2,
             longitude: (store.longitude + delivery.longitude) / 2
         )
-        
+
         let latDelta = abs(store.latitude - delivery.latitude) * 1.5
         let lonDelta = abs(store.longitude - delivery.longitude) * 1.5
-        
+
         region = MKCoordinateRegion(
             center: center,
-            span: MKCoordinateSpan(latitudeDelta: max(latDelta, 0.01), longitudeDelta: max(lonDelta, 0.01))
+            span: MKCoordinateSpan(
+                latitudeDelta: max(latDelta, 0.01), longitudeDelta: max(lonDelta, 0.01))
         )
     }
 
@@ -100,9 +108,8 @@ struct OrderTrackingView: View {
         )
     }
 
-    
     // MARK: - Tracking Sheet
-    
+
     private var trackingSheet: some View {
         VStack(spacing: 0) {
             // Handle
@@ -110,7 +117,7 @@ struct OrderTrackingView: View {
                 .fill(Color.gray.opacity(0.4))
                 .frame(width: 40, height: 5)
                 .padding(.top, 10)
-            
+
             if viewModel.isLoading {
                 ProgressView()
                     .padding(40)
@@ -122,15 +129,19 @@ struct OrderTrackingView: View {
                             Text(order.status.displayName)
                                 .font(.headline)
                             let eta = viewModel.formattedETA
-                            if eta != "--" {
+                            if eta != "--", !viewModel.isPickupOrder {
                                 Text("Llegada estimada: \(eta)")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            } else if viewModel.isPickupOrder {
+                                Text("Estado de recogida en tienda")
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
                             }
                         }
-                        
+
                         Spacer()
-                        
+
                         // Status icon
                         Image(systemName: order.status.icon)
                             .font(.title)
@@ -138,18 +149,19 @@ struct OrderTrackingView: View {
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 16)
-                    
+
                     // Progress bar
                     ProgressView(value: viewModel.statusProgress)
                         .tint(order.status.color)
                         .padding(.horizontal, 20)
-                    
+
                     Divider()
-                    
+
                     // Delivery person info
-                    if let deliveryPerson = viewModel.deliveryPerson {
+                    if let deliveryPerson = viewModel.deliveryPerson, !viewModel.isPickupOrder {
                         HStack(spacing: 12) {
-                            AsyncImage(url: URL(string: deliveryPerson.profileImageUrl ?? "")) { image in
+                            AsyncImage(url: URL(string: deliveryPerson.profileImageUrl ?? "")) {
+                                image in
                                 image.resizable().aspectRatio(contentMode: .fill)
                             } placeholder: {
                                 Image(systemName: "person.circle.fill")
@@ -158,7 +170,7 @@ struct OrderTrackingView: View {
                             }
                             .frame(width: 50, height: 50)
                             .clipShape(Circle())
-                            
+
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(deliveryPerson.name)
                                     .font(.subheadline)
@@ -174,9 +186,9 @@ struct OrderTrackingView: View {
                                         .foregroundColor(.secondary)
                                 }
                             }
-                            
+
                             Spacer()
-                            
+
                             // Call button
                             Button {
                                 if let url = URL(string: "tel:\(deliveryPerson.phone)") {
@@ -192,9 +204,9 @@ struct OrderTrackingView: View {
                         }
                         .padding(.horizontal, 20)
                     }
-                    
+
                     Divider()
-                    
+
                     // Order summary
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
@@ -205,11 +217,11 @@ struct OrderTrackingView: View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
-                        
+
                         Spacer()
-                        
+
                         let distance = viewModel.formattedDistance
-                        if distance != "--" {
+                        if distance != "--", !viewModel.isPickupOrder {
                             Text(distance)
                                 .font(.caption)
                                 .padding(.horizontal, 10)
@@ -247,10 +259,10 @@ struct MapAnnotationItem: Identifiable {
     let id: String
     let coordinate: CLLocationCoordinate2D
     let type: AnnotationType
-    
+
     enum AnnotationType {
         case store, delivery, driver
-        
+
         var icon: String {
             switch self {
             case .store: return "storefront.fill"
@@ -258,7 +270,7 @@ struct MapAnnotationItem: Identifiable {
             case .driver: return "car.fill"
             }
         }
-        
+
         var color: Color {
             switch self {
             case .store: return .orange

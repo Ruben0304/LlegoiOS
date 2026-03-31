@@ -313,7 +313,8 @@ class OrderManager: ObservableObject {
             guard let jwt = AuthManager.shared.getAccessToken() else { return }
 
             do {
-                try await self.realtimeClient.streamOrderUpdates(orderId: orderId, jwt: jwt) { [weak self] event in
+                try await self.realtimeClient.streamOrderUpdates(orderId: orderId, jwt: jwt) {
+                    [weak self] event in
                     await MainActor.run {
                         self?.applyRealtimeEvent(event)
                     }
@@ -357,7 +358,9 @@ class OrderManager: ObservableObject {
     }
 
     private func applyTrackingSnapshot(_ tracking: OrderTracking) {
-        guard let existingOrder = currentOrder, tracking.order.id == existingOrder.id else { return }
+        guard let existingOrder = currentOrder, tracking.order.id == existingOrder.id else {
+            return
+        }
 
         driverLocation = tracking.deliveryPersonLocation
         if let km = tracking.distanceKm {
@@ -367,7 +370,8 @@ class OrderManager: ObservableObject {
         }
         estimatedMinutesRemaining = tracking.estimatedMinutes ?? estimatedMinutesRemaining
 
-        let mappedStatus = mapGraphQLStatusToDeliveryStatus(tracking.order.status, distanceKm: tracking.distanceKm)
+        let mappedStatus = mapGraphQLStatusToDeliveryStatus(
+            tracking.order.status, distanceKm: tracking.distanceKm)
         if mappedStatus != orderStatus {
             orderStatus = mappedStatus
             currentOrder?.status = mappedStatus
@@ -450,7 +454,9 @@ class OrderManager: ObservableObject {
         }
     }
 
-    private func mapGraphQLStatusToDeliveryStatus(_ status: OrderStatusEnum, distanceKm: Double?) -> DeliveryStatus {
+    private func mapGraphQLStatusToDeliveryStatus(_ status: OrderStatusEnum, distanceKm: Double?)
+        -> DeliveryStatus
+    {
         switch status {
         case .pendingAcceptance, .awaitingDeliveryAcceptance, .pendingPayment, .modifiedByStore:
             return .pending
@@ -459,7 +465,7 @@ class OrderManager: ObservableObject {
         case .preparing:
             return .preparing
         case .readyForPickup:
-            return .inTransit
+            return .preparing
         case .onTheWay:
             if let distanceKm, distanceKm <= 0.35 {
                 return .nearDestination
@@ -472,16 +478,19 @@ class OrderManager: ObservableObject {
         }
     }
 
-    private func mapRawStatusToDeliveryStatus(_ rawStatus: String, distanceKm: Double?) -> DeliveryStatus {
+    private func mapRawStatusToDeliveryStatus(_ rawStatus: String, distanceKm: Double?)
+        -> DeliveryStatus
+    {
         switch rawStatus.uppercased() {
-        case "PENDING_ACCEPTANCE", "AWAITING_DELIVERY_ACCEPTANCE", "PENDING_PAYMENT", "PAYMENT_IN_PROGRESS", "MODIFIED_BY_STORE":
+        case "PENDING_ACCEPTANCE", "AWAITING_DELIVERY_ACCEPTANCE", "PENDING_PAYMENT",
+            "PAYMENT_IN_PROGRESS", "MODIFIED_BY_STORE":
             return .pending
         case "ACCEPTED":
             return .confirmed
         case "PREPARING":
             return .preparing
         case "READY_FOR_PICKUP":
-            return .inTransit
+            return .preparing
         case "ON_THE_WAY":
             if let distanceKm, distanceKm <= 0.35 {
                 return .nearDestination
@@ -876,8 +885,11 @@ class OrderManager: ObservableObject {
                 return
             }
 
-            let restoredStatus = DeliveryStatus(rawValue: snapshot.orderStatusRaw) ?? snapshot.order.status
-            guard restoredStatus != .delivered, restoredStatus != .cancelled, restoredStatus != .idle else {
+            let restoredStatus =
+                DeliveryStatus(rawValue: snapshot.orderStatusRaw) ?? snapshot.order.status
+            guard restoredStatus != .delivered, restoredStatus != .cancelled,
+                restoredStatus != .idle
+            else {
                 clearPersistedActiveOrderState()
                 return
             }

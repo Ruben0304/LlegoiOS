@@ -880,7 +880,8 @@ extension String {
             status: .pendingAcceptance,
             paymentStatus: .pending,
             itemCount: 3,
-            items: []
+            items: [],
+            fulfillmentMode: nil
         )
     )
 }

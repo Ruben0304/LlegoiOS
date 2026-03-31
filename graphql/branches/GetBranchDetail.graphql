@@ -1,39 +1,40 @@
 query GetBranchDetail($id: String!) {
-  branch(id: $id) {
-    id
-    businessId
-    name
-    acceptsQvapay
-    acceptsZelle
-    qvapayUsername
-    zelleEmail
-    address
-    coordinates {
-      type
-      coordinates
-    }
-    phone
-    status
-    avatarUrl
-    coverUrl
-    deliveryRadius
-    acceptedCurrency
-    exchangeRate
-    createdAt
-    showcases(activeOnly: true) {
-      id
-      title
-      description
-      imageUrl
-      isActive
-      createdAt
-      items {
+    branch(id: $id) {
         id
+        businessId
         name
-        description
-        price
-        availability
-      }
+        acceptsQvapay
+        acceptsZelle
+        qvapayUsername
+        zelleEmail
+        address
+        coordinates {
+            type
+            coordinates
+        }
+        phone
+        status
+        avatarUrl
+        coverUrl
+        deliveryRadius
+        acceptedCurrency
+        exchangeRate
+        schedule
+        createdAt
+        showcases(activeOnly: true) {
+            id
+            title
+            description
+            imageUrl
+            isActive
+            createdAt
+            items {
+                id
+                name
+                description
+                price
+                availability
+            }
+        }
     }
-  }
 }

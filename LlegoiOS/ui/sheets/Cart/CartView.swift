@@ -346,7 +346,7 @@ struct CartView: View {
             }
             .fullScreenCover(isPresented: $showOrderConfirmation) {
                 OrderConfirmationView(
-                    deliveryLocation: "Calle 23 #456, Vedado, La Habana",  //TODO: Usar ubicación real del usuario
+                    deliveryLocation: orderConfirmationLocationLabel,
                     selectedPaymentMethod: selectedPaymentMethod?.name ?? "Método de Pago",
                     onDismiss: {
                         showOrderConfirmation = false
@@ -397,7 +397,7 @@ struct CartView: View {
     }
 
     private var shouldShowCashCUPDeliveryToggle: Bool {
-        selectedCurrency == .USD
+        selectedCurrency == .USD && viewModel.fulfillmentMode == .delivery
     }
 
     private func normalizeDeliveryFeePaymentMode() {
@@ -555,6 +555,12 @@ struct CartView: View {
 
         guard let paymentMethod = selectedPaymentMethod else {
             paymentAlertMessage = "Por favor selecciona un método de pago."
+            showPaymentAlert = true
+            return
+        }
+
+        if viewModel.fulfillmentMode == .pickup, viewModel.selectedPickup == nil {
+            paymentAlertMessage = "Selecciona una tienda para recogida antes de continuar."
             showPaymentAlert = true
             return
         }
@@ -889,8 +895,16 @@ struct CartView: View {
             VStack(spacing: 12) {
                 cartItemsPanel
 
+                if viewModel.isStorePickupEnabled {
+                    fulfillmentSection
+                }
+
                 if viewModel.hasMultipleBranches {
                     multipleBranchesBanner
+                }
+
+                if viewModel.hasShowcaseItems && viewModel.fulfillmentMode == .pickup {
+                    pickupBlockedBanner
                 }
 
                 priceBreakdown
@@ -987,6 +1001,13 @@ struct CartView: View {
     }
 
     private func startOrderTracking(for order: CreatedOrder) {
+        let isPickupOrder =
+            (order.deliveryMode == FulfillmentMode.pickup.rawValue)
+            || viewModel.fulfillmentMode == .pickup
+        if isPickupOrder {
+            return
+        }
+
         if OrderManager.shared.currentOrder?.id == order.id {
             return
         }
@@ -1551,7 +1572,11 @@ struct CartView: View {
     private var bottomPlaceOrderAction: some View {
         Button(action: {
             if !viewModel.hasMultipleBranches {
-                showDeliveryAddressAlert = true
+                if viewModel.fulfillmentMode == .delivery {
+                    showDeliveryAddressAlert = true
+                } else {
+                    processPayment()
+                }
             }
         }) {
             HStack(spacing: 6) {
@@ -1570,8 +1595,14 @@ struct CartView: View {
         }
         .modifier(GlassProminentButtonModifier())
         .tint(gradientManager.currentAccentColor)
-        .disabled(viewModel.hasMultipleBranches)
-        .opacity(viewModel.hasMultipleBranches ? 0.45 : 1.0)
+        .disabled(
+            viewModel.hasMultipleBranches
+                || (viewModel.fulfillmentMode == .pickup && viewModel.selectedPickup == nil)
+        )
+        .opacity(
+            (viewModel.hasMultipleBranches
+                || (viewModel.fulfillmentMode == .pickup && viewModel.selectedPickup == nil))
+                ? 0.45 : 1.0)
     }
 
     private var deliveryAddressAlertMessage: String {
@@ -1605,7 +1636,7 @@ struct CartView: View {
 
                 // Envío
                 HStack {
-                    Text("Envío")
+                    Text(viewModel.fulfillmentMode == .pickup ? "Recogida" : "Envío")
                         .font(.system(size: 14, weight: .regular))
                         .foregroundColor(.secondary)
                     if !viewModel.deliveryFeeDescription.isEmpty {
@@ -1624,9 +1655,12 @@ struct CartView: View {
                             .progressViewStyle(CircularProgressViewStyle())
                             .scaleEffect(0.75)
                     } else {
-                        Text(viewModel.formattedDeliveryFee)
-                            .font(.system(size: 14, weight: .medium, design: .rounded))
-                            .foregroundColor(.primary)
+                        Text(
+                            viewModel.fulfillmentMode == .pickup
+                                ? "$0.00" : viewModel.formattedDeliveryFee
+                        )
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .foregroundColor(.primary)
                     }
                 }
                 .padding(.top, 13)
@@ -1717,6 +1751,60 @@ struct CartView: View {
             // Productos recomendados por IA
             suggestedProductsSection
         }
+    }
+
+    private var fulfillmentSection: some View {
+        VStack(spacing: 12) {
+            FulfillmentSelectorView(
+                mode: Binding(
+                    get: { viewModel.fulfillmentMode },
+                    set: { viewModel.setFulfillmentMode($0) }
+                ),
+                pickupEnabled: viewModel.isStorePickupEnabled
+                    && viewModel.isPickupAvailableForCurrentCart
+            )
+
+            if viewModel.fulfillmentMode == .pickup {
+                PickupStoreSelectorView(
+                    selection: Binding(
+                        get: { viewModel.selectedPickup },
+                        set: { viewModel.setPickupSelection($0) }
+                    ),
+                    currentBranchId: viewModel.cartItems.first?.branchId
+                )
+            }
+        }
+    }
+
+    private var pickupBlockedBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "info.circle.fill")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(.orange)
+            Text("Recogida no disponible para este tipo de carrito. Usa entrega para continuar.")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.orange.opacity(0.12))
+        )
+    }
+
+    private var orderConfirmationLocationLabel: String {
+        if viewModel.fulfillmentMode == .pickup {
+            if let pickup = viewModel.selectedPickup {
+                return pickup.address ?? pickup.branchName
+            }
+            return "Recogida en tienda"
+        }
+        if let selected = viewModel.selectedAddress {
+            return selected.street
+        }
+        return UserLocationManager.shared.userAddress
     }
 
     private func priceRow(

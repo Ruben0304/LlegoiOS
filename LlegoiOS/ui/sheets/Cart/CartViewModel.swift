@@ -58,6 +58,11 @@ class CartViewModel: ObservableObject {
     // Default Address
     @Published var defaultAddress: SavedAddress?
     @Published var selectedAddress: SavedAddress?
+    @Published var fulfillmentMode: FulfillmentMode = .delivery
+    @Published var selectedPickup: PickupSelection?
+    @Published var isValidatingCheckout: Bool = false
+    @Published var checkoutValidation: CheckoutValidationResultUI?
+    @Published var checkoutIssues: [CheckoutIssueCode] = []
 
     // Store branchId from cart products
     private var cartBranchId: String?
@@ -73,6 +78,8 @@ class CartViewModel: ObservableObject {
     private let recommendationsManager = CartRecommendationsManager.shared
     private let recommendationEngine = RecommendationEngine.shared
     private let aiPreferenceManager = AIPreferenceManager.shared
+    private let pickupSelectionManager = PickupSelectionManager.shared
+    private let checkoutFeatureFlags = CheckoutFeatureFlagManager.shared
     private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Multi-branch detection
@@ -82,6 +89,18 @@ class CartViewModel: ObservableObject {
 
     var hasMultipleBranches: Bool {
         uniqueBranchIds.count > 1
+    }
+
+    var hasShowcaseItems: Bool {
+        cartItems.contains(where: { $0.itemType == .showcase })
+    }
+
+    var isPickupAvailableForCurrentCart: Bool {
+        !hasMultipleBranches && !hasShowcaseItems
+    }
+
+    var requiresDeliveryAddress: Bool {
+        fulfillmentMode == .delivery
     }
 
     // MARK: - Service Fee Constants
@@ -114,6 +133,7 @@ class CartViewModel: ObservableObject {
     /// - `cashCUP`: no se incluye en el pago in-app.
     var payableDeliveryFee: Double {
         guard !cartItems.isEmpty else { return 0.0 }
+        guard fulfillmentMode == .delivery else { return 0.0 }
         guard let estimate = deliveryFeeEstimate else {
             return deliveryFeePaymentMode == .sameCurrency ? deliveryFee : 0.0
         }
@@ -203,6 +223,9 @@ class CartViewModel: ObservableObject {
 
     /// Descripción del envío (distancia + zona)
     var deliveryFeeDescription: String {
+        if fulfillmentMode == .pickup {
+            return "Recogida en tienda"
+        }
         if isLoadingDeliveryFee {
             return "Estimando envío..."
         }
@@ -339,6 +362,9 @@ class CartViewModel: ObservableObject {
 
                     self.cartItems = productItems + showcaseItems
                     self.cartBranchId = self.cartItems.first?.branchId
+                    self.selectedPickup = self.pickupSelectionManager.loadSelection(
+                        for: self.authManager.currentUser?.id
+                    )
 
                     print("✅ Loaded \(self.cartItems.count) items in cart")
                     if let branchId = self.cartBranchId {
@@ -347,9 +373,25 @@ class CartViewModel: ObservableObject {
                         self.fetchCashKycMerchantContext(branchId: branchId)
                         // Estimar envío usando el branchId del primer producto
                         self.fetchDeliveryFeeEstimate(branchId: branchId)
+                        if self.selectedPickup == nil || self.selectedPickup?.branchId != branchId {
+                            self.selectedPickup = PickupSelection(
+                                branchId: branchId,
+                                branchName: self.cartItems.first?.shop ?? "Tienda",
+                                address: nil,
+                                latitude: nil,
+                                longitude: nil,
+                                scheduleJson: nil,
+                                selectedWindowId: nil
+                            )
+                            self.persistPickupSelection()
+                        }
                     } else {
                         self.cashKycMerchantId = nil
                         self.cashKycBranchId = nil
+                    }
+
+                    if !self.isStorePickupEnabled || !self.isPickupAvailableForCurrentCart {
+                        self.fulfillmentMode = .delivery
                     }
 
                     // Check for default saved address
@@ -711,7 +753,15 @@ class CartViewModel: ObservableObject {
     }
 
     var includeDeliveryFeeInAppPayment: Bool {
-        deliveryFeePaymentMode == .sameCurrency
+        fulfillmentMode == .delivery && deliveryFeePaymentMode == .sameCurrency
+    }
+
+    var shouldIncludeDeliveryFeeInPayment: Bool {
+        includeDeliveryFeeInAppPayment
+    }
+
+    var isStorePickupEnabled: Bool {
+        checkoutFeatureFlags.isPickupEnabled(for: cartBranchId)
     }
 
     // MARK: - Filter Payment Methods
@@ -747,18 +797,6 @@ class CartViewModel: ObservableObject {
             return
         }
 
-        // Get user location for delivery address
-        let locationManager = UserLocationManager.shared
-        guard let userLocation = locationManager.userLocation else {
-            let error = NSError(
-                domain: "CartViewModel", code: -3,
-                userInfo: [
-                    NSLocalizedDescriptionKey: "Por favor selecciona una ubicación de entrega"
-                ])
-            completion(.failure(error))
-            return
-        }
-
         isCreatingOrder = true
         orderError = nil
 
@@ -773,46 +811,44 @@ class CartViewModel: ObservableObject {
             return
         }
 
-        // Build delivery address
-        let deliveryAddress: DeliveryAddressInput
-        if let selected = selectedAddress {
-            deliveryAddress = DeliveryAddressInput(
-                street: selected.street,
-                city: selected.city,
-                reference: selected.reference,
-                latitude: selected.latitude,
-                longitude: selected.longitude,
-                addressType: selected.addressType,
-                buildingName: selected.buildingName,
-                floor: selected.floor,
-                apartment: selected.apartment,
-                deliveryInstructions: selected.deliveryInstructions
+        guard let fulfillment = buildFulfillmentInput(branchId: branchId) else {
+            let error = NSError(
+                domain: "CartViewModel",
+                code: -9,
+                userInfo: [NSLocalizedDescriptionKey: "La recogida seleccionada no es válida"]
             )
-        } else {
-            deliveryAddress = DeliveryAddressInput(
-                street: locationManager.userAddress,
-                city: nil,
-                reference: nil,
-                latitude: userLocation.latitude,
-                longitude: userLocation.longitude,
-                addressType: nil,
-                buildingName: nil,
-                floor: nil,
-                apartment: nil,
-                deliveryInstructions: nil
-            )
+            completion(.failure(error))
+            return
+        }
+
+        let deliveryAddress: DeliveryAddressInput?
+        switch fulfillment.type {
+        case .delivery:
+            guard let address = buildDeliveryAddress() else {
+                let error = NSError(
+                    domain: "CartViewModel", code: -3,
+                    userInfo: [
+                        NSLocalizedDescriptionKey: "Por favor selecciona una ubicación de entrega"
+                    ])
+                completion(.failure(error))
+                return
+            }
+            deliveryAddress = address
+        case .pickup:
+            deliveryAddress = nil
         }
 
         print("🛒 Creating order with new payment flow...")
         print("   Branch: \(branchId)")
         print("   Items: \(items.count)")
         print("   Payment Method: \(paymentMethodId)")
-        print("   Address: \(locationManager.userAddress)")
+        print("   Fulfillment: \(fulfillment.type.rawValue)")
 
         // Step 1: Create Order (without payment)
         createOrderRepository.createOrder(
             branchId: branchId,
             items: items,
+            fulfillment: fulfillment,
             deliveryAddress: deliveryAddress,
             paymentMethod: "pending",  // Temporary, will be updated by payment
             paymentIntentId: nil,
@@ -1045,18 +1081,6 @@ class CartViewModel: ObservableObject {
             return
         }
 
-        // Get user location for delivery address
-        let locationManager = UserLocationManager.shared
-        guard let userLocation = locationManager.userLocation else {
-            let error = NSError(
-                domain: "CartViewModel", code: -3,
-                userInfo: [
-                    NSLocalizedDescriptionKey: "Por favor selecciona una ubicación de entrega"
-                ])
-            completion(.failure(error))
-            return
-        }
-
         isCreatingOrder = true
         orderError = nil
 
@@ -1071,45 +1095,43 @@ class CartViewModel: ObservableObject {
             return
         }
 
-        // Build delivery address
-        let deliveryAddress: DeliveryAddressInput
-        if let selected = selectedAddress {
-            deliveryAddress = DeliveryAddressInput(
-                street: selected.street,
-                city: selected.city,
-                reference: selected.reference,
-                latitude: selected.latitude,
-                longitude: selected.longitude,
-                addressType: selected.addressType,
-                buildingName: selected.buildingName,
-                floor: selected.floor,
-                apartment: selected.apartment,
-                deliveryInstructions: selected.deliveryInstructions
+        guard let fulfillment = buildFulfillmentInput(branchId: branchId) else {
+            let error = NSError(
+                domain: "CartViewModel",
+                code: -9,
+                userInfo: [NSLocalizedDescriptionKey: "La recogida seleccionada no es válida"]
             )
-        } else {
-            deliveryAddress = DeliveryAddressInput(
-                street: locationManager.userAddress,
-                city: nil,
-                reference: nil,
-                latitude: userLocation.latitude,
-                longitude: userLocation.longitude,
-                addressType: nil,
-                buildingName: nil,
-                floor: nil,
-                apartment: nil,
-                deliveryInstructions: nil
-            )
+            completion(.failure(error))
+            return
+        }
+
+        let deliveryAddress: DeliveryAddressInput?
+        switch fulfillment.type {
+        case .delivery:
+            guard let address = buildDeliveryAddress() else {
+                let error = NSError(
+                    domain: "CartViewModel", code: -3,
+                    userInfo: [
+                        NSLocalizedDescriptionKey: "Por favor selecciona una ubicación de entrega"
+                    ])
+                completion(.failure(error))
+                return
+            }
+            deliveryAddress = address
+        case .pickup:
+            deliveryAddress = nil
         }
 
         print("🛒 Creating order...")
         print("   Branch: \(branchId)")
         print("   Items: \(items.count)")
         print("   Payment: \(paymentMethod)")
-        print("   Address: \(locationManager.userAddress)")
+        print("   Fulfillment: \(fulfillment.type.rawValue)")
 
         createOrderRepository.createOrder(
             branchId: branchId,
             items: items,
+            fulfillment: fulfillment,
             deliveryAddress: deliveryAddress,
             paymentMethod: paymentMethod,
             paymentIntentId: paymentIntentId,
@@ -1193,9 +1215,81 @@ class CartViewModel: ObservableObject {
         cartManager.clearCart()
         cartItems = []
         state = .success
+        fulfillmentMode = .delivery
     }
 
     // MARK: - Helpers
+
+    func setFulfillmentMode(_ mode: FulfillmentMode) {
+        if mode == .pickup && (!isStorePickupEnabled || !isPickupAvailableForCurrentCart) {
+            fulfillmentMode = .delivery
+            return
+        }
+        fulfillmentMode = mode
+    }
+
+    func setPickupSelection(_ selection: PickupSelection?) {
+        selectedPickup = selection
+        persistPickupSelection()
+    }
+
+    private func persistPickupSelection() {
+        pickupSelectionManager.saveSelection(selectedPickup, for: authManager.currentUser?.id)
+    }
+
+    private func buildDeliveryAddress() -> DeliveryAddressInput? {
+        if let selected = selectedAddress {
+            return DeliveryAddressInput(
+                street: selected.street,
+                city: selected.city,
+                reference: selected.reference,
+                latitude: selected.latitude,
+                longitude: selected.longitude,
+                addressType: selected.addressType,
+                buildingName: selected.buildingName,
+                floor: selected.floor,
+                apartment: selected.apartment,
+                deliveryInstructions: selected.deliveryInstructions
+            )
+        }
+
+        let locationManager = UserLocationManager.shared
+        guard let userLocation = locationManager.userLocation else {
+            return nil
+        }
+
+        return DeliveryAddressInput(
+            street: locationManager.userAddress,
+            city: nil,
+            reference: nil,
+            latitude: userLocation.latitude,
+            longitude: userLocation.longitude,
+            addressType: nil,
+            buildingName: nil,
+            floor: nil,
+            apartment: nil,
+            deliveryInstructions: nil
+        )
+    }
+
+    private func buildFulfillmentInput(branchId: String) -> FulfillmentPayloadInput? {
+        switch fulfillmentMode {
+        case .delivery:
+            return .delivery
+        case .pickup:
+            guard isStorePickupEnabled, isPickupAvailableForCurrentCart else {
+                return nil
+            }
+            guard let pickup = selectedPickup, pickup.branchId == branchId else {
+                return nil
+            }
+            return FulfillmentPayloadInput(
+                type: .pickup,
+                pickupBranchId: pickup.branchId,
+                pickupWindowId: pickup.selectedWindowId
+            )
+        }
+    }
 
     private func aggregatedOrderItems() -> [(productId: String, quantity: Int)] {
         let grouped = Dictionary(

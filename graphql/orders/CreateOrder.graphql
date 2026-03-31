@@ -1,68 +1,75 @@
 mutation CreateOrder($input: CreateOrderInput!, $jwt: String!) {
-  createOrder(input: $input, jwt: $jwt) {
-    id
-    orderNumber
-    status
-    subtotal
-    deliveryFee
-    total
-    currency
-    paymentMethod
-    paymentStatus
-    createdAt
-    items {
-      itemType
-      itemId
-      productId
-      name
-      basePrice
-      finalPrice
-      price
-      quantity
-      imageUrl
-      lineTotal
-      discountType
-      discountValue
-      comboSelections {
-        slotId
-        slotName
-        selectedOptions {
-          productId
-          name
-          price
-          quantity
-          priceAdjustment
-          modifiers {
+    createOrder(input: $input, jwt: $jwt) {
+        id
+        orderNumber
+        status
+        subtotal
+        deliveryFee
+        total
+        currency
+        paymentMethod
+        paymentStatus
+        createdAt
+        deliveryMode
+        estimatedReadyAt
+        items {
+            itemType
+            itemId
+            productId
             name
-            priceAdjustment
-          }
+            basePrice
+            finalPrice
+            price
+            quantity
+            imageUrl
+            lineTotal
+            discountType
+            discountValue
+            comboSelections {
+                slotId
+                slotName
+                selectedOptions {
+                    productId
+                    name
+                    price
+                    quantity
+                    priceAdjustment
+                    modifiers {
+                        name
+                        priceAdjustment
+                    }
+                }
+            }
         }
-      }
+        discounts {
+            id
+            title
+            amount
+            type
+        }
+        deliveryAddress {
+            street
+            city
+            reference
+            addressType
+            buildingName
+            floor
+            apartment
+            deliveryInstructions
+        }
+        pickupAddress {
+            street
+            city
+            reference
+        }
+        branch {
+            id
+            name
+            avatarUrl
+        }
+        business {
+            id
+            name
+        }
     }
-    discounts {
-      id
-      title
-      amount
-      type
-    }
-    deliveryAddress {
-      street
-      city
-      reference
-      addressType
-      buildingName
-      floor
-      apartment
-      deliveryInstructions
-    }
-    branch {
-      id
-      name
-      avatarUrl
-    }
-    business {
-      id
-      name
-    }
-  }
 }

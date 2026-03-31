@@ -1,39 +1,45 @@
-query GetMyOrders($status: OrderStatusEnum, $limit: Int, $offset: Int, $jwt: String!) {
-  myOrders(status: $status, limit: $limit, offset: $offset, jwt: $jwt) {
-    orders {
-      id
-      orderNumber
-      status
-      total
-      currency
-      paymentStatus
-      createdAt
-      lastStatusAt
-      estimatedMinutesRemaining
-      items {
-        itemType
-        itemId
-        productId
-        name
-        quantity
-        imageUrlMuyBaja
-        imageUrl
-        basePrice
-        finalPrice
-        discountType
-        discountValue
-      }
-      branch {
-        id
-        name
-        avatarUrl
-      }
-      business {
-        id
-        name
-      }
+query GetMyOrders(
+    $status: OrderStatusEnum
+    $limit: Int
+    $offset: Int
+    $jwt: String!
+) {
+    myOrders(status: $status, limit: $limit, offset: $offset, jwt: $jwt) {
+        orders {
+            id
+            orderNumber
+            status
+            total
+            currency
+            paymentStatus
+            deliveryMode
+            createdAt
+            lastStatusAt
+            estimatedMinutesRemaining
+            items {
+                itemType
+                itemId
+                productId
+                name
+                quantity
+                imageUrlMuyBaja
+                imageUrl
+                basePrice
+                finalPrice
+                discountType
+                discountValue
+            }
+            branch {
+                id
+                name
+                avatarUrl
+            }
+            business {
+                id
+                name
+            }
+        }
+        totalCount
+        hasMore
     }
-    totalCount
-    hasMore
-  }
 }

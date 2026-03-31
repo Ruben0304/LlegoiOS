@@ -68,6 +68,10 @@ final class OrderListRepository {
                         }
 
                         let orders = data.orders.map { order -> RecentOrder in
+                            let mappedStatus = self.mapGraphQLToStatus(order.status)
+                            let inferredFulfillment: FulfillmentMode? =
+                                mappedStatus == .readyForPickup ? .pickup : .delivery
+
                             let items = order.items.map { item in
                                 OrderListItem(
                                     id: item.productId,
@@ -85,10 +89,11 @@ final class OrderListRepository {
                                 date: self.parseDate(order.createdAt) ?? Date(),
                                 total: order.total,
                                 currency: order.currency,
-                                status: self.mapGraphQLToStatus(order.status),
+                                status: mappedStatus,
                                 paymentStatus: self.mapGraphQLToPaymentStatus(order.paymentStatus),
                                 itemCount: order.items.count,
-                                items: items
+                                items: items,
+                                fulfillmentMode: inferredFulfillment
                             )
                         }
 

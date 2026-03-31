@@ -30,6 +30,7 @@ struct OrderDetailView: View {
                     VStack(spacing: 16) {
                         headerSection(order)
                         itemsSection(order)
+                        fulfillmentSection(order)
                         if !order.comments.isEmpty {
                             commentsSection(order)
                         }
@@ -311,7 +312,10 @@ struct OrderDetailView: View {
             card {
                 VStack(spacing: 12) {
                     priceRow(title: "Subtotal", value: order.formattedSubtotal)
-                    priceRow(title: "Envío", value: order.formattedDeliveryFee)
+                    priceRow(
+                        title: order.isPickup ? "Recogida" : "Envío",
+                        value: order.isPickup ? "$0.00" : order.formattedDeliveryFee
+                    )
 
                     ForEach(order.discounts) { discount in
                         priceRow(
@@ -321,6 +325,29 @@ struct OrderDetailView: View {
 
                     Divider()
                     priceRow(title: "Total", value: order.formattedTotal, isEmphasis: true)
+                }
+            }
+        }
+    }
+
+    private func fulfillmentSection(_ order: OrderDetail) -> some View {
+        card {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Entrega")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+
+                if order.isPickup {
+                    Text("Recogida en tienda")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                    Text(order.pickupAddress?.displayText ?? order.branchName)
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(.secondary)
+                } else {
+                    Text(order.deliveryAddress?.fullAddress ?? "Dirección de entrega")
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(.secondary)
                 }
             }
         }
@@ -573,7 +600,7 @@ struct OrderDetailView: View {
                     .disabled(viewModel.isInitiatingPayment || viewModel.isProcessing)
                 }
 
-                if OrderPermissionPolicy.canShowTracking(status: order.status) {
+                if OrderPermissionPolicy.canShowTracking(status: order.status), !order.isPickup {
                     NavigationLink(destination: OrderTrackingView(orderId: order.id)) {
                         Text("Ver tracking")
                             .font(.system(size: 16, weight: .semibold))
@@ -652,7 +679,9 @@ struct OrderDetailView: View {
                 if method.code.lowercased().contains("qvapay") {
                     return "dollarsign.circle.fill"
                 }
-                if method.code.lowercased().contains("usdt") || method.code.lowercased().contains("trondealer") {
+                if method.code.lowercased().contains("usdt")
+                    || method.code.lowercased().contains("trondealer")
+                {
                     return "bitcoinsign.circle.fill"
                 }
                 break

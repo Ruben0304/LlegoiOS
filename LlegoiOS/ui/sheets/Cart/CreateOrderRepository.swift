@@ -1,18 +1,19 @@
-import Foundation
 import Apollo
+import Foundation
 
 @MainActor
 final class CreateOrderRepository {
     private let apolloClient = ApolloClientManager.shared.apollo
     private let jsonEncoder = JSONEncoder()
     private let jsonDecoder = JSONDecoder()
-    
+
     // MARK: - Create Order
-    
+
     func createOrder(
         branchId: String,
         items: [OrderRequestItem],
-        deliveryAddress: DeliveryAddressInput,
+        fulfillment: FulfillmentPayloadInput = .delivery,
+        deliveryAddress: DeliveryAddressInput?,
         paymentMethod: String,
         paymentIntentId: String? = nil,
         comments: String? = nil,
@@ -20,18 +21,24 @@ final class CreateOrderRepository {
         completion: @escaping @Sendable (Result<CreatedOrder, Error>) -> Void
     ) {
         let client = apolloClient
-        
+
         Task { @MainActor in
             guard let jwt = AuthManager.shared.getAccessToken() else {
-                completion(.failure(NSError(domain: "CreateOrderRepository", code: 401, userInfo: [NSLocalizedDescriptionKey: "No autenticado"])))
+                completion(
+                    .failure(
+                        NSError(
+                            domain: "CreateOrderRepository", code: 401,
+                            userInfo: [NSLocalizedDescriptionKey: "No autenticado"])))
                 return
             }
 
-            let hasShowcaseItems = items.contains { $0.itemType == .showcase }
-            if hasShowcaseItems {
+            // Prefer JSON payload so fulfillment is sent explicitly for DELIVERY and PICKUP.
+            let shouldUseMixedPayload = !jwt.isEmpty
+            if shouldUseMixedPayload {
                 createMixedOrder(
                     branchId: branchId,
                     items: items,
+                    fulfillment: fulfillment,
                     deliveryAddress: deliveryAddress,
                     paymentMethod: paymentMethod,
                     paymentIntentId: paymentIntentId,
@@ -42,7 +49,20 @@ final class CreateOrderRepository {
                 )
                 return
             }
-            
+
+            guard let deliveryAddress else {
+                completion(
+                    .failure(
+                        NSError(
+                            domain: "CreateOrderRepository",
+                            code: -11,
+                            userInfo: [NSLocalizedDescriptionKey: "Falta dirección de entrega"]
+                        )
+                    )
+                )
+                return
+            }
+
             // Build items input
             let itemsInput = items.compactMap { item -> LlegoAPI.OrderItemInput? in
                 switch item.itemType {
@@ -79,7 +99,7 @@ final class CreateOrderRepository {
                     return nil
                 }
             }
-            
+
             // Build delivery address input
             let addressInput = LlegoAPI.DeliveryAddressInput(
                 street: deliveryAddress.street,
@@ -87,13 +107,16 @@ final class CreateOrderRepository {
                 longitude: deliveryAddress.longitude,
                 city: deliveryAddress.city.map { .some($0) } ?? .none,
                 reference: deliveryAddress.reference.map { .some($0) } ?? .none,
-                addressType: deliveryAddress.addressType.flatMap { LlegoAPI.AddressTypeInput(rawValue: $0) }.map { .some(GraphQLEnum($0)) } ?? .none,
+                addressType: deliveryAddress.addressType.flatMap {
+                    LlegoAPI.AddressTypeInput(rawValue: $0)
+                }.map { .some(GraphQLEnum($0)) } ?? .none,
                 buildingName: deliveryAddress.buildingName.map { .some($0) } ?? .none,
                 floor: deliveryAddress.floor.map { .some($0) } ?? .none,
                 apartment: deliveryAddress.apartment.map { .some($0) } ?? .none,
-                deliveryInstructions: deliveryAddress.deliveryInstructions.map { .some($0) } ?? .none
+                deliveryInstructions: deliveryAddress.deliveryInstructions.map { .some($0) }
+                    ?? .none
             )
-            
+
             // Build create order input
             let input = LlegoAPI.CreateOrderInput(
                 branchId: branchId,
@@ -104,30 +127,41 @@ final class CreateOrderRepository {
                 comments: comments.map { .some($0) } ?? .none,
                 promoCode: promoCode.map { .some($0) } ?? .none
             )
-            
+
             let mutation = LlegoAPI.CreateOrderMutation(input: input, jwt: jwt)
-            
+
             client.performCompat(mutation: mutation) { [weak self] result in
                 Task { @MainActor in
                     guard let self = self else { return }
-                    
+
                     switch result {
                     case .success(let graphQLResult):
                         if let errors = graphQLResult.errors {
                             print("❌ GraphQL Errors creating order: \(errors)")
-                            let errorMessage = errors.first?.localizedDescription ?? "Error al crear el pedido"
-                            completion(.failure(NSError(domain: "GraphQL", code: -1, userInfo: [NSLocalizedDescriptionKey: errorMessage])))
+                            let errorMessage =
+                                errors.first?.localizedDescription ?? "Error al crear el pedido"
+                            completion(
+                                .failure(
+                                    NSError(
+                                        domain: "GraphQL", code: -1,
+                                        userInfo: [NSLocalizedDescriptionKey: errorMessage])))
                             return
                         }
-                        
+
                         guard let order = graphQLResult.data?.createOrder else {
-                            completion(.failure(NSError(domain: "CreateOrderRepository", code: -1, userInfo: [NSLocalizedDescriptionKey: "No se pudo crear el pedido"])))
+                            completion(
+                                .failure(
+                                    NSError(
+                                        domain: "CreateOrderRepository", code: -1,
+                                        userInfo: [
+                                            NSLocalizedDescriptionKey: "No se pudo crear el pedido"
+                                        ])))
                             return
                         }
-                        
+
                         let createdOrder = self.mapToCreatedOrder(order)
                         completion(.success(createdOrder))
-                        
+
                     case .failure(let error):
                         print("❌ Network error creating order: \(error.localizedDescription)")
                         completion(.failure(error))
@@ -136,11 +170,12 @@ final class CreateOrderRepository {
             }
         }
     }
-    
+
     private func createMixedOrder(
         branchId: String,
         items: [OrderRequestItem],
-        deliveryAddress: DeliveryAddressInput,
+        fulfillment: FulfillmentPayloadInput,
+        deliveryAddress: DeliveryAddressInput?,
         paymentMethod: String,
         paymentIntentId: String?,
         comments: String?,
@@ -149,11 +184,13 @@ final class CreateOrderRepository {
         completion: @escaping @Sendable (Result<CreatedOrder, Error>) -> Void
     ) {
         guard let endpointURL = URL(string: "\(ApolloClientManager.baseURL)/graphql") else {
-            completion(.failure(NSError(
-                domain: "CreateOrderRepository",
-                code: -2,
-                userInfo: [NSLocalizedDescriptionKey: "Endpoint GraphQL inválido"]
-            )))
+            completion(
+                .failure(
+                    NSError(
+                        domain: "CreateOrderRepository",
+                        code: -2,
+                        userInfo: [NSLocalizedDescriptionKey: "Endpoint GraphQL inválido"]
+                    )))
             return
         }
 
@@ -170,6 +207,8 @@ final class CreateOrderRepository {
                 paymentMethod
                 paymentStatus
                 createdAt
+                deliveryMode
+                estimatedReadyAt
                 items {
                   itemType
                   itemId
@@ -206,6 +245,11 @@ final class CreateOrderRepository {
                   type
                 }
                 deliveryAddress {
+                  street
+                  city
+                  reference
+                }
+                pickupAddress {
                   street
                   city
                   reference
@@ -251,18 +295,25 @@ final class CreateOrderRepository {
                             requestDescription: item.description
                         )
                     },
-                    deliveryAddress: .init(
-                        street: deliveryAddress.street,
-                        latitude: deliveryAddress.latitude,
-                        longitude: deliveryAddress.longitude,
-                        city: deliveryAddress.city,
-                        reference: deliveryAddress.reference,
-                        addressType: deliveryAddress.addressType,
-                        buildingName: deliveryAddress.buildingName,
-                        floor: deliveryAddress.floor,
-                        apartment: deliveryAddress.apartment,
-                        deliveryInstructions: deliveryAddress.deliveryInstructions
+                    fulfillment: .init(
+                        type: fulfillment.type.rawValue,
+                        pickupBranchId: fulfillment.pickupBranchId,
+                        pickupWindowId: fulfillment.pickupWindowId
                     ),
+                    deliveryAddress: deliveryAddress.map {
+                        .init(
+                            street: $0.street,
+                            latitude: $0.latitude,
+                            longitude: $0.longitude,
+                            city: $0.city,
+                            reference: $0.reference,
+                            addressType: $0.addressType,
+                            buildingName: $0.buildingName,
+                            floor: $0.floor,
+                            apartment: $0.apartment,
+                            deliveryInstructions: $0.deliveryInstructions
+                        )
+                    },
                     paymentMethod: paymentMethod,
                     paymentIntentId: paymentIntentId,
                     comments: comments,
@@ -288,7 +339,8 @@ final class CreateOrderRepository {
                         )
                     }
                     guard (200..<300).contains(httpResponse.statusCode) else {
-                        let rawMessage = String(data: data, encoding: .utf8) ?? "Respuesta desconocida"
+                        let rawMessage =
+                            String(data: data, encoding: .utf8) ?? "Respuesta desconocida"
                         throw NSError(
                             domain: "CreateOrderRepository",
                             code: httpResponse.statusCode,
@@ -325,8 +377,10 @@ final class CreateOrderRepository {
     }
 
     // MARK: - Mapping
-    
-    private func mapToCreatedOrder(_ order: LlegoAPI.CreateOrderMutation.Data.CreateOrder) -> CreatedOrder {
+
+    private func mapToCreatedOrder(_ order: LlegoAPI.CreateOrderMutation.Data.CreateOrder)
+        -> CreatedOrder
+    {
         let items = order.items.map { item in
             CreatedOrderItem(
                 productId: item.productId,
@@ -337,7 +391,7 @@ final class CreateOrderRepository {
                 lineTotal: item.lineTotal
             )
         }
-        
+
         let discounts = order.discounts.map { discount in
             CreatedOrderDiscount(
                 id: discount.id,
@@ -346,7 +400,7 @@ final class CreateOrderRepository {
                 type: mapDiscountType(discount.type)
             )
         }
-        
+
         return CreatedOrder(
             id: order.id,
             orderNumber: order.orderNumber,
@@ -365,11 +419,16 @@ final class CreateOrderRepository {
             businessName: order.business.name,
             deliveryStreet: order.deliveryAddress.street,
             deliveryCity: order.deliveryAddress.city,
-            deliveryReference: order.deliveryAddress.reference
+            deliveryReference: order.deliveryAddress.reference,
+            deliveryMode: nil,
+            pickupAddress: nil,
+            estimatedReadyAt: nil
         )
     }
 
-    private func mapToCreatedOrder(_ order: MixedCreateOrderResponse.DataContainer.CreateOrder) -> CreatedOrder {
+    private func mapToCreatedOrder(_ order: MixedCreateOrderResponse.DataContainer.CreateOrder)
+        -> CreatedOrder
+    {
         let items = order.items.map { item in
             CreatedOrderItem(
                 productId: item.productId ?? "",
@@ -406,26 +465,29 @@ final class CreateOrderRepository {
             branchName: order.branch.name,
             branchImageUrl: order.branch.avatarUrl,
             businessName: order.business.name,
-            deliveryStreet: order.deliveryAddress.street,
-            deliveryCity: order.deliveryAddress.city,
-            deliveryReference: order.deliveryAddress.reference
+            deliveryStreet: order.deliveryAddress?.street ?? order.pickupAddress?.street ?? "",
+            deliveryCity: order.deliveryAddress?.city ?? order.pickupAddress?.city,
+            deliveryReference: order.deliveryAddress?.reference ?? order.pickupAddress?.reference,
+            deliveryMode: order.deliveryMode,
+            pickupAddress: order.pickupAddress?.street,
+            estimatedReadyAt: order.estimatedReadyAt
         )
     }
-    
+
     private func mapStatus(_ status: GraphQLEnum<LlegoAPI.OrderStatusEnum>) -> String {
         switch status {
         case .case(let value): return value.rawValue
         case .unknown: return "PENDING_ACCEPTANCE"
         }
     }
-    
+
     private func mapPaymentStatus(_ status: GraphQLEnum<LlegoAPI.PaymentStatusEnum>) -> String {
         switch status {
         case .case(let value): return value.rawValue
         case .unknown: return "PENDING"
         }
     }
-    
+
     private func mapDiscountType(_ type: GraphQLEnum<LlegoAPI.DiscountTypeEnum>) -> String {
         switch type {
         case .case(let value): return value.rawValue
@@ -496,7 +558,10 @@ struct CreatedOrder {
     let deliveryStreet: String
     let deliveryCity: String?
     let deliveryReference: String?
-    
+    let deliveryMode: String?
+    let pickupAddress: String?
+    let estimatedReadyAt: String?
+
     var formattedTotal: String {
         String(format: "$%.2f", total)
     }
@@ -530,7 +595,8 @@ private struct MixedCreateOrderRequestPayload: Encodable {
     struct Input: Encodable {
         let branchId: String
         let items: [Item]
-        let deliveryAddress: DeliveryAddress
+        let fulfillment: Fulfillment
+        let deliveryAddress: DeliveryAddress?
         let paymentMethod: String
         let paymentIntentId: String?
         let comments: String?
@@ -584,6 +650,12 @@ private struct MixedCreateOrderRequestPayload: Encodable {
         let apartment: String?
         let deliveryInstructions: String?
     }
+
+    struct Fulfillment: Encodable {
+        let type: String
+        let pickupBranchId: String?
+        let pickupWindowId: String?
+    }
 }
 
 private struct MixedCreateOrderResponse: Decodable {
@@ -604,9 +676,12 @@ private struct MixedCreateOrderResponse: Decodable {
             let paymentMethod: String
             let paymentStatus: String
             let createdAt: String
+            let deliveryMode: String?
+            let estimatedReadyAt: String?
             let items: [Item]
             let discounts: [Discount]
-            let deliveryAddress: DeliveryAddress
+            let deliveryAddress: DeliveryAddress?
+            let pickupAddress: PickupAddress?
             let branch: Branch
             let business: Business
 
@@ -629,6 +704,12 @@ private struct MixedCreateOrderResponse: Decodable {
 
             struct DeliveryAddress: Decodable {
                 let street: String
+                let city: String?
+                let reference: String?
+            }
+
+            struct PickupAddress: Decodable {
+                let street: String?
                 let city: String?
                 let reference: String?
             }
