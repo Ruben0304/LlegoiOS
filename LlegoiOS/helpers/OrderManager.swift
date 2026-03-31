@@ -452,7 +452,7 @@ class OrderManager: ObservableObject {
 
     private func mapGraphQLStatusToDeliveryStatus(_ status: OrderStatusEnum, distanceKm: Double?) -> DeliveryStatus {
         switch status {
-        case .pendingAcceptance, .modifiedByStore:
+        case .pendingAcceptance, .awaitingDeliveryAcceptance, .pendingPayment, .modifiedByStore:
             return .pending
         case .accepted:
             return .confirmed
@@ -474,7 +474,7 @@ class OrderManager: ObservableObject {
 
     private func mapRawStatusToDeliveryStatus(_ rawStatus: String, distanceKm: Double?) -> DeliveryStatus {
         switch rawStatus.uppercased() {
-        case "PENDING_ACCEPTANCE", "MODIFIED_BY_STORE":
+        case "PENDING_ACCEPTANCE", "AWAITING_DELIVERY_ACCEPTANCE", "PENDING_PAYMENT", "PAYMENT_IN_PROGRESS", "MODIFIED_BY_STORE":
             return .pending
         case "ACCEPTED":
             return .confirmed

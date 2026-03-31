@@ -5,6 +5,9 @@
 
 public extension LlegoAPI {
   enum OrderStatusEnum: String, EnumType {
+    case awaitingDeliveryAcceptance = "AWAITING_DELIVERY_ACCEPTANCE"
+    case pendingPayment = "PENDING_PAYMENT"
+    case paymentInProgress = "PAYMENT_IN_PROGRESS"
     case pendingAcceptance = "PENDING_ACCEPTANCE"
     case modifiedByStore = "MODIFIED_BY_STORE"
     case accepted = "ACCEPTED"

@@ -206,7 +206,13 @@ final class OrderDetailViewModel: ObservableObject {
                 await MainActor.run {
                     self.isInitiatingPayment = false
                 }
-                showPaymentAlertMessage(error.localizedDescription)
+                let normalizedError = error.localizedDescription.lowercased()
+                if normalizedError.contains("no permite pago") || normalizedError.contains("estado no permite") || normalizedError.contains("estado del pedido") || normalizedError.contains("invalid order status") || (normalizedError.contains("order status") && normalizedError.contains("payment")) {
+                    refresh()
+                    showPaymentAlertMessage("El estado del pedido cambió y ya no permite pagar ahora. Actualizamos la información.")
+                } else {
+                    showPaymentAlertMessage(error.localizedDescription)
+                }
             }
         }
     }
@@ -433,7 +439,13 @@ final class OrderDetailViewModel: ObservableObject {
             } catch {
                 await MainActor.run {
                     self.isInitiatingPayment = false
-                    self.showPaymentAlertMessage("No se pudo generar el enlace de pago: \(error.localizedDescription)")
+                    let normalizedError = error.localizedDescription.lowercased()
+                    if normalizedError.contains("no permite pago") || normalizedError.contains("estado no permite") || normalizedError.contains("estado del pedido") || normalizedError.contains("invalid order status") || (normalizedError.contains("order status") && normalizedError.contains("payment")) {
+                        self.refresh()
+                        self.showPaymentAlertMessage("El estado del pedido cambió y ya no permite pagar ahora. Actualizamos la información.")
+                    } else {
+                        self.showPaymentAlertMessage("No se pudo generar el enlace de pago: \(error.localizedDescription)")
+                    }
                 }
             }
         }
@@ -521,7 +533,13 @@ final class OrderDetailViewModel: ObservableObject {
             } catch {
                 await MainActor.run {
                     self.isInitiatingPayment = false
-                    self.showPaymentAlertMessage("No se pudo generar la dirección de pago: \(error.localizedDescription)")
+                    let normalizedError = error.localizedDescription.lowercased()
+                    if normalizedError.contains("no permite pago") || normalizedError.contains("estado no permite") || normalizedError.contains("estado del pedido") || normalizedError.contains("invalid order status") || (normalizedError.contains("order status") && normalizedError.contains("payment")) {
+                        self.refresh()
+                        self.showPaymentAlertMessage("El estado del pedido cambió y ya no permite pagar ahora. Actualizamos la información.")
+                    } else {
+                        self.showPaymentAlertMessage("No se pudo generar la dirección de pago: \(error.localizedDescription)")
+                    }
                 }
             }
         }

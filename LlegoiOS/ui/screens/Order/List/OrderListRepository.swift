@@ -40,7 +40,8 @@ final class OrderListRepository {
                 jwt: jwt
             )
 
-            client.fetchCompat(query: query, cachePolicy: .fetchIgnoringCacheData) { [weak self] result in
+            client.fetchCompat(query: query, cachePolicy: .fetchIgnoringCacheData) {
+                [weak self] result in
                 Task { @MainActor in
                     guard let self = self else { return }
 
@@ -112,6 +113,8 @@ final class OrderListRepository {
 
     private func mapStatusToGraphQL(_ status: OrderStatusEnum) -> LlegoAPI.OrderStatusEnum {
         switch status {
+        case .awaitingDeliveryAcceptance: return .awaitingDeliveryAcceptance
+        case .pendingPayment: return .pendingPayment
         case .pendingAcceptance: return .pendingAcceptance
         case .modifiedByStore: return .modifiedByStore
         case .accepted: return .accepted
@@ -129,6 +132,9 @@ final class OrderListRepository {
         switch status {
         case .case(let value):
             switch value {
+            case .awaitingDeliveryAcceptance: return .awaitingDeliveryAcceptance
+            case .pendingPayment: return .pendingPayment
+            case .paymentInProgress: return .pendingPayment
             case .pendingAcceptance: return .pendingAcceptance
             case .modifiedByStore: return .modifiedByStore
             case .accepted: return .accepted

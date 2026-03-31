@@ -2,6 +2,8 @@ import SwiftUI
 
 // MARK: - Order Status Enum (matches GraphQL OrderStatusEnum)
 enum OrderStatusEnum: String, CaseIterable, Codable {
+    case awaitingDeliveryAcceptance = "AWAITING_DELIVERY_ACCEPTANCE"
+    case pendingPayment = "PENDING_PAYMENT"
     case pendingAcceptance = "PENDING_ACCEPTANCE"
     case modifiedByStore = "MODIFIED_BY_STORE"
     case accepted = "ACCEPTED"
@@ -13,7 +15,9 @@ enum OrderStatusEnum: String, CaseIterable, Codable {
 
     var displayName: String {
         switch self {
-        case .pendingAcceptance: return "Pendiente"
+        case .awaitingDeliveryAcceptance: return "Tienda confirmó. Esperando mensajero"
+        case .pendingPayment: return "Listo para pagar"
+        case .pendingAcceptance: return "Esperando confirmación de la tienda"
         case .modifiedByStore: return "Modificado"
         case .accepted: return "Aceptado"
         case .preparing: return "Preparando"
@@ -26,6 +30,8 @@ enum OrderStatusEnum: String, CaseIterable, Codable {
 
     var color: Color {
         switch self {
+        case .awaitingDeliveryAcceptance: return .blue
+        case .pendingPayment: return .orange
         case .pendingAcceptance: return .orange
         case .modifiedByStore: return .blue
         case .accepted: return .green
@@ -39,6 +45,8 @@ enum OrderStatusEnum: String, CaseIterable, Codable {
 
     var icon: String {
         switch self {
+        case .awaitingDeliveryAcceptance: return "storefront.circle.fill"
+        case .pendingPayment: return "creditcard.circle.fill"
         case .pendingAcceptance: return "clock.fill"
         case .modifiedByStore: return "square.and.pencil"
         case .accepted: return "checkmark.circle.fill"

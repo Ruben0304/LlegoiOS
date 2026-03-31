@@ -144,6 +144,9 @@ final class OrderTrackingRepository {
         switch status {
         case .case(let value):
             switch value {
+            case .awaitingDeliveryAcceptance: return .awaitingDeliveryAcceptance
+            case .pendingPayment: return .pendingPayment
+            case .paymentInProgress: return .pendingPayment
             case .pendingAcceptance: return .pendingAcceptance
             case .modifiedByStore: return .modifiedByStore
             case .accepted: return .accepted

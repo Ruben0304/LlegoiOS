@@ -2,6 +2,7 @@ import Foundation
 
 enum OrderPermissionPolicy {
     private static let paymentEnabledStatuses: Set<OrderStatusEnum> = [
+        .pendingPayment,
         .accepted,
         .modifiedByStore,
     ]

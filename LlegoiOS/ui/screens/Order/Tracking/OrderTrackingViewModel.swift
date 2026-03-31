@@ -145,6 +145,8 @@ final class OrderTrackingViewModel: ObservableObject {
         guard let status = tracking?.order.status else { return 0 }
         switch status {
         case .pendingAcceptance: return 0.1
+        case .awaitingDeliveryAcceptance: return 0.18
+        case .pendingPayment: return 0.22
         case .modifiedByStore: return 0.15
         case .accepted: return 0.25
         case .preparing: return 0.4

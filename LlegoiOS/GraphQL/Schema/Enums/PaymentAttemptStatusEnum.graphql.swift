@@ -10,6 +10,7 @@ public extension LlegoAPI {
     case awaitingProof = "AWAITING_PROOF"
     case awaitingBusiness = "AWAITING_BUSINESS"
     case awaitingDelivery = "AWAITING_DELIVERY"
+    case awaitingKyc = "AWAITING_KYC"
     case completed = "COMPLETED"
     case failed = "FAILED"
     case expired = "EXPIRED"
