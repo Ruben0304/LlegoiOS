@@ -70,8 +70,8 @@ class StoreListViewModel: ObservableObject {
                             etaMinutes: self.calculateETA(
                                 deliveryRadius: branchGraphQL.deliveryRadius
                             ),
-                            logoUrl: branchGraphQL.avatarUrl ?? self.defaultLogoUrl,
-                            bannerUrl: branchGraphQL.coverUrl ?? self.defaultBannerUrl,
+                            logoUrl: branchGraphQL.preferredAvatarSmallUrl ?? self.defaultLogoUrl,
+                            bannerUrl: branchGraphQL.preferredCoverFastUrl ?? self.defaultBannerUrl,
                             address: branchGraphQL.address,
                             rating: nil, // TODO: Add rating when available in backend
                             description: "Descripción de la tienda que estará disponible próximamente",
@@ -160,8 +160,8 @@ class StoreListViewModel: ObservableObject {
                             etaMinutes: self.calculateETA(
                                 deliveryRadius: branchGraphQL.deliveryRadius
                             ),
-                            logoUrl: branchGraphQL.avatarUrl ?? self.defaultLogoUrl,
-                            bannerUrl: branchGraphQL.coverUrl ?? self.defaultBannerUrl,
+                            logoUrl: branchGraphQL.preferredAvatarSmallUrl ?? self.defaultLogoUrl,
+                            bannerUrl: branchGraphQL.preferredCoverFastUrl ?? self.defaultBannerUrl,
                             address: branchGraphQL.address,
                             rating: nil,
                             description: "Descripción de la tienda que estará disponible próximamente",
@@ -250,8 +250,8 @@ class StoreListViewModel: ObservableObject {
                             etaMinutes: self.calculateETA(
                                 deliveryRadius: branchGraphQL.deliveryRadius
                             ),
-                            logoUrl: branchGraphQL.avatarUrl ?? self.defaultLogoUrl,
-                            bannerUrl: branchGraphQL.coverUrl ?? self.defaultBannerUrl,
+                            logoUrl: branchGraphQL.preferredAvatarSmallUrl ?? self.defaultLogoUrl,
+                            bannerUrl: branchGraphQL.preferredCoverFastUrl ?? self.defaultBannerUrl,
                             address: branchGraphQL.address,
                             rating: nil,
                             description: "Descripción de la tienda que estará disponible próximamente",

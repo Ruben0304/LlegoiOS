@@ -65,7 +65,11 @@ class MapRepository {
                             phone: edge.node.phone,
                             status: edge.node.status ?? "",
                             avatarUrl: edge.node.avatarUrl,
+                            avatarUrlBaja: edge.node.avatarUrlBaja,
+                            avatarUrlAlta: edge.node.avatarUrlAlta,
                             coverUrl: edge.node.coverUrl,
+                            coverUrlBaja: edge.node.coverUrlBaja,
+                            coverUrlAlta: edge.node.coverUrlAlta,
                             deliveryRadius: edge.node.deliveryRadius,
                             createdAt: edge.node.createdAt,
                             score: edge.node.score,
@@ -97,11 +101,23 @@ struct MapBranchGraphQL: Identifiable, Sendable {
     let phone: String
     let status: String
     let avatarUrl: String?
+    let avatarUrlBaja: String?
+    let avatarUrlAlta: String?
     let coverUrl: String?
+    let coverUrlBaja: String?
+    let coverUrlAlta: String?
     let deliveryRadius: Double?
     let createdAt: String
     let score: Double
     let distanceKm: Double?
+
+    var preferredAvatarSmallUrl: String? {
+        avatarSmallURL(low: avatarUrlBaja, original: avatarUrl, high: avatarUrlAlta)
+    }
+
+    var preferredCoverFastUrl: String? {
+        coverFastURL(low: coverUrlBaja, original: coverUrl, high: coverUrlAlta)
+    }
 }
 
 // Model for coordinates

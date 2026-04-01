@@ -544,7 +544,7 @@ struct StoreCircleCard: View {
                         color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.15), radius: 10,
                         x: 0, y: 5)
 
-                if let avatarUrl = store.avatarUrl, !avatarUrl.isEmpty {
+                if let avatarUrl = store.preferredAvatarSmallUrl {
                     CachedAsyncImage(
                         url: URL(string: avatarUrl),
                         cacheKey: "store_avatar_\(store.id)",

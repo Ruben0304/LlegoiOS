@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetBranches"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetBranches($first: Int! = 20, $after: String, $businessId: String, $tipo: BranchTipo, $radiusKm: Float, $productCategoryId: String, $jwt: String, $productsLimit: Int = 2) { branches( first: $first after: $after businessId: $businessId tipo: $tipo radiusKm: $radiusKm productCategoryId: $productCategoryId jwt: $jwt ) { __typename edges { __typename node { __typename id businessId name acceptsQvapay acceptsZelle qvapayUsername zelleEmail address coordinates { __typename type coordinates } phone status avatarUrl coverUrl deliveryRadius createdAt score distanceKm products(limit: $productsLimit, availableOnly: false) { __typename id name price currency imageUrlBaja } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
+        #"query GetBranches($first: Int! = 20, $after: String, $businessId: String, $tipo: BranchTipo, $radiusKm: Float, $productCategoryId: String, $jwt: String, $productsLimit: Int = 2) { branches( first: $first after: $after businessId: $businessId tipo: $tipo radiusKm: $radiusKm productCategoryId: $productCategoryId jwt: $jwt ) { __typename edges { __typename node { __typename id businessId name acceptsQvapay acceptsZelle qvapayUsername zelleEmail address coordinates { __typename type coordinates } phone status avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta deliveryRadius createdAt score distanceKm products(limit: $productsLimit, availableOnly: false) { __typename id name price currency imageUrlBaja } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
       ))
 
     public var first: Int32
@@ -137,7 +137,11 @@ public extension LlegoAPI {
               .field("phone", String.self),
               .field("status", String?.self),
               .field("avatarUrl", String?.self),
+              .field("avatarUrlBaja", String?.self),
+              .field("avatarUrlAlta", String?.self),
               .field("coverUrl", String?.self),
+              .field("coverUrlBaja", String?.self),
+              .field("coverUrlAlta", String?.self),
               .field("deliveryRadius", Double?.self),
               .field("createdAt", LlegoAPI.DateTime.self),
               .field("score", Double.self),
@@ -164,8 +168,12 @@ public extension LlegoAPI {
             public var status: String? { __data["status"] }
             /// Presigned URL for the branch avatar (inherits from business if not set)
             public var avatarUrl: String? { __data["avatarUrl"] }
+            public var avatarUrlBaja: String? { __data["avatarUrlBaja"] }
+            public var avatarUrlAlta: String? { __data["avatarUrlAlta"] }
             /// Presigned URL for the branch cover image
             public var coverUrl: String? { __data["coverUrl"] }
+            public var coverUrlBaja: String? { __data["coverUrlBaja"] }
+            public var coverUrlAlta: String? { __data["coverUrlAlta"] }
             public var deliveryRadius: Double? { __data["deliveryRadius"] }
             public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
             public var score: Double { __data["score"] }

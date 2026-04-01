@@ -1012,7 +1012,7 @@ struct SiblingBranchCard: View {
     var body: some View {
         HStack(spacing: 0) {
             // Image
-            AsyncImage(url: URL(string: branch.avatarUrl ?? "")) { phase in
+            AsyncImage(url: URL(string: branch.preferredAvatarSmallUrl ?? "")) { phase in
                 switch phase {
                 case .empty:
                     ZStack {

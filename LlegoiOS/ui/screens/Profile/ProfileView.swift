@@ -8,6 +8,7 @@ import UIKit
 struct ProfileView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = ProfileViewModel()
+    @StateObject private var gradientManager = GradientStateManager.shared
     @ObservedObject private var userLocationManager = UserLocationManager.shared
     @ObservedObject private var aiPreferenceManager = AIPreferenceManager.shared
     @State private var showingLocationPicker = false
@@ -205,9 +206,6 @@ struct ProfileView: View {
                                 // Vista previa de pedidos recientes
                                 recentOrdersSection
 
-                                // Modelos 3D descargados
-                                DownloadedModelsSection()
-
                                 // Preferencia de AI para recomendaciones
                                 aiPreferenceSection
 
@@ -258,6 +256,7 @@ struct ProfileView: View {
             .navigationDestination(isPresented: $navigateToPlansAndPricing) {
                 PlansAndPricingView()
             }
+            .tint(gradientManager.currentAccentColor)
         }
         .fullScreenCover(isPresented: $showingWallet) {
             WalletView()
@@ -318,7 +317,7 @@ struct ProfileView: View {
     private var profileLoadingIndicator: some View {
         HStack(spacing: 12) {
             ProgressView()
-                .tint(.llegoPrimary)
+                .tint(gradientManager.currentAccentColor)
 
             Text("Cargando datos del perfil...")
                 .font(.system(size: 14, weight: .medium))
@@ -473,7 +472,7 @@ struct ProfileView: View {
                                             LinearGradient(
                                                 gradient: Gradient(colors: [
                                                     Color.llegoAccent.opacity(0.3),
-                                                    Color.llegoPrimary.opacity(0.2),
+                                                    gradientManager.currentAccentColor.opacity(0.2),
                                                 ]),
                                                 startPoint: .topLeading,
                                                 endPoint: .bottomTrailing
@@ -483,7 +482,7 @@ struct ProfileView: View {
                                         .overlay(
                                             Image(systemName: "person.fill")
                                                 .font(.system(size: 48, weight: .medium))
-                                                .foregroundColor(.llegoPrimary)
+                                                .foregroundColor(gradientManager.currentAccentColor)
                                         )
                                 @unknown default:
                                     EmptyView()
@@ -496,7 +495,7 @@ struct ProfileView: View {
                                     LinearGradient(
                                         gradient: Gradient(colors: [
                                             Color.llegoAccent.opacity(0.3),
-                                            Color.llegoPrimary.opacity(0.2),
+                                            gradientManager.currentAccentColor.opacity(0.2),
                                         ]),
                                         startPoint: .topLeading,
                                         endPoint: .bottomTrailing
@@ -506,7 +505,7 @@ struct ProfileView: View {
                                 .overlay(
                                     Image(systemName: "person.fill")
                                         .font(.system(size: 48, weight: .medium))
-                                        .foregroundColor(.llegoPrimary)
+                                        .foregroundColor(gradientManager.currentAccentColor)
                                 )
                         }
                     }
@@ -532,7 +531,7 @@ struct ProfileView: View {
                             }) {
                                 ZStack {
                                     Circle()
-                                        .fill(Color.llegoPrimary)
+                                        .fill(gradientManager.currentAccentColor)
                                         .frame(width: 38, height: 38)
                                         .shadow(
                                             color: Color.black.opacity(0.3), radius: 8, x: 0, y: 4)
@@ -557,13 +556,13 @@ struct ProfileView: View {
                 VStack(spacing: 8) {
                     Text(viewModel.currentUser?.fullName ?? cachedProfile?.fullName ?? "Usuario")
                         .font(.system(size: 28, weight: .bold, design: .rounded))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(.primary)
                         .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
 
                     HStack(spacing: 6) {
-                        Image(systemName: "envelope.fill")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.llegoAccent)
+                    Image(systemName: "envelope.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(gradientManager.currentAccentColor.opacity(0.8))
 
                         Text(viewModel.currentUser?.email ?? cachedProfile?.email ?? "")
                             .font(.system(size: 15, weight: .medium))
@@ -585,7 +584,7 @@ struct ProfileView: View {
                         HStack(spacing: 6) {
                             Image(systemName: "at")
                                 .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(.llegoPrimary)
+                                .foregroundColor(gradientManager.currentAccentColor)
 
                             Text(viewModel.currentUser?.username ?? "")
                                 .font(.system(size: 15, weight: .medium))
@@ -624,7 +623,7 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Ubicación de entrega")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(.primary)
 
                     Text(userLocationManager.userAddress)
                         .font(.system(size: 14, weight: .medium))
@@ -657,10 +656,10 @@ struct ProfileView: View {
             HStack {
                 Image(systemName: "person.text.rectangle.fill")
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.llegoPrimary)
+                    .foregroundColor(gradientManager.currentAccentColor)
                 Text("Verificación de identidad para efectivo")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.llegoPrimary)
+                    .foregroundColor(.primary)
                 Spacer()
             }
 
@@ -682,7 +681,7 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(cashKycStatusTitle)
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(.primary)
                     Text(cashKycStatusSubtitle)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.gray)
@@ -709,11 +708,11 @@ struct ProfileView: View {
                 HStack(spacing: 12) {
                     Image(systemName: "shield.checkerboard")
                         .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(gradientManager.currentAccentColor)
                     VStack(alignment: .leading, spacing: 4) {
                         Text(cashKycActionTitle)
                             .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(.primary)
                         Text("Se solicitará foto del documento y selfie sosteniendo el documento.")
                             .font(.system(size: 12, weight: .medium))
                             .foregroundColor(.gray)
@@ -771,44 +770,44 @@ struct ProfileView: View {
     }
 
     private var cashKycStatusTitle: String {
-        guard let snapshot = cashKycStatusSnapshot else { return "Aún no verificada" }
-        if snapshot.allowCash && snapshot.appCoversCash { return "Verificación aprobada" }
+        guard let snapshot = cashKycStatusSnapshot else { return "KYC no completado" }
+        if snapshot.allowCash && snapshot.appCoversCash { return "KYC aprobado" }
         if snapshot.allowCash && !snapshot.appCoversCash {
-            return "Efectivo permitido sin cobertura"
+            return "KYC aprobado sin cobertura"
         }
         switch snapshot.kycEvalStatus {
-        case .submitted: return "Verificación en revisión"
-        case .rejected: return "Verificación rechazada"
-        case .insufficientData: return "Se requiere nueva evidencia"
-        case .expired: return "Verificación expirada"
-        case .error: return "No se pudo validar"
+        case .submitted: return "KYC en revisión"
+        case .rejected: return "KYC rechazado"
+        case .insufficientData: return "KYC incompleto"
+        case .expired: return "KYC vencido"
+        case .error: return "KYC no disponible"
         case .pendingEvidence, .notRequired, .needsReview, .approved, .unknown:
-            return "Aún no verificada"
+            return "KYC no completado"
         }
     }
 
     private var cashKycStatusSubtitle: String {
         guard let snapshot = cashKycStatusSnapshot else {
-            return "Completa tu verificación para pagos en efectivo."
+            return "Todavía no has completado la verificación para pagar en efectivo."
         }
         if snapshot.allowCash {
             return snapshot.appCoversCash
-                ? "Tu cuenta ya puede usar efectivo cuando esté disponible."
-                : "Puedes usar efectivo, pero sin cobertura de la app."
+                ? "Tu cuenta ya está habilitada para pagar en efectivo."
+                : "Tu cuenta puede pagar en efectivo, pero sin cobertura de la app."
         }
         switch snapshot.kycEvalStatus {
         case .submitted:
-            return "Tu evidencia fue enviada y está siendo evaluada."
+            return "Tus fotos fueron enviadas y están siendo revisadas."
         case .rejected:
-            return "No fue posible aprobar la evidencia enviada."
+            return "La verificación fue rechazada. Debes enviar nuevas fotos."
         case .insufficientData:
-            return "Debes subir nuevamente documento y selfie con documento."
+            return "Faltan datos o calidad suficiente. Vuelve a subir documento y selfie."
         case .expired:
-            return "Necesitas verificarte otra vez para usar efectivo."
+            return "La verificación anterior venció. Debes completarla otra vez."
         case .error:
-            return "Ocurrió un error temporal. Intenta nuevamente."
+            return "Ahora mismo no pudimos validar tu KYC. Intenta de nuevo más tarde."
         case .pendingEvidence, .notRequired, .needsReview, .approved, .unknown:
-            return "Completa tu verificación para pagos en efectivo."
+            return "Completa tu verificación para habilitar pagos en efectivo."
         }
     }
 
@@ -873,7 +872,7 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Mis direcciones")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(.primary)
 
                     Text("Gestiona tus lugares de entrega")
                         .font(.system(size: 13, weight: .medium))
@@ -911,7 +910,7 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Wallet")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(.primary)
 
                     Text("Saldo disponible")
                         .font(.system(size: 13, weight: .medium))
@@ -922,7 +921,7 @@ struct ProfileView: View {
 
                 Text(walletBalance)
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.llegoPrimary)
+                    .foregroundColor(.primary)
             }
             .padding(16)
             .background(
@@ -947,7 +946,7 @@ struct ProfileView: View {
 
                 Text("Nivel de Cliente")
                     .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundColor(.llegoPrimary)
+                    .foregroundColor(.primary)
 
                 Spacer()
             }
@@ -977,7 +976,7 @@ struct ProfileView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Cliente \(effectiveCustomerLevel.name)")
                             .font(.system(size: 20, weight: .bold, design: .rounded))
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(.primary)
 
                         Text("\(effectiveCurrentPoints) puntos de \(effectiveNextLevelPoints)")
                             .font(.system(size: 14, weight: .medium))
@@ -1026,7 +1025,7 @@ struct ProfileView: View {
                                 Text(level.name)
                                     .font(.system(size: 9, weight: .semibold))
                                     .foregroundColor(
-                                        level.rawValue <= 3 ? .llegoPrimary : .gray.opacity(0.6))
+                                        level.rawValue <= 3 ? gradientManager.currentAccentColor : .gray.opacity(0.6))
                             }
                             .frame(maxWidth: .infinity)
                         }
@@ -1108,7 +1107,7 @@ struct ProfileView: View {
             HStack {
                 Text("Pedidos recientes")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.llegoPrimary)
+                    .foregroundColor(.primary)
 
                 Spacer()
 
@@ -1122,7 +1121,7 @@ struct ProfileView: View {
             if viewModel.isLoadingOrders {
                 HStack(spacing: 12) {
                     ProgressView()
-                        .tint(.llegoPrimary)
+                        .tint(gradientManager.currentAccentColor)
                     Text("Cargando pedidos...")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.gray)
@@ -1182,7 +1181,7 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(order.storeName)
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(.primary)
 
                     Text(order.formattedDate)
                         .font(.system(size: 13, weight: .medium))
@@ -1194,7 +1193,7 @@ struct ProfileView: View {
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(order.formattedTotal)
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(.primary)
 
                     Text(order.status.displayName)
                         .font(.system(size: 12, weight: .medium))
@@ -1216,11 +1215,11 @@ struct ProfileView: View {
             HStack {
                 Image(systemName: "creditcard.fill")
                     .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(.llegoPrimary)
+                    .foregroundColor(gradientManager.currentAccentColor)
 
                 Text("Método de Pago Preferido")
                     .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundColor(.llegoPrimary)
+                    .foregroundColor(.primary)
 
                 Spacer()
             }
@@ -1285,12 +1284,12 @@ struct ProfileView: View {
                 HStack(spacing: 12) {
                     Image(systemName: "sparkles")
                         .font(.system(size: 18, weight: .regular))
-                        .foregroundColor(.llegoAccent)
+                        .foregroundColor(gradientManager.currentAccentColor.opacity(0.78))
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Motor de Recomendaciones")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(.primary)
 
                         Text("Elige cómo obtener sugerencias")
                             .font(.system(size: 13, weight: .medium))
@@ -1310,7 +1309,7 @@ struct ProfileView: View {
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(
                                     aiPreferenceManager.selectedEngine == engine
-                                        ? .llegoAccent : .gray
+                                        ? gradientManager.currentAccentColor.opacity(0.82) : .gray
                                 )
                                 .frame(width: 24)
 
@@ -1330,7 +1329,7 @@ struct ProfileView: View {
                             if aiPreferenceManager.selectedEngine == engine {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 20, weight: .semibold))
-                                    .foregroundColor(.llegoAccent)
+                                    .foregroundColor(gradientManager.currentAccentColor.opacity(0.82))
                             } else {
                                 Image(systemName: "circle")
                                     .font(.system(size: 20, weight: .regular))
@@ -1342,13 +1341,13 @@ struct ProfileView: View {
                             RoundedRectangle(cornerRadius: 12)
                                 .fill(
                                     aiPreferenceManager.selectedEngine == engine
-                                        ? Color.llegoAccent.opacity(0.08) : Color.clear)
+                                        ? gradientManager.currentAccentColor.opacity(0.07) : Color.clear)
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
                                 .stroke(
                                     aiPreferenceManager.selectedEngine == engine
-                                        ? Color.llegoAccent.opacity(0.3)
+                                        ? gradientManager.currentAccentColor.opacity(0.18)
                                         : Color.black.opacity(0.06),
                                     lineWidth: 1
                                 )
@@ -1408,7 +1407,7 @@ struct ProfileView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Tutoriales")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(.primary)
 
                         Text("Aprende a usar Llego")
                             .font(.system(size: 13, weight: .medium))
@@ -1441,18 +1440,18 @@ struct ProfileView: View {
                     HStack(spacing: 12) {
                         Image(systemName: "arrow.counterclockwise")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.llegoAccent)
+                            .foregroundColor(gradientManager.currentAccentColor.opacity(0.82))
 
                         Text("Mostrar tutoriales en el feed")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(.primary)
 
                         Spacer()
                     }
                     .padding(14)
                     .background(
                         RoundedRectangle(cornerRadius: 14)
-                            .fill(Color.llegoAccent.opacity(0.1))
+                            .fill(gradientManager.currentAccentColor.opacity(0.08))
                     )
                 }
                 .buttonStyle(PlainButtonStyle())
@@ -1474,7 +1473,7 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Volver a ver onboarding")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(.primary)
 
                     Text("Se mostrará al próximo inicio")
                         .font(.system(size: 13, weight: .medium))
@@ -1513,7 +1512,7 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Notificaciones")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.llegoPrimary)
+                        .foregroundColor(.primary)
 
                     Text("Personaliza tus avisos")
                         .font(.system(size: 13, weight: .medium))
@@ -1544,6 +1543,7 @@ struct ProfileView: View {
 struct EditNameView: View {
     @Binding var userName: String
     @Environment(\.presentationMode) var presentationMode
+    @StateObject private var gradientManager = GradientStateManager.shared
     @State private var tempName: String = ""
 
     var body: some View {
@@ -1555,7 +1555,7 @@ struct EditNameView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Nombre completo")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(.primary)
 
                         HStack(spacing: 16) {
                             Image(systemName: "person.fill")
@@ -1564,7 +1564,7 @@ struct EditNameView: View {
 
                             TextField("Ingresa tu nombre", text: $tempName)
                                 .font(.system(size: 17, weight: .medium))
-                                .foregroundColor(.llegoPrimary)
+                                .foregroundColor(.primary)
                         }
                         .padding(18)
                         .background(
@@ -1595,7 +1595,7 @@ struct EditNameView: View {
                             .background(
                                 LinearGradient(
                                     gradient: Gradient(colors: [
-                                        Color.llegoAccent, Color.llegoPrimary,
+                                        Color.llegoAccent, gradientManager.currentAccentColor,
                                     ]),
                                     startPoint: .leading,
                                     endPoint: .trailing
@@ -1666,6 +1666,7 @@ enum CustomerLevel: Int, CaseIterable {
 // MARK: - Payment Methods Sheet
 struct PaymentMethodsSheet: View {
     @Environment(\.presentationMode) var presentationMode
+    @StateObject private var gradientManager = GradientStateManager.shared
 
     var body: some View {
         NavigationView {
@@ -1680,7 +1681,7 @@ struct PaymentMethodsSheet: View {
                             lastFour: "4532",
                             expiryDate: "08/26",
                             isPreferred: true,
-                            cardColor: .llegoPrimary
+                            cardColor: gradientManager.currentAccentColor
                         )
 
                         PaymentCardView(
@@ -1702,7 +1703,7 @@ struct PaymentMethodsSheet: View {
 
                                 Text("Agregar método de pago")
                                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                    .foregroundColor(.llegoPrimary)
+                                    .foregroundColor(.primary)
 
                                 Spacer()
                             }
@@ -1868,6 +1869,7 @@ struct ProfileImagePicker: UIViewControllerRepresentable {
 struct EditUsernameSheet: View {
     @ObservedObject var viewModel: ProfileViewModel
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var gradientManager = GradientStateManager.shared
     @FocusState private var isUsernameFocused: Bool
 
     var body: some View {
@@ -1876,12 +1878,12 @@ struct EditUsernameSheet: View {
                 VStack(spacing: 16) {
                     ZStack {
                         Circle()
-                            .fill(Color.llegoPrimary.opacity(0.15))
+                            .fill(gradientManager.currentAccentColor.opacity(0.15))
                             .frame(width: 80, height: 80)
 
                         Image(systemName: "at.circle.fill")
                             .font(.system(size: 40))
-                            .foregroundColor(.llegoPrimary)
+                            .foregroundColor(gradientManager.currentAccentColor)
                     }
 
                     Text("Editar nombre de usuario")
@@ -1964,7 +1966,7 @@ struct EditUsernameSheet: View {
                     .foregroundColor(.white)
                     .background(
                         RoundedRectangle(cornerRadius: 14)
-                            .fill(Color.llegoPrimary)
+                            .fill(gradientManager.currentAccentColor)
                     )
                 }
                 .padding(.horizontal)
@@ -2041,7 +2043,7 @@ private final class AccountCashKycViewModel: ObservableObject {
 
             state = .loadingStatus
             title = "Consultando estado"
-            message = "Verificando estado global para pagos en efectivo..."
+            message = "Estamos consultando si tu KYC ya está habilitado para efectivo."
 
             do {
                 let status = try await paymentRepository.globalCashKycStatus(jwt: jwt)
@@ -2073,7 +2075,7 @@ private final class AccountCashKycViewModel: ObservableObject {
 
             state = .submitting
             title = "Enviando evidencia"
-            message = "Estamos enviando tus imágenes para evaluación."
+            message = "Estamos enviando tus fotos para validar tu identidad."
 
             do {
                 let decision = try await paymentRepository.startGlobalCashKycEvaluation(
@@ -2098,64 +2100,72 @@ private final class AccountCashKycViewModel: ObservableObject {
 
     @discardableResult
     private func applyDecision(_ decision: CashKycDecisionSnapshot) -> AccountCashKycUIState {
+        logDecision(decision)
+
         if decision.allowCash {
             if decision.appCoversCash {
                 state = .cashAvailableCovered
-                title = "Verificación activa"
-                message = "Tu identidad global está aprobada para pagos en efectivo."
+                title = "KYC aprobado"
+                message = "Tu cuenta ya está verificada y puede pagar en efectivo."
                 return .cashAvailableCovered
             }
             state = .cashAvailableUncovered
-            title = "Efectivo permitido"
-            message = "Puedes usar efectivo, pero sin cobertura de la app."
+            title = "KYC aprobado sin cobertura"
+            message = "Tu cuenta puede pagar en efectivo, pero sin cobertura de la app."
             return .cashAvailableUncovered
         }
 
         switch decision.kycEvalStatus {
         case .pendingEvidence, .notRequired:
             state = .readyToStart
-            title = "Verificación requerida"
-            message = "Captura documento y selfie para habilitar efectivo."
+            title = "KYC pendiente"
+            message = "Debes subir documento y selfie para habilitar pagos en efectivo."
             return .readyToStart
         case .submitted:
             state = .waitingResult
-            title = "En revisión"
-            message = "Tu evidencia fue enviada y está siendo evaluada."
+            title = "KYC en revisión"
+            message = "Ya recibimos tus fotos y estamos revisando la verificación."
             return .waitingResult
         case .approved:
             state = .approved
-            title = "Verificación aprobada"
-            message = "Tu cuenta quedó verificada para pagos en efectivo."
+            title = "KYC aprobado"
+            message = "Tu cuenta quedó verificada para pagar en efectivo."
             return .approved
         case .rejected:
             state = .rejected
-            title = "Verificación rechazada"
-            message = "No es posible habilitar efectivo con la evidencia actual."
+            title = "KYC rechazado"
+            message = "No pudimos aprobar la verificación con las fotos enviadas."
             return .rejected
         case .insufficientData:
             state = .insufficientData
-            title = "Evidencia insuficiente"
-            message = "Captura de nuevo documento y selfie."
+            title = "KYC incompleto"
+            message = preferredKycMessage(
+                decision,
+                fallback: "Necesitamos fotos más claras del documento y la selfie."
+            )
             return .insufficientData
         case .error:
             state = .error
-            title = "No se pudo completar"
-            message = "Intenta nuevamente en unos minutos."
+            title = "KYC no disponible"
+            message = preferredKycMessage(
+                decision,
+                fallback: "No pudimos validar tu identidad ahora mismo. Intenta nuevamente en unos minutos."
+            )
             return .error
         case .expired:
             state = .expired
-            title = "Verificación expirada"
-            message = "Necesitas enviar evidencia otra vez."
+            title = "KYC vencido"
+            message = "Tu verificación venció y debes enviar las fotos otra vez."
             return .expired
         case .needsReview:
             state = .cashBlocked
-            title = "Revisión manual requerida"
-            message = "Temporalmente no puedes usar efectivo."
+            title = "KYC en revisión manual"
+            message = "Por ahora no puedes usar efectivo hasta que termine la revisión."
             return .cashBlocked
         case .unknown:
             state = .error
-            title = "Estado no reconocido"
-            message = "No se pudo validar el estado de forma segura."
+            title = "KYC sin estado claro"
+            message = "No pudimos determinar el estado de tu verificación."
             return .error
         }
     }
@@ -2182,6 +2192,45 @@ private final class AccountCashKycViewModel: ObservableObject {
         state = .error
         title = "Error de verificación"
         self.message = message
+    }
+
+    private func preferredKycMessage(_ decision: CashKycDecisionSnapshot, fallback: String) -> String {
+        if decision.providerErrorCode == "GEMINI_MODEL_OVERLOADED" {
+            return "El servicio de verificación está saturado temporalmente. Intenta de nuevo en unos minutos."
+        }
+
+        let trimmedProviderError = decision.providerError?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmedProviderError, !trimmedProviderError.isEmpty {
+            return trimmedProviderError
+        }
+
+        let trimmedBackendMessage = decision.backendMessage?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let trimmedBackendMessage, !trimmedBackendMessage.isEmpty {
+            return trimmedBackendMessage
+        }
+
+        return fallback
+    }
+
+    private func logDecision(_ decision: CashKycDecisionSnapshot) {
+        print(
+            """
+            [KYC Perfil] Resultado evaluacion:
+            - verificationId: \(decision.verificationId ?? "nil")
+            - correlationId: \(decision.correlationId ?? "nil")
+            - kycEvalStatus: \(String(describing: decision.kycEvalStatus))
+            - cashCoverageStatus: \(String(describing: decision.cashCoverageStatus))
+            - allowCash: \(decision.allowCash)
+            - appCoversCash: \(decision.appCoversCash)
+            - nextAction: \(decision.nextAction ?? "nil")
+            - reasonCodes: \(decision.reasonCodes.isEmpty ? "[]" : decision.reasonCodes.joined(separator: ", "))
+            - providerErrorCode: \(decision.providerErrorCode ?? "nil")
+            - providerError: \(decision.providerError ?? "nil")
+            - backendMessage: \(decision.backendMessage ?? "nil")
+            - selfieRef: \(decision.evidenceRefs?.selfieWithId ?? "nil")
+            - documentRef: \(decision.evidenceRefs?.identityDocumentFront ?? "nil")
+            """
+        )
     }
 
     private func userFriendlyError(_ raw: String) -> String {
@@ -2216,9 +2265,15 @@ private struct AccountCashKycSheet: View {
     let onCompleted: (String) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @StateObject private var viewModel: AccountCashKycViewModel
+    @StateObject private var gradientManager = GradientStateManager.shared
     @State private var showDocumentCamera = false
     @State private var showSelfieCamera = false
+    @State private var showDocumentLibrary = false
+    @State private var showSelfieLibrary = false
+    @State private var showDocumentSourceDialog = false
+    @State private var showSelfieSourceDialog = false
     @State private var showPermissionAlert = false
     @State private var permissionMessage = ""
 
@@ -2229,49 +2284,80 @@ private struct AccountCashKycSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    Text(viewModel.title)
-                        .font(.system(size: 22, weight: .bold))
-                    Text(viewModel.message)
-                        .font(.system(size: 14, weight: .regular))
-                        .foregroundColor(.secondary)
+            ZStack {
+                Color.feedBackground(colorScheme)
+                    .ignoresSafeArea()
 
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Para verificar tu identidad necesitaremos:")
-                            .font(.system(size: 13, weight: .semibold))
-                        Text("1. Foto del frente del carnet/documento")
-                            .font(.system(size: 13, weight: .regular))
-                        Text("2. Selfie sosteniendo tu carnet visible")
-                            .font(.system(size: 13, weight: .regular))
+                ScrollView {
+                    VStack(spacing: 18) {
+                        kycHeroHeader
+                        kycIntroSection
+                        kycPurposeSection
+
+                        if shouldShowCapture {
+                            documentCaptureCard
+                            selfieCaptureCard
+                        }
+
+                        actionsPanel
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, 4)
+
+                        Spacer(minLength: 40)
                     }
-                    .padding(12)
-                    .background(Color(.systemGray6))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-
-                    if shouldShowCapture {
-                        capturePanel
-                    }
-
-                    actionsPanel
+                    .padding(.horizontal, 20)
+                    .padding(.top, 20)
+                    .padding(.bottom, 28)
                 }
-                .padding(20)
             }
-            .navigationTitle("KYC efectivo")
+            .navigationTitle("Verificación de identidad")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cerrar") {
+                    Button(action: {
                         viewModel.clearEvidence()
                         dismiss()
+                    }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(.secondary)
+                            .symbolRenderingMode(.hierarchical)
                     }
                 }
             }
             .sheet(isPresented: $showDocumentCamera) {
-                ProfileKycCameraPicker(image: $viewModel.documentImage)
+                ProfileKycImagePicker(image: $viewModel.documentImage, sourceType: .camera)
             }
             .sheet(isPresented: $showSelfieCamera) {
-                ProfileKycCameraPicker(image: $viewModel.selfieImage)
+                ProfileKycImagePicker(image: $viewModel.selfieImage, sourceType: .camera)
+            }
+            .sheet(isPresented: $showDocumentLibrary) {
+                ProfileKycImagePicker(image: $viewModel.documentImage, sourceType: .photoLibrary)
+            }
+            .sheet(isPresented: $showSelfieLibrary) {
+                ProfileKycImagePicker(image: $viewModel.selfieImage, sourceType: .photoLibrary)
+            }
+            .confirmationDialog(
+                "Documento de identidad",
+                isPresented: $showDocumentSourceDialog,
+                titleVisibility: .visible
+            ) {
+                Button("Tomar foto") { openCamera(target: .document) }
+                Button("Elegir de galería") { showDocumentLibrary = true }
+                Button("Cancelar", role: .cancel) {}
+            } message: {
+                Text("Selecciona cómo agregar la foto del documento")
+            }
+            .confirmationDialog(
+                "Selfie con documento",
+                isPresented: $showSelfieSourceDialog,
+                titleVisibility: .visible
+            ) {
+                Button("Tomar foto") { openCamera(target: .selfie) }
+                Button("Elegir de galería") { showSelfieLibrary = true }
+                Button("Cancelar", role: .cancel) {}
+            } message: {
+                Text("Selecciona cómo agregar la selfie")
             }
             .alert("Permiso de cámara", isPresented: $showPermissionAlert) {
                 Button("Entendido", role: .cancel) {}
@@ -2284,91 +2370,303 @@ private struct AccountCashKycSheet: View {
         }
     }
 
-    private var shouldShowCapture: Bool {
-        [.readyToStart, .capturingDocument, .capturingSelfie, .insufficientData, .error, .expired]
-            .contains(viewModel.state)
+    // MARK: - Hero Header
+
+    private var kycHeroHeader: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(gradientManager.currentAccentColor.opacity(0.12))
+                    .frame(width: 52, height: 52)
+
+                Image(systemName: "checkmark.shield")
+                    .font(.system(size: 21, weight: .semibold))
+                    .foregroundColor(gradientManager.currentAccentColor)
+            }
+
+            Text("Verificación KYC")
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+
+            Spacer(minLength: 0)
+        }
+        .padding(.top, 6)
     }
 
-    private var capturePanel: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Evidencia requerida")
-                .font(.system(size: 16, weight: .semibold))
+    private var kycIntroSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Verifica tu identidad para habilitar funciones que requieren validación de cuenta.")
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                .fixedSize(horizontal: false, vertical: true)
 
-            HStack {
-                Image(
-                    systemName: viewModel.documentImage == nil ? "circle" : "checkmark.circle.fill"
-                )
-                .foregroundColor(viewModel.documentImage == nil ? .secondary : .green)
-                Text("Carnet/documento (frente)")
-                Spacer()
-                Button("Capturar") { openCamera(target: .document) }
-            }
+            Text(viewModel.message)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
 
-            HStack {
-                Image(systemName: viewModel.selfieImage == nil ? "circle" : "checkmark.circle.fill")
-                    .foregroundColor(viewModel.selfieImage == nil ? .secondary : .green)
-                Text("Selfie sosteniendo el carnet")
-                Spacer()
-                Button("Capturar") { openCamera(target: .selfie) }
-            }
+    private var kycPurposeSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Sirve para")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(gradientManager.currentAccentColor)
 
-            if viewModel.documentImage != nil || viewModel.selfieImage != nil {
-                HStack(spacing: 10) {
-                    if let doc = viewModel.documentImage {
-                        Image(uiImage: doc)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 70, height: 70)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                    }
-                    if let selfie = viewModel.selfieImage {
-                        Image(uiImage: selfie)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 70, height: 70)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                    }
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(gradientManager.currentAccentColor.opacity(0.10))
+                        .frame(width: 40, height: 40)
+
+                    Image(systemName: "banknote")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(gradientManager.currentAccentColor)
                 }
-                .padding(.top, 4)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Pagar en efectivo")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+
+                    Text("Activa esta opción cuando tu cuenta quede verificada.")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
             }
         }
-        .padding(14)
-        .background(Color(.systemGray6))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(18)
+        .background(surfaceCard)
     }
+
+    // MARK: - Capture Cards
+
+    private var documentCaptureCard: some View {
+        kycCaptureCard(
+            title: "Documento de identidad",
+            subtitle: "Frente del carnet o documento oficial",
+            icon: "creditcard.viewfinder",
+            image: viewModel.documentImage
+        ) {
+            showDocumentSourceDialog = true
+        }
+    }
+
+    private var selfieCaptureCard: some View {
+        kycCaptureCard(
+            title: "Selfie con documento",
+            subtitle: "Sostén el carnet visible en la foto",
+            icon: "person.crop.square.filled.and.at.rectangle",
+            image: viewModel.selfieImage
+        ) {
+            showSelfieSourceDialog = true
+        }
+    }
+
+    private func kycCaptureCard(
+        title: String,
+        subtitle: String,
+        icon: String,
+        image: UIImage?,
+        action: @escaping () -> Void
+    ) -> some View {
+        let isComplete = image != nil
+        return VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 14) {
+                ZStack(alignment: .topTrailing) {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(isComplete ? Color.clear : gradientManager.currentAccentColor.opacity(0.08))
+                        .frame(width: 84, height: 84)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .stroke(
+                                    isComplete
+                                        ? Color.green.opacity(0.26)
+                                        : gradientManager.currentAccentColor.opacity(0.16),
+                                    lineWidth: 1
+                                )
+                        )
+
+                    if let image = image {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 84, height: 84)
+                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundStyle(.white, .green)
+                            .background(Color.white, in: Circle())
+                            .offset(x: 6, y: -6)
+                    } else {
+                        Image(systemName: icon)
+                            .font(.system(size: 24, weight: .medium))
+                            .foregroundColor(gradientManager.currentAccentColor)
+                            .frame(width: 84, height: 84, alignment: .center)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(title)
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+
+                    Text(subtitle)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(isComplete ? Color.green : gradientManager.currentAccentColor)
+                            .frame(width: 7, height: 7)
+                        Text(isComplete ? "Foto agregada" : "Pendiente")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(isComplete ? .green : gradientManager.currentAccentColor)
+                    }
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            Button(action: action) {
+                HStack(spacing: 8) {
+                    Image(systemName: isComplete ? "arrow.triangle.2.circlepath" : "plus")
+                    Text(isComplete ? "Cambiar foto" : "Agregar foto")
+                }
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(isComplete ? Color.adaptiveOnSurface(colorScheme) : .white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 46)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(
+                            isComplete
+                                ? Color.primary.opacity(0.06)
+                                : gradientManager.currentAccentColor
+                        )
+                )
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(20)
+        .background(surfaceCard)
+    }
+
+    // MARK: - Actions Panel
 
     @ViewBuilder
     private var actionsPanel: some View {
         switch viewModel.state {
         case .approved, .cashAvailableCovered, .cashAvailableUncovered:
-            Button("Listo") {
+            Button(action: {
                 onCompleted("Verificación consultada correctamente.")
                 dismiss()
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                    Text("Listo")
+                        .fontWeight(.semibold)
+                }
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 54)
+                .background(Color.green)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.plain)
+
         case .rejected, .cashBlocked:
-            Button("Entendido") {
-                onCompleted(
-                    "Actualmente no está habilitado el pago en efectivo para tu cuenta.")
+            Button(action: {
+                onCompleted("Actualmente no está habilitado el pago en efectivo para tu cuenta.")
                 dismiss()
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "hand.thumbsup.fill")
+                    Text("Entendido")
+                        .fontWeight(.semibold)
+                }
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 54)
+                .background(gradientManager.currentAccentColor)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.plain)
+
         case .readyToStart, .insufficientData, .error, .expired:
-            Button("Enviar verificación") {
+            Button(action: {
                 viewModel.submitAccountVerification()
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.up.circle.fill")
+                    Text("Enviar verificación")
+                        .fontWeight(.semibold)
+                }
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 54)
+                .background(
+                    viewModel.canSubmitEvidence
+                        ? gradientManager.currentAccentColor : Color.gray.opacity(0.35)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.plain)
             .disabled(!viewModel.canSubmitEvidence)
+
         case .waitingResult, .loadingPolicy, .loadingStatus, .submitting:
-            HStack(spacing: 10) {
+            HStack(spacing: 12) {
                 ProgressView()
-                Text("Procesando...")
-                    .font(.system(size: 14, weight: .medium))
+                    .tint(gradientManager.currentAccentColor)
+                Text("Procesando verificación...")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(gradientManager.currentAccentColor)
             }
-            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity)
+            .frame(height: 54)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(gradientManager.currentAccentColor.opacity(0.08))
+            )
+
         default:
             EmptyView()
         }
+    }
+
+    private func heroMetaLabel(icon: String, text: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+            Text(text)
+        }
+        .font(.system(size: 12, weight: .semibold))
+        .foregroundColor(gradientManager.currentAccentColor)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(gradientManager.currentAccentColor.opacity(0.10), in: Capsule())
+    }
+
+    private var surfaceCard: some View {
+        RoundedRectangle(cornerRadius: 24, style: .continuous)
+            .fill(.regularMaterial)
+            .shadow(color: .black.opacity(colorScheme == .dark ? 0.18 : 0.08), radius: 18, x: 0, y: 8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(Color.white.opacity(colorScheme == .dark ? 0.08 : 0.55), lineWidth: 1)
+            )
+    }
+
+    private var shouldShowCapture: Bool {
+        [.readyToStart, .capturingDocument, .capturingSelfie, .insufficientData, .error, .expired]
+            .contains(viewModel.state)
     }
 
     private enum CameraTarget {
@@ -2379,12 +2677,12 @@ private struct AccountCashKycSheet: View {
     private func openCamera(target: CameraTarget) {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:
-            present(target: target)
+            presentCamera(target: target)
         case .notDetermined:
             AVCaptureDevice.requestAccess(for: .video) { granted in
                 DispatchQueue.main.async {
                     if granted {
-                        present(target: target)
+                        presentCamera(target: target)
                     } else {
                         permissionMessage = "Debes habilitar el acceso a cámara para continuar."
                         showPermissionAlert = true
@@ -2397,7 +2695,7 @@ private struct AccountCashKycSheet: View {
         }
     }
 
-    private func present(target: CameraTarget) {
+    private func presentCamera(target: CameraTarget) {
         switch target {
         case .document: showDocumentCamera = true
         case .selfie: showSelfieCamera = true
@@ -2405,16 +2703,17 @@ private struct AccountCashKycSheet: View {
     }
 }
 
-private struct ProfileKycCameraPicker: UIViewControllerRepresentable {
+private struct ProfileKycImagePicker: UIViewControllerRepresentable {
     @Binding var image: UIImage?
+    let sourceType: UIImagePickerController.SourceType
     @Environment(\.dismiss) private var dismiss
 
     final class Coordinator: NSObject, UINavigationControllerDelegate,
         UIImagePickerControllerDelegate
     {
-        let parent: ProfileKycCameraPicker
+        let parent: ProfileKycImagePicker
 
-        init(parent: ProfileKycCameraPicker) {
+        init(parent: ProfileKycImagePicker) {
             self.parent = parent
         }
 
@@ -2440,7 +2739,7 @@ private struct ProfileKycCameraPicker: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let picker = UIImagePickerController()
         picker.delegate = context.coordinator
-        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+        if sourceType == .camera && UIImagePickerController.isSourceTypeAvailable(.camera) {
             picker.sourceType = .camera
             picker.cameraCaptureMode = .photo
         } else {

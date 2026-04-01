@@ -24,9 +24,21 @@ struct FeedStore: Identifiable, Hashable, Sendable {
     let businessId: String
     let name: String
     let avatarUrl: String?
+    let avatarUrlBaja: String?
+    let avatarUrlAlta: String?
     let coverUrl: String?
+    let coverUrlBaja: String?
+    let coverUrlAlta: String?
     let address: String?
     let distanceKm: Double?
+
+    var preferredAvatarSmallUrl: String? {
+        avatarSmallURL(low: avatarUrlBaja, original: avatarUrl, high: avatarUrlAlta)
+    }
+
+    var preferredCoverFastUrl: String? {
+        coverFastURL(low: coverUrlBaja, original: coverUrl, high: coverUrlAlta)
+    }
 }
 
 struct FeedProduct: Identifiable, Hashable, Sendable {
@@ -368,7 +380,11 @@ class ProductFeedRepository {
                                 businessId: edge.node.businessId,
                                 name: edge.node.name,
                                 avatarUrl: edge.node.avatarUrl,
+                                avatarUrlBaja: edge.node.avatarUrlBaja,
+                                avatarUrlAlta: edge.node.avatarUrlAlta,
                                 coverUrl: edge.node.coverUrl,
+                                coverUrlBaja: edge.node.coverUrlBaja,
+                                coverUrlAlta: edge.node.coverUrlAlta,
                                 address: edge.node.address,
                                 distanceKm: edge.node.distanceKm
                             )
@@ -412,7 +428,11 @@ class ProductFeedRepository {
                                 startingFinalPrice: combo.startingFinalPrice,
                                 startingSavings: combo.startingSavings,
                                 branchName: combo.branch?.name ?? "",
-                                branchLogoUrl: combo.branch?.avatarUrl,
+                                branchLogoUrl: avatarSmallURL(
+                                    low: combo.branch?.avatarUrlBaja,
+                                    original: combo.branch?.avatarUrl,
+                                    high: combo.branch?.avatarUrlAlta
+                                ),
                                 representativeImageUrls: combo.representativeProducts.map { $0.imageUrl },
                                 slotCount: combo.slots.count,
                                 giftOptionsCount: combo.giftOptions.count,
@@ -672,7 +692,11 @@ class ProductFeedRepository {
                                 businessId: edge.node.businessId,
                                 name: edge.node.name,
                                 avatarUrl: edge.node.avatarUrl,
+                                avatarUrlBaja: edge.node.avatarUrlBaja,
+                                avatarUrlAlta: edge.node.avatarUrlAlta,
                                 coverUrl: edge.node.coverUrl,
+                                coverUrlBaja: edge.node.coverUrlBaja,
+                                coverUrlAlta: edge.node.coverUrlAlta,
                                 address: edge.node.address,
                                 distanceKm: edge.node.distanceKm
                             ))
@@ -722,7 +746,11 @@ class ProductFeedRepository {
                                 distanceKm: edge.node.distanceKm,
                                 branchId: edge.node.branchId,
                                 branchName: edge.node.business?.name ?? "",
-                                branchAvatarUrl: edge.node.business?.avatarUrl,
+                                branchAvatarUrl: avatarSmallURL(
+                                    low: edge.node.business?.avatarUrlBaja,
+                                    original: edge.node.business?.avatarUrl,
+                                    high: edge.node.business?.avatarUrlAlta
+                                ),
                                 businessName: edge.node.business?.name ?? "Tienda",
                                 categoryId: edge.node.categoryId,
                                 categoryName: edge.node.categoryName

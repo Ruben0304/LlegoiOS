@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetBusinessDetail"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetBusinessDetail($id: String!) { business(id: $id) { __typename id name avatarUrl } }"#
+        #"query GetBusinessDetail($id: String!) { business(id: $id) { __typename id name avatarUrl avatarUrlBaja avatarUrlAlta } }"#
       ))
 
     public var id: String
@@ -48,6 +48,8 @@ public extension LlegoAPI {
           .field("id", String.self),
           .field("name", String.self),
           .field("avatarUrl", String?.self),
+          .field("avatarUrlBaja", String?.self),
+          .field("avatarUrlAlta", String?.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
           GetBusinessDetailQuery.Data.Business.self
@@ -57,6 +59,8 @@ public extension LlegoAPI {
         public var name: String { __data["name"] }
         /// Presigned URL for the business avatar
         public var avatarUrl: String? { __data["avatarUrl"] }
+        public var avatarUrlBaja: String? { __data["avatarUrlBaja"] }
+        public var avatarUrlAlta: String? { __data["avatarUrlAlta"] }
       }
     }
   }

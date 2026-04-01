@@ -58,6 +58,14 @@ struct CashKycDecisionSnapshot: Equatable {
     let correlationId: String?
     let verificationId: String?
     let backendMessage: String?
+    let providerErrorCode: String?
+    let providerError: String?
+    let evidenceRefs: CashKycEvidenceRefs?
+}
+
+struct CashKycEvidenceRefs: Equatable {
+    let selfieWithId: String?
+    let identityDocumentFront: String?
 }
 
 struct CashKycAccountContext: Equatable {
@@ -416,6 +424,8 @@ class PaymentRepository {
                 expiresAt
                 nextAction
                 verificationId
+                providerErrorCode
+                providerError
               }
             }
             """
@@ -449,6 +459,8 @@ class PaymentRepository {
                 reasonCodes
                 nextAction
                 correlationId
+                providerErrorCode
+                providerError
               }
             }
             """
@@ -499,6 +511,8 @@ class PaymentRepository {
                 kycEvalStatus
                 cashCoverageStatus
                 nextAction
+                providerErrorCode
+                providerError
               }
             }
             """
@@ -559,6 +573,8 @@ class PaymentRepository {
                 expiresAt
                 nextAction
                 verificationId
+                providerErrorCode
+                providerError
               }
             }
             """
@@ -593,6 +609,8 @@ class PaymentRepository {
                 reasonCodes
                 nextAction
                 correlationId
+                providerErrorCode
+                providerError
               }
             }
             """
@@ -657,6 +675,8 @@ class PaymentRepository {
                 reasonCodes
                 nextAction
                 expiresAt
+                providerErrorCode
+                providerError
               }
             }
             """
@@ -678,19 +698,17 @@ class PaymentRepository {
         jwt: String
     ) async throws -> CashKycDecisionSnapshot {
         do {
-            try await startGlobalCashKycEvaluationREST(
+            return try await startGlobalCashKycEvaluationREST(
                 identityDocumentFrontBase64: identityDocumentFrontBase64,
                 selfieWithIdBase64: selfieWithIdBase64,
                 deviceContext: deviceContext,
                 jwt: jwt
             )
-            return try await globalCashKycStatus(jwt: jwt)
         } catch let error as NSError
             where error.domain == "GlobalCashKycREST"
-            && (error.code == 400 || error.code == 404 || error.code == 405 || error.code == 415
-                || error.code == 422)
+            && (error.code == 404 || error.code == 405)
         {
-            // Compatibilidad: si REST no está disponible o cambia contrato, usar GraphQL vigente.
+            // Compatibilidad: si el endpoint REST global no existe en el backend activo, usar GraphQL.
             return try await startGlobalCashKycEvaluationGraphQL(
                 identityDocumentFrontBase64: identityDocumentFrontBase64,
                 selfieWithIdBase64: selfieWithIdBase64,
@@ -705,7 +723,7 @@ class PaymentRepository {
         selfieWithIdBase64: String,
         deviceContext: [String: Any],
         jwt: String
-    ) async throws {
+    ) async throws -> CashKycDecisionSnapshot {
         guard let identityDocumentData = Data(base64Encoded: identityDocumentFrontBase64),
             let selfieWithIdData = Data(base64Encoded: selfieWithIdBase64)
         else {
@@ -784,6 +802,16 @@ class PaymentRepository {
                 userInfo: [NSLocalizedDescriptionKey: message]
             )
         }
+
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw NSError(
+                domain: "GlobalCashKycREST",
+                code: -2,
+                userInfo: [NSLocalizedDescriptionKey: "Respuesta inválida del endpoint KYC global"]
+            )
+        }
+
+        return parseCashKycDecision(json)
     }
 
     private func startGlobalCashKycEvaluationGraphQL(
@@ -803,6 +831,8 @@ class PaymentRepository {
                 reasonCodes
                 nextAction
                 correlationId
+                providerErrorCode
+                providerError
               }
             }
             """
@@ -1024,7 +1054,25 @@ class PaymentRepository {
             nextAction: string(from: node, keys: ["nextAction", "next_action"]),
             correlationId: string(from: node, keys: ["correlationId", "correlation_id"]),
             verificationId: string(from: node, keys: ["verificationId", "verification_id", "id"]),
-            backendMessage: string(from: node, keys: ["message"])
+            backendMessage: string(from: node, keys: ["message"]),
+            providerErrorCode: string(from: node, keys: ["providerErrorCode", "provider_error_code"]),
+            providerError: string(from: node, keys: ["providerError", "provider_error"]),
+            evidenceRefs: parseEvidenceRefs(from: node)
+        )
+    }
+
+    private func parseEvidenceRefs(from node: [String: Any]) -> CashKycEvidenceRefs? {
+        guard let refs = node["evidenceRefs"] as? [String: Any] ?? node["evidence_refs"] as? [String: Any]
+        else {
+            return nil
+        }
+
+        return CashKycEvidenceRefs(
+            selfieWithId: string(from: refs, keys: ["selfie_with_id", "selfieWithId"]),
+            identityDocumentFront: string(
+                from: refs,
+                keys: ["identity_document_front", "identityDocumentFront"]
+            )
         )
     }
 
@@ -1069,6 +1117,12 @@ class PaymentRepository {
 
     private func extractErrorMessage(from data: Data) -> String {
         if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            if let providerError = json["providerError"] as? String, !providerError.isEmpty {
+                return providerError
+            }
+            if let providerError = json["provider_error"] as? String, !providerError.isEmpty {
+                return providerError
+            }
             if let detail = json["detail"] as? String, !detail.isEmpty { return detail }
             if let message = json["message"] as? String, !message.isEmpty { return message }
             if let errors = json["errors"] as? [[String: Any]],

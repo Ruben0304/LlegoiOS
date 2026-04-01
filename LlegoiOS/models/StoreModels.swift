@@ -1,5 +1,28 @@
 import SwiftUI
 
+func firstNonEmptyURL(_ candidates: String?...) -> String? {
+    candidates.first { candidate in
+        guard let candidate else { return false }
+        return !candidate.isEmpty
+    } ?? nil
+}
+
+func avatarSmallURL(low: String?, original: String?, high: String?) -> String? {
+    firstNonEmptyURL(low, original, high)
+}
+
+func avatarLargeURL(low: String?, original: String?, high: String?) -> String? {
+    firstNonEmptyURL(high, original, low)
+}
+
+func coverFastURL(low: String?, original: String?, high: String?) -> String? {
+    firstNonEmptyURL(low, original, high)
+}
+
+func coverBestURL(low: String?, original: String?, high: String?) -> String? {
+    firstNonEmptyURL(high, original, low)
+}
+
 // MARK: - Store Model (UI compatibility layer)
 struct Store: Identifiable {
     let id: String
@@ -70,7 +93,11 @@ struct BranchGraphQL: Identifiable, Sendable {
     let phone: String
     let status: String
     let avatarUrl: String?
+    let avatarUrlBaja: String?
+    let avatarUrlAlta: String?
     let coverUrl: String?
+    let coverUrlBaja: String?
+    let coverUrlAlta: String?
     let deliveryRadius: Double?
     let facilities: [String]?
     let createdAt: String
@@ -79,7 +106,9 @@ struct BranchGraphQL: Identifiable, Sendable {
     init(
         id: String, businessId: String, name: String, address: String,
         coordinates: CoordinatesGraphQL, phone: String, status: String, avatarUrl: String?,
-        coverUrl: String?, deliveryRadius: Double?, facilities: [String]?, createdAt: String,
+        avatarUrlBaja: String? = nil, avatarUrlAlta: String? = nil, coverUrl: String?,
+        coverUrlBaja: String? = nil, coverUrlAlta: String? = nil, deliveryRadius: Double?,
+        facilities: [String]?, createdAt: String,
         products: [BranchProductGraphQL] = []
     ) {
         self.id = id
@@ -90,11 +119,31 @@ struct BranchGraphQL: Identifiable, Sendable {
         self.phone = phone
         self.status = status
         self.avatarUrl = avatarUrl
+        self.avatarUrlBaja = avatarUrlBaja
+        self.avatarUrlAlta = avatarUrlAlta
         self.coverUrl = coverUrl
+        self.coverUrlBaja = coverUrlBaja
+        self.coverUrlAlta = coverUrlAlta
         self.deliveryRadius = deliveryRadius
         self.facilities = facilities
         self.createdAt = createdAt
         self.products = products
+    }
+
+    var preferredAvatarSmallUrl: String? {
+        avatarSmallURL(low: avatarUrlBaja, original: avatarUrl, high: avatarUrlAlta)
+    }
+
+    var preferredAvatarLargeUrl: String? {
+        avatarLargeURL(low: avatarUrlBaja, original: avatarUrl, high: avatarUrlAlta)
+    }
+
+    var preferredCoverFastUrl: String? {
+        coverFastURL(low: coverUrlBaja, original: coverUrl, high: coverUrlAlta)
+    }
+
+    var preferredCoverBestUrl: String? {
+        coverBestURL(low: coverUrlBaja, original: coverUrl, high: coverUrlAlta)
     }
 }
 

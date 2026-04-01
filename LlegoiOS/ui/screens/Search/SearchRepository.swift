@@ -142,7 +142,11 @@ class SearchRepository {
                         id: node.id,
                         name: node.name,
                         shop: node.business?.name ?? "",
-                        shopLogoUrl: node.business?.avatarUrl ?? "",
+                        shopLogoUrl: avatarSmallURL(
+                            low: node.business?.avatarUrlBaja,
+                            original: node.business?.avatarUrl,
+                            high: node.business?.avatarUrlAlta
+                        ) ?? "",
                         weight: "",
                         price: priceFormatted,
                         imageUrl: node.imageUrlBaja
@@ -178,8 +182,16 @@ class SearchRepository {
                         id: node.id,
                         name: node.name,
                         etaMinutes: etaMinutes,
-                        logoUrl: node.avatarUrl ?? "",
-                        bannerUrl: node.coverUrl ?? "",
+                        logoUrl: avatarSmallURL(
+                            low: node.avatarUrlBaja,
+                            original: node.avatarUrl,
+                            high: node.avatarUrlAlta
+                        ) ?? "",
+                        bannerUrl: coverFastURL(
+                            low: node.coverUrlBaja,
+                            original: node.coverUrl,
+                            high: node.coverUrlAlta
+                        ) ?? "",
                         address: node.address,
                         rating: nil,
                         description: "Descripción de la tienda que estará disponible próximamente",
@@ -293,8 +305,16 @@ class SearchRepository {
                         id: node.id,
                         name: node.name,
                         etaMinutes: etaMinutes,
-                        logoUrl: node.avatarUrl ?? "",
-                        bannerUrl: node.coverUrl ?? "",
+                        logoUrl: avatarSmallURL(
+                            low: node.avatarUrlBaja,
+                            original: node.avatarUrl,
+                            high: node.avatarUrlAlta
+                        ) ?? "",
+                        bannerUrl: coverFastURL(
+                            low: node.coverUrlBaja,
+                            original: node.coverUrl,
+                            high: node.coverUrlAlta
+                        ) ?? "",
                         address: node.address ?? "",
                         rating: nil,
                         description: "Descripción de la tienda que estará disponible próximamente",

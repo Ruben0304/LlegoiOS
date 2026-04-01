@@ -49,7 +49,11 @@ class StoreDetailRepository {
                     phone: branch.phone,
                     status: branch.status ?? "",
                     avatarUrl: branch.avatarUrl,
+                    avatarUrlBaja: branch.avatarUrlBaja,
+                    avatarUrlAlta: branch.avatarUrlAlta,
                     coverUrl: branch.coverUrl,
+                    coverUrlBaja: branch.coverUrlBaja,
+                    coverUrlAlta: branch.coverUrlAlta,
                     deliveryRadius: branch.deliveryRadius,
                     facilities: nil,
                     createdAt: branch.createdAt,
@@ -127,6 +131,8 @@ class StoreDetailRepository {
                     name: business.name,
                     socialMedia: nil,  // Not available in query
                     avatarUrl: business.avatarUrl,
+                    avatarUrlBaja: business.avatarUrlBaja,
+                    avatarUrlAlta: business.avatarUrlAlta,
                     coverUrl: business.avatarUrl
                 )
 
@@ -197,7 +203,11 @@ class StoreDetailRepository {
                             phone: edge.node.phone,
                             status: edge.node.status ?? "",
                             avatarUrl: edge.node.avatarUrl,
+                            avatarUrlBaja: edge.node.avatarUrlBaja,
+                            avatarUrlAlta: edge.node.avatarUrlAlta,
                             coverUrl: edge.node.coverUrl,
+                            coverUrlBaja: edge.node.coverUrlBaja,
+                            coverUrlAlta: edge.node.coverUrlAlta,
                             deliveryRadius: edge.node.deliveryRadius,
                             facilities: nil,
                             createdAt: edge.node.createdAt
@@ -410,7 +420,11 @@ struct BranchDetailGraphQL: Identifiable, Sendable {
     let phone: String
     let status: String
     let avatarUrl: String?
+    let avatarUrlBaja: String?
+    let avatarUrlAlta: String?
     let coverUrl: String?
+    let coverUrlBaja: String?
+    let coverUrlAlta: String?
     let deliveryRadius: Double?
     let facilities: [String]?
     let createdAt: String
@@ -418,6 +432,14 @@ struct BranchDetailGraphQL: Identifiable, Sendable {
     let acceptedCurrency: String?
     let exchangeRate: Int?
     let showcases: [ShowcaseGraphQL]
+
+    var preferredAvatarLargeUrl: String? {
+        avatarLargeURL(low: avatarUrlBaja, original: avatarUrl, high: avatarUrlAlta)
+    }
+
+    var preferredCoverBestUrl: String? {
+        coverBestURL(low: coverUrlBaja, original: coverUrl, high: coverUrlAlta)
+    }
 }
 
 // Model to represent GraphQL Business details
@@ -426,7 +448,13 @@ struct BusinessDetailGraphQL: Identifiable, Sendable {
     let name: String
     let socialMedia: [String: String]?
     let avatarUrl: String?
+    let avatarUrlBaja: String?
+    let avatarUrlAlta: String?
     let coverUrl: String?
+
+    var preferredAvatarLargeUrl: String? {
+        avatarLargeURL(low: avatarUrlBaja, original: avatarUrl, high: avatarUrlAlta)
+    }
 }
 
 // Model to represent GraphQL Product for store detail (to avoid conflict with ProductRepository)

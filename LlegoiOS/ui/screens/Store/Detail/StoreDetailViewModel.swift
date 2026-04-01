@@ -194,11 +194,11 @@ class StoreDetailViewModel: ObservableObject {
     }
 
     func getLogoUrl() -> String {
-        branchDetail?.avatarUrl ?? defaultLogoUrl
+        branchDetail?.preferredAvatarLargeUrl ?? defaultLogoUrl
     }
 
     func getBannerUrl() -> String {
-        branchDetail?.coverUrl ?? defaultBannerUrl
+        branchDetail?.preferredCoverBestUrl ?? defaultBannerUrl
     }
 
     func getSocialMediaUrl(for platform: String) -> String? {
