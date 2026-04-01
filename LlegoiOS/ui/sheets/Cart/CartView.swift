@@ -407,7 +407,7 @@ struct CartView: View {
     }
 
     private var shouldShowCashCUPDeliveryToggle: Bool {
-        selectedCurrency == .USD
+        selectedCurrency == .USD && viewModel.fulfillmentMode == .delivery
     }
 
     private func normalizeDeliveryFeePaymentMode() {
@@ -1092,6 +1092,10 @@ struct CartView: View {
                     multipleBranchesBanner
                 }
 
+                if viewModel.isStorePickupEnabled && viewModel.isPickupAvailableForCurrentCart {
+                    fulfillmentSelectorCard
+                }
+
                 priceBreakdown
             }
             .padding(.horizontal, 16)
@@ -1678,6 +1682,94 @@ struct CartView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    // MARK: - Fulfillment Selector
+
+    private var fulfillmentSelectorCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Método de entrega")
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundColor(gradientManager.currentAccentColor)
+
+            HStack(spacing: 8) {
+                fulfillmentOptionButton(
+                    mode: .delivery,
+                    icon: "bicycle",
+                    title: "Envío a domicilio"
+                )
+                fulfillmentOptionButton(
+                    mode: .pickup,
+                    icon: "bag.fill",
+                    title: "Recoger en tienda"
+                )
+            }
+
+            if viewModel.fulfillmentMode == .pickup, let pickup = viewModel.selectedPickup {
+                HStack(spacing: 10) {
+                    ZStack {
+                        Circle()
+                            .fill(gradientManager.currentAccentColor.opacity(0.12))
+                            .frame(width: 34, height: 34)
+                        Image(systemName: "mappin.circle.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(gradientManager.currentAccentColor)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(pickup.branchName)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.primary)
+                        if let address = pickup.address, !address.isEmpty {
+                            Text(address)
+                                .font(.system(size: 12, weight: .regular))
+                                .foregroundColor(.secondary)
+                        } else {
+                            Text("La tienda te indicará el punto de recogida")
+                                .font(.system(size: 12, weight: .regular))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(12)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(gradientManager.currentAccentColor.opacity(0.06))
+                )
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .padding(16)
+        .background(Color.white)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+        .animation(.spring(response: 0.38, dampingFraction: 0.82), value: viewModel.fulfillmentMode)
+    }
+
+    private func fulfillmentOptionButton(mode: FulfillmentMode, icon: String, title: String) -> some View {
+        let isSelected = viewModel.fulfillmentMode == mode
+        return Button(action: {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                viewModel.setFulfillmentMode(mode)
+            }
+        }) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .semibold))
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 42)
+            .foregroundColor(isSelected ? .white : .secondary)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isSelected ? gradientManager.currentAccentColor : Color(.systemGray6))
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
     private var multipleBranchesBanner: some View {
         HStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
@@ -1750,7 +1842,11 @@ struct CartView: View {
     private var bottomPlaceOrderAction: some View {
         Button(action: {
             if !viewModel.hasMultipleBranches {
-                showDeliveryAddressAlert = true
+                if viewModel.fulfillmentMode == .pickup {
+                    processPayment()
+                } else {
+                    showDeliveryAddressAlert = true
+                }
             }
         }) {
             HStack(spacing: 6) {
@@ -1919,13 +2015,15 @@ struct CartView: View {
     }
 
     private var orderConfirmationLocationLabel: String {
-        if viewModel.fulfillmentMode == .pickup {
-            if let pickup = viewModel.selectedPickup {
+        let cartViewModel = _viewModel.wrappedValue
+
+        if cartViewModel.fulfillmentMode.rawValue == "PICKUP" {
+            if let pickup = cartViewModel.selectedPickup {
                 return pickup.address ?? pickup.branchName
             }
             return "Recogida en tienda"
         }
-        if let selected = viewModel.selectedAddress {
+        if let selected = cartViewModel.selectedAddress {
             return selected.street
         }
         return UserLocationManager.shared.userAddress

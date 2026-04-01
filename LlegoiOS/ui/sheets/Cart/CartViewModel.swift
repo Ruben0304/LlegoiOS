@@ -194,6 +194,9 @@ class CartViewModel: ObservableObject {
     }
 
     var formattedDeliveryFee: String {
+        if fulfillmentMode == .pickup {
+            return "Gratis"
+        }
         if isLoadingDeliveryFee {
             return "Calculando..."
         }
