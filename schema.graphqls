@@ -1,361 +1,209 @@
-"""
-A directive used by the Apollo iOS client to annotate operations or fragments that should be used exclusively for generating local cache mutations instead of as standard operations.
-"""
-directive @apollo_client_ios_localCacheMutation on QUERY | MUTATION | SUBSCRIPTION | FRAGMENT_DEFINITION
-
-"""
-A directive used by the Apollo iOS code generation engine to generate custom import statements in operation or fragment definition files. An import statement to import a module with the name provided in the `module` argument will be added to the generated definition file.
-"""
-directive @import(
-  """The name of the module to import."""
-  module: String!
-) repeatable on QUERY | MUTATION | SUBSCRIPTION | FRAGMENT_DEFINITION
-
-"""Attach extra information to a given type."""
-directive @typePolicy(
-  """
-  A selection set containing fields used to compute the cache key of an object. Referenced fields must have non-nullable scalar types. Order is important.
-  """
-  keyFields: String!
-) on OBJECT | INTERFACE
-
-"""
-A directive used by Apollo iOS to map query input data to cache keys of objects.
-"""
-directive @fieldPolicy(
-  """The field you are setting the @fieldPolicy for."""
-  forField: String!
-
-  """Set of fields used to compute the cache key."""
-  keyArgs: String!
-) repeatable on OBJECT | INTERFACE
-
-"""
-Directs the executor to defer this fragment when the `if` argument is true or undefined.
-"""
-directive @defer(
-  """Deferred when true or undefined."""
-  if: Boolean
-
-  """Unique name"""
-  label: String
-) on FRAGMENT_SPREAD | INLINE_FRAGMENT
-
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
+"Date with time (isoformat)"
+scalar DateTime
+"The `JSON` scalar type represents JSON values as specified by [ECMA-404](https://ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf)."
+scalar JSON
+scalar Upload
 type Query {
-  """Lista de usuarios (requiere rol admin o manager)"""
+  "Lista de usuarios (requiere rol admin o manager)"
   users(jwt: String!): [UserType!]!
-
-  """Obtener usuario por ID (requiere rol admin o manager)"""
+  "Obtener usuario por ID (requiere rol admin o manager)"
   user(id: String!, jwt: String!): UserType
-
-  """Buscar usuarios (requiere autenticación)"""
+  "Buscar usuarios (requiere autenticación)"
   searchUsers(query: String!, jwt: String!): [UserType!]!
-
-  """Usuario actual desde JWT"""
+  "Usuario actual desde JWT"
   me(jwt: String!): UserType
-
-  """Lista de negocios (query pública/admin)"""
+  "Lista de negocios (query pública/admin)"
   businesses(ownerId: String = null, jwt: String = null): [BusinessType!]!
-
-  """Obtener negocio por ID"""
+  "Obtener negocio por ID"
   business(id: String!, jwt: String = null): BusinessType
-
-  """Buscar negocios"""
+  "Buscar negocios"
   searchBusinesses(query: String!, limit: Int! = 10, useVectorSearch: Boolean! = true, jwt: String = null): [BusinessType!]!
-
-  """Obtener todos mis negocios con sucursales (propios + compartidos)"""
+  "Obtener todos mis negocios con sucursales (propios + compartidos)"
   getMyBusinessesWithBranches(jwt: String!): [BusinessWithBranchesType!]!
-
-  """Lista de sucursales con scoring por cercanía (paginado)"""
+  "Lista de sucursales con scoring por cercanía (paginado)"
   branches(first: Int = null, after: String = null, businessId: String = null, tipo: BranchTipo = null, radiusKm: Float = null, productCategoryId: String = null, jwt: String = null): BranchConnection!
-
-  """Obtener sucursal por ID"""
+  "Obtener sucursal por ID"
   branch(id: String!, jwt: String = null): BranchType
-
-  """Buscar sucursales con scoring por cercanía (paginado)"""
+  "Buscar sucursales con scoring por cercanía (paginado)"
   searchBranches(query: String!, first: Int = null, after: String = null, useVectorSearch: Boolean! = true, productCategoryId: String = null, radiusKm: Float = null, jwt: String = null): BranchConnection!
-
-  """Buscar sucursales cercanas por coordenadas (paginado)"""
+  "Buscar sucursales cercanas por coordenadas (paginado)"
   nearbyBranches(longitude: Float!, latitude: Float!, first: Int = null, after: String = null, radiusKm: Float! = 5, onlyActive: Boolean! = true, tipo: BranchTipo = null, productCategoryId: String = null, jwt: String = null): NearbyBranchConnection!
-
-  """Obtener ubicación de una sucursal desde MongoDB"""
+  "Obtener ubicación de una sucursal desde MongoDB"
   branchLocation(branchId: String!, jwt: String = null): CoordinatesType
-
-  """
-  Obtener todas las sucursales a las que tengo acceso (propias + compartidas)
-  """
+  "Obtener todas las sucursales a las que tengo acceso (propias + compartidas)"
   getMyBranches(jwt: String!): [BranchType!]!
-
-  """Lista de productos con scoring por cercanía (paginado)"""
+  "Lista de productos con scoring por cercanía (paginado)"
   products(first: Int = null, after: String = null, ids: [String!] = null, branchId: String = null, categoryId: String = null, availableOnly: Boolean! = false, branchTipo: BranchTipo = null, radiusKm: Float = null, jwt: String = null): ProductConnection!
-
-  """Obtener producto por ID"""
+  "Obtener producto por ID"
   product(id: String!, jwt: String = null): ProductType
-
-  """Obtener múltiples productos por lista de IDs (findMany)"""
+  "Obtener múltiples productos por lista de IDs (findMany)"
   productsByIds(ids: [String!]!, jwt: String = null): [ProductType!]!
-
-  """Buscar productos con scoring por cercanía (paginado)"""
+  "Buscar productos con scoring por cercanía (paginado)"
   searchProducts(query: String!, first: Int = null, after: String = null, useVectorSearch: Boolean! = true, branchTipo: BranchTipo = null, categoryId: String = null, radiusKm: Float = null, jwt: String = null): ProductConnection!
-
-  """
-  Obtener recomendaciones de productos complementarios basadas en items del carrito
-  """
+  "Obtener recomendaciones de productos complementarios basadas en items del carrito"
   productRecommendations(productIds: [String!]!, limit: Int! = 5, jwt: String = null): ProductRecommendationsResponseType
-
-  """
-  Obtener productos de la misma branch/sucursal, excluyendo el producto dado
-  """
+  "Obtener productos de la misma branch/sucursal, excluyendo el producto dado"
   productsFromSameBranch(productId: String!, limit: Int! = 10, jwt: String = null): [ProductType!]!
-
-  """Obtener vitrina por ID"""
+  "Obtener vitrina por ID"
   showcase(showcaseId: String!, jwt: String = null): ShowcaseType
-
-  """Obtener vitrinas por sucursal"""
+  "Obtener vitrinas por sucursal"
   showcasesByBranch(branchId: String!, activeOnly: Boolean! = true, jwt: String = null): [ShowcaseType!]!
-
-  """Obtener todas las vitrinas"""
+  "Obtener todas las vitrinas"
   allShowcases(activeOnly: Boolean! = false, jwt: String = null): [ShowcaseType!]!
-
-  """Lista de categorías con subcategorías"""
+  "Lista de categorías con subcategorías"
   categories(jwt: String = null): [CategoryType!]!
-
-  """Obtener categoría por ID"""
+  "Obtener categoría por ID"
   category(id: String!, jwt: String = null): CategoryType
-
-  """Get all product categories"""
+  "Get all product categories"
   productCategories(branchType: String = null): [ProductCategoryType!]!
-
-  """Get product category by ID"""
+  "Get product category by ID"
   productCategory(id: String!): ProductCategoryType
-
-  """Obtener un combo por ID"""
+  "Obtener un combo por ID"
   combo(comboId: String!): ComboType
-
-  """Obtener todos los combos de una sucursal"""
+  "Obtener todos los combos de una sucursal"
   combosByBranch(branchId: String!, availableOnly: Boolean! = true): [ComboType!]!
-
-  """Obtener todos los combos"""
+  "Obtener todos los combos"
   allCombos(availableOnly: Boolean! = false, branchTipo: String = null, productCategoryId: String = null): [ComboType!]!
-
-  """
-  Semantic vector search across products, branches, or businesses. Returns enriched results from Qdrant + MongoDB.
-  """
+  "Semantic vector search across products, branches, or businesses. Returns enriched results from Qdrant + MongoDB."
   semanticSearch(query: String!, collection: SemanticSearchCollection!, limit: Int! = 10, jwt: String = null): SemanticSearchResultType!
-
-  """
-  Send a message to the AI assistant and get a response with RAG. Use stream=true for GraphQL subscription streaming.
-  """
+  "Send a message to the AI assistant and get a response with RAG. Use stream=true for GraphQL subscription streaming."
   aiChat(input: AiAssistantChatInput!, jwt: String = null): AiChatResult!
-
-  """Obtener mis pedidos con paginación"""
+  "Obtener mis pedidos con paginación"
   myOrders(jwt: String!, status: OrderStatusEnum = null, limit: Int! = 20, offset: Int! = 0): OrdersConnectionType!
-
-  """Obtener un pedido por ID"""
+  "Obtener un pedido por ID"
   order(id: String!, jwt: String!): OrderType
-
-  """Obtener pedido por número de orden"""
+  "Obtener pedido por número de orden"
   orderByNumber(orderNumber: String!, jwt: String!): OrderType
-
-  """Tracking completo de un pedido"""
+  "Tracking completo de un pedido"
   orderTracking(orderId: String!, jwt: String!): OrderTrackingType
-
-  """Pedidos de una sucursal"""
+  "Pedidos de una sucursal"
   branchOrders(branchId: String!, jwt: String!, status: OrderStatusEnum = null, fromDate: DateTime = null, toDate: DateTime = null, limit: Int! = 50, offset: Int! = 0): OrdersConnectionType!
-
-  """Pedidos pendientes de una sucursal"""
+  "Pedidos pendientes de una sucursal"
   pendingBranchOrders(branchId: String!, jwt: String!): [OrderType!]!
-
-  """Pedidos disponibles para repartidores cerca"""
+  "Pedidos disponibles para repartidores cerca"
   availableOrdersForDelivery(latitude: Float!, longitude: Float!, jwt: String!, radiusKm: Float! = 5): [OrderType!]!
-
-  """Pedido actual del repartidor"""
+  "Pedido actual del repartidor"
   myCurrentDelivery(jwt: String!): OrderType
-
-  """Historial de pedidos del repartidor autenticado"""
+  "Historial de pedidos del repartidor autenticado"
   myDeliveries(jwt: String!, status: OrderStatusEnum = null, page: Int! = 1, pageSize: Int! = 20): [OrderType!]!
-
-  """Estadísticas del repartidor autenticado"""
+  "Estadísticas del repartidor autenticado"
   myDeliveryStats(jwt: String!): DeliveryPersonStatsType!
-
-  """Mis solicitudes de vinculación a sucursales"""
+  "Mis solicitudes de vinculación a sucursales"
   myBranchLinkRequests(jwt: String!, status: DeliveryRequestStatusEnum = null): [BranchDeliveryRequestType!]!
-
-  """Solicitudes de vinculación a una sucursal (para managers)"""
+  "Solicitudes de vinculación a una sucursal (para managers)"
   branchLinkRequests(branchId: String!, jwt: String!, status: DeliveryRequestStatusEnum = null): [BranchDeliveryRequestType!]!
-
-  """Estadísticas de pedidos"""
+  "Estadísticas de pedidos"
   orderStats(fromDate: DateTime!, toDate: DateTime!, jwt: String!, branchId: String = null): OrderStatsType!
-
-  """
-  Estimar precio de envío antes de crear el pedido. Usa la ubicación guardada del usuario autenticado.
-  """
+  "Estimar precio de envío antes de crear el pedido. Usa la ubicación guardada del usuario autenticado."
   estimateDeliveryFee(branchId: String!, jwt: String!, subtotal: Float! = 0): DeliveryFeeEstimateType!
-
-  """
-  Estadísticas del dashboard: ingresos, pedidos completados/rechazados y productos más vendidos por período (today, week, month)
-  """
+  "Estadísticas del dashboard: ingresos, pedidos completados/rechazados y productos más vendidos por período (today, week, month)"
   dashboardStats(businessId: String!, period: DashboardPeriod!, jwt: String!): DashboardStatsType!
-
-  """Get business type configurations (supports incremental sync)"""
+  "Get business type configurations (supports incremental sync)"
   businessTypeConfigs(lastSyncAt: DateTime = null): [BusinessTypeConfigType!]!
-
-  """
-  Obtener todos los métodos de pago disponibles. Si se provee branchId, retorna solo los aceptados por ese branch.
-  """
+  "Obtener todos los métodos de pago disponibles. Si se provee branchId, retorna solo los aceptados por ese branch."
   paymentMethods(branchId: String = null, jwt: String = null): [PaymentMethodType!]!
-
-  """Obtener método de pago por ID"""
+  "Obtener método de pago por ID"
   paymentMethod(id: String!, jwt: String = null): PaymentMethodType
-
-  """Obtener métodos de pago por moneda"""
+  "Obtener métodos de pago por moneda"
   paymentMethodsByCurrency(currency: String!, jwt: String = null): [PaymentMethodType!]!
-
-  """Obtener métodos de pago por tipo"""
+  "Obtener métodos de pago por tipo"
   paymentMethodsByMethod(method: String!, jwt: String = null): [PaymentMethodType!]!
-
-  """Obtener intento de pago por ID"""
+  "Obtener intento de pago por ID"
   paymentAttempt(id: String!, jwt: String!): PaymentAttemptType
-
-  """Obtener intentos de pago de un pedido"""
+  "Obtener intentos de pago de un pedido"
   paymentAttemptsByOrder(orderId: String!, jwt: String!): [PaymentAttemptType!]!
-
-  """Obtener el intento de pago activo de un pedido"""
+  "Obtener el intento de pago activo de un pedido"
   activePaymentAttempt(orderId: String!, jwt: String!): PaymentAttemptType
-
-  """Obtiene la política KYC de efectivo para una orden"""
+  "Obtiene la política KYC de efectivo para una orden"
   cashKycPolicy(orderId: String!, jwt: String!): CashKycPolicyResult!
-
-  """Obtiene el estado KYC de un intento de pago en efectivo"""
+  "Obtiene el estado KYC de un intento de pago en efectivo"
   cashKycStatus(paymentAttemptId: String!, jwt: String!): CashKycStatusResult!
-
-  """Obtiene estado KYC reusable por cuenta para un merchant"""
+  "Obtiene estado KYC reusable por cuenta para un merchant"
   cashKycStatusByAccount(merchantId: String!, jwt: String!, branchId: String = null): CashKycAccountStatusResult!
-
-  """
-  Obtiene política KYC de efectivo por merchant/branch sin requerir orden
-  """
+  "Obtiene política KYC de efectivo por merchant/branch sin requerir orden"
   cashKycPolicyByMerchant(merchantId: String!, jwt: String!, branchId: String = null): CashKycPolicyResult!
-
-  """Obtiene estado global KYC de la cuenta del usuario para cash"""
+  "Obtiene estado global KYC de la cuenta del usuario para cash"
   globalCashKycStatus(jwt: String!): GlobalCashKycStatusResult!
-
-  """Obtener balance de wallet del usuario actual"""
+  "Obtener balance de wallet del usuario actual"
   myWallet(jwt: String!): WalletStatusType!
-
-  """Obtener historial de transacciones del usuario actual"""
+  "Obtener historial de transacciones del usuario actual"
   myWalletTransactions(jwt: String!, limit: Int! = 50, skip: Int! = 0, currency: String = null): [WalletTransactionType!]!
-
-  """Obtener balance de wallet de una sucursal"""
+  "Obtener balance de wallet de una sucursal"
   branchWallet(branchId: String!, jwt: String!): WalletStatusType!
-
-  """Obtener historial de transacciones de una sucursal"""
+  "Obtener historial de transacciones de una sucursal"
   branchWalletTransactions(branchId: String!, jwt: String!, limit: Int! = 50, skip: Int! = 0, currency: String = null): [WalletTransactionType!]!
-
-  """Vista previa de una invitacion por codigo"""
+  "Vista previa de una invitacion por codigo"
   invitationByCode(code: String!, jwt: String = null): BranchInvitationType
-
-  """Todas las invitaciones de un negocio (dueno)"""
+  "Todas las invitaciones de un negocio (dueno)"
   invitationsByBusiness(businessId: String!, jwt: String!): [BranchInvitationType!]!
-
-  """Invitaciones activas de un negocio (dueno)"""
+  "Invitaciones activas de un negocio (dueno)"
   activeInvitationsByBusiness(businessId: String!, jwt: String!): [BranchInvitationType!]!
-
-  """Accesos a negocio por negocio (dueno)"""
+  "Accesos a negocio por negocio (dueno)"
   businessAccessByBusiness(businessId: String!, jwt: String!): [BusinessAccessType!]!
-
-  """Mis accesos a negocios"""
+  "Mis accesos a negocios"
   myBusinessAccess(jwt: String!): [BusinessAccessType!]!
-
-  """Obtener configuración de la aplicación de clientes"""
+  "Obtener configuración de la aplicación de clientes"
   appConfig: AppConfigType
-
-  """Obtener configuración de la aplicación de negocios"""
+  "Obtener configuración de la aplicación de negocios"
   businessAppConfig: BusinessAppConfigType
-
-  """Obtener todos los feedbacks (requiere rol admin)"""
+  "Obtener todos los feedbacks (requiere rol admin)"
   feedbacks(jwt: String!): [FeedbackType!]!
-
-  """Obtener feedback por ID"""
+  "Obtener feedback por ID"
   feedback(id: String!, jwt: String!): FeedbackType
-
-  """Obtener mis feedbacks"""
+  "Obtener mis feedbacks"
   myFeedbacks(jwt: String!): [FeedbackType!]!
-
-  """Obtener feedbacks por tipo (requiere rol admin)"""
+  "Obtener feedbacks por tipo (requiere rol admin)"
   feedbacksByType(type: FeedbackTypeEnum!, jwt: String!): [FeedbackType!]!
-
-  """Obtener feedbacks por estado (requiere rol admin)"""
+  "Obtener feedbacks por estado (requiere rol admin)"
   feedbacksByStatus(status: FeedbackStatusEnum!, jwt: String!): [FeedbackType!]!
-
-  """Obtener todas las encuestas activas"""
+  "Obtener todas las encuestas activas"
   activeSurveys(jwt: String!): [SurveyType!]!
-
-  """Obtener todas las encuestas (requiere rol admin)"""
+  "Obtener todas las encuestas (requiere rol admin)"
   allSurveys(jwt: String!): [SurveyType!]!
-
-  """Obtener encuesta por ID"""
+  "Obtener encuesta por ID"
   survey(id: String!, jwt: String!): SurveyType
-
-  """Obtener respuestas por encuesta (requiere rol admin)"""
+  "Obtener respuestas por encuesta (requiere rol admin)"
   surveyResponses(surveyId: String!, jwt: String!): [SurveyResponseType!]!
-
-  """Obtener mis respuestas a encuestas"""
+  "Obtener mis respuestas a encuestas"
   mySurveyResponses(jwt: String!): [SurveyResponseType!]!
-
-  """Verificar si el usuario ya respondió una encuesta"""
+  "Verificar si el usuario ya respondió una encuesta"
   hasRespondedToSurvey(surveyId: String!, jwt: String!): Boolean!
-
-  """Get personalized feed with multiple sections"""
+  "Get personalized feed with multiple sections"
   getFeed(branchTipo: String!, first: Int! = 10, radiusKm: Float = null, sections: [String!] = null, productCategoryId: String = null, jwt: String = null): FeedResponse!
-
-  """Get all tutorials"""
+  "Get all tutorials"
   tutorials: [TutorialType!]!
-
-  """Get active tutorials only"""
+  "Get active tutorials only"
   activeTutorials: [TutorialType!]!
-
-  """Get tutorials by app target"""
+  "Get tutorials by app target"
   tutorialsByApp(appTarget: AppTarget!): [TutorialType!]!
-
-  """Get tutorial by ID"""
+  "Get tutorial by ID"
   tutorial(id: String!): TutorialType
-
-  """Search tutorials by title, description or tags"""
+  "Search tutorials by title, description or tags"
   searchTutorials(query: String!): [TutorialType!]!
-
-  """Get tutorials by tags"""
+  "Get tutorials by tags"
   tutorialsByTags(tags: [String!]!): [TutorialType!]!
-
-  """Buscar transferencias pendientes por transfer_id y/o teléfono"""
+  "Buscar transferencias pendientes por transfer_id y/o teléfono"
   findPendingTransfers(jwt: String!, transferId: String = null, phone: String = null): [ShortcutTransferType!]!
-
-  """Obtener listas de variantes por sucursal"""
+  "Obtener listas de variantes por sucursal"
   variantLists(branchId: String!, jwt: String = null): [VariantListType!]!
-
-  """Obtener lista de variantes por ID"""
+  "Obtener lista de variantes por ID"
   variantList(id: String!, jwt: String = null): VariantListType
-
-  """
-  Sincronizar negocios con sus branches (excluye datos sensibles como managerIds y ownerId)
-  """
+  "Sincronizar negocios con sus branches (excluye datos sensibles como managerIds y ownerId)"
   syncBusinessesWithBranches(jwt: String = null): [BusinessSyncType!]!
-
-  """Sincronizar productos (todos los productos disponibles)"""
+  "Sincronizar productos (todos los productos disponibles)"
   syncProducts(branchId: String = null, categoryId: String = null, availableOnly: Boolean! = false, jwt: String = null): [ProductSyncType!]!
-
-  """
-  Sincronizar imágenes con URLs para diferentes calidades (200x200, 720x540, 1080x1350, 1440x1800, original)
-  """
+  "Sincronizar imágenes con URLs para diferentes calidades (200x200, 720x540, 1080x1350, 1440x1800, original)"
   syncImages(entityType: String = null, entityIds: [String!] = null, qualities: [ImageQuality!] = null, jwt: String = null): [ImageSyncType!]!
-
-  """Saludo de ejemplo"""
+  "Saludo de ejemplo"
   hello(jwt: String = null): String!
-
-  """Saluda por nombre"""
+  "Saluda por nombre"
   greet(name: String! = "mundo", jwt: String = null): String!
 }
-
 type UserType {
   id: String!
   name: String!
@@ -378,24 +226,13 @@ type UserType {
   aiConsultasLimit: JSON
   savedAddresses: [SavedAddressType!]!
   defaultAddressId: String
-
-  """URL firmada del avatar del usuario"""
+  "URL firmada del avatar del usuario"
   avatarUrl: String
 }
-
-"""Date with time (isoformat)"""
-scalar DateTime
-
 type WalletBalanceType {
   local: Float!
   usd: Float!
 }
-
-"""
-The `JSON` scalar type represents JSON values as specified by [ECMA-404](https://ecma-international.org/wp-content/uploads/ECMA-404_2nd_edition_december_2017.pdf).
-"""
-scalar JSON
-
 type SavedAddressType {
   id: String!
   label: String!
@@ -410,7 +247,6 @@ type SavedAddressType {
   latitude: Float!
   longitude: Float!
 }
-
 type BusinessType {
   id: String!
   name: String!
@@ -421,11 +257,13 @@ type BusinessType {
   tags: [String!]
   isActive: Boolean!
   createdAt: DateTime!
-
-  """Presigned URL for the business avatar"""
+  "Presigned URL for the business avatar"
   avatarUrl: String
+  "Presigned URL for low quality business avatar (with fallback to original)"
+  avatarUrlBaja: String
+  "Presigned URL for high quality business avatar (with fallback to original)"
+  avatarUrlAlta: String
 }
-
 type BusinessWithBranchesType {
   id: String!
   name: String!
@@ -439,11 +277,13 @@ type BusinessWithBranchesType {
   branches: [BranchType!]!
   isOwner: Boolean!
   role: String!
-
-  """Presigned URL for the business avatar"""
+  "Presigned URL for the business avatar"
   avatarUrl: String
+  "Presigned URL for low quality business avatar (with fallback to original)"
+  avatarUrlBaja: String
+  "Presigned URL for high quality business avatar (with fallback to original)"
+  avatarUrlAlta: String
 }
-
 type BranchType {
   id: String!
   businessId: String!
@@ -480,71 +320,45 @@ type BranchType {
   createdAt: DateTime!
   wallet: WalletBalanceType!
   walletStatus: String!
-
-  """
-  Presigned URL for the branch avatar (inherits from business if not set)
-  """
+  "Presigned URL for the branch avatar (inherits from business if not set)"
   avatarUrl: String
-
-  """Presigned URL for the branch cover image"""
+  "Presigned URL for low quality branch avatar (inherits business avatar and falls back to original)"
+  avatarUrlBaja: String
+  "Presigned URL for high quality branch avatar (inherits business avatar and falls back to original)"
+  avatarUrlAlta: String
+  "Presigned URL for the branch cover image"
   coverUrl: String
-
-  """Products from this branch"""
+  "Presigned URL for low quality branch cover (with fallback to original)"
+  coverUrlBaja: String
+  "Presigned URL for high quality branch cover (with fallback to original)"
+  coverUrlAlta: String
+  "Products from this branch"
   products(limit: Int! = 6, availableOnly: Boolean! = true): [ProductType!]!
-
-  """Payment methods accepted by this branch"""
+  "Payment methods accepted by this branch"
   paymentMethods: [PaymentMethodType!]!
-
-  """Product categories applicable to this branch based on its tipos"""
+  "Product categories applicable to this branch based on its tipos"
   applicableCategories: [ProductCategoryType!]!
-
-  """Showcases from this branch"""
+  "Showcases from this branch"
   showcases(activeOnly: Boolean! = true): [ShowcaseType!]!
 }
-
 type CoordinatesType {
   type: String!
   coordinates: [Float!]!
 }
-
-enum BranchTipo {
-  RESTAURANTE
-  DULCERIA
-  TIENDA
-  PERFUMERIA
-}
-
-enum BranchVehicle {
-  MOTO
-  BICICLETA
-  CARRO
-  CAMIONETA
-  CAMINANDO
-}
-
 type TransferAccountType {
   cardNumber: String!
   cardHolderName: String!
   bankName: String!
   isActive: Boolean!
 }
-
 type QrPaymentType {
   value: String!
   isActive: Boolean!
 }
-
 type TransferPhoneType {
   phone: String!
   isActive: Boolean!
 }
-
-enum AcceptedCurrency {
-  CUP
-  USD
-  BOTH
-}
-
 type ProductType {
   id: String!
   branchId: String!
@@ -558,50 +372,35 @@ type ProductType {
   categoryId: String
   variantListIds: [String!]!
   createdAt: DateTime!
-
-  """Presigned URL for the product image"""
+  "Presigned URL for the product image"
   imageUrl: String!
-
-  """Presigned URL for the very low quality product image (200x200)"""
+  "Presigned URL for the very low quality product image (200x200)"
   imageUrlMuyBaja: String!
-
-  """Presigned URL for the low quality product image (720x540)"""
+  "Presigned URL for the low quality product image (720x540)"
   imageUrlBaja: String!
-
-  """Presigned URL for the medium quality product image (1080x1350)"""
+  "Presigned URL for the medium quality product image (1080x1350)"
   imageUrlMedia: String!
-
-  """Presigned URL for the high quality product image (1440x1800)"""
+  "Presigned URL for the high quality product image (1440x1800)"
   imageUrlAlta: String!
-
-  """Presigned URL for the original product image"""
+  "Presigned URL for the original product image"
   imageUrlOriginal: String!
-
-  """Precio convertido a la otra moneda (si la sucursal acepta ambas)"""
+  "Precio convertido a la otra moneda (si la sucursal acepta ambas)"
   convertedPrice: Float
-
-  """Moneda del precio convertido"""
+  "Moneda del precio convertido"
   convertedCurrency: String
-
-  """Tasa de cambio de la sucursal (si acepta ambas monedas)"""
+  "Tasa de cambio de la sucursal (si acepta ambas monedas)"
   exchangeRate: Int
-
-  """Product category name"""
+  "Product category name"
   categoryName: String
-
-  """Variant lists assigned to this product"""
+  "Variant lists assigned to this product"
   variantLists: [VariantListType!]!
-
-  """Product category"""
+  "Product category"
   category: ProductCategoryType
-
-  """Branch associated with this product"""
+  "Branch associated with this product"
   branch: BranchType
-
-  """Business associated with this product (through branch)"""
+  "Business associated with this product (through branch)"
   business: BusinessType
 }
-
 type VariantListType {
   id: String!
   branchId: String!
@@ -610,17 +409,14 @@ type VariantListType {
   options: [VariantOptionType!]!
   createdAt: DateTime!
   updatedAt: DateTime!
-
-  """Branch associated with this variant list"""
+  "Branch associated with this variant list"
   branch: BranchType
 }
-
 type VariantOptionType {
   id: String!
   name: String!
   priceAdjustment: Float!
 }
-
 type ProductCategoryType {
   id: String!
   branchType: String!
@@ -630,60 +426,42 @@ type ProductCategoryType {
   iconAndroid: String!
   createdAt: DateTime!
 }
-
 type PaymentMethodType {
-  """Payment method ID"""
+  "Payment method ID"
   id: String!
-
-  """Display name"""
+  "Display name"
   name: String!
-
-  """Internal code"""
+  "Internal code"
   code: String!
-
-  """Currency code"""
+  "Currency code"
   currency: String!
-
-  """Method type"""
+  "Method type"
   method: String!
-
-  """Commission percentage charged"""
+  "Commission percentage charged"
   commissionPercent: Float!
-
-  """Delivery fee percentage"""
+  "Delivery fee percentage"
   deliveryFeePercent: Float!
-
-  """Whether refunds are allowed"""
+  "Whether refunds are allowed"
   isRefundable: Boolean!
-
-  """Whether proof is required"""
+  "Whether proof is required"
   requiresProof: Boolean!
-
-  """Whether business confirmation is required"""
+  "Whether business confirmation is required"
   requiresBusinessConfirmation: Boolean!
-
-  """Expiration in minutes"""
+  "Expiration in minutes"
   expirationMinutes: Int
-
-  """Whether method is active"""
+  "Whether method is active"
   isActive: Boolean!
-
-  """Display order"""
+  "Display order"
   displayOrder: Int!
-
-  """Icon URL"""
+  "Icon URL"
   iconUrl: String
-
-  """Payment instructions"""
+  "Payment instructions"
   instructions: String
-
-  """Creation time"""
+  "Creation time"
   createdAt: DateTime!
-
-  """Last update time"""
+  "Last update time"
   updatedAt: DateTime!
 }
-
 type ShowcaseType {
   id: String!
   branchId: String!
@@ -694,14 +472,11 @@ type ShowcaseType {
   isActive: Boolean!
   createdAt: DateTime!
   updatedAt: DateTime!
-
-  """Presigned URL for the showcase image"""
+  "Presigned URL for the showcase image"
   imageUrl: String!
-
-  """Branch associated with this showcase"""
+  "Branch associated with this showcase"
   branch: BranchType
 }
-
 type ShowcaseItemType {
   id: String!
   name: String!
@@ -709,17 +484,14 @@ type ShowcaseItemType {
   price: Float
   availability: Boolean!
 }
-
 type BranchConnection {
   edges: [BranchEdge!]!
   pageInfo: PageInfo!
 }
-
 type BranchEdge {
   node: ScoredBranchType!
   cursor: String!
 }
-
 type ScoredBranchType {
   id: String!
   businessId: String!
@@ -753,31 +525,29 @@ type ScoredBranchType {
   distanceM: Float
   wallet: WalletBalanceType!
   walletStatus: String!
-
-  """
-  Presigned URL for the branch avatar (inherits from business if not set)
-  """
+  "Presigned URL for the branch avatar (inherits from business if not set)"
   avatarUrl: String
-
-  """Presigned URL for the branch cover image"""
+  "Presigned URL for low quality branch avatar (inherits business avatar and falls back to original)"
+  avatarUrlBaja: String
+  "Presigned URL for high quality branch avatar (inherits business avatar and falls back to original)"
+  avatarUrlAlta: String
+  "Presigned URL for the branch cover image"
   coverUrl: String
-
-  """Distance in kilometers from user"""
+  "Presigned URL for low quality branch cover (with fallback to original)"
+  coverUrlBaja: String
+  "Presigned URL for high quality branch cover (with fallback to original)"
+  coverUrlAlta: String
+  "Distance in kilometers from user"
   distanceKm: Float
-
-  """Products from this branch"""
+  "Products from this branch"
   products(limit: Int! = 6, availableOnly: Boolean! = true): [ProductType!]!
-
-  """Payment methods accepted by this branch"""
+  "Payment methods accepted by this branch"
   paymentMethods: [PaymentMethodType!]!
-
-  """Product categories applicable to this branch based on its tipos"""
+  "Product categories applicable to this branch based on its tipos"
   applicableCategories: [ProductCategoryType!]!
-
-  """Showcases from this branch"""
+  "Showcases from this branch"
   showcases(activeOnly: Boolean! = true): [ShowcaseType!]!
 }
-
 type PageInfo {
   hasNextPage: Boolean!
   hasPreviousPage: Boolean!
@@ -785,17 +555,14 @@ type PageInfo {
   endCursor: String
   totalCount: Int!
 }
-
 type NearbyBranchConnection {
   edges: [NearbyBranchEdge!]!
   pageInfo: PageInfo!
 }
-
 type NearbyBranchEdge {
   node: NearbyBranchType!
   cursor: String!
 }
-
 type NearbyBranchType {
   id: String!
   businessId: String!
@@ -833,41 +600,37 @@ type NearbyBranchType {
   distanceM: Float!
   wallet: WalletBalanceType!
   walletStatus: String!
-
-  """
-  Presigned URL for the branch avatar (inherits from business if not set)
-  """
+  "Presigned URL for the branch avatar (inherits from business if not set)"
   avatarUrl: String
-
-  """Presigned URL for the branch cover image"""
+  "Presigned URL for low quality branch avatar (inherits business avatar and falls back to original)"
+  avatarUrlBaja: String
+  "Presigned URL for high quality branch avatar (inherits business avatar and falls back to original)"
+  avatarUrlAlta: String
+  "Presigned URL for the branch cover image"
   coverUrl: String
-
-  """Distance in kilometers"""
+  "Presigned URL for low quality branch cover (with fallback to original)"
+  coverUrlBaja: String
+  "Presigned URL for high quality branch cover (with fallback to original)"
+  coverUrlAlta: String
+  "Distance in kilometers"
   distanceKm: Float!
-
-  """Products from this branch"""
+  "Products from this branch"
   products(limit: Int! = 6, availableOnly: Boolean! = true): [ProductType!]!
-
-  """Payment methods accepted by this branch"""
+  "Payment methods accepted by this branch"
   paymentMethods: [PaymentMethodType!]!
-
-  """Product categories applicable to this branch based on its tipos"""
+  "Product categories applicable to this branch based on its tipos"
   applicableCategories: [ProductCategoryType!]!
-
-  """Showcases from this branch"""
+  "Showcases from this branch"
   showcases(activeOnly: Boolean! = true): [ShowcaseType!]!
 }
-
 type ProductConnection {
   edges: [ProductEdge!]!
   pageInfo: PageInfo!
 }
-
 type ProductEdge {
   node: ScoredProductType!
   cursor: String!
 }
-
 type ScoredProductType {
   id: String!
   branchId: String!
@@ -883,67 +646,48 @@ type ScoredProductType {
   createdAt: DateTime!
   score: Float!
   distanceM: Float
-
-  """Presigned URL for the product image"""
+  "Presigned URL for the product image"
   imageUrl: String!
-
-  """Presigned URL for the very low quality product image (200x200)"""
+  "Presigned URL for the very low quality product image (200x200)"
   imageUrlMuyBaja: String!
-
-  """Presigned URL for the low quality product image (720x540)"""
+  "Presigned URL for the low quality product image (720x540)"
   imageUrlBaja: String!
-
-  """Presigned URL for the medium quality product image (1080x1350)"""
+  "Presigned URL for the medium quality product image (1080x1350)"
   imageUrlMedia: String!
-
-  """Presigned URL for the high quality product image (1440x1800)"""
+  "Presigned URL for the high quality product image (1440x1800)"
   imageUrlAlta: String!
-
-  """Presigned URL for the original product image"""
+  "Presigned URL for the original product image"
   imageUrlOriginal: String!
-
-  """Distance in kilometers from user"""
+  "Distance in kilometers from user"
   distanceKm: Float
-
-  """Precio convertido a la otra moneda (si la sucursal acepta ambas)"""
+  "Precio convertido a la otra moneda (si la sucursal acepta ambas)"
   convertedPrice: Float
-
-  """Moneda del precio convertido"""
+  "Moneda del precio convertido"
   convertedCurrency: String
-
-  """Tasa de cambio de la sucursal (si acepta ambas monedas)"""
+  "Tasa de cambio de la sucursal (si acepta ambas monedas)"
   exchangeRate: Int
-
-  """Product category name"""
+  "Product category name"
   categoryName: String
-
-  """Variant lists assigned to this product"""
+  "Variant lists assigned to this product"
   variantLists: [VariantListType!]!
-
-  """Product category"""
+  "Product category"
   category: ProductCategoryType
-
-  """Branch associated with this product"""
+  "Branch associated with this product"
   branch: BranchType
-
-  """Business associated with this product (through branch)"""
+  "Business associated with this product (through branch)"
   business: BusinessType
 }
-
 type ProductRecommendationsResponseType {
   recommendations: [ProductRecommendationType!]!
   reasoning: String!
 }
-
 type ProductRecommendationType {
   productId: String!
   productName: String!
   reasoning: String!
-
-  """Full product details"""
+  "Full product details"
   product: ProductType
 }
-
 type CategoryType {
   id: String!
   name: String!
@@ -951,12 +695,10 @@ type CategoryType {
   subcategories: [SubcategoryType!]!
   createdAt: DateTime!
 }
-
 type SubcategoryType {
   name: String!
   imageUrl: String!
 }
-
 type ComboType {
   id: String!
   branchId: String!
@@ -972,31 +714,21 @@ type ComboType {
   categoryId: String
   createdAt: DateTime!
   updatedAt: DateTime!
-
-  """Presigned URL for combo image (optional)"""
+  "Presigned URL for combo image (optional)"
   imageUrl: String
-
-  """Representative products for frontend composition (max 4 products)"""
+  "Representative products for frontend composition (max 4 products)"
   representativeProducts: [ProductType!]!
-
-  """Final price with discount applied"""
+  "Final price with discount applied"
   finalPrice: Float!
-
-  """Amount saved with discount"""
+  "Amount saved with discount"
   savings: Float!
-
-  """
-  Minimum valid final price after discount (for catalog 'From $X' display)
-  """
+  "Minimum valid final price after discount (for catalog 'From $X' display)"
   startingFinalPrice: Float!
-
-  """Minimum savings amount (minimum base total - startingFinalPrice)"""
+  "Minimum savings amount (minimum base total - startingFinalPrice)"
   startingSavings: Float!
-
-  """Branch associated with this combo"""
+  "Branch associated with this combo"
   branch: BranchType
 }
-
 type ComboSlotType {
   id: String!
   name: String!
@@ -1007,291 +739,182 @@ type ComboSlotType {
   isFree: Boolean!
   displayOrder: Int!
 }
-
 type ComboOptionType {
   productId: String!
   isDefault: Boolean!
   priceAdjustment: Float!
   availableModifiers: [ComboModifierType!]!
-
-  """Product details"""
+  "Product details"
   product: ProductType
 }
-
 type ComboModifierType {
   name: String!
   priceAdjustment: Float!
 }
-
-enum DiscountType {
-  NONE
-  PERCENTAGE
-  FIXED
-}
-
 type ComboGiftOptionType {
   productId: String!
-
-  """Gift product details"""
+  "Gift product details"
   product: ProductType
 }
-
 type SemanticSearchResultType {
-  """Collection that was searched: products, branches, or businesses"""
+  "Collection that was searched: products, branches, or businesses"
   collection: String!
-
-  """Total number of results returned"""
+  "Total number of results returned"
   totalResults: Int!
-
-  """Product results (populated when collection=products)"""
+  "Product results (populated when collection=products)"
   products: [SemanticSearchProductResult!]!
-
-  """Branch results (populated when collection=branches)"""
+  "Branch results (populated when collection=branches)"
   branches: [SemanticSearchBranchResult!]!
-
-  """Business results (populated when collection=businesses)"""
+  "Business results (populated when collection=businesses)"
   businesses: [SemanticSearchBusinessResult!]!
 }
-
 type SemanticSearchProductResult {
-  """Similarity score from vector search (0.0 to 1.0)"""
+  "Similarity score from vector search (0.0 to 1.0)"
   score: Float!
-
-  """The matched product"""
+  "The matched product"
   product: ProductType!
-
-  """Branch name where product is sold"""
+  "Branch name where product is sold"
   branchName: String
-
-  """Branch avatar S3 key"""
+  "Branch avatar S3 key"
   branchAvatar: String
-
-  """Branch address"""
+  "Branch address"
   branchAddress: String
-
-  """Branch phone number"""
+  "Branch phone number"
   branchPhone: String
-
-  """Presigned URL for the branch avatar"""
+  "Presigned URL for the branch avatar"
   branchAvatarUrl: String
 }
-
 type SemanticSearchBranchResult {
-  """Similarity score from vector search (0.0 to 1.0)"""
+  "Similarity score from vector search (0.0 to 1.0)"
   score: Float!
-
-  """The matched branch"""
+  "The matched branch"
   branch: BranchType!
 }
-
 type SemanticSearchBusinessResult {
-  """Similarity score from vector search (0.0 to 1.0)"""
+  "Similarity score from vector search (0.0 to 1.0)"
   score: Float!
-
-  """The matched business"""
+  "The matched business"
   business: BusinessType!
 }
-
-enum SemanticSearchCollection {
-  PRODUCTS
-  BRANCHES
-  BUSINESSES
-}
-
 type AiChatResult {
-  """Successful response data"""
+  "Successful response data"
   success: AiAssistantResponseType
-
-  """Error information if request failed"""
+  "Error information if request failed"
   error: AiChatError
 }
-
 type AiAssistantResponseType {
-  """
-  Type of response: search_products, search_branches, create_draft_order, request_details, general_response
-  """
+  "Type of response: search_products, search_branches, create_draft_order, request_details, general_response"
   responseType: String!
-
-  """Natural language response from AI"""
+  "Natural language response from AI"
   aiText: String!
-
-  """Products suggested by AI"""
+  "Products suggested by AI"
   suggestedProducts: [ProductSuggestionType!]!
-
-  """Branches suggested by AI"""
+  "Branches suggested by AI"
   suggestedBranches: [BranchSuggestionType!]!
-
-  """Draft order created by AI (if applicable)"""
+  "Draft order created by AI (if applicable)"
   draftOrder: DraftOrderType
-
-  """Fields that AI needs from user"""
+  "Fields that AI needs from user"
   missingFields: [String!]!
-
-  """AI confidence score (0.0 to 1.0)"""
+  "AI confidence score (0.0 to 1.0)"
   confidence: Float!
 }
-
 type ProductSuggestionType {
-  """The suggested product"""
+  "The suggested product"
   product: ProductType!
-
-  """Why this product was suggested"""
+  "Why this product was suggested"
   reason: String!
-
-  """Branch name where product is sold"""
+  "Branch name where product is sold"
   branchName: String
-
-  """Branch avatar S3 key"""
+  "Branch avatar S3 key"
   branchAvatar: String
-
-  """Branch address"""
+  "Branch address"
   branchAddress: String
-
-  """Branch phone number"""
+  "Branch phone number"
   branchPhone: String
-
-  """Presigned URL for the branch avatar"""
+  "Presigned URL for the branch avatar"
   branchAvatarUrl: String
 }
-
 type BranchSuggestionType {
-  """The suggested branch"""
+  "The suggested branch"
   branch: BranchType!
-
-  """Why this branch was suggested"""
+  "Why this branch was suggested"
   reason: String!
 }
-
 type DraftOrderType {
-  """Draft order ID"""
+  "Draft order ID"
   id: String!
-
-  """Session ID (user ID)"""
+  "Session ID (user ID)"
   sessionId: String!
-
-  """Customer ID"""
+  "Customer ID"
   customerId: String!
-
-  """Branch ID"""
+  "Branch ID"
   branchId: String!
-
-  """Business ID"""
+  "Business ID"
   businessId: String!
-
-  """Branch avatar URL"""
+  "Branch avatar URL"
   branchAvatar: String
-
-  """Order items"""
+  "Order items"
   items: [DraftOrderItemType!]!
-
-  """Subtotal amount"""
+  "Subtotal amount"
   subtotal: Float!
-
-  """Delivery fee"""
+  "Delivery fee"
   deliveryFee: Float!
-
-  """Total amount"""
+  "Total amount"
   total: Float!
-
-  """Currency code"""
+  "Currency code"
   currency: String!
-
-  """Delivery address"""
+  "Delivery address"
   deliveryAddress: String
-
-  """Payment method ID"""
+  "Payment method ID"
   paymentMethodId: String
-
-  """Draft status"""
+  "Draft status"
   status: String!
-
-  """Creation timestamp"""
+  "Creation timestamp"
   createdAt: DateTime!
-
-  """Expiration timestamp"""
+  "Expiration timestamp"
   expiresAt: DateTime!
 }
-
 type DraftOrderItemType {
-  """Product ID"""
+  "Product ID"
   productId: String!
-
-  """Product name"""
+  "Product name"
   name: String!
-
-  """Product price"""
+  "Product price"
   price: Float!
-
-  """Quantity"""
+  "Quantity"
   quantity: Int!
-
-  """Product image URL"""
+  "Product image URL"
   imageUrl: String!
 }
-
 type AiChatError {
-  """Error code"""
+  "Error code"
   code: AiChatErrorCode!
-
-  """Human-readable error message"""
+  "Human-readable error message"
   message: String!
-
-  """Quota information (if applicable)"""
+  "Quota information (if applicable)"
   quota: AiChatQuotaInfo
-
-  """Seconds until retry is allowed (if applicable)"""
+  "Seconds until retry is allowed (if applicable)"
   retryAfter: Int
-
-  """Maximum allowed words (for MESSAGE_TOO_LONG)"""
+  "Maximum allowed words (for MESSAGE_TOO_LONG)"
   maxWords: Int
-
-  """Actual word count (for MESSAGE_TOO_LONG)"""
+  "Actual word count (for MESSAGE_TOO_LONG)"
   wordsCount: Int
 }
-
-enum AiChatErrorCode {
-  AI_MESSAGE_TOO_LONG
-  AI_DEVICE_ID_REQUIRED
-  AI_DAILY_DEVICE_QUOTA_EXCEEDED
-  AI_QUOTA_EXCEEDED
-  AI_FREE_QUOTA_EXCEEDED
-  AI_SERVICE_ERROR
-  AI_RATE_LIMIT_EXCEEDED
-  AI_INVALID_REQUEST
-  AI_INTERNAL_ERROR
-}
-
 type AiChatQuotaInfo {
-  """Quota source identifier"""
+  "Quota source identifier"
   source: String!
-
-  """Total quota limit"""
+  "Total quota limit"
   limit: Int!
-
-  """Amount used"""
+  "Amount used"
   used: Int!
-
-  """Amount remaining"""
+  "Amount remaining"
   remaining: Int!
 }
-
-input AiAssistantChatInput {
-  """The user message/query to send"""
-  message: String!
-
-  """Unique device identifier from mobile app (required for free quota)"""
-  deviceId: String = null
-
-  """Enable streaming mode (requires GraphQL subscription)"""
-  stream: Boolean! = false
-}
-
 type OrdersConnectionType {
   orders: [OrderType!]!
   totalCount: Int!
   hasMore: Boolean!
 }
-
 type OrderType {
   id: String!
   orderNumber: String!
@@ -1315,6 +938,8 @@ type OrderType {
   paymentId: String
   currentPaymentAttemptId: String
   paidAt: DateTime
+  deadlineAt: DateTime
+  resubmissionCount: Int!
   assignedAt: DateTime
   pickedUpAt: DateTime
   completedAt: DateTime
@@ -1323,68 +948,37 @@ type OrderType {
   deliveryEarnings: Float
   rating: Int
   ratingComment: String
-
-  """Order items"""
+  "Order items"
   items: [OrderItemType!]!
-
-  """Applied discounts"""
+  "Applied discounts"
   discounts: [OrderDiscountType!]!
-
-  """Delivery address"""
+  "Delivery address"
   deliveryAddress: DeliveryAddressType!
-
-  """Pickup address (branch location)"""
+  "Pickup address (branch location)"
   pickupAddress: PickupAddressType
-
-  """Order timeline"""
+  "Order timeline"
   timeline: [OrderTimelineType!]!
-
-  """Order comments"""
+  "Order comments"
   comments: [OrderCommentType!]!
-
-  """Customer who placed the order"""
+  "Codigo de verificacion de entrega. Solo visible para el cliente dueno del pedido mientras esta en camino."
+  deliveryVerificationCode: String
+  "Customer who placed the order"
   customer: UserType!
-
-  """Branch preparing the order"""
+  "Branch preparing the order"
   branch: BranchType!
-
-  """Business owning the branch"""
+  "Business owning the branch"
   business: BusinessType!
-
-  """Assigned delivery person"""
+  "Assigned delivery person"
   deliveryPerson: DeliveryPersonType
-
-  """Whether order can be edited by customer"""
+  "Whether order can be edited by customer"
   isEditable: Boolean!
-
-  """Whether order can be cancelled"""
+  "Whether order can be cancelled"
   canCancel: Boolean!
-
-  """Estimated minutes remaining for delivery"""
+  "Customer-facing status"
+  customerVisibleStatus: OrderStatusEnum!
+  "Estimated minutes remaining for delivery"
   estimatedMinutesRemaining: Int
 }
-
-enum OrderStatusEnum {
-  AWAITING_DELIVERY_ACCEPTANCE
-  PENDING_PAYMENT
-  PAYMENT_IN_PROGRESS
-  PENDING_ACCEPTANCE
-  MODIFIED_BY_STORE
-  ACCEPTED
-  PREPARING
-  READY_FOR_PICKUP
-  ON_THE_WAY
-  DELIVERED
-  CANCELLED
-}
-
-enum PaymentStatusEnum {
-  PENDING
-  VALIDATED
-  COMPLETED
-  FAILED
-}
-
 type OrderItemType {
   productId: String!
   itemId: String!
@@ -1401,35 +995,26 @@ type OrderItemType {
   discountType: String
   discountValue: Float
   previewProducts: [OrderPreviewProductType!]
-
-  """Presigned URL for the item image"""
+  "Presigned URL for the item image"
   imageUrl: String
-
-  """Presigned URL for the very low quality item image (200x200)"""
+  "Presigned URL for the very low quality item image (200x200)"
   imageUrlMuyBaja: String
-
-  """Presigned URL for the low quality item image (720x540)"""
+  "Presigned URL for the low quality item image (720x540)"
   imageUrlBaja: String
-
-  """Presigned URL for the medium quality item image (1080x1350)"""
+  "Presigned URL for the medium quality item image (1080x1350)"
   imageUrlMedia: String
-
-  """Presigned URL for the high quality item image (1440x1800)"""
+  "Presigned URL for the high quality item image (1440x1800)"
   imageUrlAlta: String
-
-  """Presigned URL for the original item image"""
+  "Presigned URL for the original item image"
   imageUrlOriginal: String
-
-  """Line total (price * quantity)"""
+  "Line total (price * quantity)"
   lineTotal: Float!
 }
-
 type OrderComboSelectionType {
   slotId: String!
   slotName: String!
   selectedOptions: [OrderComboSelectedOptionType!]!
 }
-
 type OrderComboSelectedOptionType {
   productId: String!
   name: String!
@@ -1438,33 +1023,22 @@ type OrderComboSelectedOptionType {
   priceAdjustment: Float!
   modifiers: [OrderComboModifierType!]!
 }
-
 type OrderComboModifierType {
   name: String!
   priceAdjustment: Float!
 }
-
 type OrderPreviewProductType {
   productId: String!
   name: String!
-
-  """Presigned URL for preview product image"""
+  "Presigned URL for preview product image"
   imageUrl: String
 }
-
 type OrderDiscountType {
   id: String!
   title: String!
   amount: Float!
   type: DiscountTypeEnum!
 }
-
-enum DiscountTypeEnum {
-  PREMIUM
-  LEVEL
-  PROMO
-}
-
 type DeliveryAddressType {
   street: String!
   city: String
@@ -1474,46 +1048,26 @@ type DeliveryAddressType {
   floor: String
   apartment: String
   deliveryInstructions: String
-
-  """Delivery coordinates"""
+  "Delivery coordinates"
   coordinates: CoordinatesType!
 }
-
-enum AddressTypeEnum {
-  HOUSE
-  APARTMENT
-  OFFICE
-  OTHER
-}
-
 type PickupAddressType {
   street: String
-
-  """Pickup coordinates"""
+  "Pickup coordinates"
   coordinates: CoordinatesType!
 }
-
 type OrderTimelineType {
   status: OrderStatusEnum!
   timestamp: DateTime!
   message: String!
   actor: OrderActorEnum!
 }
-
-enum OrderActorEnum {
-  CUSTOMER
-  BUSINESS
-  SYSTEM
-  DELIVERY
-}
-
 type OrderCommentType {
   id: String!
   author: OrderActorEnum!
   message: String!
   timestamp: DateTime!
 }
-
 type DeliveryPersonType {
   id: String!
   name: String!
@@ -1524,18 +1078,9 @@ type DeliveryPersonType {
   vehiclePlate: String
   profileImageUrl: String
   isOnline: Boolean!
-
-  """Current location of delivery person"""
+  "Current location of delivery person"
   currentLocation: CoordinatesType
 }
-
-enum VehicleTypeEnum {
-  MOTO
-  BICICLETA
-  AUTO
-  A_PIE
-}
-
 type OrderTrackingType {
   order: OrderType!
   storeLocation: CoordinatesType!
@@ -1545,7 +1090,6 @@ type OrderTrackingType {
   distanceKm: Float
   routePolyline: String
 }
-
 type DeliveryPersonStatsType {
   totalDeliveries: Int!
   totalEarnings: Float!
@@ -1553,7 +1097,6 @@ type DeliveryPersonStatsType {
   avgDurationMin: Float!
   avgRating: Float!
 }
-
 type BranchDeliveryRequestType {
   id: String!
   deliveryPersonId: String!
@@ -1564,20 +1107,11 @@ type BranchDeliveryRequestType {
   respondedAt: DateTime
   createdAt: DateTime!
   updatedAt: DateTime!
-
-  """Detalles de la sucursal"""
+  "Detalles de la sucursal"
   branch: BranchType
-
-  """Detalles del repartidor"""
+  "Detalles del repartidor"
   deliveryPerson: DeliveryPersonType
 }
-
-enum DeliveryRequestStatusEnum {
-  PENDING
-  ACCEPTED
-  REJECTED
-}
-
 type OrderStatsType {
   totalOrders: Int!
   completedOrders: Int!
@@ -1586,7 +1120,6 @@ type OrderStatsType {
   averageOrderValue: Float!
   averageDeliveryTime: Int!
 }
-
 type DeliveryFeeEstimateType {
   deliveryFee: Float!
   currency: String!
@@ -1596,45 +1129,30 @@ type DeliveryFeeEstimateType {
   branchId: String!
   branchName: String!
 }
-
 type DashboardStatsType {
   totalRevenue: Float!
   completedOrders: Int!
   cancelledOrders: Int!
   topProducts: [TopProductType!]!
 }
-
 type TopProductType {
   productId: String!
   name: String!
   totalQuantity: Int!
   totalRevenue: Float!
-
-  """Presigned URL for the product image"""
+  "Presigned URL for the product image"
   imageUrl: String!
-
-  """Presigned URL for the very low quality product image (200x200)"""
+  "Presigned URL for the very low quality product image (200x200)"
   imageUrlMuyBaja: String!
-
-  """Presigned URL for the low quality product image (720x540)"""
+  "Presigned URL for the low quality product image (720x540)"
   imageUrlBaja: String!
-
-  """Presigned URL for the medium quality product image (1080x1350)"""
+  "Presigned URL for the medium quality product image (1080x1350)"
   imageUrlMedia: String!
-
-  """Presigned URL for the high quality product image (1440x1800)"""
+  "Presigned URL for the high quality product image (1440x1800)"
   imageUrlAlta: String!
-
-  """Presigned URL for the original product image"""
+  "Presigned URL for the original product image"
   imageUrlOriginal: String!
 }
-
-enum DashboardPeriod {
-  TODAY
-  WEEK
-  MONTH
-}
-
 type BusinessTypeConfigType {
   id: String!
   key: String!
@@ -1652,11 +1170,9 @@ type BusinessTypeConfigType {
   isActive: Boolean!
   createdAt: DateTime!
   updatedAt: DateTime!
-
-  """Presigned URL for the 3D model (auto-generated from model3dUrl)"""
+  "Presigned URL for the 3D model (auto-generated from model3dUrl)"
   model3dPresignedUrl: String
 }
-
 type GradientConfigType {
   darkColor: String!
   mediumColor: String!
@@ -1664,7 +1180,6 @@ type GradientConfigType {
   veryLightColor: String!
   overlayColor: String!
 }
-
 type CameraConfigType {
   positionX: Float!
   positionY: Float!
@@ -1673,158 +1188,96 @@ type CameraConfigType {
   eulerY: Float
   eulerZ: Float
 }
-
 type FeatureType {
   icon: String!
   title: String!
   subtitle: String!
   sortOrder: Int!
 }
-
 type PaymentAttemptType {
-  """Payment attempt ID"""
+  "Payment attempt ID"
   id: String!
-
-  """Order ID"""
+  "Order ID"
   orderId: String!
-
-  """Payment method ID"""
+  "Payment method ID"
   paymentMethodId: String!
-
-  """Order subtotal"""
+  "Order subtotal"
   subtotal: Float!
-
-  """Delivery fee"""
+  "Delivery fee"
   deliveryFee: Float!
-
-  """Whether delivery is included"""
+  "Whether delivery is included"
   includesDeliveryFee: Boolean!
-
-  """Tax amount"""
+  "Tax amount"
   taxAmount: Float!
-
-  """Discount amount"""
+  "Discount amount"
   discountAmount: Float!
-
-  """Commission charged"""
+  "Commission charged"
   commissionAmount: Float!
-
-  """Total to pay"""
+  "Total to pay"
   totalAmount: Float!
-
-  """Currency (usd or local)"""
+  "Currency (usd or local)"
   currency: String!
-
-  """Current status"""
+  "Current status"
   status: PaymentAttemptStatusEnum!
-
-  """Stripe Payment Intent ID"""
+  "Stripe Payment Intent ID"
   stripePaymentIntentId: String
-
-  """Stripe client secret for UI"""
+  "Stripe client secret for UI"
   stripeClientSecret: String
-
-  """
-  User indicated their transfer sends SMS (enables Shortcut auto-confirm)
-  """
+  "User indicated their transfer sends SMS (enables Shortcut auto-confirm)"
   sendsSmsNotification: Boolean!
-
-  """Proof/receipt URL"""
+  "Proof/receipt URL"
   proofUrl: String
-
-  """When customer confirmed"""
+  "When customer confirmed"
   customerConfirmedAt: DateTime
-
-  """When business confirmed"""
+  "When business confirmed"
   businessConfirmedAt: DateTime
-
-  """Dispute reason if disputed"""
+  "Dispute reason if disputed"
   disputeReason: String
-
-  """When delivery confirmed cash"""
+  "When delivery confirmed cash"
   deliveryPersonConfirmedAt: DateTime
-
-  """Delivery person who confirmed"""
+  "Delivery person who confirmed"
   deliveryPersonId: String
-
-  """Whether KYC is required for this cash payment"""
+  "Whether KYC is required for this cash payment"
   kycRequired: Boolean!
-
-  """KYC evaluation status"""
+  "KYC evaluation status"
   kycEvalStatus: String!
-
-  """Cash coverage status for app responsibility"""
+  "Cash coverage status for app responsibility"
   cashCoverageStatus: String!
-
-  """Latest KYC verification ID"""
+  "Latest KYC verification ID"
   latestKycVerificationId: String
-
-  """Timestamp of latest KYC decision"""
+  "Timestamp of latest KYC decision"
   kycDecisionAt: DateTime
-
-  """KYC failure code"""
+  "KYC failure code"
   kycFailureCode: String
-
-  """User wallet transaction ID"""
+  "User wallet transaction ID"
   walletTransactionId: String
-
-  """Business wallet transaction ID"""
+  "Business wallet transaction ID"
   businessWalletTransactionId: String
-
-  """Commission transaction ID"""
+  "Commission transaction ID"
   commissionTransactionId: String
-
-  """When refund was requested"""
+  "When refund was requested"
   refundRequestedAt: DateTime
-
-  """Refund reason"""
+  "Refund reason"
   refundReason: String
-
-  """When refund completed"""
+  "When refund completed"
   refundedAt: DateTime
-
-  """Refund transaction ID"""
+  "Refund transaction ID"
   refundTransactionId: String
-
-  """Refund amount"""
+  "Refund amount"
   refundAmount: Float
-
-  """Expiration time"""
+  "Expiration time"
   expiresAt: DateTime
-
-  """Completion time"""
+  "Completion time"
   completedAt: DateTime
-
-  """Failure time"""
+  "Failure time"
   failedAt: DateTime
-
-  """Failure reason"""
+  "Failure reason"
   failedReason: String
-
-  """Creation time"""
+  "Creation time"
   createdAt: DateTime!
-
-  """Last update time"""
+  "Last update time"
   updatedAt: DateTime!
 }
-
-enum PaymentAttemptStatusEnum {
-  PENDING
-  PROCESSING
-  AWAITING_PROOF
-  AWAITING_BUSINESS
-  AWAITING_DELIVERY
-  AWAITING_KYC
-  COMPLETED
-  FAILED
-  EXPIRED
-  CANCELLED
-  DISPUTED
-  REFUND_REQUESTED
-  REFUND_PROCESSING
-  REFUNDED
-}
-
 type CashKycPolicyResult {
   kycRequired: Boolean!
   policyVersion: String!
@@ -1833,7 +1286,6 @@ type CashKycPolicyResult {
   allowCashNow: Boolean!
   appCoversCashNow: Boolean!
 }
-
 type CashKycStatusResult {
   paymentAttemptId: String!
   verificationId: String
@@ -1844,8 +1296,9 @@ type CashKycStatusResult {
   reasonCodes: [String!]!
   nextAction: String
   expiresAt: DateTime
+  providerError: String
+  providerErrorCode: String
 }
-
 type CashKycAccountStatusResult {
   merchantId: String!
   branchId: String
@@ -1857,8 +1310,9 @@ type CashKycAccountStatusResult {
   reasonCodes: [String!]!
   nextAction: String
   expiresAt: DateTime
+  providerError: String
+  providerErrorCode: String
 }
-
 type GlobalCashKycStatusResult {
   verificationId: String
   kycEvalStatus: String!
@@ -1868,13 +1322,13 @@ type GlobalCashKycStatusResult {
   reasonCodes: [String!]!
   nextAction: String
   expiresAt: DateTime
+  providerError: String
+  providerErrorCode: String
 }
-
 type WalletStatusType {
   balance: WalletBalanceType!
   status: String!
 }
-
 type WalletTransactionType {
   id: String!
   fromOwnerId: String
@@ -1889,7 +1343,6 @@ type WalletTransactionType {
   createdAt: DateTime!
   completedAt: DateTime
 }
-
 type BranchInvitationType {
   id: String!
   code: String!
@@ -1903,37 +1356,19 @@ type BranchInvitationType {
   usedBy: String
   usedAt: DateTime
   accessExpiresAt: DateTime
-
-  """Sucursal asociada a la invitacion"""
+  "Sucursal asociada a la invitacion"
   branch: BranchType
-
-  """Negocio asociado a la invitacion"""
+  "Negocio asociado a la invitacion"
   business: BusinessType
-
-  """Creador de la invitacion"""
+  "Creador de la invitacion"
   creator: UserType
-
-  """Usuario que canjeo la invitacion"""
+  "Usuario que canjeo la invitacion"
   redeemer: UserType
-
-  """Si el codigo esta disponible para usar"""
+  "Si el codigo esta disponible para usar"
   isUsable: Boolean!
-
-  """Estado del acceso otorgado por la invitacion"""
+  "Estado del acceso otorgado por la invitacion"
   accessStatus: String!
 }
-
-enum InvitationType {
-  BRANCH
-  BUSINESS
-}
-
-enum InvitationStatus {
-  PENDING
-  USED
-  REVOKED
-}
-
 type BusinessAccessType {
   id: String!
   userId: String!
@@ -1944,117 +1379,78 @@ type BusinessAccessType {
   isActive: Boolean!
   revokedAt: DateTime
   revokedBy: String
-
-  """Usuario con acceso al negocio"""
+  "Usuario con acceso al negocio"
   user: UserType
-
-  """Negocio asociado"""
+  "Negocio asociado"
   business: BusinessType
-
-  """Invitacion que otorgo el acceso"""
+  "Invitacion que otorgo el acceso"
   invitation: BranchInvitationType
-
-  """Si el acceso ya expiro"""
+  "Si el acceso ya expiro"
   isExpired: Boolean!
-
-  """Dias restantes para expiracion (si aplica)"""
+  "Dias restantes para expiracion (si aplica)"
   daysUntilExpiration: Int
 }
-
 type AppConfigType {
   id: String!
   android: AndroidConfigType!
   ios: IosConfigType!
   maintenance: MaintenanceConfigType!
-
-  """Message to show when update is available"""
+  "Message to show when update is available"
   updateMessage: String
-
-  """Release notes"""
+  "Release notes"
   changelog: String
-
-  """Date of the latest release"""
+  "Date of the latest release"
   releaseDate: DateTime!
 }
-
 type AndroidConfigType {
-  """Minimum version allowed"""
+  "Minimum version allowed"
   minVersion: String!
-
-  """Latest available version"""
+  "Latest available version"
   currentVersion: String!
-
-  """URL to download the update"""
+  "URL to download the update"
   updateUrl: String!
-
-  """Google Play Store URL"""
+  "Google Play Store URL"
   storeUrl: String!
-
-  """App size (e.g., '25 MB')"""
+  "App size (e.g., '25 MB')"
   appSize: String!
 }
-
 type IosConfigType {
-  """Minimum version allowed"""
+  "Minimum version allowed"
   minVersion: String!
-
-  """Latest available version"""
+  "Latest available version"
   currentVersion: String!
-
-  """App Store URL"""
+  "App Store URL"
   storeUrl: String!
 }
-
 type MaintenanceConfigType {
-  """Whether maintenance mode is active"""
+  "Whether maintenance mode is active"
   enabled: Boolean!
-
-  """Message to display during maintenance"""
+  "Message to display during maintenance"
   message: String
 }
-
 type BusinessAppConfigType {
   id: String!
   android: AndroidConfigType!
   ios: IosConfigType!
   maintenance: MaintenanceConfigType!
-
-  """Message to show when update is available"""
+  "Message to show when update is available"
   updateMessage: String
-
-  """Release notes"""
+  "Release notes"
   changelog: String
-
-  """Date of the latest release"""
+  "Date of the latest release"
   releaseDate: DateTime!
 }
-
 type FeedbackType {
   id: String!
   userId: String!
   type: FeedbackTypeEnum!
   description: String!
-
-  """Rating from 1-5 stars"""
+  "Rating from 1-5 stars"
   rating: Int!
   status: FeedbackStatusEnum!
   createdAt: DateTime!
   updatedAt: DateTime
 }
-
-enum FeedbackTypeEnum {
-  BUG
-  FEATURE_REQUEST
-  IMPROVEMENT
-}
-
-enum FeedbackStatusEnum {
-  PENDING
-  IN_REVIEW
-  RESOLVED
-  DISMISSED
-}
-
 type SurveyType {
   id: String!
   title: String!
@@ -2064,7 +1460,6 @@ type SurveyType {
   createdAt: DateTime!
   updatedAt: DateTime
 }
-
 type SurveyQuestionType {
   questionId: String!
   text: String!
@@ -2072,12 +1467,6 @@ type SurveyQuestionType {
   options: [String!]
   required: Boolean!
 }
-
-enum QuestionTypeEnum {
-  MULTIPLE_CHOICE
-  TEXT
-}
-
 type SurveyResponseType {
   id: String!
   surveyId: String!
@@ -2085,18 +1474,15 @@ type SurveyResponseType {
   responses: [QuestionResponseType!]!
   createdAt: DateTime!
 }
-
 type QuestionResponseType {
   questionId: String!
   answer: String!
 }
-
 type FeedResponse {
   sections: [FeedSection!]!
   sectionDiagnostics: [FeedSectionDiagnostic!]!
   timestamp: DateTime!
 }
-
 type FeedSection {
   title: String!
   sectionId: String!
@@ -2104,7 +1490,6 @@ type FeedSection {
   products: [FeedProductType!]!
   totalCount: Int!
 }
-
 type FeedProductType {
   id: String!
   branchId: String!
@@ -2120,32 +1505,23 @@ type FeedProductType {
   createdAt: DateTime!
   score: Float!
   distanceM: Float
-
-  """Presigned URL for the product image"""
+  "Presigned URL for the product image"
   imageUrl: String!
-
-  """Presigned URL for the very low quality product image (200x200)"""
+  "Presigned URL for the very low quality product image (200x200)"
   imageUrlMuyBaja: String!
-
-  """Presigned URL for the low quality product image (720x540)"""
+  "Presigned URL for the low quality product image (720x540)"
   imageUrlBaja: String!
-
-  """Presigned URL for the medium quality product image (1080x1350)"""
+  "Presigned URL for the medium quality product image (1080x1350)"
   imageUrlMedia: String!
-
-  """Presigned URL for the high quality product image (1440x1800)"""
+  "Presigned URL for the high quality product image (1440x1800)"
   imageUrlAlta: String!
-
-  """Presigned URL for the original product image"""
+  "Presigned URL for the original product image"
   imageUrlOriginal: String!
-
-  """Product category name"""
+  "Product category name"
   categoryName: String
-
-  """Branch associated with this product"""
+  "Branch associated with this product"
   branch: BranchType
 }
-
 type FeedSectionDiagnostic {
   sectionId: String!
   title: String!
@@ -2154,7 +1530,6 @@ type FeedSectionDiagnostic {
   totalBeforeDedup: Int
   totalAfterDedup: Int
 }
-
 type TutorialType {
   id: String!
   title: String!
@@ -2168,46 +1543,29 @@ type TutorialType {
   tags: [String!]!
   createdAt: DateTime!
   updatedAt: DateTime
-
-  """Presigned URL for the tutorial video"""
+  "Presigned URL for the tutorial video"
   videoUrlSigned: String!
-
-  """Presigned URL for the tutorial thumbnail"""
+  "Presigned URL for the tutorial thumbnail"
   thumbnailUrlSigned: String
 }
-
-enum AppTarget {
-  CUSTOMER
-  MERCHANT
-  BOTH
-}
-
 type ShortcutTransferType {
-  """Transfer record ID"""
+  "Transfer record ID"
   id: String!
-
-  """Bank transfer ID from SMS"""
+  "Bank transfer ID from SMS"
   transferId: String!
-
-  """Transfer amount"""
+  "Transfer amount"
   amount: Float!
-
-  """Phone that received the SMS"""
+  "Phone that received the SMS"
   phone: String
-
-  """Transfer date from SMS"""
+  "Transfer date from SMS"
   date: DateTime
-
-  """Whether this transfer has been used"""
+  "Whether this transfer has been used"
   activated: Boolean!
-
-  """When it was activated"""
+  "When it was activated"
   activatedAt: DateTime
-
-  """When the record was created"""
+  "When the record was created"
   createdAt: DateTime!
 }
-
 type BusinessSyncType {
   id: String!
   name: String!
@@ -2218,11 +1576,9 @@ type BusinessSyncType {
   isActive: Boolean!
   createdAt: DateTime!
   branches: [BranchSyncType!]!
-
-  """Presigned URL for the business avatar"""
+  "Presigned URL for the business avatar"
   avatarUrl: String
 }
-
 type BranchSyncType {
   id: String!
   businessId: String!
@@ -2243,19 +1599,15 @@ type BranchSyncType {
   acceptedCurrency: String
   exchangeRate: Int
   createdAt: DateTime!
-
-  """Presigned URL for the branch avatar"""
+  "Presigned URL for the branch avatar"
   avatarUrl: String
-
-  """Presigned URL for the branch cover image"""
+  "Presigned URL for the branch cover image"
   coverUrl: String
 }
-
 type CoordinatesSyncType {
   type: String!
   coordinates: [Float!]!
 }
-
 type ProductSyncType {
   id: String!
   branchId: String!
@@ -2269,18 +1621,15 @@ type ProductSyncType {
   categoryId: String
   variantListIds: [String!]!
   createdAt: DateTime!
-
-  """Presigned URL for the product image"""
+  "Presigned URL for the product image"
   imageUrl: String!
 }
-
 type ImageSyncType {
   entityId: String!
   entityType: String!
   imagePath: String!
   urls: ImageUrlType!
 }
-
 type ImageUrlType {
   muyBaja: String
   baja: String
@@ -2288,356 +1637,229 @@ type ImageUrlType {
   alta: String
   original: String
 }
-
-enum ImageQuality {
-  MUY_BAJA
-  BAJA
-  MEDIA
-  ALTA
-  ORIGINAL
-}
-
 type Mutation {
-  """Register a new user"""
+  "Register a new user"
   register(input: RegisterInput!, jwt: String = null): AuthResponse!
-
-  """Login with email and password"""
+  "Login with email and password"
   login(input: LoginInput!, jwt: String = null): AuthResponse!
-
-  """Login with Google"""
+  "Login with Google"
   loginWithGoogle(input: SocialLoginInput!, jwt: String = null): AuthResponse!
-
-  """Login with Apple"""
+  "Login with Apple"
   loginWithApple(input: AppleLoginInput!, jwt: String = null): AuthResponse!
-
-  """Actualizar perfil de usuario"""
+  "Actualizar perfil de usuario"
   updateUser(input: UpdateUserInput!, jwt: String = null): UserType!
-
-  """Agregar sucursal a usuario"""
+  "Agregar sucursal a usuario"
   addBranchToUser(input: AddBranchToUserInput!, jwt: String = null): UserType!
-
-  """Remover sucursal de usuario"""
+  "Remover sucursal de usuario"
   removeBranchFromUser(branchId: String!, jwt: String = null): UserType!
-
-  """Eliminar cuenta de usuario"""
+  "Eliminar cuenta de usuario"
   deleteUser(jwt: String = null): Boolean!
-
-  """Actualizar ubicación del usuario"""
+  "Actualizar ubicación del usuario"
   updateLocation(input: UpdateLocationInput!, jwt: String = null): UserType!
-
-  """Guardar una nueva dirección de entrega en el perfil"""
+  "Guardar una nueva dirección de entrega en el perfil"
   addSavedAddress(input: SavedAddressInput!, jwt: String = null): UserType!
-
-  """Editar una dirección guardada en el perfil"""
+  "Editar una dirección guardada en el perfil"
   updateSavedAddress(input: UpdateSavedAddressInput!, jwt: String = null): UserType!
-
-  """Eliminar una dirección guardada del perfil"""
+  "Eliminar una dirección guardada del perfil"
   removeSavedAddress(addressId: String!, jwt: String = null): UserType!
-
-  """Establecer la dirección de entrega por defecto"""
+  "Establecer la dirección de entrega por defecto"
   setDefaultAddress(addressId: String!, jwt: String = null): UserType!
-
-  """Registrar un nuevo negocio con al menos una sucursal"""
+  "Registrar un nuevo negocio con al menos una sucursal"
   registerBusiness(businessInput: CreateBusinessInput!, branchesInput: [RegisterBranchInput!]!, jwt: String = null): BusinessType!
-
-  """Actualizar un negocio"""
+  "Actualizar un negocio"
   updateBusiness(businessId: String!, input: UpdateBusinessInput!, jwt: String = null): BusinessType!
-
-  """Registrar múltiples negocios con sus sucursales en una sola operación"""
+  "Registrar múltiples negocios con sus sucursales en una sola operación"
   registerMultipleBusinesses(businessesInput: [RegisterBusinessWithBranchesInput!]!, jwt: String = null): [BusinessType!]!
-
-  """Eliminar un negocio y todas sus sucursales"""
+  "Eliminar un negocio y todas sus sucursales"
   deleteBusiness(businessId: String!, jwt: String = null): Boolean!
-
-  """Crear una nueva sucursal"""
+  "Crear una nueva sucursal"
   createBranch(input: CreateBranchInput!, jwt: String = null): BranchType!
-
-  """Actualizar una sucursal"""
+  "Actualizar una sucursal"
   updateBranch(branchId: String!, input: UpdateBranchInput!, jwt: String = null): BranchType!
-
-  """Eliminar una sucursal"""
+  "Eliminar una sucursal"
   deleteBranch(branchId: String!, jwt: String = null): Boolean!
-
-  """Crear un nuevo producto"""
+  "Crear un nuevo producto"
   createProduct(input: CreateProductInput!, jwt: String = null): ProductType!
-
-  """Actualizar un producto"""
+  "Actualizar un producto"
   updateProduct(productId: String!, input: UpdateProductInput!, jwt: String = null): ProductType!
-
-  """Eliminar un producto"""
+  "Eliminar un producto"
   deleteProduct(productId: String!, jwt: String = null): Boolean!
-
-  """Crear una vitrina"""
+  "Crear una vitrina"
   createShowcase(input: CreateShowcaseInput!, jwt: String = null): ShowcaseType!
-
-  """Actualizar una vitrina"""
+  "Actualizar una vitrina"
   updateShowcase(showcaseId: String!, input: UpdateShowcaseInput!, jwt: String = null): ShowcaseType!
-
-  """Eliminar una vitrina"""
+  "Eliminar una vitrina"
   deleteShowcase(showcaseId: String!, jwt: String = null): Boolean!
-
-  """Cambiar disponibilidad de una vitrina"""
+  "Cambiar disponibilidad de una vitrina"
   toggleShowcaseAvailability(showcaseId: String!, isActive: Boolean!, jwt: String = null): ShowcaseType!
-
-  """Crear un nuevo combo"""
+  "Crear un nuevo combo"
   createCombo(input: CreateComboInput!, jwt: String = null): ComboType!
-
-  """Actualizar un combo existente"""
+  "Actualizar un combo existente"
   updateCombo(input: UpdateComboInput!, jwt: String = null): ComboType!
-
-  """Eliminar un combo"""
+  "Eliminar un combo"
   deleteCombo(comboId: String!, jwt: String = null): Boolean!
-
-  """Cambiar disponibilidad de un combo"""
+  "Cambiar disponibilidad de un combo"
   toggleComboAvailability(comboId: String!, availability: Boolean!, jwt: String = null): ComboType!
-
-  """Crear nuevo pedido"""
+  "Crear nuevo pedido"
   createOrder(input: CreateOrderInput!, jwt: String!): OrderType!
-
-  """Aceptar modificaciones de la tienda"""
+  "Aceptar modificaciones de la tienda"
   acceptOrderModifications(orderId: String!, jwt: String!): OrderType!
-
-  """Rechazar modificaciones y cancelar pedido"""
+  "Editar y reenviar pedido al estado inicial"
+  resubmitOrder(input: ResubmitOrderInput!, jwt: String!): OrderType!
+  "Rechazar modificaciones y cancelar pedido"
   rejectOrderModifications(orderId: String!, jwt: String!): OrderType!
-
-  """Cancelar pedido"""
+  "Cancelar pedido"
   cancelOrder(orderId: String!, jwt: String!, reason: String = null): OrderType!
-
-  """Añadir comentario al pedido"""
+  "Añadir comentario al pedido"
   addOrderComment(input: AddOrderCommentInput!, jwt: String!): OrderType!
-
-  """Calificar pedido después de entrega"""
+  "Calificar pedido después de entrega"
   rateOrder(orderId: String!, rating: Int!, jwt: String!, comment: String = null): OrderType!
-
-  """
-  Aceptar pedido. Si se proporciona deliveryFee, el branch establece manualmente el precio de envío.
-  """
+  "Aceptar pedido. Si se proporciona deliveryFee, el branch establece manualmente el precio de envío."
   acceptOrder(orderId: String!, estimatedMinutes: Int!, jwt: String!, deliveryFee: Float = null): OrderType!
-
-  """Rechazar pedido"""
+  "Rechazar pedido"
   rejectOrder(orderId: String!, reason: String!, jwt: String!): OrderType!
-
-  """Modificar items del pedido"""
+  "Modificar items del pedido"
   modifyOrderItems(input: ModifyOrderItemsInput!, jwt: String!): OrderType!
-
-  """Actualizar estado del pedido"""
+  "Actualizar estado del pedido"
   updateOrderStatus(input: UpdateOrderStatusInput!, jwt: String!): OrderType!
-
-  """Marcar pedido como listo para recoger"""
+  "Marcar pedido como listo para recoger"
   markOrderReady(orderId: String!, jwt: String!): OrderType!
-
-  """Aceptar pedido antes del pago para habilitar el cobro"""
+  "Aceptar pedido antes del pago para habilitar el cobro"
   acceptOrderForPayment(orderId: String!, jwt: String!): OrderType!
-
-  """Rechazar pedido previo al pago y liberarlo para otro mensajero"""
+  "Rechazar pedido previo al pago y liberarlo para otro mensajero"
   rejectOrderForPayment(orderId: String!, jwt: String!): OrderType!
-
-  """Aceptar pedido para entrega"""
+  "Aceptar pedido para entrega"
   acceptDelivery(orderId: String!, jwt: String!): OrderType!
-
-  """Confirmar recogida del pedido"""
+  "Confirmar recogida del pedido"
   confirmPickup(orderId: String!, jwt: String!): OrderType!
-
-  """Actualizar ubicación durante la entrega"""
+  "Actualizar ubicación durante la entrega"
   updateDeliveryLocation(input: UpdateDeliveryLocationInput!, jwt: String!): Boolean!
-
-  """Confirmar entrega completada"""
-  confirmDelivery(orderId: String!, jwt: String!): OrderType!
-
-  """Asignar repartidor manualmente"""
+  "Confirmar entrega completada"
+  confirmDelivery(orderId: String!, deliveryCode: String!, jwt: String!): OrderType!
+  "Asignar repartidor manualmente"
   assignDeliveryPerson(input: AssignDeliveryPersonInput!, jwt: String!): OrderType!
-
-  """Solicitar vinculación a una sucursal como repartidor"""
+  "Solicitar vinculación a una sucursal como repartidor"
   requestBranchLink(input: RequestBranchLinkInput!, jwt: String!): BranchDeliveryRequestType!
-
-  """Responder a una solicitud de vinculación (manager)"""
+  "Responder a una solicitud de vinculación (manager)"
   respondBranchLinkRequest(input: RespondBranchLinkInput!, jwt: String!): BranchDeliveryRequestType!
-
-  """Cancelar solicitud de vinculación propia"""
+  "Cancelar solicitud de vinculación propia"
   cancelBranchLinkRequest(requestId: String!, jwt: String!): Boolean!
-
-  """Forzar cambio de estado (admin)"""
+  "Forzar cambio de estado (admin)"
   forceOrderStatus(orderId: String!, status: OrderStatusEnum!, reason: String!, jwt: String!): OrderType!
-
-  """Register device token for push notifications"""
+  "Register device token for push notifications"
   registerDeviceToken(input: RegisterDeviceTokenInput!, jwt: String = null): DeviceTokenType!
-
-  """Unregister device token"""
+  "Unregister device token"
   unregisterDeviceToken(token: String!): Boolean!
-
-  """
-  Create new business type configuration (Admin only, triggers push notification)
-  """
+  "Create new business type configuration (Admin only, triggers push notification)"
   createBusinessTypeConfig(input: CreateBusinessTypeConfigInput!, jwt: String!): BusinessTypeConfigType!
-
-  """
-  Update business type configuration (Admin only, triggers push notification)
-  """
+  "Update business type configuration (Admin only, triggers push notification)"
   updateBusinessTypeConfig(id: String!, input: UpdateBusinessTypeConfigInput!, jwt: String!): BusinessTypeConfigType!
-
-  """Deactivate business type configuration (Admin only)"""
+  "Deactivate business type configuration (Admin only)"
   deactivateBusinessTypeConfig(id: String!, jwt: String!): BusinessTypeConfigType!
-
-  """Delete business type configuration permanently (Admin only)"""
+  "Delete business type configuration permanently (Admin only)"
   deleteBusinessTypeConfig(id: String!, jwt: String!): Boolean!
-
-  """Validar una imagen de transferencia bancaria usando Gemini OCR"""
+  "Validar una imagen de transferencia bancaria usando Gemini OCR"
   validatePaymentImage(file: Upload!, jwt: String = null): PaymentType!
-
-  """Iniciar un pago para un pedido"""
+  "Iniciar un pago para un pedido"
   initiatePayment(orderId: String!, paymentMethodId: String!, jwt: String!, includeDeliveryFee: Boolean! = true, sendsSmsNotification: Boolean! = false): InitiatePaymentResult!
-
-  """Confirmar que el cliente envió el pago (para métodos manuales)"""
+  "Confirmar que el cliente envió el pago (para métodos manuales)"
   confirmPaymentSent(paymentAttemptId: String!, proofUrl: String!, jwt: String!): PaymentAttemptType!
-
-  """Negocio confirma que recibió el pago"""
+  "Negocio confirma que recibió el pago"
   confirmPaymentReceived(paymentAttemptId: String!, jwt: String!): PaymentAttemptType!
-
-  """Repartidor confirma que recibió el pago en efectivo"""
+  "Repartidor confirma que recibió el pago en efectivo"
   confirmCashReceived(paymentAttemptId: String!, jwt: String!): PaymentAttemptType!
-
-  """Negocio disputa que no recibió el pago"""
+  "Negocio disputa que no recibió el pago"
   disputePayment(paymentAttemptId: String!, reason: String!, jwt: String!): PaymentAttemptType!
-
-  """Solicitar reembolso de un pago"""
+  "Solicitar reembolso de un pago"
   requestRefund(paymentAttemptId: String!, reason: String!, jwt: String!): PaymentAttemptType!
-
-  """
-  Confirmar automáticamente un pago por transferencia usando el sistema de Shortcut Transfers. Busca por el teléfono del perfil del usuario; si no hay coincidencia, el cliente puede proveer el ID de transferencia.
-  """
+  "Confirmar automáticamente un pago por transferencia usando el sistema de Shortcut Transfers. Busca por el teléfono del perfil del usuario; si no hay coincidencia, el cliente puede proveer el ID de transferencia."
   confirmTransferByShortcut(paymentAttemptId: String!, jwt: String!, transferId: String = null): PaymentAttemptType!
-
-  """Cancelar un intento de pago pendiente"""
+  "Cancelar un intento de pago pendiente"
   cancelPayment(paymentAttemptId: String!, jwt: String!): PaymentAttemptType!
-
-  """Inicia evaluación KYC para pago en efectivo"""
+  "Inicia evaluación KYC para pago en efectivo"
   startCashKycEvaluation(input: StartCashKycInput!, jwt: String!): StartCashKycPayload!
-
-  """
-  Inicia evaluación KYC de efectivo desde cuenta/perfil (sin paymentAttemptId)
-  """
+  "Inicia evaluación KYC de efectivo desde cuenta/perfil (sin paymentAttemptId)"
   startCashKycEvaluationByAccount(input: StartCashKycByAccountInput!, jwt: String!): StartCashKycPayload!
-
-  """Inicia evaluación KYC global de cuenta para pagos en efectivo"""
+  "Inicia evaluación KYC global de cuenta para pagos en efectivo"
   startGlobalCashKycEvaluation(input: StartGlobalCashKycInput!, jwt: String!): StartCashKycPayload!
-
-  """Reintenta evaluación KYC en efectivo"""
+  "Reintenta evaluación KYC en efectivo"
   retryCashKycEvaluation(verificationId: String!, jwt: String!): RetryCashKycPayload!
-
-  """Override operativo de decisión KYC (admin/risk_admin)"""
+  "Override operativo de decisión KYC (admin/risk_admin)"
   overrideCashKycDecision(input: OverrideCashKycInput!, jwt: String!): OverrideCashKycPayload!
-
-  """Iniciar pago con QvaPay para un pedido"""
+  "Iniciar pago con QvaPay para un pedido"
   initiateQvapayPayment(orderId: String!, jwt: String!): QvaPayPaymentResult!
-
-  """Iniciar pago con USDT/TronDealer para un pedido"""
+  "Iniciar pago con USDT/TronDealer para un pedido"
   initiateTrondealerPayment(orderId: String!, jwt: String!): TronDealerPaymentResult!
-
-  """Transferir dinero a otro usuario o sucursal"""
+  "Transferir dinero a otro usuario o sucursal"
   transferMoney(input: TransferInput!, jwt: String!): WalletTransactionType!
-
-  """Depositar dinero en la wallet"""
+  "Depositar dinero en la wallet"
   depositMoney(input: DepositInput!, jwt: String!): WalletTransactionType!
-
-  """Retirar dinero de la wallet"""
+  "Retirar dinero de la wallet"
   withdrawMoney(input: WithdrawInput!, jwt: String!): WalletTransactionType!
-
-  """Transferir dinero desde wallet de sucursal"""
+  "Transferir dinero desde wallet de sucursal"
   branchTransferMoney(branchId: String!, input: TransferInput!, jwt: String!): WalletTransactionType!
-
-  """Retirar dinero de wallet de sucursal"""
+  "Retirar dinero de wallet de sucursal"
   branchWithdrawMoney(branchId: String!, input: WithdrawInput!, jwt: String!): WalletTransactionType!
-
-  """Generar codigo de invitacion"""
+  "Generar codigo de invitacion"
   generateInvitationCode(input: GenerateInvitationInput!, jwt: String = null): BranchInvitationType!
-
-  """Canjear codigo de invitacion"""
+  "Canjear codigo de invitacion"
   acceptInvitationCode(input: AcceptInvitationInput!, jwt: String = null): BranchInvitationType!
-
-  """Revocar codigo de invitacion"""
+  "Revocar codigo de invitacion"
   revokeInvitationCode(invitationId: String!, jwt: String = null): Boolean!
-
-  """Actualizar configuración de la aplicación (requiere rol admin)"""
+  "Actualizar configuración de la aplicación (requiere rol admin)"
   updateAppConfig(input: UpdateAppConfigInput!, jwt: String!): AppConfigType
-
-  """
-  Actualizar configuración de la aplicación de negocios (requiere rol admin)
-  """
+  "Actualizar configuración de la aplicación de negocios (requiere rol admin)"
   updateBusinessAppConfig(input: UpdateAppConfigInput!, jwt: String!): BusinessAppConfigType
-
-  """Crear un nuevo feedback"""
+  "Crear un nuevo feedback"
   createFeedback(input: CreateFeedbackInput!, jwt: String!): FeedbackType!
-
-  """Actualizar estado de feedback (requiere rol admin)"""
+  "Actualizar estado de feedback (requiere rol admin)"
   updateFeedbackStatus(feedbackId: String!, input: UpdateFeedbackStatusInput!, jwt: String!): FeedbackType!
-
-  """Eliminar un feedback"""
+  "Eliminar un feedback"
   deleteFeedback(feedbackId: String!, jwt: String!): Boolean!
-
-  """Crear una nueva encuesta (requiere rol admin)"""
+  "Crear una nueva encuesta (requiere rol admin)"
   createSurvey(input: CreateSurveyInput!, jwt: String!): SurveyType!
-
-  """Actualizar una encuesta (requiere rol admin)"""
+  "Actualizar una encuesta (requiere rol admin)"
   updateSurvey(surveyId: String!, input: UpdateSurveyInput!, jwt: String!): SurveyType!
-
-  """Desactivar una encuesta (requiere rol admin)"""
+  "Desactivar una encuesta (requiere rol admin)"
   deactivateSurvey(surveyId: String!, jwt: String!): SurveyType!
-
-  """Enviar respuesta a una encuesta"""
+  "Enviar respuesta a una encuesta"
   submitSurveyResponse(input: SubmitSurveyResponseInput!, jwt: String!): SurveyResponseType!
-
-  """Eliminar una encuesta (requiere rol admin)"""
+  "Eliminar una encuesta (requiere rol admin)"
   deleteSurvey(surveyId: String!, jwt: String!): Boolean!
-
-  """Agregar producto a favoritos"""
+  "Agregar producto a favoritos"
   addFavorite(productId: String!, jwt: String = null): FavoriteCartType
-
-  """Agregar producto al carrito"""
+  "Agregar producto al carrito"
   addToCart(productId: String!, jwt: String = null): FavoriteCartType
-
-  """Remover producto de favoritos"""
+  "Remover producto de favoritos"
   removeFavorite(productId: String!, jwt: String = null): Boolean!
-
-  """Remover producto del carrito"""
+  "Remover producto del carrito"
   removeFromCart(productId: String!, jwt: String = null): Boolean!
-
-  """Registrar clic en resultado de búsqueda"""
+  "Registrar clic en resultado de búsqueda"
   trackSearchClick(searchQuery: String!, itemId: String!, itemType: String!, jwt: String = null): SearchType!
-
-  """Agregar like a un branch"""
+  "Agregar like a un branch"
   likeBranch(branchId: String!, jwt: String = null): BranchLikeType!
-
-  """Remover like de un branch"""
+  "Remover like de un branch"
   unlikeBranch(branchId: String!, jwt: String = null): Boolean!
-
-  """Create a new tutorial (admin only)"""
+  "Create a new tutorial (admin only)"
   createTutorial(input: CreateTutorialInput!, jwt: String = null): TutorialType!
-
-  """Update a tutorial (admin only)"""
+  "Update a tutorial (admin only)"
   updateTutorial(id: String!, input: UpdateTutorialInput!, jwt: String = null): TutorialType!
-
-  """Delete a tutorial (admin only)"""
+  "Delete a tutorial (admin only)"
   deleteTutorial(id: String!, jwt: String = null): Boolean!
-
-  """Toggle tutorial active status (admin only)"""
+  "Toggle tutorial active status (admin only)"
   toggleTutorialActive(id: String!, jwt: String = null): TutorialType!
-
-  """Crear una nueva lista de variantes"""
+  "Crear una nueva lista de variantes"
   createVariantList(input: CreateVariantListInput!, jwt: String = null): VariantListType!
-
-  """Actualizar una lista de variantes existente"""
+  "Actualizar una lista de variantes existente"
   updateVariantList(input: UpdateVariantListInput!, jwt: String = null): VariantListType!
-
-  """Eliminar una lista de variantes"""
+  "Eliminar una lista de variantes"
   deleteVariantList(variantListId: String!, jwt: String = null): Boolean!
 }
-
 type AuthResponse {
   accessToken: String!
   tokenType: String!
   user: UserData!
 }
-
 type UserData {
   id: String!
   name: String!
@@ -2646,47 +1868,376 @@ type UserData {
   role: String!
   createdAt: String!
 }
-
+type DeviceTokenType {
+  id: String!
+  userId: String
+  token: String!
+  platform: DevicePlatformEnum!
+  appVersion: String
+  osVersion: String
+  isActive: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+type PaymentType {
+  id: String!
+  quienEnvio: String!
+  banco: String!
+  fecha: DateTime!
+  esMensajeBanco: Boolean!
+  cantidadTransferida: Float!
+  numeroTransferencia: String!
+  primeros4Tarjeta: String!
+  ultimos4Tarjeta: String!
+  createdAt: DateTime!
+}
+type InitiatePaymentResult {
+  "The created payment attempt"
+  paymentAttempt: PaymentAttemptType!
+  "Instructions for completing payment (for manual methods)"
+  instructions: String
+}
+type StartCashKycPayload {
+  verificationId: String!
+  kycEvalStatus: String!
+  cashCoverageStatus: String!
+  allowCash: Boolean!
+  appCoversCash: Boolean!
+  nextAction: String!
+  correlationId: String!
+  reasonCodes: [String!]!
+  providerError: String
+  providerErrorCode: String
+}
+type RetryCashKycPayload {
+  verificationId: String!
+  kycEvalStatus: String!
+  cashCoverageStatus: String!
+  allowCash: Boolean!
+  appCoversCash: Boolean!
+  nextAction: String!
+}
+type OverrideCashKycPayload {
+  verificationId: String!
+  kycEvalStatus: String!
+  cashCoverageStatus: String!
+  allowCash: Boolean!
+  appCoversCash: Boolean!
+  reason: String!
+}
+type QvaPayPaymentResult {
+  "URL de pago QvaPay — abrir en WebView o browser"
+  paymentUrl: String!
+  "UUID de la transacción en QvaPay"
+  transactionUuid: String!
+  "Monto a pagar en USD"
+  amount: Float!
+  "ID de la orden asociada"
+  orderId: String!
+}
+type TronDealerPaymentResult {
+  "Dirección de wallet TRON a la que enviar el USDT"
+  address: String!
+  "Monto exacto en USDT a enviar"
+  expectedAmount: Float!
+  "Token a usar, generalmente USDT"
+  token: String!
+  "Red blockchain, generalmente TRON"
+  network: String
+  "ID de la orden asociada"
+  orderId: String!
+}
+type FavoriteCartType {
+  id: String!
+  userId: String!
+  productId: String!
+  type: String!
+  createdAt: DateTime!
+}
+type SearchType {
+  id: String!
+  userId: String!
+  query: String!
+  clickedItems: [ClickedItemType!]!
+  createdAt: DateTime!
+}
+type ClickedItemType {
+  itemId: String!
+  itemType: String!
+  clicks: [DateTime!]!
+}
+type BranchLikeType {
+  id: String!
+  userId: String!
+  branchId: String!
+  createdAt: DateTime!
+}
+type Subscription {
+  "Escuchar cambios en un pedido específico"
+  orderUpdated(orderId: String!): OrderType!
+  "Ubicación del repartidor en tiempo real"
+  deliveryLocationUpdated(orderId: String!): DeliveryLocationUpdateType!
+  "Nuevos pedidos para una sucursal"
+  newBranchOrder(branchId: String!): OrderType!
+  "Cambios en pedidos de una sucursal"
+  branchOrderUpdated(branchId: String!): OrderType!
+  "Stream de seguimiento de pedido en tiempo real"
+  orderTrackingStream(orderId: String!, jwt: String = null): OrderTrackingStreamPayload!
+  "Stream AI assistant responses in real-time with RAG support"
+  aiChatStream(input: AiAssistantChatInput!, jwt: String = null): AiChatStreamChunk!
+}
+type DeliveryLocationUpdateType {
+  orderId: String!
+  location: CoordinatesType!
+  timestamp: DateTime!
+  estimatedMinutesRemaining: Int
+  distanceRemainingKm: Float
+}
+type OrderTrackingStreamPayload {
+  estimatedMinutes: Int
+  distanceKm: Float
+  deliveryPersonLocation: CoordinatesType
+  "Order summary"
+  order: OrderSummaryType!
+}
+type OrderSummaryType {
+  id: String!
+  status: OrderStatusEnum!
+  estimatedMinutesRemaining: Int
+}
+type AiChatStreamChunk {
+  "Incremental text delta for this chunk"
+  delta: String!
+  "Full accumulated text so far"
+  accumulatedText: String!
+  "Products suggested (sent in final chunk)"
+  suggestedProducts: [ProductSuggestionType!]!
+  "Branches suggested (sent in final chunk)"
+  suggestedBranches: [BranchSuggestionType!]!
+  "Product IDs suggested (sent in final chunk)"
+  suggestedProductIds: [String!]!
+  "Branch IDs suggested (sent in final chunk)"
+  suggestedBranchIds: [String!]!
+  "Draft order (sent in final chunk)"
+  draftOrder: DraftOrderType
+  "Missing fields (sent in final chunk)"
+  missingFields: [String!]!
+  "Confidence score (sent in final chunk)"
+  confidence: Float
+  "Whether this is the final chunk"
+  isFinal: Boolean!
+  "Error if streaming failed"
+  error: AiChatError
+}
+enum BranchTipo {
+  RESTAURANTE
+  DULCERIA
+  TIENDA
+  PERFUMERIA
+}
+enum BranchVehicle {
+  MOTO
+  BICICLETA
+  CARRO
+  CAMIONETA
+  CAMINANDO
+}
+enum AcceptedCurrency {
+  CUP
+  USD
+  BOTH
+}
+enum DiscountType {
+  NONE
+  PERCENTAGE
+  FIXED
+}
+enum SemanticSearchCollection {
+  PRODUCTS
+  BRANCHES
+  BUSINESSES
+}
+enum AiChatErrorCode {
+  AI_MESSAGE_TOO_LONG
+  AI_DEVICE_ID_REQUIRED
+  AI_DAILY_DEVICE_QUOTA_EXCEEDED
+  AI_QUOTA_EXCEEDED
+  AI_FREE_QUOTA_EXCEEDED
+  AI_SERVICE_ERROR
+  AI_RATE_LIMIT_EXCEEDED
+  AI_INVALID_REQUEST
+  AI_INTERNAL_ERROR
+}
+enum OrderStatusEnum {
+  AWAITING_DELIVERY_ACCEPTANCE
+  PENDING_PAYMENT
+  PAYMENT_IN_PROGRESS
+  PENDING_ACCEPTANCE
+  MODIFIED_BY_STORE
+  REJECTED_BY_STORE
+  ACCEPTED
+  PREPARING
+  READY_FOR_PICKUP
+  ON_THE_WAY
+  DELIVERED
+  CANCELLED
+}
+enum PaymentStatusEnum {
+  PENDING
+  VALIDATED
+  COMPLETED
+  FAILED
+}
+enum DiscountTypeEnum {
+  PREMIUM
+  LEVEL
+  PROMO
+}
+enum AddressTypeEnum {
+  HOUSE
+  APARTMENT
+  OFFICE
+  OTHER
+}
+enum OrderActorEnum {
+  CUSTOMER
+  BUSINESS
+  SYSTEM
+  DELIVERY
+}
+enum VehicleTypeEnum {
+  MOTO
+  BICICLETA
+  AUTO
+  A_PIE
+}
+enum DeliveryRequestStatusEnum {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+enum DashboardPeriod {
+  TODAY
+  WEEK
+  MONTH
+}
+enum PaymentAttemptStatusEnum {
+  PENDING
+  PROCESSING
+  AWAITING_PROOF
+  AWAITING_BUSINESS
+  AWAITING_DELIVERY
+  AWAITING_KYC
+  COMPLETED
+  FAILED
+  EXPIRED
+  CANCELLED
+  DISPUTED
+  REFUND_REQUESTED
+  REFUND_PROCESSING
+  REFUNDED
+}
+enum InvitationType {
+  BRANCH
+  BUSINESS
+}
+enum InvitationStatus {
+  PENDING
+  USED
+  REVOKED
+}
+enum FeedbackTypeEnum {
+  BUG
+  FEATURE_REQUEST
+  IMPROVEMENT
+}
+enum FeedbackStatusEnum {
+  PENDING
+  IN_REVIEW
+  RESOLVED
+  DISMISSED
+}
+enum QuestionTypeEnum {
+  MULTIPLE_CHOICE
+  TEXT
+}
+enum AppTarget {
+  CUSTOMER
+  MERCHANT
+  BOTH
+}
+enum ImageQuality {
+  MUY_BAJA
+  BAJA
+  MEDIA
+  ALTA
+  ORIGINAL
+}
+enum OrderItemTypeInput {
+  PRODUCT
+  COMBO
+  SHOWCASE
+}
+enum FulfillmentTypeEnum {
+  DELIVERY
+  PICKUP
+}
+enum AddressTypeInput {
+  HOUSE
+  APARTMENT
+  OFFICE
+  OTHER
+}
+enum DevicePlatformEnum {
+  IOS
+  ANDROID
+}
+enum KycOverrideDecisionEnum {
+  APPROVE
+  REJECT
+  FORCE_REEVALUATION
+}
+input AiAssistantChatInput {
+  "The user message/query to send"
+  message: String!
+  "Unique device identifier from mobile app (required for free quota)"
+  deviceId: String = null
+  "Enable streaming mode (requires GraphQL subscription)"
+  stream: Boolean! = false
+}
 input RegisterInput {
   name: String!
   email: String!
   password: String!
   phone: String = null
 }
-
 input LoginInput {
   email: String!
   password: String!
 }
-
 input SocialLoginInput {
   idToken: String!
   authorizationCode: String = null
   nonce: String = null
 }
-
 input AppleLoginInput {
   identityToken: String!
   authorizationCode: String = null
   nonce: String = null
 }
-
 input UpdateUserInput {
   name: String = null
   username: String = null
   phone: String = null
   avatar: String = null
 }
-
 input AddBranchToUserInput {
   branchId: String!
 }
-
 input UpdateLocationInput {
   longitude: Float!
   latitude: Float!
 }
-
 input SavedAddressInput {
   label: String!
   street: String!
@@ -2701,7 +2252,6 @@ input SavedAddressInput {
   deliveryInstructions: String = null
   setAsDefault: Boolean! = false
 }
-
 input UpdateSavedAddressInput {
   addressId: String!
   label: String = null
@@ -2717,14 +2267,12 @@ input UpdateSavedAddressInput {
   deliveryInstructions: String = null
   setAsDefault: Boolean = null
 }
-
 input CreateBusinessInput {
   name: String!
   avatar: String = null
   description: String = null
   tags: [String!] = null
 }
-
 input RegisterBranchInput {
   name: String!
   coordinates: CoordinatesInput!
@@ -2743,29 +2291,24 @@ input RegisterBranchInput {
   qrPayments: [QrPaymentInput!] = null
   phones: [TransferPhoneInput!] = null
 }
-
 input CoordinatesInput {
   lat: Float!
   lng: Float!
 }
-
 input TransferAccountInput {
   cardNumber: String!
   cardHolderName: String!
   bankName: String!
   isActive: Boolean! = true
 }
-
 input QrPaymentInput {
   value: String!
   isActive: Boolean! = true
 }
-
 input TransferPhoneInput {
   phone: String!
   isActive: Boolean! = true
 }
-
 input UpdateBusinessInput {
   name: String = null
   description: String = null
@@ -2773,12 +2316,10 @@ input UpdateBusinessInput {
   isActive: Boolean = null
   avatar: String = null
 }
-
 input RegisterBusinessWithBranchesInput {
   business: CreateBusinessInput!
   branches: [RegisterBranchInput!]!
 }
-
 input CreateBranchInput {
   businessId: String!
   name: String!
@@ -2804,7 +2345,6 @@ input CreateBranchInput {
   cashKycMinConfidence: Float! = 0.85
   cashKycTtlDays: Int! = 30
 }
-
 input UpdateBranchInput {
   name: String = null
   address: String = null
@@ -2835,7 +2375,6 @@ input UpdateBranchInput {
   cashKycTtlDays: Int = null
   forceReverify: Boolean = null
 }
-
 input CreateProductInput {
   name: String!
   description: String!
@@ -2848,7 +2387,6 @@ input CreateProductInput {
   categoryId: String = null
   variantListIds: [String!] = null
 }
-
 input UpdateProductInput {
   name: String = null
   description: String = null
@@ -2860,7 +2398,6 @@ input UpdateProductInput {
   image: String = null
   variantListIds: [String!] = null
 }
-
 input CreateShowcaseInput {
   branchId: String!
   title: String!
@@ -2868,7 +2405,6 @@ input CreateShowcaseInput {
   description: String = null
   items: [ShowcaseItemInput!] = null
 }
-
 input ShowcaseItemInput {
   id: String = null
   name: String!
@@ -2876,7 +2412,6 @@ input ShowcaseItemInput {
   price: Float = null
   availability: Boolean! = true
 }
-
 input UpdateShowcaseInput {
   title: String = null
   image: String = null
@@ -2884,7 +2419,6 @@ input UpdateShowcaseInput {
   items: [ShowcaseItemInput!] = null
   isActive: Boolean = null
 }
-
 input CreateComboInput {
   branchId: String!
   name: String!
@@ -2896,7 +2430,6 @@ input CreateComboInput {
   giftOptions: [ComboGiftOptionInput!]! = []
   categoryId: String = null
 }
-
 input ComboSlotInput {
   name: String!
   description: String = null
@@ -2906,23 +2439,19 @@ input ComboSlotInput {
   isFree: Boolean! = false
   displayOrder: Int! = 0
 }
-
 input ComboOptionInput {
   productId: String!
   isDefault: Boolean! = false
   priceAdjustment: Float! = 0
   availableModifiers: [ComboModifierInput!]! = []
 }
-
 input ComboModifierInput {
   name: String!
   priceAdjustment: Float! = 0
 }
-
 input ComboGiftOptionInput {
   productId: String!
 }
-
 input UpdateComboInput {
   comboId: String!
   name: String = null
@@ -2935,17 +2464,16 @@ input UpdateComboInput {
   availability: Boolean = null
   categoryId: String = null
 }
-
 input CreateOrderInput {
   branchId: String!
   items: [OrderItemInput!]!
-  deliveryAddress: DeliveryAddressInput!
+  fulfillment: FulfillmentInput = null
+  deliveryAddress: DeliveryAddressInput = null
   paymentMethod: String!
   paymentIntentId: String = null
   comments: String = null
   promoCode: String = null
 }
-
 input OrderItemInput {
   quantity: Int!
   itemType: OrderItemTypeInput! = PRODUCT
@@ -2955,28 +2483,23 @@ input OrderItemInput {
   showcaseId: String = null
   description: String = null
 }
-
-enum OrderItemTypeInput {
-  PRODUCT
-  COMBO
-  SHOWCASE
-}
-
 input OrderComboSlotSelectionInput {
   slotId: String!
   selectedOptions: [OrderComboSelectedOptionInput!]!
 }
-
 input OrderComboSelectedOptionInput {
   productId: String!
   quantity: Int! = 1
   modifiers: [OrderComboModifierInput!]! = []
 }
-
 input OrderComboModifierInput {
   name: String!
 }
-
+input FulfillmentInput {
+  type: FulfillmentTypeEnum!
+  pickupBranchId: String = null
+  pickupWindowId: String = null
+}
 input DeliveryAddressInput {
   street: String!
   latitude: Float!
@@ -2989,31 +2512,25 @@ input DeliveryAddressInput {
   apartment: String = null
   deliveryInstructions: String = null
 }
-
-enum AddressTypeInput {
-  HOUSE
-  APARTMENT
-  OFFICE
-  OTHER
+input ResubmitOrderInput {
+  orderId: String!
+  items: [OrderItemInput!] = null
+  comment: String = null
 }
-
 input AddOrderCommentInput {
   orderId: String!
   message: String!
 }
-
 input ModifyOrderItemsInput {
   orderId: String!
   items: [OrderItemInput!]!
   reason: String!
 }
-
 input UpdateOrderStatusInput {
   orderId: String!
   status: OrderStatusEnum!
   message: String = null
 }
-
 input UpdateDeliveryLocationInput {
   orderId: String!
   latitude: Float!
@@ -3021,47 +2538,25 @@ input UpdateDeliveryLocationInput {
   speed: Float = null
   heading: Float = null
 }
-
 input AssignDeliveryPersonInput {
   orderId: String!
   deliveryPersonId: String!
   estimatedMinutes: Int = null
 }
-
 input RequestBranchLinkInput {
   branchId: String!
   message: String = null
 }
-
 input RespondBranchLinkInput {
   requestId: String!
   accept: Boolean!
 }
-
-type DeviceTokenType {
-  id: String!
-  userId: String
-  token: String!
-  platform: DevicePlatformEnum!
-  appVersion: String
-  osVersion: String
-  isActive: Boolean!
-  createdAt: DateTime!
-  updatedAt: DateTime!
-}
-
-enum DevicePlatformEnum {
-  IOS
-  ANDROID
-}
-
 input RegisterDeviceTokenInput {
   token: String!
   platform: DevicePlatformEnum!
   appVersion: String = null
   osVersion: String = null
 }
-
 input CreateBusinessTypeConfigInput {
   key: String!
   name: String!
@@ -3077,7 +2572,6 @@ input CreateBusinessTypeConfigInput {
   pushTitle: String = null
   pushBody: String = null
 }
-
 input GradientConfigInput {
   darkColor: String!
   mediumColor: String!
@@ -3085,7 +2579,6 @@ input GradientConfigInput {
   veryLightColor: String!
   overlayColor: String!
 }
-
 input CameraConfigInput {
   positionX: Float!
   positionY: Float!
@@ -3094,14 +2587,12 @@ input CameraConfigInput {
   eulerY: Float = null
   eulerZ: Float = null
 }
-
 input FeatureInput {
   icon: String!
   title: String!
   subtitle: String!
   sortOrder: Int!
 }
-
 input UpdateBusinessTypeConfigInput {
   name: String = null
   description: String = null
@@ -3118,48 +2609,12 @@ input UpdateBusinessTypeConfigInput {
   pushTitle: String = null
   pushBody: String = null
 }
-
-type PaymentType {
-  id: String!
-  quienEnvio: String!
-  banco: String!
-  fecha: DateTime!
-  esMensajeBanco: Boolean!
-  cantidadTransferida: Float!
-  numeroTransferencia: String!
-  primeros4Tarjeta: String!
-  ultimos4Tarjeta: String!
-  createdAt: DateTime!
-}
-
-scalar Upload
-
-type InitiatePaymentResult {
-  """The created payment attempt"""
-  paymentAttempt: PaymentAttemptType!
-
-  """Instructions for completing payment (for manual methods)"""
-  instructions: String
-}
-
-type StartCashKycPayload {
-  verificationId: String!
-  kycEvalStatus: String!
-  cashCoverageStatus: String!
-  allowCash: Boolean!
-  appCoversCash: Boolean!
-  nextAction: String!
-  correlationId: String!
-  reasonCodes: [String!]!
-}
-
 input StartCashKycInput {
   paymentAttemptId: String!
   identityDocumentFrontRef: String!
   selfieLiveRef: String!
   deviceContext: DeviceContextInput!
 }
-
 input DeviceContextInput {
   deviceIdHash: String!
   ipHash: String!
@@ -3168,7 +2623,6 @@ input DeviceContextInput {
   latitude: Float = null
   longitude: Float = null
 }
-
 input StartCashKycByAccountInput {
   merchantId: String!
   branchId: String = null
@@ -3176,74 +2630,16 @@ input StartCashKycByAccountInput {
   selfieLiveRef: String!
   deviceContext: DeviceContextInput!
 }
-
 input StartGlobalCashKycInput {
   identityDocumentFrontRef: String!
   selfieWithIdRef: String!
   deviceContext: DeviceContextInput!
 }
-
-type RetryCashKycPayload {
-  verificationId: String!
-  kycEvalStatus: String!
-  cashCoverageStatus: String!
-  allowCash: Boolean!
-  appCoversCash: Boolean!
-  nextAction: String!
-}
-
-type OverrideCashKycPayload {
-  verificationId: String!
-  kycEvalStatus: String!
-  cashCoverageStatus: String!
-  allowCash: Boolean!
-  appCoversCash: Boolean!
-  reason: String!
-}
-
 input OverrideCashKycInput {
   verificationId: String!
   decision: KycOverrideDecisionEnum!
   reason: String!
 }
-
-enum KycOverrideDecisionEnum {
-  APPROVE
-  REJECT
-  FORCE_REEVALUATION
-}
-
-type QvaPayPaymentResult {
-  """URL de pago QvaPay — abrir en WebView o browser"""
-  paymentUrl: String!
-
-  """UUID de la transacción en QvaPay"""
-  transactionUuid: String!
-
-  """Monto a pagar en USD"""
-  amount: Float!
-
-  """ID de la orden asociada"""
-  orderId: String!
-}
-
-type TronDealerPaymentResult {
-  """Dirección de wallet TRON a la que enviar el USDT"""
-  address: String!
-
-  """Monto exacto en USDT a enviar"""
-  expectedAmount: Float!
-
-  """Token a usar, generalmente USDT"""
-  token: String!
-
-  """Red blockchain, generalmente TRON"""
-  network: String
-
-  """ID de la orden asociada"""
-  orderId: String!
-}
-
 input TransferInput {
   toOwnerId: String = null
   toOwnerEmail: String = null
@@ -3253,32 +2649,27 @@ input TransferInput {
   currency: String!
   description: String = null
 }
-
 input DepositInput {
   amount: Float!
   currency: String!
   source: String!
   description: String = null
 }
-
 input WithdrawInput {
   amount: Float!
   currency: String!
   destination: String!
   description: String = null
 }
-
 input GenerateInvitationInput {
   invitationType: InvitationType!
   branchId: String = null
   businessId: String!
   accessDurationDays: Int = null
 }
-
 input AcceptInvitationInput {
   code: String!
 }
-
 input UpdateAppConfigInput {
   android: UpdateAndroidConfigInput = null
   ios: UpdateIosConfigInput = null
@@ -3287,7 +2678,6 @@ input UpdateAppConfigInput {
   changelog: String = null
   releaseDate: DateTime = null
 }
-
 input UpdateAndroidConfigInput {
   minVersion: String = null
   currentVersion: String = null
@@ -3295,91 +2685,51 @@ input UpdateAndroidConfigInput {
   storeUrl: String = null
   appSize: String = null
 }
-
 input UpdateIosConfigInput {
   minVersion: String = null
   currentVersion: String = null
   storeUrl: String = null
 }
-
 input UpdateMaintenanceConfigInput {
   enabled: Boolean = null
   message: String = null
 }
-
 input CreateFeedbackInput {
   type: FeedbackTypeEnum!
   description: String!
-
-  """Rating from 1-5 stars"""
+  "Rating from 1-5 stars"
   rating: Int!
 }
-
 input UpdateFeedbackStatusInput {
   status: FeedbackStatusEnum!
 }
-
 input CreateSurveyInput {
   title: String!
   description: String = null
   questions: [SurveyQuestionInput!]!
 }
-
 input SurveyQuestionInput {
-  """Unique ID for this question (e.g., UUID)"""
+  "Unique ID for this question (e.g., UUID)"
   questionId: String!
   text: String!
   type: QuestionTypeEnum!
   options: [String!] = null
   required: Boolean! = true
 }
-
 input UpdateSurveyInput {
   title: String = null
   description: String = null
   questions: [SurveyQuestionInput!] = null
   isActive: Boolean = null
 }
-
 input SubmitSurveyResponseInput {
   surveyId: String!
   responses: [QuestionResponseInput!]!
 }
-
 input QuestionResponseInput {
   questionId: String!
   answer: String!
 }
-
-type FavoriteCartType {
-  id: String!
-  userId: String!
-  productId: String!
-  type: String!
-  createdAt: DateTime!
-}
-
-type SearchType {
-  id: String!
-  userId: String!
-  query: String!
-  clickedItems: [ClickedItemType!]!
-  createdAt: DateTime!
-}
-
-type ClickedItemType {
-  itemId: String!
-  itemType: String!
-  clicks: [DateTime!]!
-}
-
-type BranchLikeType {
-  id: String!
-  userId: String!
-  branchId: String!
-  createdAt: DateTime!
-}
-
 input CreateTutorialInput {
   title: String!
   description: String!
@@ -3391,7 +2741,6 @@ input CreateTutorialInput {
   isActive: Boolean! = true
   tags: [String!]! = []
 }
-
 input UpdateTutorialInput {
   title: String = null
   description: String = null
@@ -3403,101 +2752,28 @@ input UpdateTutorialInput {
   isActive: Boolean = null
   tags: [String!] = null
 }
-
 input CreateVariantListInput {
   branchId: String!
   name: String!
   description: String = null
   options: [VariantOptionInput!]!
 }
-
 input VariantOptionInput {
   id: String = null
   name: String!
   priceAdjustment: Float! = 0
 }
-
 input UpdateVariantListInput {
   variantListId: String!
   name: String = null
   description: String = null
   options: [VariantOptionInput!] = null
 }
+"Exposes a URL that specifies the behavior of this scalar."
+directive @specifiedBy(
+    "The URL that specifies the behavior of this scalar."
+    url: String!
+  ) on SCALAR
+"Indicates an Input Object is a OneOf Input Object."
+directive @oneOf on INPUT_OBJECT
 
-type Subscription {
-  """Escuchar cambios en un pedido específico"""
-  orderUpdated(orderId: String!): OrderType!
-
-  """Ubicación del repartidor en tiempo real"""
-  deliveryLocationUpdated(orderId: String!): DeliveryLocationUpdateType!
-
-  """Nuevos pedidos para una sucursal"""
-  newBranchOrder(branchId: String!): OrderType!
-
-  """Cambios en pedidos de una sucursal"""
-  branchOrderUpdated(branchId: String!): OrderType!
-
-  """Stream de seguimiento de pedido en tiempo real"""
-  orderTrackingStream(orderId: String!, jwt: String = null): OrderTrackingStreamPayload!
-
-  """Stream AI assistant responses in real-time with RAG support"""
-  aiChatStream(input: AiAssistantChatInput!, jwt: String = null): AiChatStreamChunk!
-}
-
-type DeliveryLocationUpdateType {
-  orderId: String!
-  location: CoordinatesType!
-  timestamp: DateTime!
-  estimatedMinutesRemaining: Int
-  distanceRemainingKm: Float
-}
-
-type OrderTrackingStreamPayload {
-  estimatedMinutes: Int
-  distanceKm: Float
-  deliveryPersonLocation: CoordinatesType
-
-  """Order summary"""
-  order: OrderSummaryType!
-}
-
-type OrderSummaryType {
-  id: String!
-  status: OrderStatusEnum!
-  estimatedMinutesRemaining: Int
-}
-
-type AiChatStreamChunk {
-  """Incremental text delta for this chunk"""
-  delta: String!
-
-  """Full accumulated text so far"""
-  accumulatedText: String!
-
-  """Products suggested (sent in final chunk)"""
-  suggestedProducts: [ProductSuggestionType!]!
-
-  """Branches suggested (sent in final chunk)"""
-  suggestedBranches: [BranchSuggestionType!]!
-
-  """Product IDs suggested (sent in final chunk)"""
-  suggestedProductIds: [String!]!
-
-  """Branch IDs suggested (sent in final chunk)"""
-  suggestedBranchIds: [String!]!
-
-  """Draft order (sent in final chunk)"""
-  draftOrder: DraftOrderType
-
-  """Missing fields (sent in final chunk)"""
-  missingFields: [String!]!
-
-  """Confidence score (sent in final chunk)"""
-  confidence: Float
-
-  """Whether this is the final chunk"""
-  isFinal: Boolean!
-
-  """Error if streaming failed"""
-  error: AiChatError
-}

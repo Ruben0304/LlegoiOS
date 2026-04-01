@@ -208,7 +208,6 @@ final class CreateOrderRepository {
                 paymentStatus
                 createdAt
                 deliveryMode
-                estimatedReadyAt
                 items {
                   itemType
                   itemId
@@ -251,8 +250,6 @@ final class CreateOrderRepository {
                 }
                 pickupAddress {
                   street
-                  city
-                  reference
                 }
                 branch {
                   id
@@ -421,8 +418,7 @@ final class CreateOrderRepository {
             deliveryCity: order.deliveryAddress.city,
             deliveryReference: order.deliveryAddress.reference,
             deliveryMode: nil,
-            pickupAddress: nil,
-            estimatedReadyAt: nil
+            pickupAddress: nil
         )
     }
 
@@ -466,11 +462,10 @@ final class CreateOrderRepository {
             branchImageUrl: order.branch.avatarUrl,
             businessName: order.business.name,
             deliveryStreet: order.deliveryAddress?.street ?? order.pickupAddress?.street ?? "",
-            deliveryCity: order.deliveryAddress?.city ?? order.pickupAddress?.city,
-            deliveryReference: order.deliveryAddress?.reference ?? order.pickupAddress?.reference,
+            deliveryCity: order.deliveryAddress?.city,
+            deliveryReference: order.deliveryAddress?.reference,
             deliveryMode: order.deliveryMode,
-            pickupAddress: order.pickupAddress?.street,
-            estimatedReadyAt: order.estimatedReadyAt
+            pickupAddress: order.pickupAddress?.street
         )
     }
 
@@ -560,7 +555,6 @@ struct CreatedOrder {
     let deliveryReference: String?
     let deliveryMode: String?
     let pickupAddress: String?
-    let estimatedReadyAt: String?
 
     var formattedTotal: String {
         String(format: "$%.2f", total)
@@ -677,7 +671,6 @@ private struct MixedCreateOrderResponse: Decodable {
             let paymentStatus: String
             let createdAt: String
             let deliveryMode: String?
-            let estimatedReadyAt: String?
             let items: [Item]
             let discounts: [Discount]
             let deliveryAddress: DeliveryAddress?
@@ -710,8 +703,6 @@ private struct MixedCreateOrderResponse: Decodable {
 
             struct PickupAddress: Decodable {
                 let street: String?
-                let city: String?
-                let reference: String?
             }
 
             struct Branch: Decodable {

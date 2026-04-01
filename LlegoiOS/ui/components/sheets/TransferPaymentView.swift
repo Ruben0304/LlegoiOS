@@ -37,6 +37,7 @@ struct TransferPaymentView: View {
     @State private var isProcessing = false
     @State private var showSuccess = false
     @State private var errorMessage: String?
+    private let cartRepository = CartRepository()
 
     // Tarjetas del negocio
     private let businessCards: [BusinessPaymentCard] = [
@@ -119,7 +120,7 @@ struct TransferPaymentView: View {
                 }
             } message: {
                 Text(
-                    "Tu comprobante de pago ha sido enviado. El comercio lo revisará y confirmará tu pedido."
+                    "Tu comprobante fue enviado para validación. El estado del pedido seguirá el flujo real del backend."
                 )
             }
             .overlay(alignment: .top) {
@@ -701,60 +702,34 @@ struct TransferPaymentView: View {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             isProcessing = false
-            startTestOrderTracking()
             showSuccess = true
         }
     }
 
     private func confirmPayment() {
-        guard isFormValid else { return }
+        guard isFormValid, let transferImage else { return }
 
         isProcessing = true
 
-        // TODO: Integrar con el backend para enviar la imagen y referencia
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            isProcessing = false
-            startTestOrderTracking()
-            showSuccess = true
+        cartRepository.validatePaymentImage(
+            image: transferImage,
+            transferId: transferReference
+        ) { result in
+            Task { @MainActor in
+                isProcessing = false
+
+                switch result {
+                case .success(let validation):
+                    if validation.matched {
+                        showSuccess = true
+                    } else {
+                        errorMessage = validation.message
+                    }
+                case .failure(let error):
+                    errorMessage = error.localizedDescription
+                }
+            }
         }
-    }
-
-    /// Inicia la simulación de tracking del pedido con datos de prueba
-    private func startTestOrderTracking() {
-        let testProducts: [ActiveOrder.OrderProduct] = [
-            ActiveOrder.OrderProduct(
-                id: "test-1",
-                name: "Producto de prueba",
-                imageUrl: "",
-                quantity: 1,
-                price: order.total
-            )
-        ]
-
-        // Coordenadas de prueba: restaurante en Centro Habana → destino en Vedado
-        let restaurantCoord = CLLocationCoordinate2D(latitude: 23.1150, longitude: -82.3680)
-        let deliveryCoord = CLLocationCoordinate2D(latitude: 23.1136, longitude: -82.3666)
-
-        let userAvatarUrl = AuthManager.shared.currentUser?.avatarUrl
-
-        OrderManager.shared.startOrder(
-            orderId: order.id,
-            products: testProducts,
-            totalAmount: order.total,
-            currency: order.currency,
-            deliveryLocation: "Tu ubicación",
-            deliveryCoordinates: deliveryCoord,
-            restaurantLocation: order.storeName,
-            restaurantCoordinates: restaurantCoord,
-            paymentMethod: "Transferencia",
-            paymentCompleted: true,
-            storeImageUrl: order.storeImageUrl,
-            userAvatarUrl: userAvatarUrl
-        )
-
-        print(
-            "🚀 Tracking de pedido iniciado desde TransferPaymentView para orden: \(order.orderNumber)"
-        )
     }
 }
 

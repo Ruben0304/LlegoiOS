@@ -192,11 +192,6 @@ struct ProductFeedView: View {
                             ))
                 }
 
-                // Promotions section
-                if !viewModel.promotions.isEmpty {
-                    promotionsSection
-                }
-
                 // Loading more indicator
                 if viewModel.isLoadingMore {
                     ProgressView().tint(gradientManager.currentAccentColor).padding(.vertical, 20)
@@ -328,40 +323,6 @@ struct ProductFeedView: View {
         default:
             return nil
         }
-    }
-
-    // MARK: - Promotions Section
-    private var promotionsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                HStack(spacing: 8) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.orange)
-                    Text("Ofertas y Promociones")
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundColor(Color.adaptiveOnSurface(colorScheme))
-                }
-                Spacer()
-                Text("Ver todo")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(gradientManager.currentAccentColor)
-            }
-            .padding(.horizontal, 20)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 14) {
-                    ForEach(viewModel.promotions) { promotion in
-                        PromotionCard(
-                            promotion: promotion, accentColor: gradientManager.currentAccentColor
-                        )
-                        .padding(.vertical, 12)
-                    }
-                }
-                .padding(.horizontal, 20)
-            }
-        }
-        .padding(.vertical, 10)
     }
 
     // MARK: - Tutorials Section

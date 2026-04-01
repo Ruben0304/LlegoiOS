@@ -74,7 +74,7 @@ class StoreListViewModel: ObservableObject {
                             bannerUrl: branchGraphQL.preferredCoverFastUrl ?? self.defaultBannerUrl,
                             address: branchGraphQL.address,
                             rating: nil, // TODO: Add rating when available in backend
-                            description: "Descripción de la tienda que estará disponible próximamente",
+                            description: branchGraphQL.description,
                             coordinate: CLLocationCoordinate2D(
                                 latitude: branchGraphQL.coordinates.latitude,
                                 longitude: branchGraphQL.coordinates.longitude
@@ -164,7 +164,7 @@ class StoreListViewModel: ObservableObject {
                             bannerUrl: branchGraphQL.preferredCoverFastUrl ?? self.defaultBannerUrl,
                             address: branchGraphQL.address,
                             rating: nil,
-                            description: "Descripción de la tienda que estará disponible próximamente",
+                            description: branchGraphQL.description,
                             coordinate: CLLocationCoordinate2D(
                                 latitude: branchGraphQL.coordinates.latitude,
                                 longitude: branchGraphQL.coordinates.longitude

@@ -27,7 +27,6 @@ class ProductFeedViewModel: ObservableObject {
     @Published var featuredProducts: [FeedProduct] = []
     @Published var recentProducts: [FeedProduct] = []
     @Published var popularProducts: [FeedProduct] = []
-    @Published var promotions: [Promotion] = []
 
     // Filters
     @Published var selectedCategory: String? = nil
@@ -98,8 +97,6 @@ class ProductFeedViewModel: ObservableObject {
                 self.stores = stores
                 self.tutorials = tutorials
                 self.combos = combos
-                self.promotions = Promotion.samples  // TODO: Replace with API data
-
                 let summary = feedResponse.sections
                     .map { "[\($0.sectionId): \($0.products.count)]" }
                     .joined(separator: ", ")

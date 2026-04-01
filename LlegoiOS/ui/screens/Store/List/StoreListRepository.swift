@@ -74,6 +74,7 @@ class StoreListRepository {
                             id: edge.node.id,
                             businessId: edge.node.businessId,
                             name: edge.node.name,
+                            description: edge.node.description,
                             address: edge.node.address ?? "",
                             coordinates: CoordinatesGraphQL(
                                 type: edge.node.coordinates.type,
@@ -144,6 +145,7 @@ class StoreListRepository {
                                             id: edge.node.id,
                                             businessId: edge.node.businessId,
                                             name: edge.node.name,
+                                            description: edge.node.description,
                                             address: edge.node.address ?? "",
                                             coordinates: CoordinatesGraphQL(
                                                 type: edge.node.coordinates.type,
@@ -531,6 +533,7 @@ class StoreListRepository {
                             id: edge.node.id,
                             businessId: edge.node.businessId,
                             name: edge.node.name,
+                            description: edge.node.description,
                             address: edge.node.address ?? "",
                             coordinates: CoordinatesGraphQL(
                                 type: edge.node.coordinates.type,

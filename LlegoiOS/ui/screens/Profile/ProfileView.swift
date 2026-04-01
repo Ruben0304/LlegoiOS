@@ -215,9 +215,6 @@ struct ProfileView: View {
                                 // Repetir onboarding en próximo inicio
                                 onboardingSection
 
-                                // Notificaciones
-                                notificationsSection
-
                                 // Botón de cerrar sesión
                                 signOutButton
                             }
@@ -1483,45 +1480,6 @@ struct ProfileView: View {
                 Spacer()
 
                 Image(systemName: "arrow.counterclockwise")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.gray.opacity(0.6))
-            }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.white)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
-            )
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-
-    // MARK: - Notifications Section
-    private var notificationsSection: some View {
-        Button(action: {
-            // Acción para notificaciones
-        }) {
-            HStack(spacing: 12) {
-                Image(systemName: "bell")
-                    .font(.system(size: 18, weight: .regular))
-                    .foregroundColor(.gray)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Notificaciones")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.primary)
-
-                    Text("Personaliza tus avisos")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.gray)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.gray.opacity(0.6))
             }

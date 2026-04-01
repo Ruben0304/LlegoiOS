@@ -193,9 +193,9 @@ struct SearchView: View {
             ) {
                 Task {
                     await syncService.syncDataOnly()
+                    await syncService.syncImagesOnly(quality: .baja)
                     viewModel.configure(modelContext: modelContext)
                     viewModel.loadInitialData()
-                    showSyncSheet = true
                 }
             }
             .clipShape(
