@@ -1,7 +1,7 @@
-import Foundation
-import SwiftUI
 import AuthenticationServices
 import Combine
+import Foundation
+import SwiftUI
 
 enum ProfileViewState: Equatable {
     case idle
@@ -21,10 +21,11 @@ class ProfileViewModel: ObservableObject {
     @Published var isUpdatingUsername: Bool = false
     @Published var showEditUsernameSheet: Bool = false
     @Published var editingUsername: String = ""
-    
+
     // Recent orders
     @Published var recentOrders: [RecentOrder] = []
     @Published var isLoadingOrders: Bool = false
+    @Published var completedOrdersCount: Int?
 
     // Login form state
     @Published var email: String = ""
@@ -53,6 +54,10 @@ class ProfileViewModel: ObservableObject {
     func checkAuthenticationStatus() {
         if authManager.isAuthenticated, let user = authManager.currentUser {
             currentUser = user
+            completedOrdersCount = resolveCompletedOrdersCount(
+                remoteCount: user.completedOrdersCount,
+                fallbackDeliveredCount: nil
+            )
             updateCachedUserInfo(user)
             state = .authenticated
         } else {
@@ -145,16 +150,21 @@ class ProfileViewModel: ObservableObject {
         do {
             switch result {
             case .success(let authorization):
-                if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential {
+                if let appleIDCredential = authorization.credential
+                    as? ASAuthorizationAppleIDCredential
+                {
                     guard let tokenData = appleIDCredential.identityToken,
-                          let identityToken = String(data: tokenData, encoding: .utf8) else {
+                        let identityToken = String(data: tokenData, encoding: .utf8)
+                    else {
                         errorMessage = "No se pudo obtener el token de Apple"
                         state = .unauthenticated
                         print("⚠️ Apple Sign In: identityToken nil o inválido")
                         return
                     }
 
-                    let authorizationCode = appleIDCredential.authorizationCode.flatMap { String(data: $0, encoding: .utf8) }
+                    let authorizationCode = appleIDCredential.authorizationCode.flatMap {
+                        String(data: $0, encoding: .utf8)
+                    }
                     let nonce: String?
                     if let state = appleIDCredential.state, !state.isEmpty {
                         nonce = state
@@ -162,7 +172,9 @@ class ProfileViewModel: ObservableObject {
                         nonce = nil
                     }
 
-                    print("🍎 Recibido AppleIDCredential. email: \(appleIDCredential.email ?? "no proporcionado"), tieneAuthCode: \(authorizationCode != nil)")
+                    print(
+                        "🍎 Recibido AppleIDCredential. email: \(appleIDCredential.email ?? "no proporcionado"), tieneAuthCode: \(authorizationCode != nil)"
+                    )
 
                     let session = try await repository.loginWithApple(
                         identityToken: identityToken,
@@ -206,7 +218,9 @@ class ProfileViewModel: ObservableObject {
         }
 
         do {
-            print("🔍 Iniciando login con Google. email: \(email ?? "desconocido") authCode: \(authorizationCode != nil)")
+            print(
+                "🔍 Iniciando login con Google. email: \(email ?? "desconocido") authCode: \(authorizationCode != nil)"
+            )
             let session = try await repository.loginWithGoogle(
                 idToken: idToken,
                 authorizationCode: authorizationCode,
@@ -230,6 +244,8 @@ class ProfileViewModel: ObservableObject {
     func signOut() {
         authManager.signOut()
         currentUser = nil
+        completedOrdersCount = nil
+        recentOrders = []
         state = .unauthenticated
         ProfileLocalCache.clear()
         print("✅ Sesión cerrada")
@@ -251,13 +267,16 @@ class ProfileViewModel: ObservableObject {
             currentUser = user
             updateCachedUserInfo(user)
             state = .authenticated
-            
+
             // Load recent orders after profile refresh
             await loadRecentOrders()
+            await loadCompletedOrdersCount()
         } catch {
             if shouldInvalidateSession(for: error) {
                 authManager.signOut()
                 currentUser = nil
+                completedOrdersCount = nil
+                recentOrders = []
                 state = .unauthenticated
                 ProfileLocalCache.clear()
                 return
@@ -265,36 +284,76 @@ class ProfileViewModel: ObservableObject {
             state = .authenticated
         }
     }
-    
+
     // MARK: - Orders
-    
+
     /// Load recent orders from backend
     func loadRecentOrders() async {
         guard authManager.isAuthenticated else { return }
-        
+
         isLoadingOrders = true
-        
-        await withCheckedContinuation { continuation in
+
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             orderRepository.fetchOrders(limit: 3, offset: 0) { [weak self] result in
                 Task { @MainActor in
                     guard let self = self else {
                         continuation.resume()
                         return
                     }
-                    
+
                     self.isLoadingOrders = false
-                    
+
                     switch result {
                     case .success(let orderResult):
                         self.recentOrders = orderResult.orders
                         print("✅ Loaded \(orderResult.orders.count) recent orders")
-                        
+
                     case .failure(let error):
                         print("❌ Error loading recent orders: \(error.localizedDescription)")
-                        // Keep empty array on error, don't show error to user
+                    // Keep empty array on error, don't show error to user
                     }
-                    
+
                     continuation.resume()
+                }
+            }
+        }
+    }
+
+    /// Load completed (delivered) orders count.
+    /// Current source: filtered myOrders(status: DELIVERED).totalCount.
+    /// Future source: backend-provided user.completedOrdersCount, with local fallback.
+    func loadCompletedOrdersCount() async {
+        guard authManager.isAuthenticated else { return }
+
+        // Prefer backend-provided value when available.
+        if let remoteCount = currentUser?.completedOrdersCount {
+            completedOrdersCount = resolveCompletedOrdersCount(
+                remoteCount: remoteCount,
+                fallbackDeliveredCount: nil
+            )
+            return
+        }
+
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            orderRepository.fetchDeliveredOrdersCount { [weak self] result in
+                Task { @MainActor in
+                    defer { continuation.resume() }
+                    guard let self = self else { return }
+
+                    switch result {
+                    case .success(let deliveredCount):
+                        self.completedOrdersCount = self.resolveCompletedOrdersCount(
+                            remoteCount: self.currentUser?.completedOrdersCount,
+                            fallbackDeliveredCount: deliveredCount
+                        )
+                    case .failure(let error):
+                        print(
+                            "❌ Error loading completed orders count: \(error.localizedDescription)")
+                        self.completedOrdersCount = self.resolveCompletedOrdersCount(
+                            remoteCount: self.currentUser?.completedOrdersCount,
+                            fallbackDeliveredCount: nil
+                        )
+                    }
                 }
             }
         }
@@ -317,6 +376,19 @@ class ProfileViewModel: ObservableObject {
         }
     }
 
+    private func resolveCompletedOrdersCount(
+        remoteCount: Int?,
+        fallbackDeliveredCount: Int?
+    ) -> Int? {
+        if let remoteCount {
+            return max(remoteCount, 0)
+        }
+        if let fallbackDeliveredCount {
+            return max(fallbackDeliveredCount, 0)
+        }
+        return nil
+    }
+
     private func shouldInvalidateSession(for error: Error) -> Bool {
         let message = (error as NSError).localizedDescription.lowercased()
         return message.contains("token")
@@ -324,19 +396,19 @@ class ProfileViewModel: ObservableObject {
             || message.contains("unauthorized")
             || message.contains("no autorizado")
     }
-    
+
     // MARK: - Avatar Upload
-    
+
     /// Upload avatar image
     func uploadAvatar(image: UIImage) async {
         guard !isUploadingAvatar else { return }
-        
+
         isUploadingAvatar = true
         errorMessage = nil
-        
+
         do {
             let response = try await AvatarService.shared.uploadAvatar(image: image)
-            
+
             // Update current user with new avatar
             if let user = currentUser {
                 let updatedUser = User(
@@ -352,27 +424,27 @@ class ProfileViewModel: ObservableObject {
                     savedAddresses: user.savedAddresses,
                     defaultAddressId: user.defaultAddressId
                 )
-                
+
                 currentUser = updatedUser
                 authManager.applyCurrentUser(updatedUser)
                 updateCachedUserInfo(updatedUser)
-                
+
                 print("✅ Avatar uploaded successfully")
             }
-            
+
             // Refresh profile to get complete data
             await refreshProfile()
-            
+
         } catch {
             errorMessage = "Error al subir avatar: \(error.localizedDescription)"
             print("❌ Error uploading avatar: \(error)")
         }
-        
+
         isUploadingAvatar = false
     }
-    
+
     // MARK: - Update Username
-    
+
     /// Update username
     func updateUsername(newUsername: String) async {
         guard !isUpdatingUsername else { return }
@@ -380,24 +452,24 @@ class ProfileViewModel: ObservableObject {
             errorMessage = "El username no puede estar vacío"
             return
         }
-        
+
         isUpdatingUsername = true
         errorMessage = nil
-        
+
         do {
             guard let jwt = authManager.getAccessToken() else {
                 errorMessage = "No hay sesión activa"
                 isUpdatingUsername = false
                 return
             }
-            
+
             let updatedUser = try await repository.updateUser(
                 jwt: jwt,
                 name: nil,
                 username: newUsername,
                 phone: nil
             )
-            
+
             // Update current user with new username
             if let user = currentUser {
                 let newUser = User(
@@ -413,22 +485,22 @@ class ProfileViewModel: ObservableObject {
                     savedAddresses: user.savedAddresses,
                     defaultAddressId: user.defaultAddressId
                 )
-                
+
                 currentUser = newUser
                 authManager.applyCurrentUser(newUser)
                 updateCachedUserInfo(newUser)
-                
+
                 print("✅ Username actualizado a: \(updatedUser.username)")
             }
-            
+
             showEditUsernameSheet = false
             editingUsername = ""
-            
+
         } catch {
             errorMessage = "Error al actualizar username: \(error.localizedDescription)"
             print("❌ Error updating username: \(error)")
         }
-        
+
         isUpdatingUsername = false
     }
 }

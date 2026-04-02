@@ -1,6 +1,7 @@
+import Combine
 import Foundation
 import SwiftUI
-import Combine
+
 // MARK: - User Model
 struct User: Codable, Sendable {
     let id: String
@@ -14,9 +15,13 @@ struct User: Codable, Sendable {
     let avatarUrl: String?
     let savedAddresses: [SavedAddress]?
     let defaultAddressId: String?
+    // Contador preferido cuando backend lo exponga y sea mapeado en iOS.
+    // `var` permite que Decodable lo asigne si viene en payload persistido.
+    var completedOrdersCount: Int? = nil
 
     enum CodingKeys: String, CodingKey {
-        case id, email, fullName, username, phone, role, appleUserId, avatar, avatarUrl, savedAddresses, defaultAddressId
+        case id, email, fullName, username, phone, role, appleUserId, avatar, avatarUrl,
+            savedAddresses, defaultAddressId, completedOrdersCount
     }
 }
 
@@ -83,7 +88,8 @@ class AuthManager: ObservableObject {
             let data = try encoder.encode(persisted)
             UserDefaults.standard.set(data, forKey: sessionKey)
             UserDefaults.standard.set(session.user.id, forKey: userIdKey)
-            let normalizedToken = normalizeAccessToken(session.accessToken, tokenType: session.tokenType)
+            let normalizedToken = normalizeAccessToken(
+                session.accessToken, tokenType: session.tokenType)
             KeychainHelper.save(
                 normalizedToken,
                 service: keychainService,
@@ -163,7 +169,8 @@ class AuthManager: ObservableObject {
     private func loadSession() {
         let decoder = JSONDecoder()
         if let data = UserDefaults.standard.data(forKey: sessionKey),
-           let session = try? decoder.decode(PersistedAuthSession.self, from: data) {
+            let session = try? decoder.decode(PersistedAuthSession.self, from: data)
+        {
             currentUser = session.user
             tokenType = session.tokenType
             userId = session.user.id
@@ -174,11 +181,13 @@ class AuthManager: ObservableObject {
         }
 
         if let data = UserDefaults.standard.data(forKey: sessionKey),
-           let legacySession = try? decoder.decode(AuthSession.self, from: data) {
+            let legacySession = try? decoder.decode(AuthSession.self, from: data)
+        {
             currentUser = legacySession.user
             userId = legacySession.user.id
             tokenType = legacySession.tokenType
-            let normalizedToken = normalizeAccessToken(legacySession.accessToken, tokenType: tokenType)
+            let normalizedToken = normalizeAccessToken(
+                legacySession.accessToken, tokenType: tokenType)
             accessToken = normalizedToken
             isAuthenticated = !normalizedToken.isEmpty
             KeychainHelper.save(
@@ -226,7 +235,8 @@ class AuthManager: ObservableObject {
         let trimmed = token.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return token }
         if let prefix = tokenType?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !prefix.isEmpty {
+            !prefix.isEmpty
+        {
             let lowerPrefix = prefix.lowercased() + " "
             if trimmed.lowercased().hasPrefix(lowerPrefix) {
                 return String(trimmed.dropFirst(lowerPrefix.count))

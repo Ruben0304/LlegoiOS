@@ -99,6 +99,7 @@ struct ProfileView: View {
                     // Recargar los pedidos recientes cuando se cierra el detalle
                     Task {
                         await viewModel.loadRecentOrders()
+                        await viewModel.loadCompletedOrdersCount()
                     }
                 }
                 .toolbar {
@@ -180,7 +181,7 @@ struct ProfileView: View {
             ZStack {
                 Color.llegoBackground.ignoresSafeArea()
 
-                ScrollView {
+                ScrollView(.vertical, showsIndicators: true) {
                     VStack(spacing: 0) {
                         // Header futurista con mapa como portada y avatar flotante
                         futuristicProfileHeader
@@ -224,7 +225,9 @@ struct ProfileView: View {
                         .padding(.horizontal, 20)
                         .padding(.top, 24)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .clipped()
                 .ignoresSafeArea(edges: .top)
             }
 
@@ -1113,6 +1116,45 @@ struct ProfileView: View {
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.gray)
                 }
+            }
+
+            if let completedCount = viewModel.completedOrdersCount {
+                HStack(spacing: 14) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.llegoAccent.opacity(0.25))
+                            .frame(width: 44, height: 44)
+
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.llegoPrimary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Pedidos realizados")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.gray)
+
+                        Text("\(completedCount)")
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .foregroundColor(.llegoPrimary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.white)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.llegoPrimary.opacity(0.12), lineWidth: 1)
+                )
             }
 
             if viewModel.isLoadingOrders {

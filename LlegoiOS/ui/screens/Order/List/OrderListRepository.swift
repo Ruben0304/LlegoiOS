@@ -114,6 +114,21 @@ final class OrderListRepository {
         }
     }
 
+    /// Returns exact count of delivered orders using backend filtering + totalCount.
+    /// This avoids relying on locally paginated history.
+    func fetchDeliveredOrdersCount(
+        completion: @escaping @Sendable (Result<Int, Error>) -> Void
+    ) {
+        fetchOrders(status: .delivered, limit: 1, offset: 0) { result in
+            switch result {
+            case .success(let data):
+                completion(.success(data.totalCount))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
     // MARK: - Helpers
 
     private func mapStatusToGraphQL(_ status: OrderStatusEnum) -> LlegoAPI.OrderStatusEnum {
