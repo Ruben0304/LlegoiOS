@@ -1,0 +1,10 @@
+mutation ResubmitOrder($input: ResubmitOrderInput!, $jwt: String!) {
+  resubmitOrder(input: $input, jwt: $jwt) {
+    id
+    orderNumber
+    status
+    customerVisibleStatus
+    deadlineAt
+    updatedAt
+  }
+}

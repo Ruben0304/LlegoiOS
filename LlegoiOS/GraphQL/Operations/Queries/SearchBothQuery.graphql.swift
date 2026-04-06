@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "SearchBoth"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query SearchBoth($query: String!, $firstProducts: Int! = 10, $firstBranches: Int! = 8, $useVectorSearch: Boolean, $jwt: String) { searchProducts( query: $query first: $firstProducts useVectorSearch: $useVectorSearch jwt: $jwt ) { __typename edges { __typename node { __typename id name price currency imageUrlBaja business { __typename id name avatarUrl avatarUrlBaja avatarUrlAlta } } } } searchBranches( query: $query first: $firstBranches useVectorSearch: $useVectorSearch jwt: $jwt ) { __typename edges { __typename node { __typename id name description avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta address coordinates { __typename type coordinates } deliveryRadius products(limit: 4, availableOnly: false) { __typename id name price currency imageUrlBaja availability } } } } }"#
+        #"query SearchBoth($query: String!, $firstProducts: Int! = 10, $firstBranches: Int! = 8, $useVectorSearch: Boolean, $jwt: String) { searchProducts( query: $query first: $firstProducts useVectorSearch: $useVectorSearch jwt: $jwt ) { __typename edges { __typename node { __typename id name price currency imageUrlBaja business { __typename id name avatarUrl avatarUrlBaja avatarUrlAlta } } } } searchBranches( query: $query first: $firstBranches useVectorSearch: $useVectorSearch jwt: $jwt ) { __typename edges { __typename node { __typename id name avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta address coordinates { __typename type coordinates } deliveryRadius products(limit: 4, availableOnly: false) { __typename id name price currency imageUrlBaja availability } } } } }"#
       ))
 
     public var query: String
@@ -158,7 +158,9 @@ public extension LlegoAPI {
               public var name: String { __data["name"] }
               /// Presigned URL for the business avatar
               public var avatarUrl: String? { __data["avatarUrl"] }
+              /// Presigned URL for low quality business avatar (with fallback to original)
               public var avatarUrlBaja: String? { __data["avatarUrlBaja"] }
+              /// Presigned URL for high quality business avatar (with fallback to original)
               public var avatarUrlAlta: String? { __data["avatarUrlAlta"] }
             }
           }
@@ -213,7 +215,6 @@ public extension LlegoAPI {
               .field("__typename", String.self),
               .field("id", String.self),
               .field("name", String.self),
-              .field("description", String?.self),
               .field("avatarUrl", String?.self),
               .field("avatarUrlBaja", String?.self),
               .field("avatarUrlAlta", String?.self),
@@ -234,14 +235,17 @@ public extension LlegoAPI {
 
             public var id: String { __data["id"] }
             public var name: String { __data["name"] }
-            public var description: String? { __data["description"] }
             /// Presigned URL for the branch avatar (inherits from business if not set)
             public var avatarUrl: String? { __data["avatarUrl"] }
+            /// Presigned URL for low quality branch avatar (inherits business avatar and falls back to original)
             public var avatarUrlBaja: String? { __data["avatarUrlBaja"] }
+            /// Presigned URL for high quality branch avatar (inherits business avatar and falls back to original)
             public var avatarUrlAlta: String? { __data["avatarUrlAlta"] }
             /// Presigned URL for the branch cover image
             public var coverUrl: String? { __data["coverUrl"] }
+            /// Presigned URL for low quality branch cover (with fallback to original)
             public var coverUrlBaja: String? { __data["coverUrlBaja"] }
+            /// Presigned URL for high quality branch cover (with fallback to original)
             public var coverUrlAlta: String? { __data["coverUrlAlta"] }
             public var address: String? { __data["address"] }
             public var coordinates: Coordinates { __data["coordinates"] }

@@ -9,6 +9,8 @@ query GetMyOrders(
             id
             orderNumber
             status
+            customerVisibleStatus
+            deadlineAt
             total
             currency
             paymentStatus

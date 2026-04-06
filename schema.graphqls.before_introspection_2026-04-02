@@ -226,7 +226,6 @@ type UserType {
   aiConsultasLimit: JSON
   savedAddresses: [SavedAddressType!]!
   defaultAddressId: String
-  deliveredOrdersCount: Int!
   "URL firmada del avatar del usuario"
   avatarUrl: String
 }

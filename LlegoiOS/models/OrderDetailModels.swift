@@ -6,6 +6,7 @@ struct OrderDetail: Identifiable {
     let id: String
     let orderNumber: String
     let status: OrderStatusEnum
+    let customerVisibleStatus: OrderStatusEnum
     let subtotal: Double
     let deliveryFee: Double
     let total: Double
@@ -15,6 +16,8 @@ struct OrderDetail: Identifiable {
     let createdAt: Date
     let updatedAt: Date
     let lastStatusAt: Date
+    let deadlineAt: Date?
+    let deliveryVerificationCode: String?
     let isEditable: Bool
     let canCancel: Bool
     let estimatedDeliveryTime: Date?
@@ -37,6 +40,8 @@ struct OrderDetail: Identifiable {
     let branchPhone: String?
     let branchImageUrl: String?
     let branchCoordinates: CLLocationCoordinate2D?
+    let transferAccounts: [OrderTransferAccount]
+    let transferPhones: [OrderTransferPhone]
 
     // Business info
     let businessId: String
@@ -47,6 +52,9 @@ struct OrderDetail: Identifiable {
     var formattedDeliveryFee: String { String(format: "$%.2f", deliveryFee) }
     var formattedTotal: String { String(format: "$%.2f", total) }
     var isPickup: Bool { deliveryMode == .pickup }
+    var displayStatus: OrderStatusEnum {
+        customerVisibleStatus == .unknown ? status : customerVisibleStatus
+    }
 }
 
 // MARK: - Order Detail Item
@@ -157,6 +165,20 @@ struct OrderDetailComment: Identifiable {
         formatter.dateFormat = "HH:mm"
         return formatter.string(from: timestamp)
     }
+}
+
+// MARK: - Transfer Account
+struct OrderTransferAccount: Identifiable {
+    let id = UUID()
+    let cardNumber: String
+    let cardHolderName: String
+    let bankName: String
+}
+
+// MARK: - Transfer Phone
+struct OrderTransferPhone: Identifiable {
+    let id = UUID()
+    let phone: String
 }
 
 // MARK: - Legacy compatibility aliases

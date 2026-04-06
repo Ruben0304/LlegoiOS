@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetMyOrders"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetMyOrders($status: OrderStatusEnum, $limit: Int, $offset: Int, $jwt: String!) { myOrders(status: $status, limit: $limit, offset: $offset, jwt: $jwt) { __typename orders { __typename id orderNumber status total currency paymentStatus createdAt lastStatusAt estimatedMinutesRemaining items { __typename itemType itemId productId name quantity imageUrlMuyBaja imageUrl basePrice finalPrice discountType discountValue } branch { __typename id name avatarUrl } business { __typename id name } } totalCount hasMore } }"#
+        #"query GetMyOrders($status: OrderStatusEnum, $limit: Int, $offset: Int, $jwt: String!) { myOrders(status: $status, limit: $limit, offset: $offset, jwt: $jwt) { __typename orders { __typename id orderNumber status customerVisibleStatus deadlineAt total currency paymentStatus deliveryMode createdAt lastStatusAt estimatedMinutesRemaining items { __typename itemType itemId productId name quantity imageUrlMuyBaja imageUrl basePrice finalPrice discountType discountValue } branch { __typename id name avatarUrl } business { __typename id name } } totalCount hasMore } }"#
       ))
 
     public var status: GraphQLNullable<GraphQLEnum<OrderStatusEnum>>
@@ -91,9 +91,12 @@ public extension LlegoAPI {
             .field("id", String.self),
             .field("orderNumber", String.self),
             .field("status", GraphQLEnum<LlegoAPI.OrderStatusEnum>.self),
+            .field("customerVisibleStatus", GraphQLEnum<LlegoAPI.OrderStatusEnum>.self),
+            .field("deadlineAt", LlegoAPI.DateTime?.self),
             .field("total", Double.self),
             .field("currency", String.self),
             .field("paymentStatus", GraphQLEnum<LlegoAPI.PaymentStatusEnum>.self),
+            .field("deliveryMode", String.self),
             .field("createdAt", LlegoAPI.DateTime.self),
             .field("lastStatusAt", LlegoAPI.DateTime.self),
             .field("estimatedMinutesRemaining", Int?.self),
@@ -108,9 +111,13 @@ public extension LlegoAPI {
           public var id: String { __data["id"] }
           public var orderNumber: String { __data["orderNumber"] }
           public var status: GraphQLEnum<LlegoAPI.OrderStatusEnum> { __data["status"] }
+          /// Customer-facing status
+          public var customerVisibleStatus: GraphQLEnum<LlegoAPI.OrderStatusEnum> { __data["customerVisibleStatus"] }
+          public var deadlineAt: LlegoAPI.DateTime? { __data["deadlineAt"] }
           public var total: Double { __data["total"] }
           public var currency: String { __data["currency"] }
           public var paymentStatus: GraphQLEnum<LlegoAPI.PaymentStatusEnum> { __data["paymentStatus"] }
+          public var deliveryMode: String { __data["deliveryMode"] }
           public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
           public var lastStatusAt: LlegoAPI.DateTime { __data["lastStatusAt"] }
           /// Estimated minutes remaining for delivery

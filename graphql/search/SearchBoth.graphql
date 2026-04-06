@@ -22,6 +22,8 @@ query SearchBoth(
           id
           name
           avatarUrl
+          avatarUrlBaja
+          avatarUrlAlta
         }
       }
     }
@@ -37,7 +39,11 @@ query SearchBoth(
         id
         name
         avatarUrl
+        avatarUrlBaja
+        avatarUrlAlta
         coverUrl
+        coverUrlBaja
+        coverUrlAlta
         address
         coordinates {
           type

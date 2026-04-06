@@ -15,7 +15,11 @@ query GetBranchDetail($id: String!) {
         phone
         status
         avatarUrl
+        avatarUrlBaja
+        avatarUrlAlta
         coverUrl
+        coverUrlBaja
+        coverUrlAlta
         deliveryRadius
         acceptedCurrency
         exchangeRate

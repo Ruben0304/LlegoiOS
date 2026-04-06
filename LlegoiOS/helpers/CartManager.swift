@@ -278,6 +278,16 @@ class CartManager: ObservableObject {
         print("🧹 Cart cleared")
     }
 
+    /// Reemplazar el carrito completo con líneas precargadas desde un pedido editable.
+    func replaceCart(
+        items: [CartItemLocal],
+        showcaseItems: [ShowcaseCartItemLocal] = []
+    ) {
+        saveCartItems(items)
+        saveShowcaseCartItems(showcaseItems)
+        print("🛒 Cart replaced with \(items.count) product lines")
+    }
+
     /// Obtener cantidad de un producto específico en el carrito
     func getQuantity(for productId: String) -> Int {
         localItems

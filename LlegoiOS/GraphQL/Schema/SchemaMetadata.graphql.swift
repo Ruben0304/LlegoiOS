@@ -83,6 +83,7 @@ public extension LlegoAPI {
       case "PageInfo": return LlegoAPI.Objects.PageInfo
       case "PaymentAttemptType": return LlegoAPI.Objects.PaymentAttemptType
       case "PaymentMethodType": return LlegoAPI.Objects.PaymentMethodType
+      case "PickupAddressType": return LlegoAPI.Objects.PickupAddressType
       case "ProductCategoryType": return LlegoAPI.Objects.ProductCategoryType
       case "ProductConnection": return LlegoAPI.Objects.ProductConnection
       case "ProductEdge": return LlegoAPI.Objects.ProductEdge
@@ -99,6 +100,8 @@ public extension LlegoAPI {
       case "ShowcaseItemType": return LlegoAPI.Objects.ShowcaseItemType
       case "ShowcaseType": return LlegoAPI.Objects.ShowcaseType
       case "Subscription": return LlegoAPI.Objects.Subscription
+      case "TransferAccountType": return LlegoAPI.Objects.TransferAccountType
+      case "TransferPhoneType": return LlegoAPI.Objects.TransferPhoneType
       case "TronDealerPaymentResult": return LlegoAPI.Objects.TronDealerPaymentResult
       case "TutorialType": return LlegoAPI.Objects.TutorialType
       case "UserData": return LlegoAPI.Objects.UserData

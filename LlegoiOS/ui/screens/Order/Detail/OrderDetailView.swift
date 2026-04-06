@@ -1,11 +1,18 @@
+import Combine
+import MapKit
 import SwiftUI
 
 struct OrderDetailView: View {
     @StateObject private var viewModel: OrderDetailViewModel
     @StateObject private var gradientManager = GradientStateManager.shared
+    @ObservedObject private var cartManager = CartManager.shared
     @State private var showCancelAlert = false
+    @State private var showReplaceCartAlert = false
+    @State private var showCartEditor = false
+    @State private var now = Date()
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
+    private let deadlineTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     var onDismiss: (() -> Void)?
 
     init(orderId: String, onDismiss: (() -> Void)? = nil) {
@@ -29,6 +36,7 @@ struct OrderDetailView: View {
                 } else if let order = viewModel.order {
                     VStack(spacing: 16) {
                         headerSection(order)
+                        orderContractSection(order)
                         itemsSection(order)
                         fulfillmentSection(order)
                         if !order.comments.isEmpty {
@@ -84,10 +92,29 @@ struct OrderDetailView: View {
         } message: {
             Text("¿Estás seguro de que deseas cancelar este pedido?")
         }
+        .alert("Reemplazar carrito", isPresented: $showReplaceCartAlert) {
+            Button("Cancelar", role: .cancel) {}
+            Button("Continuar", role: .destructive) {
+                openCartEditor()
+            }
+        } message: {
+            Text("Los productos del carrito actual se reemplazarán por los de este pedido.")
+        }
         .alert("Pago", isPresented: $viewModel.showPaymentAlert) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(viewModel.paymentAlertMessage ?? "Error al procesar el pago.")
+        }
+        .alert(
+            "Listo",
+            isPresented: Binding(
+                get: { viewModel.successMessage != nil },
+                set: { if !$0 { viewModel.successMessage = nil } }
+            )
+        ) {
+            Button("OK", role: .cancel) { viewModel.successMessage = nil }
+        } message: {
+            Text(viewModel.successMessage ?? "")
         }
         .sheet(isPresented: $viewModel.showTronDealerSheet) {
             if let paymentInfo = viewModel.tronDealerPaymentInfo {
@@ -103,6 +130,33 @@ struct OrderDetailView: View {
                 )
             }
         }
+        .sheet(isPresented: $viewModel.showTransferSheet) {
+            if let order = viewModel.order {
+                OrderTransferPaymentSheet(
+                    order: order,
+                    paymentAttemptId: viewModel.activePaymentAttemptId ?? "",
+                    isConfirming: viewModel.isConfirmingTransfer,
+                    onConfirm: { proofImageData in
+                        viewModel.confirmTransferPaymentSent(proofImageData: proofImageData)
+                    },
+                    onDismiss: {
+                        viewModel.showTransferSheet = false
+                    }
+                )
+            }
+        }
+        .fullScreenCover(isPresented: $showCartEditor) {
+            NavigationStack {
+                CartView()
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            CloseButton {
+                                showCartEditor = false
+                            }
+                        }
+                    }
+            }
+        }
         .background(
             StripePaymentSheetPresenter(
                 isPresented: $viewModel.showStripePaymentSheet,
@@ -110,6 +164,7 @@ struct OrderDetailView: View {
                 onCompletion: viewModel.handleStripePaymentResult
             )
         )
+        .onReceive(deadlineTimer) { now = $0 }
     }
 
     // MARK: - Order Gradient Background
@@ -177,7 +232,7 @@ struct OrderDetailView: View {
                     }
 
                     Spacer()
-                    statusBadge(order.status)
+                    statusBadge(order.displayStatus)
                 }
 
                 Divider()
@@ -227,6 +282,13 @@ struct OrderDetailView: View {
                         .foregroundColor(gradientManager.currentAccentColor)
                 }
                 Spacer()
+                if order.isEditable {
+                    Button("Modificar productos") {
+                        handleEditProductsTap()
+                    }
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(gradientManager.currentAccentColor)
+                }
             }
             .padding(.horizontal, 2)
 
@@ -242,6 +304,30 @@ struct OrderDetailView: View {
                 }
             }
         }
+    }
+
+    private func handleEditProductsTap() {
+        guard viewModel.order?.isEditable == true else { return }
+        let hasExistingCart = !cartManager.localItems.isEmpty || !cartManager.localShowcaseItems.isEmpty
+        if hasExistingCart {
+            showReplaceCartAlert = true
+        } else {
+            openCartEditor()
+        }
+    }
+
+    private func openCartEditor() {
+        guard let order = viewModel.order, order.isEditable else { return }
+        let cartItems = order.items.map { item in
+            CartItemLocal(
+                productId: item.productId,
+                quantity: item.quantity,
+                basePrice: item.price,
+                finalUnitPrice: item.price
+            )
+        }
+        cartManager.replaceCart(items: cartItems)
+        showCartEditor = true
     }
 
     private func itemRow(_ item: OrderDetailItem) -> some View {
@@ -331,23 +417,209 @@ struct OrderDetailView: View {
     }
 
     private func fulfillmentSection(_ order: OrderDetail) -> some View {
-        card {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Entrega")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+        VStack(alignment: .leading, spacing: 12) {
+            Text(order.isPickup ? "Recogida" : "Entrega")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                .padding(.horizontal, 2)
 
-                if order.isPickup {
-                    Text("Recogida en tienda")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.secondary)
-                    Text(order.pickupAddress?.displayText ?? order.branchName)
-                        .font(.system(size: 13, weight: .regular))
-                        .foregroundColor(.secondary)
-                } else {
-                    Text(order.deliveryAddress?.fullAddress ?? "Dirección de entrega")
-                        .font(.system(size: 13, weight: .regular))
-                        .foregroundColor(.secondary)
+            card {
+                VStack(spacing: 12) {
+                    HStack(spacing: 12) {
+                        Image(systemName: order.isPickup ? "bag.fill" : "shippingbox.fill")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(gradientManager.currentAccentColor)
+                            .frame(width: 44, height: 44)
+                            .background(gradientManager.currentAccentColor.opacity(0.12))
+                            .clipShape(Circle())
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(order.isPickup ? "Recogida en tienda" : "Envío a domicilio")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+
+                            if order.isPickup {
+                                Text(order.pickupAddress?.displayText ?? order.branchAddress ?? order.branchName)
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.secondary)
+                            } else {
+                                Text(order.deliveryAddress?.fullAddress ?? "Dirección de entrega")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+
+                        Spacer()
+                    }
+
+                    if order.isPickup {
+                        if let estimatedReady = order.estimatedReadyAt {
+                            HStack(spacing: 8) {
+                                Image(systemName: "clock.fill")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(gradientManager.currentAccentColor)
+                                Text("Listo aprox. \(formatTime(estimatedReady))")
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                            }
+                            .padding(12)
+                            .background(gradientManager.currentAccentColor.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+
+                        Divider()
+
+                        HStack(spacing: 12) {
+                            if order.branchCoordinates != nil {
+                                Button {
+                                    openInMaps(
+                                        coordinate: order.branchCoordinates!,
+                                        name: order.branchName
+                                    )
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "map.fill")
+                                            .font(.system(size: 14))
+                                        Text("Ver en mapa")
+                                            .font(.system(size: 13, weight: .semibold))
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 40)
+                                    .background(gradientManager.currentAccentColor.opacity(0.12))
+                                    .foregroundColor(gradientManager.currentAccentColor)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                }
+                            }
+
+                            if let phone = order.branchPhone, !phone.isEmpty {
+                                Button {
+                                    callPhone(phone)
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "phone.fill")
+                                            .font(.system(size: 14))
+                                        Text("Llamar")
+                                            .font(.system(size: 13, weight: .semibold))
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 40)
+                                    .background(gradientManager.currentAccentColor.opacity(0.12))
+                                    .foregroundColor(gradientManager.currentAccentColor)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                }
+                            }
+                        }
+                    } else {
+                        if let address = order.deliveryAddress {
+                            if let reference = address.reference, !reference.isEmpty {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "mappin.circle.fill")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.secondary)
+                                    Text(reference)
+                                        .font(.system(size: 13))
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                }
+                            }
+                            if let instructions = address.deliveryInstructions, !instructions.isEmpty {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "text.bubble.fill")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.secondary)
+                                    Text(instructions)
+                                        .font(.system(size: 13))
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func openInMaps(coordinate: CLLocationCoordinate2D, name: String) {
+        let placemark = MKPlacemark(coordinate: coordinate)
+        let mapItem = MKMapItem(placemark: placemark)
+        mapItem.name = name
+        mapItem.openInMaps(launchOptions: [
+            MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDefault
+        ])
+    }
+
+    private func callPhone(_ phone: String) {
+        let cleaned = phone.replacingOccurrences(of: " ", with: "")
+        if let url = URL(string: "tel://\(cleaned)") {
+            UIApplication.shared.open(url)
+        }
+    }
+
+    private func formatTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: date)
+    }
+
+    private func orderContractSection(_ order: OrderDetail) -> some View {
+        VStack(spacing: 10) {
+            if OrderPermissionPolicy.shouldShowDeadline(status: order.status),
+                let deadlineAt = order.deadlineAt
+            {
+                card {
+                    HStack(spacing: 10) {
+                        Image(systemName: deadlineAt < now ? "clock.badge.xmark" : "hourglass")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(deadlineAt < now ? .red : .orange)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Tiempo límite")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                            Text(formatDeadline(deadlineAt))
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                        }
+
+                        Spacer()
+                    }
+                }
+            }
+
+            if OrderPermissionPolicy.isTimedOutCancellation(
+                status: order.status,
+                deadlineAt: order.deadlineAt
+            ) {
+                card {
+                    HStack(spacing: 10) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.red)
+                        Text("Pedido cancelado automáticamente por vencimiento del tiempo límite.")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.red)
+                        Spacer()
+                    }
+                }
+            }
+
+            if order.status == .onTheWay,
+                let deliveryCode = order.deliveryVerificationCode,
+                !deliveryCode.isEmpty
+            {
+                card {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Código de verificación de entrega")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                        Text(deliveryCode)
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .kerning(2)
+                            .foregroundColor(gradientManager.currentAccentColor)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
         }
@@ -544,6 +816,8 @@ struct OrderDetailView: View {
                 let shouldShowPay = viewModel.canInitiatePayment(for: order)
                 let shouldShowAccept = OrderPermissionPolicy.canAcceptModifications(
                     status: order.status)
+                    && !viewModel.canResubmitOrder
+                let shouldShowResubmit = viewModel.canResubmitOrder
 
                 if order.canCancel {
                     Button {
@@ -572,6 +846,29 @@ struct OrderDetailView: View {
                     }
                     .modifier(GlassProminentButtonModifier())
                     .tint(gradientManager.currentAccentColor)
+                }
+
+                if shouldShowResubmit {
+                    Button {
+                        viewModel.resubmitOrder()
+                    } label: {
+                        HStack(spacing: 8) {
+                            if viewModel.isProcessing {
+                                ProgressView()
+                                    .tint(.white)
+                            } else {
+                                Image(systemName: "arrow.clockwise.circle.fill")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                            Text("Reenviar")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                    }
+                    .modifier(GlassProminentButtonModifier())
+                    .tint(gradientManager.currentAccentColor)
+                    .disabled(viewModel.isProcessing)
                 }
 
                 if shouldShowPay {
@@ -671,6 +968,8 @@ struct OrderDetailView: View {
                 return "creditcard.fill"
             case "cash":
                 return "banknote.fill"
+            case "transfer", "transfermovil":
+                return "building.columns.fill"
             case "qvapay":
                 return "dollarsign.circle.fill"
             case "usdt":
@@ -701,6 +1000,9 @@ struct OrderDetailView: View {
         if normalized.contains("usdt") || normalized.contains("trondealer") {
             return "bitcoinsign.circle.fill"
         }
+        if normalized.contains("transfer") {
+            return "building.columns.fill"
+        }
 
         return "creditcard.fill"
     }
@@ -717,6 +1019,21 @@ struct OrderDetailView: View {
         .background(status.color.opacity(0.15))
         .foregroundColor(status.color)
         .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func formatDeadline(_ deadline: Date) -> String {
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "dd MMM, HH:mm"
+        timeFormatter.locale = Locale(identifier: "es")
+
+        let absolute = timeFormatter.string(from: deadline)
+        let remaining = Int(deadline.timeIntervalSince(now))
+        if remaining <= 0 {
+            return "Vencido (\(absolute))"
+        }
+        let minutes = remaining / 60
+        let seconds = remaining % 60
+        return String(format: "\(absolute) • Vence en %02d:%02d", minutes, seconds)
     }
 
     private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {

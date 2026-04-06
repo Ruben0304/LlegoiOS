@@ -17,6 +17,9 @@ struct OrderTrackingOrder: Identifiable {
     let id: String
     let orderNumber: String
     let status: OrderStatusEnum
+    let customerVisibleStatus: OrderStatusEnum
+    let deadlineAt: Date?
+    let deliveryVerificationCode: String?
     let total: Double
     let currency: String
     let estimatedDeliveryTime: Date?
@@ -32,6 +35,9 @@ struct OrderTrackingOrder: Identifiable {
     let estimatedReadyAt: Date?
 
     var isPickup: Bool { deliveryMode == .pickup }
+    var displayStatus: OrderStatusEnum {
+        customerVisibleStatus == .unknown ? status : customerVisibleStatus
+    }
 
     var formattedTotal: String { String(format: "$%.2f", total) }
 

@@ -10,6 +10,7 @@ public extension LlegoAPI {
     case paymentInProgress = "PAYMENT_IN_PROGRESS"
     case pendingAcceptance = "PENDING_ACCEPTANCE"
     case modifiedByStore = "MODIFIED_BY_STORE"
+    case rejectedByStore = "REJECTED_BY_STORE"
     case accepted = "ACCEPTED"
     case preparing = "PREPARING"
     case readyForPickup = "READY_FOR_PICKUP"

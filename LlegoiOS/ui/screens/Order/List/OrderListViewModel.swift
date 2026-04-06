@@ -14,6 +14,14 @@ final class OrderListViewModel: ObservableObject {
     private var hasMore = false
     private var currentOffset = 0
     private let pageSize = 20
+    private let actionRequiredStatuses: Set<OrderStatusEnum> = [
+        .pendingAcceptance,
+        .modifiedByStore,
+        .rejectedByStore,
+        .awaitingDeliveryAcceptance,
+        .pendingPayment,
+        .paymentInProgress,
+    ]
     
     // MARK: - Load Orders
     
@@ -22,14 +30,18 @@ final class OrderListViewModel: ObservableObject {
         errorMessage = nil
         currentOffset = 0
         
-        repository.fetchOrders(status: selectedStatus, limit: pageSize, offset: 0) { [weak self] result in
+        repository.fetchOrders(
+            status: backendStatusForSelectedFilter(),
+            limit: pageSize,
+            offset: 0
+        ) { [weak self] result in
             Task { @MainActor in
                 guard let self = self else { return }
                 self.isLoading = false
                 
                 switch result {
                 case .success(let data):
-                    self.orders = data.orders
+                    self.orders = self.applyFilter(data.orders)
                     self.totalCount = data.totalCount
                     self.hasMore = data.hasMore
                     self.currentOffset = data.orders.count
@@ -45,8 +57,8 @@ final class OrderListViewModel: ObservableObject {
     
     func loadMoreIfNeeded(currentItem: RecentOrder?) {
         guard let currentItem = currentItem else { return }
-        
-        let thresholdIndex = orders.index(orders.endIndex, offsetBy: -3)
+
+        let thresholdIndex = orders.index(orders.endIndex, offsetBy: -min(3, orders.count))
         if let itemIndex = orders.firstIndex(where: { $0.id == currentItem.id }),
            itemIndex >= thresholdIndex,
            hasMore,
@@ -60,14 +72,18 @@ final class OrderListViewModel: ObservableObject {
         
         isLoadingMore = true
         
-        repository.fetchOrders(status: selectedStatus, limit: pageSize, offset: currentOffset) { [weak self] result in
+        repository.fetchOrders(
+            status: backendStatusForSelectedFilter(),
+            limit: pageSize,
+            offset: currentOffset
+        ) { [weak self] result in
             Task { @MainActor in
                 guard let self = self else { return }
                 self.isLoadingMore = false
                 
                 switch result {
                 case .success(let data):
-                    self.orders.append(contentsOf: data.orders)
+                    self.orders.append(contentsOf: self.applyFilter(data.orders))
                     self.hasMore = data.hasMore
                     self.currentOffset += data.orders.count
                     
@@ -89,5 +105,20 @@ final class OrderListViewModel: ObservableObject {
     
     func refresh() {
         loadOrders()
+    }
+
+    private func backendStatusForSelectedFilter() -> OrderStatusEnum? {
+        // "Pendientes" en UI incluye estados que requieren acción del cliente.
+        if selectedStatus == .pendingAcceptance {
+            return nil
+        }
+        return selectedStatus
+    }
+
+    private func applyFilter(_ incoming: [RecentOrder]) -> [RecentOrder] {
+        guard selectedStatus == .pendingAcceptance else {
+            return incoming
+        }
+        return incoming.filter { actionRequiredStatuses.contains($0.status.normalizedForContract) }
     }
 }

@@ -1234,9 +1234,9 @@ struct ProfileView: View {
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(.primary)
 
-                    Text(order.status.displayName)
+                    Text(order.displayStatus.displayName)
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(order.status.color)
+                        .foregroundColor(order.displayStatus.color)
                 }
             }
             .padding(16)

@@ -71,7 +71,11 @@ query GetCompleteFeed(
         businessId
         name
         avatarUrl
+        avatarUrlBaja
+        avatarUrlAlta
         coverUrl
+        coverUrlBaja
+        coverUrlAlta
         address
         distanceKm
       }
@@ -124,6 +128,8 @@ query GetCompleteFeed(
       id
       name
       avatarUrl
+      avatarUrlBaja
+      avatarUrlAlta
     }
   }
 }

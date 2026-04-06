@@ -235,6 +235,8 @@ struct OrderStatusFilterView: View {
     private let statuses: [(OrderStatusEnum?, String, String)] = [
         (nil, "Todos", "square.grid.2x2"),
         (.pendingAcceptance, "Pendientes", "clock.fill"),
+        (.modifiedByStore, "Modificados", "square.and.pencil"),
+        (.rejectedByStore, "Rechazados", "xmark.shield.fill"),
         (.onTheWay, "En camino", "car.fill"),
         (.delivered, "Entregados", "checkmark.circle.fill"),
         (.cancelled, "Cancelados", "xmark.circle.fill")

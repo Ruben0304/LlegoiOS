@@ -22,6 +22,9 @@ final class OrderDetailViewModel: ObservableObject {
     @Published var isPollingTronDealer = false
     @Published var showTronDealerSheet = false
     @Published var tronDealerPaymentInfo: TronDealerPaymentResult?
+    @Published var showTransferSheet = false
+    @Published var activePaymentAttemptId: String?
+    @Published var isConfirmingTransfer = false
 
     private let repository = OrderDetailRepository()
     private let paymentRepository = PaymentRepository()
@@ -119,6 +122,34 @@ final class OrderDetailViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Resubmit Order
+
+    func resubmitOrder(onSuccess: @escaping @Sendable () -> Void = {}) {
+        guard let order = order, OrderPermissionPolicy.canResubmit(status: order.status) else {
+            return
+        }
+
+        isProcessing = true
+        errorMessage = nil
+
+        repository.resubmitOrder(orderId: orderId) { [weak self] result in
+            Task { @MainActor in
+                guard let self = self else { return }
+                self.isProcessing = false
+
+                switch result {
+                case .success(let updatedOrder):
+                    self.order = updatedOrder
+                    self.successMessage = "Pedido reenviado"
+                    self.loadPaymentMethodIfNeeded(for: updatedOrder)
+                    onSuccess()
+                case .failure(let error):
+                    self.errorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+
     // MARK: - Add Comment
 
     func sendComment() {
@@ -159,19 +190,25 @@ final class OrderDetailViewModel: ObservableObject {
     
     private func initiatePaymentWithMethod(_ method: PaymentMethodModel, order: OrderDetail) {
         let methodType = method.method.lowercased()
-        
+
         // QvaPay → abrir URL de pago
         if methodType == "qvapay" || method.code.lowercased().contains("qvapay") {
             initiateQvaPayPayment(order: order)
             return
         }
-        
+
         // TronDealer → mostrar dirección y QR
         if methodType == "usdt" || method.code.lowercased().contains("trondealer") || method.code.lowercased().contains("usdt") {
             initiateTronDealerPayment(order: order)
             return
         }
-        
+
+        // Transferencia CUP → mostrar datos bancarios del negocio
+        if methodType == "transfer" || methodType == "transfermovil" {
+            initiateTransferPayment(order: order, method: method)
+            return
+        }
+
         guard ["wallet", "stripe"].contains(methodType) else {
             showPaymentAlertMessage("Este método de pago aún no está disponible.")
             return
@@ -219,26 +256,26 @@ final class OrderDetailViewModel: ObservableObject {
     
     private func initiatePaymentWithOrderMethod(_ order: OrderDetail) {
         let methodType = order.paymentMethod.lowercased()
-        
-        print("🔍 DEBUG: order.paymentMethod = '\(order.paymentMethod)'")
-        print("🔍 DEBUG: methodType = '\(methodType)'")
-        
+
         // QvaPay
         if methodType.contains("qvapay") {
-            print("✅ Detectado QvaPay")
             initiateQvaPayPayment(order: order)
             return
         }
-        
+
         // TronDealer / USDT
         if methodType.contains("usdt") || methodType.contains("trondealer") {
-            print("✅ Detectado TronDealer/USDT")
             initiateTronDealerPayment(order: order)
             return
         }
-        
-        print("❌ No se detectó ningún método conocido")
-        showPaymentAlertMessage("Método de pago no disponible. Método recibido: \(order.paymentMethod)")
+
+        // Transferencia CUP
+        if methodType.contains("transfer") || methodType.contains("transfermovil") {
+            initiateTransferPayment(order: order, method: nil)
+            return
+        }
+
+        showPaymentAlertMessage("Método de pago no disponible.")
     }
 
     func handleStripePaymentResult(_ result: PaymentSheetResult) {
@@ -373,6 +410,10 @@ final class OrderDetailViewModel: ObservableObject {
             return methods.first(where: { $0.method.lowercased() == "usdt" || $0.code.lowercased().contains("usdt") || $0.code.lowercased().contains("trondealer") })
         }
 
+        if normalized.contains("transfer") || normalized.contains("transfermovil") {
+            return methods.first(where: { $0.method.lowercased() == "transfer" || $0.method.lowercased() == "transfermovil" || $0.code.lowercased().contains("transfer") })
+        }
+
         return nil
     }
 
@@ -400,6 +441,11 @@ final class OrderDetailViewModel: ObservableObject {
     var canAcceptModifications: Bool {
         guard let status = order?.status else { return false }
         return OrderPermissionPolicy.canAcceptModifications(status: status)
+    }
+
+    var canResubmitOrder: Bool {
+        guard let status = order?.status else { return false }
+        return OrderPermissionPolicy.canResubmit(status: status)
     }
 
     var canCancelOrder: Bool {
@@ -611,7 +657,111 @@ final class OrderDetailViewModel: ObservableObject {
         tronDealerPollingTask = nil
         isPollingTronDealer = false
     }
-    
+
+    // MARK: - Transfer CUP Payment
+
+    private func initiateTransferPayment(order: OrderDetail, method: PaymentMethodModel?) {
+        isInitiatingPayment = true
+
+        Task {
+            do {
+                // Necesitamos crear un payment attempt para tener el ID de confirmación
+                guard let jwt = authManager.getAccessToken() else {
+                    await MainActor.run {
+                        self.isInitiatingPayment = false
+                        self.showPaymentAlertMessage("No hay sesión activa.")
+                    }
+                    return
+                }
+
+                let methodId: String
+                if let method = method {
+                    methodId = method.id
+                } else {
+                    // Sin method model cargado, mostrar sheet directamente sin payment attempt
+                    await MainActor.run {
+                        self.isInitiatingPayment = false
+                        self.activePaymentAttemptId = nil
+                        self.showTransferSheet = true
+                    }
+                    return
+                }
+
+                let result = try await paymentRepository.initiatePayment(
+                    orderId: order.id,
+                    paymentMethodId: methodId,
+                    jwt: jwt,
+                    includeDeliveryFee: true
+                )
+
+                await MainActor.run {
+                    self.isInitiatingPayment = false
+                    self.activePaymentAttemptId = result.paymentAttempt.id
+                    self.showTransferSheet = true
+                }
+            } catch {
+                await MainActor.run {
+                    self.isInitiatingPayment = false
+                    let msg = error.localizedDescription.lowercased()
+                    if msg.contains("no permite pago") || msg.contains("estado del pedido") || msg.contains("invalid order status") {
+                        self.refresh()
+                        self.showPaymentAlertMessage("El estado del pedido cambió. Actualizamos la información.")
+                    } else {
+                        // Si falla el initiate, mostramos el sheet de todas formas
+                        // para que el usuario vea los datos bancarios
+                        self.activePaymentAttemptId = nil
+                        self.showTransferSheet = true
+                    }
+                }
+            }
+        }
+    }
+
+    func confirmTransferPaymentSent(proofImageData: Data?) {
+        isConfirmingTransfer = true
+
+        Task {
+            do {
+                if let proofData = proofImageData,
+                    let attemptId = activePaymentAttemptId
+                {
+                    // Con comprobante: ConfirmPaymentSent
+                    let base64 = proofData.base64EncodedString()
+                    let proofUrl = "data:image/jpeg;base64,\(base64)"
+                    try await repository.confirmPaymentSent(
+                        paymentAttemptId: attemptId, proofUrl: proofUrl)
+                } else if let attemptId = activePaymentAttemptId {
+                    // Sin comprobante: ConfirmTransferByShortcut
+                    try await repository.confirmTransferByShortcut(paymentAttemptId: attemptId)
+                }
+                // Si no hay attemptId, no podemos confirmar por API pero igual cerramos
+
+                await MainActor.run {
+                    self.isConfirmingTransfer = false
+                    self.showTransferSheet = false
+                    self.activePaymentAttemptId = nil
+                    self.successMessage = proofImageData != nil
+                        ? "¡Listo! Tu comprobante fue enviado. El negocio lo revisará en breve."
+                        : "¡Listo! El negocio revisará tu pago y confirmará el pedido."
+                }
+
+                try? await Task.sleep(nanoseconds: 800_000_000)
+                await MainActor.run { self.refresh() }
+
+            } catch {
+                await MainActor.run {
+                    self.isConfirmingTransfer = false
+                    // Cerramos el sheet y mostramos mensaje de éxito igual
+                    // porque la transferencia ya se realizó aunque falle el confirm
+                    self.showTransferSheet = false
+                    self.activePaymentAttemptId = nil
+                    self.successMessage = "Tu pago fue registrado. El negocio lo revisará en breve."
+                    self.refresh()
+                }
+            }
+        }
+    }
+
     deinit {
         qvaPayPollingTask?.cancel()
         tronDealerPollingTask?.cancel()

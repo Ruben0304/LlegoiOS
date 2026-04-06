@@ -4,10 +4,12 @@ query GetOrderTracking($orderId: String!, $jwt: String!) {
             id
             orderNumber
             status
+            customerVisibleStatus
+            deadlineAt
+            deliveryVerificationCode
             total
             currency
             deliveryMode
-            estimatedReadyAt
             estimatedDeliveryTime
             estimatedMinutesRemaining
             items {
@@ -66,8 +68,6 @@ query GetOrderTracking($orderId: String!, $jwt: String!) {
             }
             pickupAddress {
                 street
-                city
-                reference
             }
         }
         deliveryPersonLocation {

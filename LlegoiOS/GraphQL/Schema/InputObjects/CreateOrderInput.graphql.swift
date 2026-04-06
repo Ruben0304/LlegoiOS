@@ -14,7 +14,8 @@ public extension LlegoAPI {
     public init(
       branchId: String,
       items: [OrderItemInput],
-      deliveryAddress: DeliveryAddressInput,
+      fulfillment: GraphQLNullable<FulfillmentInput> = nil,
+      deliveryAddress: GraphQLNullable<DeliveryAddressInput> = nil,
       paymentMethod: String,
       paymentIntentId: GraphQLNullable<String> = nil,
       comments: GraphQLNullable<String> = nil,
@@ -23,6 +24,7 @@ public extension LlegoAPI {
       __data = InputDict([
         "branchId": branchId,
         "items": items,
+        "fulfillment": fulfillment,
         "deliveryAddress": deliveryAddress,
         "paymentMethod": paymentMethod,
         "paymentIntentId": paymentIntentId,
@@ -41,7 +43,12 @@ public extension LlegoAPI {
       set { __data["items"] = newValue }
     }
 
-    public var deliveryAddress: DeliveryAddressInput {
+    public var fulfillment: GraphQLNullable<FulfillmentInput> {
+      get { __data["fulfillment"] }
+      set { __data["fulfillment"] = newValue }
+    }
+
+    public var deliveryAddress: GraphQLNullable<DeliveryAddressInput> {
       get { __data["deliveryAddress"] }
       set { __data["deliveryAddress"] = newValue }
     }

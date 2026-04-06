@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetBranchDetail"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetBranchDetail($id: String!) { branch(id: $id) { __typename id businessId name acceptsQvapay acceptsZelle qvapayUsername zelleEmail address coordinates { __typename type coordinates } phone status avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta deliveryRadius acceptedCurrency exchangeRate createdAt showcases(activeOnly: true) { __typename id title description imageUrl isActive createdAt items { __typename id name description price availability } } } }"#
+        #"query GetBranchDetail($id: String!) { branch(id: $id) { __typename id businessId name acceptsQvapay acceptsZelle qvapayUsername zelleEmail address coordinates { __typename type coordinates } phone status avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta deliveryRadius acceptedCurrency exchangeRate schedule createdAt showcases(activeOnly: true) { __typename id title description imageUrl isActive createdAt items { __typename id name description price availability } } } }"#
       ))
 
     public var id: String
@@ -65,6 +65,7 @@ public extension LlegoAPI {
           .field("deliveryRadius", Double?.self),
           .field("acceptedCurrency", GraphQLEnum<LlegoAPI.AcceptedCurrency>?.self),
           .field("exchangeRate", Int?.self),
+          .field("schedule", LlegoAPI.JSON.self),
           .field("createdAt", LlegoAPI.DateTime.self),
           .field("showcases", [Showcase].self, arguments: ["activeOnly": true]),
         ] }
@@ -85,15 +86,20 @@ public extension LlegoAPI {
         public var status: String? { __data["status"] }
         /// Presigned URL for the branch avatar (inherits from business if not set)
         public var avatarUrl: String? { __data["avatarUrl"] }
+        /// Presigned URL for low quality branch avatar (inherits business avatar and falls back to original)
         public var avatarUrlBaja: String? { __data["avatarUrlBaja"] }
+        /// Presigned URL for high quality branch avatar (inherits business avatar and falls back to original)
         public var avatarUrlAlta: String? { __data["avatarUrlAlta"] }
         /// Presigned URL for the branch cover image
         public var coverUrl: String? { __data["coverUrl"] }
+        /// Presigned URL for low quality branch cover (with fallback to original)
         public var coverUrlBaja: String? { __data["coverUrlBaja"] }
+        /// Presigned URL for high quality branch cover (with fallback to original)
         public var coverUrlAlta: String? { __data["coverUrlAlta"] }
         public var deliveryRadius: Double? { __data["deliveryRadius"] }
         public var acceptedCurrency: GraphQLEnum<LlegoAPI.AcceptedCurrency>? { __data["acceptedCurrency"] }
         public var exchangeRate: Int? { __data["exchangeRate"] }
+        public var schedule: LlegoAPI.JSON { __data["schedule"] }
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
         /// Showcases from this branch
         public var showcases: [Showcase] { __data["showcases"] }

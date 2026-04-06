@@ -369,13 +369,15 @@ class OrderManager: ObservableObject {
             updateRemainingDistance()
         }
         estimatedMinutesRemaining = tracking.estimatedMinutes ?? estimatedMinutesRemaining
+        let visibleOrderStatus = tracking.order.displayStatus
+        let progress = progressValue(for: visibleOrderStatus, distanceKm: tracking.distanceKm)
 
         let mappedStatus = mapGraphQLStatusToDeliveryStatus(
             tracking.order.status, distanceKm: tracking.distanceKm)
         if mappedStatus != orderStatus {
             orderStatus = mappedStatus
             currentOrder?.status = mappedStatus
-            updateLiveActivity(progress: progressValue(for: mappedStatus))
+            updateLiveActivity(progress: progress)
             if mappedStatus == .delivered {
                 sendDeliveryNotification()
                 endLiveActivity(delivered: true)
@@ -389,7 +391,7 @@ class OrderManager: ObservableObject {
                 persistActiveOrderState()
             }
         } else {
-            updateLiveActivity(progress: progressValue(for: mappedStatus))
+            updateLiveActivity(progress: progress)
             persistActiveOrderState()
         }
     }
@@ -413,6 +415,11 @@ class OrderManager: ObservableObject {
         }
 
         let mappedStatus = mapRawStatusToDeliveryStatus(statusRaw, distanceKm: event.distanceKm)
+        let mappedOrderStatus = mapRawStatusToOrderStatus(statusRaw)
+        let progress = progressValue(
+            for: mappedOrderStatus ?? .unknown,
+            distanceKm: event.distanceKm
+        )
         if mappedStatus != orderStatus {
             orderStatus = mappedStatus
             currentOrder?.status = mappedStatus
@@ -429,7 +436,7 @@ class OrderManager: ObservableObject {
                 persistActiveOrderState()
             }
         }
-        updateLiveActivity(progress: progressValue(for: mappedStatus))
+        updateLiveActivity(progress: progress)
         if mappedStatus != .delivered && mappedStatus != .cancelled {
             persistActiveOrderState()
         }
@@ -454,11 +461,52 @@ class OrderManager: ObservableObject {
         }
     }
 
+    private func progressValue(for status: OrderStatusEnum, distanceKm: Double?) -> Double {
+        switch status.normalizedForContract {
+        case .pendingAcceptance:
+            return 0.08
+        case .modifiedByStore:
+            return 0.12
+        case .rejectedByStore:
+            return 0.06
+        case .awaitingDeliveryAcceptance:
+            return 0.18
+        case .pendingPayment:
+            return 0.24
+        case .accepted:
+            return 0.34
+        case .preparing:
+            return 0.48
+        case .readyForPickup:
+            return 0.62
+        case .onTheWay:
+            if let distanceKm, distanceKm <= 0.35 {
+                return 0.9
+            }
+            return 0.78
+        case .delivered:
+            return 1.0
+        case .cancelled:
+            return 0.0
+        case .unknown:
+            return 0.05
+        case .paymentInProgress:
+            // No llega por normalización, pero mantenemos fallback explícito.
+            return 0.3
+        }
+    }
+
     private func mapGraphQLStatusToDeliveryStatus(_ status: OrderStatusEnum, distanceKm: Double?)
         -> DeliveryStatus
     {
         switch status {
-        case .pendingAcceptance, .awaitingDeliveryAcceptance, .pendingPayment, .modifiedByStore:
+        case .pendingAcceptance,
+            .awaitingDeliveryAcceptance,
+            .pendingPayment,
+            .paymentInProgress,
+            .modifiedByStore,
+            .rejectedByStore,
+            .unknown:
             return .pending
         case .accepted:
             return .confirmed
@@ -483,7 +531,7 @@ class OrderManager: ObservableObject {
     {
         switch rawStatus.uppercased() {
         case "PENDING_ACCEPTANCE", "AWAITING_DELIVERY_ACCEPTANCE", "PENDING_PAYMENT",
-            "PAYMENT_IN_PROGRESS", "MODIFIED_BY_STORE":
+            "PAYMENT_IN_PROGRESS", "MODIFIED_BY_STORE", "REJECTED_BY_STORE":
             return .pending
         case "ACCEPTED":
             return .confirmed
@@ -501,7 +549,39 @@ class OrderManager: ObservableObject {
         case "CANCELLED":
             return .cancelled
         default:
+            print("⚠️ Unknown realtime order status '\(rawStatus)' received")
             return orderStatus
+        }
+    }
+
+    private func mapRawStatusToOrderStatus(_ rawStatus: String) -> OrderStatusEnum? {
+        switch rawStatus.uppercased() {
+        case "PENDING_ACCEPTANCE":
+            return .pendingAcceptance
+        case "AWAITING_DELIVERY_ACCEPTANCE":
+            return .awaitingDeliveryAcceptance
+        case "PENDING_PAYMENT":
+            return .pendingPayment
+        case "PAYMENT_IN_PROGRESS":
+            return .paymentInProgress
+        case "MODIFIED_BY_STORE":
+            return .modifiedByStore
+        case "REJECTED_BY_STORE":
+            return .rejectedByStore
+        case "ACCEPTED":
+            return .accepted
+        case "PREPARING":
+            return .preparing
+        case "READY_FOR_PICKUP":
+            return .readyForPickup
+        case "ON_THE_WAY":
+            return .onTheWay
+        case "DELIVERED":
+            return .delivered
+        case "CANCELLED":
+            return .cancelled
+        default:
+            return nil
         }
     }
 

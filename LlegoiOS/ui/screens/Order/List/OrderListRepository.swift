@@ -28,7 +28,12 @@ final class OrderListRepository {
 
             let graphQLStatus: GraphQLNullable<GraphQLEnum<LlegoAPI.OrderStatusEnum>>
             if let status = status {
-                graphQLStatus = .some(.case(mapStatusToGraphQL(status)))
+                if let mapped = mapStatusToGraphQL(status) {
+                    graphQLStatus = .some(.case(mapped))
+                } else {
+                    print("⚠️ Ignoring unmappable order status filter '\(status.rawValue)'")
+                    graphQLStatus = .none
+                }
             } else {
                 graphQLStatus = .none
             }
@@ -68,9 +73,9 @@ final class OrderListRepository {
                         }
 
                         let orders = data.orders.map { order -> RecentOrder in
-                            let mappedStatus = self.mapGraphQLToStatus(order.status)
-                            let inferredFulfillment: FulfillmentMode? =
-                                mappedStatus == .readyForPickup ? .pickup : .delivery
+                            let technicalStatus = self.mapGraphQLToStatus(order.status)
+                            let visibleStatus = self.mapGraphQLToStatus(order.customerVisibleStatus)
+                            let deliveryMode = self.mapFulfillmentMode(order.deliveryMode)
 
                             let items = order.items.map { item in
                                 OrderListItem(
@@ -89,11 +94,13 @@ final class OrderListRepository {
                                 date: self.parseDate(order.createdAt) ?? Date(),
                                 total: order.total,
                                 currency: order.currency,
-                                status: mappedStatus,
+                                customerVisibleStatus: visibleStatus,
+                                status: technicalStatus,
+                                deadlineAt: order.deadlineAt.flatMap { self.parseDate($0) },
                                 paymentStatus: self.mapGraphQLToPaymentStatus(order.paymentStatus),
                                 itemCount: order.items.count,
                                 items: items,
-                                fulfillmentMode: inferredFulfillment
+                                fulfillmentMode: deliveryMode
                             )
                         }
 
@@ -131,18 +138,23 @@ final class OrderListRepository {
 
     // MARK: - Helpers
 
-    private func mapStatusToGraphQL(_ status: OrderStatusEnum) -> LlegoAPI.OrderStatusEnum {
+    private func mapStatusToGraphQL(_ status: OrderStatusEnum) -> LlegoAPI.OrderStatusEnum? {
         switch status {
         case .awaitingDeliveryAcceptance: return .awaitingDeliveryAcceptance
         case .pendingPayment: return .pendingPayment
+        case .paymentInProgress: return .pendingPayment
         case .pendingAcceptance: return .pendingAcceptance
         case .modifiedByStore: return .modifiedByStore
+        case .rejectedByStore: return .rejectedByStore
         case .accepted: return .accepted
         case .preparing: return .preparing
         case .readyForPickup: return .readyForPickup
         case .onTheWay: return .onTheWay
         case .delivered: return .delivered
         case .cancelled: return .cancelled
+        case .unknown:
+            assertionFailure("Attempted to map unknown local order status to GraphQL enum")
+            return nil
         }
     }
 
@@ -154,9 +166,12 @@ final class OrderListRepository {
             switch value {
             case .awaitingDeliveryAcceptance: return .awaitingDeliveryAcceptance
             case .pendingPayment: return .pendingPayment
-            case .paymentInProgress: return .pendingPayment
+            case .paymentInProgress:
+                print("ℹ️ Legacy order status PAYMENT_IN_PROGRESS received from GraphQL")
+                return .paymentInProgress
             case .pendingAcceptance: return .pendingAcceptance
             case .modifiedByStore: return .modifiedByStore
+            case .rejectedByStore: return .rejectedByStore
             case .accepted: return .accepted
             case .preparing: return .preparing
             case .readyForPickup: return .readyForPickup
@@ -165,7 +180,8 @@ final class OrderListRepository {
             case .cancelled: return .cancelled
             }
         case .unknown:
-            return .pendingAcceptance
+            print("⚠️ Unknown order status enum received from GraphQL")
+            return .unknown
         }
     }
 
@@ -192,6 +208,18 @@ final class OrderListRepository {
             }
         case .unknown:
             return .pending
+        }
+    }
+
+    private func mapFulfillmentMode(_ rawValue: String) -> FulfillmentMode {
+        switch rawValue.uppercased() {
+        case FulfillmentMode.pickup.rawValue:
+            return .pickup
+        case FulfillmentMode.delivery.rawValue:
+            return .delivery
+        default:
+            print("⚠️ Unknown fulfillment mode '\(rawValue)' - defaulting to delivery")
+            return .delivery
         }
     }
 }

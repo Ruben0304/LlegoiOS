@@ -3,5 +3,7 @@ query GetBusinessDetail($id: String!) {
     id
     name
     avatarUrl
+    avatarUrlBaja
+    avatarUrlAlta
   }
 }

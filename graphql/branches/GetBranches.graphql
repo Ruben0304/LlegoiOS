@@ -17,7 +17,11 @@ query GetBranches($first: Int! = 20, $after: String, $businessId: String, $tipo:
         phone
         status
         avatarUrl
+        avatarUrlBaja
+        avatarUrlAlta
         coverUrl
+        coverUrlBaja
+        coverUrlAlta
         deliveryRadius
         createdAt
         score

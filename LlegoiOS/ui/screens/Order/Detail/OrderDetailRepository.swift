@@ -164,6 +164,53 @@ final class OrderDetailRepository {
         }
     }
 
+    // MARK: - Resubmit Order
+
+    func resubmitOrder(
+        orderId: String,
+        completion: @escaping @Sendable (Result<OrderDetail, Error>) -> Void
+    ) {
+        let client = apolloClient
+
+        Task { @MainActor in
+            guard let jwt = AuthManager.shared.getAccessToken() else {
+                completion(
+                    .failure(
+                        NSError(
+                            domain: "OrderDetailRepository", code: 401,
+                            userInfo: [NSLocalizedDescriptionKey: "No autenticado"])))
+                return
+            }
+
+            let input = LlegoAPI.ResubmitOrderInput(orderId: orderId)
+            let mutation = LlegoAPI.ResubmitOrderMutation(input: input, jwt: jwt)
+
+            client.performCompat(mutation: mutation) { [weak self] result in
+                Task { @MainActor in
+                    switch result {
+                    case .success(let graphQLResult):
+                        if let errors = graphQLResult.errors {
+                            completion(
+                                .failure(
+                                    NSError(
+                                        domain: "GraphQL", code: -1,
+                                        userInfo: [
+                                            NSLocalizedDescriptionKey: errors.first?
+                                                .localizedDescription ?? "Error"
+                                        ])))
+                            return
+                        }
+
+                        self?.fetchOrder(id: orderId, completion: completion)
+
+                    case .failure(let error):
+                        completion(.failure(error))
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Add Comment
 
     func addComment(
@@ -221,12 +268,88 @@ final class OrderDetailRepository {
         }
     }
 
+    // MARK: - Confirm Transfer By Shortcut (sin comprobante)
+
+    func confirmTransferByShortcut(paymentAttemptId: String) async throws {
+        let client = apolloClient
+
+        return try await withCheckedThrowingContinuation { continuation in
+            Task { @MainActor in
+                guard let jwt = AuthManager.shared.getAccessToken() else {
+                    continuation.resume(throwing: NSError(
+                        domain: "OrderDetailRepository", code: 401,
+                        userInfo: [NSLocalizedDescriptionKey: "No hay sesión activa."]))
+                    return
+                }
+
+                let mutation = LlegoAPI.ConfirmTransferByShortcutMutation(
+                    paymentAttemptId: paymentAttemptId,
+                    jwt: jwt,
+                    transferId: .none
+                )
+
+                client.performCompat(mutation: mutation) { result in
+                    switch result {
+                    case .success(let graphQLResult):
+                        if let errors = graphQLResult.errors {
+                            continuation.resume(throwing: NSError(
+                                domain: "GraphQL", code: -1,
+                                userInfo: [NSLocalizedDescriptionKey: errors.first?.localizedDescription ?? "Error"]))
+                        } else {
+                            continuation.resume(returning: ())
+                        }
+                    case .failure(let error):
+                        continuation.resume(throwing: error)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Confirm Payment Sent (con comprobante)
+
+    func confirmPaymentSent(paymentAttemptId: String, proofUrl: String) async throws {
+        let client = apolloClient
+
+        return try await withCheckedThrowingContinuation { continuation in
+            Task { @MainActor in
+                guard let jwt = AuthManager.shared.getAccessToken() else {
+                    continuation.resume(throwing: NSError(
+                        domain: "OrderDetailRepository", code: 401,
+                        userInfo: [NSLocalizedDescriptionKey: "No hay sesión activa."]))
+                    return
+                }
+
+                let mutation = LlegoAPI.ConfirmPaymentSentMutation(
+                    paymentAttemptId: paymentAttemptId,
+                    proofUrl: proofUrl,
+                    jwt: jwt
+                )
+
+                client.performCompat(mutation: mutation) { result in
+                    switch result {
+                    case .success(let graphQLResult):
+                        if let errors = graphQLResult.errors {
+                            continuation.resume(throwing: NSError(
+                                domain: "GraphQL", code: -1,
+                                userInfo: [NSLocalizedDescriptionKey: errors.first?.localizedDescription ?? "Error"]))
+                        } else {
+                            continuation.resume(returning: ())
+                        }
+                    case .failure(let error):
+                        continuation.resume(throwing: error)
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Mapping Helpers
 
     private func mapToOrderDetail(_ order: LlegoAPI.GetOrderDetailQuery.Data.Order) -> OrderDetail {
-        let mappedStatus = mapGraphQLToStatus(order.status)
-        let inferredFulfillmentMode: FulfillmentMode? =
-            mappedStatus == .readyForPickup ? .pickup : .delivery
+        let technicalStatus = mapGraphQLToStatus(order.status)
+        let visibleStatus = mapGraphQLToStatus(order.customerVisibleStatus)
+        let fulfillmentMode = mapFulfillmentMode(order.deliveryMode)
 
         let items = order.items.map { item in
             OrderDetailItem(
@@ -316,10 +439,25 @@ final class OrderDetailRepository {
             ? CLLocationCoordinate2D(latitude: branchCoords[1], longitude: branchCoords[0])
             : nil
 
+        let transferAccounts = order.branch.accounts
+            .filter { $0.isActive }
+            .map { account in
+                OrderTransferAccount(
+                    cardNumber: account.cardNumber,
+                    cardHolderName: account.cardHolderName,
+                    bankName: account.bankName
+                )
+            }
+
+        let transferPhones = order.branch.phones
+            .filter { $0.isActive }
+            .map { OrderTransferPhone(phone: $0.phone) }
+
         return OrderDetail(
             id: order.id,
             orderNumber: order.orderNumber,
-            status: mappedStatus,
+            status: technicalStatus,
+            customerVisibleStatus: visibleStatus,
             subtotal: order.subtotal,
             deliveryFee: order.deliveryFee,
             total: order.total,
@@ -329,12 +467,16 @@ final class OrderDetailRepository {
             createdAt: parseDate(order.createdAt) ?? Date(),
             updatedAt: parseDate(order.updatedAt) ?? Date(),
             lastStatusAt: parseDate(order.lastStatusAt) ?? Date(),
+            deadlineAt: order.deadlineAt.flatMap { parseDate($0) },
+            deliveryVerificationCode: technicalStatus == .onTheWay
+                ? order.deliveryVerificationCode
+                : nil,
             isEditable: order.isEditable,
             canCancel: order.canCancel,
             estimatedDeliveryTime: order.estimatedDeliveryTime.flatMap { parseDate($0) },
             estimatedMinutesRemaining: order.estimatedMinutesRemaining,
-            deliveryMode: inferredFulfillmentMode,
-            pickupAddress: inferredFulfillmentMode == .pickup
+            deliveryMode: fulfillmentMode,
+            pickupAddress: fulfillmentMode == .pickup
                 ? OrderPickupAddress(
                     street: order.branch.address,
                     city: nil,
@@ -343,7 +485,7 @@ final class OrderDetailRepository {
             estimatedReadyAt: nil,
             items: items,
             discounts: discounts,
-            deliveryAddress: inferredFulfillmentMode == .pickup ? nil : deliveryAddress,
+            deliveryAddress: fulfillmentMode == .pickup ? nil : deliveryAddress,
             deliveryPerson: deliveryPerson,
             timeline: timeline,
             comments: comments,
@@ -353,6 +495,8 @@ final class OrderDetailRepository {
             branchPhone: order.branch.phone,
             branchImageUrl: order.branch.avatarUrl,
             branchCoordinates: branchCoordinate,
+            transferAccounts: transferAccounts,
+            transferPhones: transferPhones,
             businessId: order.business.id,
             businessName: order.business.name,
             businessImageUrl: order.business.avatarUrl
@@ -367,9 +511,12 @@ final class OrderDetailRepository {
             switch value {
             case .awaitingDeliveryAcceptance: return .awaitingDeliveryAcceptance
             case .pendingPayment: return .pendingPayment
-            case .paymentInProgress: return .pendingPayment
+            case .paymentInProgress:
+                print("ℹ️ Legacy order status PAYMENT_IN_PROGRESS received from GraphQL")
+                return .paymentInProgress
             case .pendingAcceptance: return .pendingAcceptance
             case .modifiedByStore: return .modifiedByStore
+            case .rejectedByStore: return .rejectedByStore
             case .accepted: return .accepted
             case .preparing: return .preparing
             case .readyForPickup: return .readyForPickup
@@ -378,7 +525,20 @@ final class OrderDetailRepository {
             case .cancelled: return .cancelled
             }
         case .unknown:
-            return .pendingAcceptance
+            print("⚠️ Unknown order status enum received from GraphQL")
+            return .unknown
+        }
+    }
+
+    private func mapFulfillmentMode(_ rawValue: String) -> FulfillmentMode {
+        switch rawValue.uppercased() {
+        case FulfillmentMode.pickup.rawValue:
+            return .pickup
+        case FulfillmentMode.delivery.rawValue:
+            return .delivery
+        default:
+            print("⚠️ Unknown fulfillment mode '\(rawValue)' - defaulting to delivery")
+            return .delivery
         }
     }
 

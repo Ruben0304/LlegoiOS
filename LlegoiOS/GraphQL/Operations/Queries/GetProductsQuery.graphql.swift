@@ -218,7 +218,9 @@ public extension LlegoAPI {
               public var name: String { __data["name"] }
               /// Presigned URL for the business avatar
               public var avatarUrl: String? { __data["avatarUrl"] }
+              /// Presigned URL for low quality business avatar (with fallback to original)
               public var avatarUrlBaja: String? { __data["avatarUrlBaja"] }
+              /// Presigned URL for high quality business avatar (with fallback to original)
               public var avatarUrlAlta: String? { __data["avatarUrlAlta"] }
             }
           }

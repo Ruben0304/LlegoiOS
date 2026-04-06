@@ -2,9 +2,7 @@ import Foundation
 
 enum OrderPermissionPolicy {
     private static let paymentEnabledStatuses: Set<OrderStatusEnum> = [
-        .pendingPayment,
-        .accepted,
-        .modifiedByStore,
+        .pendingPayment
     ]
 
     private static let trackingEnabledStatuses: Set<OrderStatusEnum> = [
@@ -13,19 +11,49 @@ enum OrderPermissionPolicy {
         .onTheWay,
     ]
 
+    private static let resubmitEnabledStatuses: Set<OrderStatusEnum> = [
+        .modifiedByStore,
+        .rejectedByStore,
+        .awaitingDeliveryAcceptance,
+        .pendingPayment,
+    ]
+
+    private static let slaDeadlineStatuses: Set<OrderStatusEnum> = [
+        .pendingAcceptance,
+        .modifiedByStore,
+        .rejectedByStore,
+        .awaitingDeliveryAcceptance,
+        .pendingPayment,
+    ]
+
     static func canAcceptModifications(status: OrderStatusEnum) -> Bool {
-        status == .modifiedByStore
+        status.normalizedForContract == .modifiedByStore
     }
 
     static func canShowTracking(status: OrderStatusEnum) -> Bool {
-        trackingEnabledStatuses.contains(status)
+        trackingEnabledStatuses.contains(status.normalizedForContract)
+    }
+
+    static func canResubmit(status: OrderStatusEnum) -> Bool {
+        resubmitEnabledStatuses.contains(status.normalizedForContract)
+    }
+
+    static func shouldShowDeadline(status: OrderStatusEnum) -> Bool {
+        slaDeadlineStatuses.contains(status.normalizedForContract)
+    }
+
+    static func isTimedOutCancellation(status: OrderStatusEnum, deadlineAt: Date?) -> Bool {
+        guard status.normalizedForContract == .cancelled, let deadlineAt else {
+            return false
+        }
+        return deadlineAt <= Date()
     }
 
     static func canShowTransferPaymentShortcut(
         status: OrderStatusEnum,
         paymentStatus: PaymentStatusEnum
     ) -> Bool {
-        paymentEnabledStatuses.contains(status) && paymentStatus != .completed
+        paymentEnabledStatuses.contains(status.normalizedForContract) && paymentStatus != .completed
     }
 
     static func canInitiateInAppPayment(
@@ -33,7 +61,9 @@ enum OrderPermissionPolicy {
         paymentStatus: PaymentStatusEnum,
         paymentMethodType: String?
     ) -> Bool {
-        guard paymentEnabledStatuses.contains(status), paymentStatus != .completed else {
+        guard paymentEnabledStatuses.contains(status.normalizedForContract),
+            paymentStatus != .completed
+        else {
             return false
         }
 
@@ -42,6 +72,6 @@ enum OrderPermissionPolicy {
         }
 
         let normalizedType = paymentMethodType.lowercased()
-        return ["wallet", "stripe", "qvapay", "usdt"].contains(normalizedType)
+        return ["wallet", "stripe", "qvapay", "usdt", "transfer", "transfermovil"].contains(normalizedType)
     }
 }

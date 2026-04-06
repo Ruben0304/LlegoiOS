@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 struct RecentOrderCard: View {
@@ -5,6 +6,8 @@ struct RecentOrderCard: View {
     @StateObject private var gradientManager = GradientStateManager.shared
     @Environment(\.colorScheme) private var colorScheme
     @State private var showingTransferPayment = false
+    @State private var now = Date()
+    private let deadlineTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,6 +31,7 @@ struct RecentOrderCard: View {
                     color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.1), radius: 10, x: 0,
                     y: 5)
         )
+        .onReceive(deadlineTimer) { now = $0 }
     }
 
     // MARK: - Header Section
@@ -89,23 +93,24 @@ struct RecentOrderCard: View {
     // MARK: - Status Badge
 
     private var statusBadge: some View {
-        HStack(spacing: 5) {
-            Image(systemName: order.status.icon)
+        let status = order.displayStatus
+        return HStack(spacing: 5) {
+            Image(systemName: status.icon)
                 .font(.system(size: 11, weight: .bold))
 
-            Text(order.status.displayName)
+            Text(status.displayName)
                 .font(.system(size: 12, weight: .bold, design: .rounded))
         }
-        .foregroundColor(order.status.color)
+        .foregroundColor(status.color)
         .padding(.horizontal, 12)
         .padding(.vertical, 7)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(order.status.color.opacity(0.12))
+                .fill(status.color.opacity(0.12))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(order.status.color.opacity(0.25), lineWidth: 1)
+                .stroke(status.color.opacity(0.25), lineWidth: 1)
         )
     }
 
@@ -220,6 +225,35 @@ struct RecentOrderCard: View {
                 }
             }
 
+            if let deadlineAt = order.deadlineAt,
+                OrderPermissionPolicy.shouldShowDeadline(status: order.status)
+            {
+                HStack(spacing: 8) {
+                    Image(systemName: deadlineAt <= now ? "clock.badge.xmark" : "hourglass")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(deadlineAt <= now ? .red : .orange)
+                    Text(deadlineBadgeText(deadlineAt))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+            }
+
+            if OrderPermissionPolicy.isTimedOutCancellation(
+                status: order.status,
+                deadlineAt: order.deadlineAt
+            ) {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.red)
+                    Text("Cancelado automáticamente por tiempo vencido")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.red)
+                    Spacer()
+                }
+            }
+
             // Botón de pagar por transferencia (solo si el pedido está pendiente de pago)
             if shouldShowTransferButton {
                 Button {
@@ -274,5 +308,15 @@ struct RecentOrderCard: View {
             status: order.status,
             paymentStatus: order.paymentStatus
         )
+    }
+
+    private func deadlineBadgeText(_ deadlineAt: Date) -> String {
+        let remaining = Int(deadlineAt.timeIntervalSince(now))
+        if remaining <= 0 {
+            return "Tiempo vencido"
+        }
+        let minutes = remaining / 60
+        let seconds = remaining % 60
+        return String(format: "Vence en %02d:%02d", minutes, seconds)
     }
 }

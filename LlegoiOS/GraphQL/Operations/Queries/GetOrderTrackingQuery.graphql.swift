@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetOrderTracking"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetOrderTracking($orderId: String!, $jwt: String!) { orderTracking(orderId: $orderId, jwt: $jwt) { __typename order { __typename id orderNumber status total currency estimatedDeliveryTime estimatedMinutesRemaining items { __typename itemType itemId productId name quantity basePrice finalPrice price imageUrlMuyBaja imageUrl discountType discountValue comboSelections { __typename slotId slotName selectedOptions { __typename productId name price quantity priceAdjustment modifiers { __typename name priceAdjustment } } } } deliveryPerson { __typename id name phone rating vehicleType vehiclePlate profileImageUrl currentLocation { __typename type coordinates } isOnline } timeline { __typename status timestamp message actor } branch { __typename id name avatarUrl } } deliveryPersonLocation { __typename type coordinates } storeLocation { __typename type coordinates } deliveryLocation { __typename type coordinates } estimatedMinutes distanceKm routePolyline } }"#
+        #"query GetOrderTracking($orderId: String!, $jwt: String!) { orderTracking(orderId: $orderId, jwt: $jwt) { __typename order { __typename id orderNumber status customerVisibleStatus deadlineAt deliveryVerificationCode total currency deliveryMode estimatedDeliveryTime estimatedMinutesRemaining items { __typename itemType itemId productId name quantity basePrice finalPrice price imageUrlMuyBaja imageUrl discountType discountValue comboSelections { __typename slotId slotName selectedOptions { __typename productId name price quantity priceAdjustment modifiers { __typename name priceAdjustment } } } } deliveryPerson { __typename id name phone rating vehicleType vehiclePlate profileImageUrl currentLocation { __typename type coordinates } isOnline } timeline { __typename status timestamp message actor } branch { __typename id name avatarUrl } pickupAddress { __typename street } } deliveryPersonLocation { __typename type coordinates } storeLocation { __typename type coordinates } deliveryLocation { __typename type coordinates } estimatedMinutes distanceKm routePolyline } }"#
       ))
 
     public var orderId: String
@@ -89,14 +89,19 @@ public extension LlegoAPI {
             .field("id", String.self),
             .field("orderNumber", String.self),
             .field("status", GraphQLEnum<LlegoAPI.OrderStatusEnum>.self),
+            .field("customerVisibleStatus", GraphQLEnum<LlegoAPI.OrderStatusEnum>.self),
+            .field("deadlineAt", LlegoAPI.DateTime?.self),
+            .field("deliveryVerificationCode", String?.self),
             .field("total", Double.self),
             .field("currency", String.self),
+            .field("deliveryMode", String.self),
             .field("estimatedDeliveryTime", LlegoAPI.DateTime?.self),
             .field("estimatedMinutesRemaining", Int?.self),
             .field("items", [Item].self),
             .field("deliveryPerson", DeliveryPerson?.self),
             .field("timeline", [Timeline].self),
             .field("branch", Branch.self),
+            .field("pickupAddress", PickupAddress?.self),
           ] }
           @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
             GetOrderTrackingQuery.Data.OrderTracking.Order.self
@@ -105,8 +110,14 @@ public extension LlegoAPI {
           public var id: String { __data["id"] }
           public var orderNumber: String { __data["orderNumber"] }
           public var status: GraphQLEnum<LlegoAPI.OrderStatusEnum> { __data["status"] }
+          /// Customer-facing status
+          public var customerVisibleStatus: GraphQLEnum<LlegoAPI.OrderStatusEnum> { __data["customerVisibleStatus"] }
+          public var deadlineAt: LlegoAPI.DateTime? { __data["deadlineAt"] }
+          /// Codigo de verificacion de entrega. Solo visible para el cliente dueno del pedido mientras esta en camino.
+          public var deliveryVerificationCode: String? { __data["deliveryVerificationCode"] }
           public var total: Double { __data["total"] }
           public var currency: String { __data["currency"] }
+          public var deliveryMode: String { __data["deliveryMode"] }
           public var estimatedDeliveryTime: LlegoAPI.DateTime? { __data["estimatedDeliveryTime"] }
           /// Estimated minutes remaining for delivery
           public var estimatedMinutesRemaining: Int? { __data["estimatedMinutesRemaining"] }
@@ -118,6 +129,8 @@ public extension LlegoAPI {
           public var timeline: [Timeline] { __data["timeline"] }
           /// Branch preparing the order
           public var branch: Branch { __data["branch"] }
+          /// Pickup address (branch location)
+          public var pickupAddress: PickupAddress? { __data["pickupAddress"] }
 
           /// OrderTracking.Order.Item
           ///
@@ -341,6 +354,25 @@ public extension LlegoAPI {
             public var name: String { __data["name"] }
             /// Presigned URL for the branch avatar (inherits from business if not set)
             public var avatarUrl: String? { __data["avatarUrl"] }
+          }
+
+          /// OrderTracking.Order.PickupAddress
+          ///
+          /// Parent Type: `PickupAddressType`
+          public struct PickupAddress: LlegoAPI.SelectionSet {
+            @_spi(Unsafe) public let __data: DataDict
+            @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+            @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.PickupAddressType }
+            @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+              .field("__typename", String.self),
+              .field("street", String?.self),
+            ] }
+            @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+              GetOrderTrackingQuery.Data.OrderTracking.Order.PickupAddress.self
+            ] }
+
+            public var street: String? { __data["street"] }
           }
         }
 

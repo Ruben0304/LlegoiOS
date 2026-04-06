@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetOrderDetail"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetOrderDetail($id: String!, $jwt: String!) { order(id: $id, jwt: $jwt) { __typename id orderNumber status subtotal deliveryFee total currency paymentMethod paymentStatus createdAt updatedAt lastStatusAt isEditable canCancel estimatedDeliveryTime estimatedMinutesRemaining items { __typename itemType itemId productId name basePrice finalPrice price quantity imageUrlMuyBaja imageUrl wasModifiedByStore lineTotal discountType discountValue comboSelections { __typename slotId slotName selectedOptions { __typename productId name price quantity priceAdjustment modifiers { __typename name priceAdjustment } } } } discounts { __typename id title amount type } deliveryAddress { __typename street city reference addressType buildingName floor apartment deliveryInstructions coordinates { __typename type coordinates } } deliveryPerson { __typename id name phone rating vehicleType vehiclePlate profileImageUrl isOnline } timeline { __typename status timestamp message actor } comments { __typename id author message timestamp } branch { __typename id name address phone avatarUrl coordinates { __typename type coordinates } } business { __typename id name avatarUrl } } }"#
+        #"query GetOrderDetail($id: String!, $jwt: String!) { order(id: $id, jwt: $jwt) { __typename id orderNumber status customerVisibleStatus deadlineAt deliveryVerificationCode subtotal deliveryFee total currency paymentMethod paymentStatus deliveryMode createdAt updatedAt lastStatusAt isEditable canCancel estimatedDeliveryTime estimatedMinutesRemaining items { __typename itemType itemId productId name basePrice finalPrice price quantity imageUrlMuyBaja imageUrl wasModifiedByStore lineTotal discountType discountValue comboSelections { __typename slotId slotName selectedOptions { __typename productId name price quantity priceAdjustment modifiers { __typename name priceAdjustment } } } } discounts { __typename id title amount type } deliveryAddress { __typename street city reference addressType buildingName floor apartment deliveryInstructions coordinates { __typename type coordinates } } pickupAddress { __typename street } deliveryPerson { __typename id name phone rating vehicleType vehiclePlate profileImageUrl isOnline } timeline { __typename status timestamp message actor } comments { __typename id author message timestamp } branch { __typename id name address phone avatarUrl accounts { __typename cardNumber cardHolderName bankName isActive } phones { __typename phone isActive } coordinates { __typename type coordinates } } business { __typename id name avatarUrl } } }"#
       ))
 
     public var id: String
@@ -59,12 +59,16 @@ public extension LlegoAPI {
           .field("id", String.self),
           .field("orderNumber", String.self),
           .field("status", GraphQLEnum<LlegoAPI.OrderStatusEnum>.self),
+          .field("customerVisibleStatus", GraphQLEnum<LlegoAPI.OrderStatusEnum>.self),
+          .field("deadlineAt", LlegoAPI.DateTime?.self),
+          .field("deliveryVerificationCode", String?.self),
           .field("subtotal", Double.self),
           .field("deliveryFee", Double.self),
           .field("total", Double.self),
           .field("currency", String.self),
           .field("paymentMethod", String.self),
           .field("paymentStatus", GraphQLEnum<LlegoAPI.PaymentStatusEnum>.self),
+          .field("deliveryMode", String.self),
           .field("createdAt", LlegoAPI.DateTime.self),
           .field("updatedAt", LlegoAPI.DateTime.self),
           .field("lastStatusAt", LlegoAPI.DateTime.self),
@@ -75,6 +79,7 @@ public extension LlegoAPI {
           .field("items", [Item].self),
           .field("discounts", [Discount].self),
           .field("deliveryAddress", DeliveryAddress.self),
+          .field("pickupAddress", PickupAddress?.self),
           .field("deliveryPerson", DeliveryPerson?.self),
           .field("timeline", [Timeline].self),
           .field("comments", [Comment].self),
@@ -88,12 +93,18 @@ public extension LlegoAPI {
         public var id: String { __data["id"] }
         public var orderNumber: String { __data["orderNumber"] }
         public var status: GraphQLEnum<LlegoAPI.OrderStatusEnum> { __data["status"] }
+        /// Customer-facing status
+        public var customerVisibleStatus: GraphQLEnum<LlegoAPI.OrderStatusEnum> { __data["customerVisibleStatus"] }
+        public var deadlineAt: LlegoAPI.DateTime? { __data["deadlineAt"] }
+        /// Codigo de verificacion de entrega. Solo visible para el cliente dueno del pedido mientras esta en camino.
+        public var deliveryVerificationCode: String? { __data["deliveryVerificationCode"] }
         public var subtotal: Double { __data["subtotal"] }
         public var deliveryFee: Double { __data["deliveryFee"] }
         public var total: Double { __data["total"] }
         public var currency: String { __data["currency"] }
         public var paymentMethod: String { __data["paymentMethod"] }
         public var paymentStatus: GraphQLEnum<LlegoAPI.PaymentStatusEnum> { __data["paymentStatus"] }
+        public var deliveryMode: String { __data["deliveryMode"] }
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
         public var updatedAt: LlegoAPI.DateTime { __data["updatedAt"] }
         public var lastStatusAt: LlegoAPI.DateTime { __data["lastStatusAt"] }
@@ -110,6 +121,8 @@ public extension LlegoAPI {
         public var discounts: [Discount] { __data["discounts"] }
         /// Delivery address
         public var deliveryAddress: DeliveryAddress { __data["deliveryAddress"] }
+        /// Pickup address (branch location)
+        public var pickupAddress: PickupAddress? { __data["pickupAddress"] }
         /// Assigned delivery person
         public var deliveryPerson: DeliveryPerson? { __data["deliveryPerson"] }
         /// Order timeline
@@ -326,6 +339,25 @@ public extension LlegoAPI {
           }
         }
 
+        /// Order.PickupAddress
+        ///
+        /// Parent Type: `PickupAddressType`
+        public struct PickupAddress: LlegoAPI.SelectionSet {
+          @_spi(Unsafe) public let __data: DataDict
+          @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+          @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.PickupAddressType }
+          @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+            .field("__typename", String.self),
+            .field("street", String?.self),
+          ] }
+          @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+            GetOrderDetailQuery.Data.Order.PickupAddress.self
+          ] }
+
+          public var street: String? { __data["street"] }
+        }
+
         /// Order.DeliveryPerson
         ///
         /// Parent Type: `DeliveryPersonType`
@@ -424,6 +456,8 @@ public extension LlegoAPI {
             .field("address", String?.self),
             .field("phone", String.self),
             .field("avatarUrl", String?.self),
+            .field("accounts", [Account].self),
+            .field("phones", [Phone].self),
             .field("coordinates", Coordinates.self),
           ] }
           @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
@@ -436,7 +470,55 @@ public extension LlegoAPI {
           public var phone: String { __data["phone"] }
           /// Presigned URL for the branch avatar (inherits from business if not set)
           public var avatarUrl: String? { __data["avatarUrl"] }
+          public var accounts: [Account] { __data["accounts"] }
+          public var phones: [Phone] { __data["phones"] }
           public var coordinates: Coordinates { __data["coordinates"] }
+
+          /// Order.Branch.Account
+          ///
+          /// Parent Type: `TransferAccountType`
+          public struct Account: LlegoAPI.SelectionSet {
+            @_spi(Unsafe) public let __data: DataDict
+            @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+            @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.TransferAccountType }
+            @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+              .field("__typename", String.self),
+              .field("cardNumber", String.self),
+              .field("cardHolderName", String.self),
+              .field("bankName", String.self),
+              .field("isActive", Bool.self),
+            ] }
+            @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+              GetOrderDetailQuery.Data.Order.Branch.Account.self
+            ] }
+
+            public var cardNumber: String { __data["cardNumber"] }
+            public var cardHolderName: String { __data["cardHolderName"] }
+            public var bankName: String { __data["bankName"] }
+            public var isActive: Bool { __data["isActive"] }
+          }
+
+          /// Order.Branch.Phone
+          ///
+          /// Parent Type: `TransferPhoneType`
+          public struct Phone: LlegoAPI.SelectionSet {
+            @_spi(Unsafe) public let __data: DataDict
+            @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+            @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.TransferPhoneType }
+            @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+              .field("__typename", String.self),
+              .field("phone", String.self),
+              .field("isActive", Bool.self),
+            ] }
+            @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+              GetOrderDetailQuery.Data.Order.Branch.Phone.self
+            ] }
+
+            public var phone: String { __data["phone"] }
+            public var isActive: Bool { __data["isActive"] }
+          }
 
           /// Order.Branch.Coordinates
           ///

@@ -11,7 +11,6 @@ mutation CreateOrder($input: CreateOrderInput!, $jwt: String!) {
         paymentStatus
         createdAt
         deliveryMode
-        estimatedReadyAt
         items {
             itemType
             itemId
@@ -59,8 +58,6 @@ mutation CreateOrder($input: CreateOrderInput!, $jwt: String!) {
         }
         pickupAddress {
             street
-            city
-            reference
         }
         branch {
             id

@@ -64,7 +64,9 @@ final class OrderTrackingViewModel: ObservableObject {
 
     private func refreshTracking() {
         guard let status = tracking?.order.status,
-            status == .onTheWay || status == .readyForPickup || status == .preparing
+            status.normalizedForContract == .onTheWay
+                || status.normalizedForContract == .readyForPickup
+                || status.normalizedForContract == .preparing
         else {
             return
         }
@@ -116,7 +118,7 @@ final class OrderTrackingViewModel: ObservableObject {
     }
 
     var isDeliveryInProgress: Bool {
-        tracking?.order.status == .onTheWay
+        tracking?.order.status.normalizedForContract == .onTheWay
     }
 
     var isPickupOrder: Bool {
@@ -148,18 +150,21 @@ final class OrderTrackingViewModel: ObservableObject {
     }
 
     var statusProgress: Double {
-        guard let status = tracking?.order.status else { return 0 }
+        guard let status = tracking?.order.displayStatus else { return 0 }
         switch status {
         case .pendingAcceptance: return 0.1
         case .awaitingDeliveryAcceptance: return 0.18
         case .pendingPayment: return 0.22
+        case .paymentInProgress: return 0.3
         case .modifiedByStore: return 0.15
+        case .rejectedByStore: return 0.12
         case .accepted: return 0.25
         case .preparing: return 0.4
         case .readyForPickup: return 0.6
         case .onTheWay: return 0.8
         case .delivered: return 1.0
         case .cancelled: return 0
+        case .unknown: return 0.05
         }
     }
 }

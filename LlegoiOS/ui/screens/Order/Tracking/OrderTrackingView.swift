@@ -1,8 +1,14 @@
+import Combine
 import MapKit
 import SwiftUI
 
 struct OrderTrackingView: View {
     @StateObject private var viewModel: OrderTrackingViewModel
+    @ObservedObject private var cartManager = CartManager.shared
+    @State private var now = Date()
+    @State private var showReplaceCartAlert = false
+    @State private var showCartEditor = false
+    private let deadlineTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 23.1136, longitude: -82.3666),
         span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
@@ -37,12 +43,33 @@ struct OrderTrackingView: View {
         }
         .navigationTitle("Tracking")
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Reemplazar carrito", isPresented: $showReplaceCartAlert) {
+            Button("Cancelar", role: .cancel) {}
+            Button("Continuar", role: .destructive) {
+                openCartEditor()
+            }
+        } message: {
+            Text("Los productos del carrito actual se reemplazarán por los de este pedido.")
+        }
+        .fullScreenCover(isPresented: $showCartEditor) {
+            NavigationStack {
+                CartView()
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            CloseButton {
+                                showCartEditor = false
+                            }
+                        }
+                    }
+            }
+        }
         .onAppear {
             updateMapRegion()
         }
         .onReceive(viewModel.$currentDeliveryLocation) { _ in
             updateMapRegion()
         }
+        .onReceive(deadlineTimer) { now = $0 }
     }
 
     // MARK: - Map Annotations
@@ -122,11 +149,12 @@ struct OrderTrackingView: View {
                 ProgressView()
                     .padding(40)
             } else if let order = viewModel.order {
+                let displayStatus = order.displayStatus
                 VStack(spacing: 16) {
                     // Status header
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(order.status.displayName)
+                            Text(displayStatus.displayName)
                                 .font(.headline)
                             let eta = viewModel.formattedETA
                             if eta != "--", !viewModel.isPickupOrder {
@@ -143,16 +171,65 @@ struct OrderTrackingView: View {
                         Spacer()
 
                         // Status icon
-                        Image(systemName: order.status.icon)
+                        Image(systemName: displayStatus.icon)
                             .font(.title)
-                            .foregroundColor(order.status.color)
+                            .foregroundColor(displayStatus.color)
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 16)
 
+                    if canEditProducts(order) {
+                        Button {
+                            handleEditProductsTap()
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "slider.horizontal.3")
+                                    .font(.system(size: 14, weight: .semibold))
+                                Text("Modificar productos")
+                                    .font(.system(size: 15, weight: .semibold))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 48)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.llegoPrimary)
+                        .padding(.horizontal, 20)
+                    }
+
+                    if OrderPermissionPolicy.shouldShowDeadline(status: order.status),
+                        let deadlineAt = order.deadlineAt
+                    {
+                        HStack(spacing: 8) {
+                            Image(systemName: deadlineAt <= now ? "clock.badge.xmark" : "hourglass")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(deadlineAt <= now ? .red : .orange)
+                            Text(deadlineText(deadlineAt))
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.secondary)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 20)
+                    }
+
+                    if OrderPermissionPolicy.isTimedOutCancellation(
+                        status: order.status,
+                        deadlineAt: order.deadlineAt
+                    ) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(.red)
+                            Text("Pedido cancelado automáticamente por tiempo vencido")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.red)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 20)
+                    }
+
                     // Progress bar
                     ProgressView(value: viewModel.statusProgress)
-                        .tint(order.status.color)
+                        .tint(displayStatus.color)
                         .padding(.horizontal, 20)
 
                     Divider()
@@ -250,6 +327,45 @@ struct OrderTrackingView: View {
         .background(Color.white)
         .cornerRadius(24, corners: [.topLeft, .topRight])
         .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: -5)
+    }
+
+    private func deadlineText(_ deadlineAt: Date) -> String {
+        let remaining = Int(deadlineAt.timeIntervalSince(now))
+        if remaining <= 0 {
+            return "Tiempo vencido"
+        }
+        let minutes = remaining / 60
+        let seconds = remaining % 60
+        return String(format: "Vence en %02d:%02d", minutes, seconds)
+    }
+
+    private func canEditProducts(_ order: OrderTrackingOrder) -> Bool {
+        let status = order.displayStatus.normalizedForContract
+        return status == .modifiedByStore || status == .accepted
+    }
+
+    private func handleEditProductsTap() {
+        guard let order = viewModel.order, canEditProducts(order) else { return }
+        let hasExistingCart = !cartManager.localItems.isEmpty || !cartManager.localShowcaseItems.isEmpty
+        if hasExistingCart {
+            showReplaceCartAlert = true
+        } else {
+            openCartEditor()
+        }
+    }
+
+    private func openCartEditor() {
+        guard let order = viewModel.order, canEditProducts(order) else { return }
+        let cartItems = order.items.map { item in
+            CartItemLocal(
+                productId: item.productId,
+                quantity: item.quantity,
+                basePrice: item.price,
+                finalUnitPrice: item.price
+            )
+        }
+        cartManager.replaceCart(items: cartItems)
+        showCartEditor = true
     }
 }
 

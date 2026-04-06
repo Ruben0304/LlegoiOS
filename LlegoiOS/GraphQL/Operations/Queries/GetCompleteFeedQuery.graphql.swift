@@ -325,11 +325,15 @@ public extension LlegoAPI {
             public var name: String { __data["name"] }
             /// Presigned URL for the branch avatar (inherits from business if not set)
             public var avatarUrl: String? { __data["avatarUrl"] }
+            /// Presigned URL for low quality branch avatar (inherits business avatar and falls back to original)
             public var avatarUrlBaja: String? { __data["avatarUrlBaja"] }
+            /// Presigned URL for high quality branch avatar (inherits business avatar and falls back to original)
             public var avatarUrlAlta: String? { __data["avatarUrlAlta"] }
             /// Presigned URL for the branch cover image
             public var coverUrl: String? { __data["coverUrl"] }
+            /// Presigned URL for low quality branch cover (with fallback to original)
             public var coverUrlBaja: String? { __data["coverUrlBaja"] }
+            /// Presigned URL for high quality branch cover (with fallback to original)
             public var coverUrlAlta: String? { __data["coverUrlAlta"] }
             public var address: String? { __data["address"] }
             /// Distance in kilometers from user
@@ -509,24 +513,26 @@ public extension LlegoAPI {
 
           @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.BranchType }
           @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
-                .field("__typename", String.self),
-                .field("id", String.self),
-                .field("name", String.self),
-                .field("avatarUrl", String?.self),
-                .field("avatarUrlBaja", String?.self),
-                .field("avatarUrlAlta", String?.self),
-              ] }
+            .field("__typename", String.self),
+            .field("id", String.self),
+            .field("name", String.self),
+            .field("avatarUrl", String?.self),
+            .field("avatarUrlBaja", String?.self),
+            .field("avatarUrlAlta", String?.self),
+          ] }
           @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
             GetCompleteFeedQuery.Data.AllCombo.Branch.self
           ] }
 
-              public var id: String { __data["id"] }
-              public var name: String { __data["name"] }
-              /// Presigned URL for the branch avatar (inherits from business if not set)
-              public var avatarUrl: String? { __data["avatarUrl"] }
-              public var avatarUrlBaja: String? { __data["avatarUrlBaja"] }
-              public var avatarUrlAlta: String? { __data["avatarUrlAlta"] }
-            }
+          public var id: String { __data["id"] }
+          public var name: String { __data["name"] }
+          /// Presigned URL for the branch avatar (inherits from business if not set)
+          public var avatarUrl: String? { __data["avatarUrl"] }
+          /// Presigned URL for low quality branch avatar (inherits business avatar and falls back to original)
+          public var avatarUrlBaja: String? { __data["avatarUrlBaja"] }
+          /// Presigned URL for high quality branch avatar (inherits business avatar and falls back to original)
+          public var avatarUrlAlta: String? { __data["avatarUrlAlta"] }
+        }
       }
     }
   }

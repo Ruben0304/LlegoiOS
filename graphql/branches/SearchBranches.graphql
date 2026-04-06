@@ -17,7 +17,11 @@ query SearchBranches($query: String!, $first: Int! = 20, $after: String, $useVec
         phone
         status
         avatarUrl
+        avatarUrlBaja
+        avatarUrlAlta
         coverUrl
+        coverUrlBaja
+        coverUrlAlta
         deliveryRadius
         createdAt
         score

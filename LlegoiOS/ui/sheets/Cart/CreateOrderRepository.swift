@@ -121,7 +121,7 @@ final class CreateOrderRepository {
             let input = LlegoAPI.CreateOrderInput(
                 branchId: branchId,
                 items: itemsInput,
-                deliveryAddress: addressInput,
+                deliveryAddress: .some(addressInput),
                 paymentMethod: paymentMethod,
                 paymentIntentId: paymentIntentId.map { .some($0) } ?? .none,
                 comments: comments.map { .some($0) } ?? .none,
@@ -472,7 +472,9 @@ final class CreateOrderRepository {
     private func mapStatus(_ status: GraphQLEnum<LlegoAPI.OrderStatusEnum>) -> String {
         switch status {
         case .case(let value): return value.rawValue
-        case .unknown: return "PENDING_ACCEPTANCE"
+        case .unknown:
+            print("⚠️ Unknown order status enum received from GraphQL in CreateOrderRepository")
+            return "UNKNOWN"
         }
     }
 

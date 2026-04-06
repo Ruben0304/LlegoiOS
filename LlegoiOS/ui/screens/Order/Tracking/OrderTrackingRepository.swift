@@ -75,10 +75,10 @@ final class OrderTrackingRepository {
         -> OrderTracking
     {
         let order = data.order
-        let mappedStatus = mapGraphQLToStatus(order.status)
-        let inferredFulfillmentMode: FulfillmentMode? =
-            mappedStatus == .readyForPickup ? .pickup : .delivery
-        let isPickup = inferredFulfillmentMode == .pickup
+        let technicalStatus = mapGraphQLToStatus(order.status)
+        let visibleStatus = mapGraphQLToStatus(order.customerVisibleStatus)
+        let deliveryMode = mapFulfillmentMode(order.deliveryMode)
+        let isPickup = deliveryMode == .pickup
 
         let items = order.items.map { item in
             OrderTrackingItem(
@@ -133,7 +133,12 @@ final class OrderTrackingRepository {
         let trackingOrder = OrderTrackingOrder(
             id: order.id,
             orderNumber: order.orderNumber,
-            status: mappedStatus,
+            status: technicalStatus,
+            customerVisibleStatus: visibleStatus,
+            deadlineAt: order.deadlineAt.flatMap { parseDate($0) },
+            deliveryVerificationCode: technicalStatus == .onTheWay
+                ? order.deliveryVerificationCode
+                : nil,
             total: order.total,
             currency: order.currency,
             estimatedDeliveryTime: order.estimatedDeliveryTime.flatMap { parseDate($0) },
@@ -144,7 +149,7 @@ final class OrderTrackingRepository {
             branchId: order.branch.id,
             branchName: order.branch.name,
             branchImageUrl: order.branch.avatarUrl,
-            deliveryMode: inferredFulfillmentMode,
+            deliveryMode: deliveryMode,
             pickupAddress: isPickup ? order.branch.name : nil,
             estimatedReadyAt: nil
         )
@@ -181,9 +186,12 @@ final class OrderTrackingRepository {
             switch value {
             case .awaitingDeliveryAcceptance: return .awaitingDeliveryAcceptance
             case .pendingPayment: return .pendingPayment
-            case .paymentInProgress: return .pendingPayment
+            case .paymentInProgress:
+                print("ℹ️ Legacy order status PAYMENT_IN_PROGRESS received from GraphQL")
+                return .paymentInProgress
             case .pendingAcceptance: return .pendingAcceptance
             case .modifiedByStore: return .modifiedByStore
+            case .rejectedByStore: return .rejectedByStore
             case .accepted: return .accepted
             case .preparing: return .preparing
             case .readyForPickup: return .readyForPickup
@@ -192,7 +200,8 @@ final class OrderTrackingRepository {
             case .cancelled: return .cancelled
             }
         case .unknown:
-            return .pendingAcceptance
+            print("⚠️ Unknown order status enum received from GraphQL")
+            return .unknown
         }
     }
 
@@ -207,6 +216,18 @@ final class OrderTrackingRepository {
             }
         case .unknown:
             return .system
+        }
+    }
+
+    private func mapFulfillmentMode(_ rawValue: String) -> FulfillmentMode {
+        switch rawValue.uppercased() {
+        case FulfillmentMode.pickup.rawValue:
+            return .pickup
+        case FulfillmentMode.delivery.rawValue:
+            return .delivery
+        default:
+            print("⚠️ Unknown fulfillment mode '\(rawValue)' - defaulting to delivery")
+            return .delivery
         }
     }
 
