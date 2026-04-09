@@ -19,7 +19,8 @@ public extension LlegoAPI {
       paymentMethod: String,
       paymentIntentId: GraphQLNullable<String> = nil,
       comments: GraphQLNullable<String> = nil,
-      promoCode: GraphQLNullable<String> = nil
+      promoCode: GraphQLNullable<String> = nil,
+      scheduledFor: GraphQLNullable<String> = nil
     ) {
       __data = InputDict([
         "branchId": branchId,
@@ -29,7 +30,8 @@ public extension LlegoAPI {
         "paymentMethod": paymentMethod,
         "paymentIntentId": paymentIntentId,
         "comments": comments,
-        "promoCode": promoCode
+        "promoCode": promoCode,
+        "scheduledFor": scheduledFor
       ])
     }
 
@@ -71,6 +73,11 @@ public extension LlegoAPI {
     public var promoCode: GraphQLNullable<String> {
       get { __data["promoCode"] }
       set { __data["promoCode"] = newValue }
+    }
+
+    public var scheduledFor: GraphQLNullable<String> {
+      get { __data["scheduledFor"] }
+      set { __data["scheduledFor"] = newValue }
     }
   }
 

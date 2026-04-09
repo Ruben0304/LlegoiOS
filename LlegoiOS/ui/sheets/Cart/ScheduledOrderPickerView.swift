@@ -70,8 +70,8 @@ struct ScheduledOrderPickerView: View {
             selectedDay = cal.isDateInToday(existing) ? 0 : 1
             pickerTime = existing
         } else {
-            // Default: now + 60 min, rounded to next 30 min boundary
-            let future = Date().addingTimeInterval(3600)
+            // Default: now + 30 min, rounded to next 30 min boundary
+            let future = Date().addingTimeInterval(1800)
             var cal = makeCal()
             let m = cal.component(.minute, from: future)
             let snap = m <= 30 ? 30 : 0
@@ -98,10 +98,12 @@ struct ScheduledOrderPickerView: View {
             return
         }
 
-        // At least 60 min in the future
-        guard combined > Date().addingTimeInterval(3600) else {
-            validationError = "La hora debe estar al menos 60 min en el futuro."
-            return
+        // For today: must be at least 30 min from now. Tomorrow has no minimum.
+        if selectedDay == 0 {
+            guard combined > Date().addingTimeInterval(1800) else {
+                validationError = "La hora debe ser al menos 30 minutos después de ahora."
+                return
+            }
         }
 
         // Within branch hours

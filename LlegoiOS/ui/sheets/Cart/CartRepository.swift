@@ -151,6 +151,44 @@ class CartRepository {
         }
     }
 
+    /// Obtener el schedule de una sucursal para validar si está abierta.
+    /// Reutiliza GetBranchDetailQuery (con caché de Apollo).
+    func fetchBranchSchedule(
+        branchId: String,
+        completion: @escaping @Sendable (Result<BranchSchedule?, Error>) -> Void
+    ) {
+        apolloClient.fetchCompat(
+            query: LlegoAPI.GetBranchDetailQuery(id: branchId),
+            cachePolicy: .returnCacheDataElseFetch
+        ) { result in
+            switch result {
+            case .success(let graphQLResult):
+                guard let gqlSchedule = graphQLResult.data?.branch?.schedule else {
+                    completion(.success(nil))
+                    return
+                }
+                let schedule = BranchSchedule(
+                    days: gqlSchedule.days.map { d in
+                        DaySchedule(
+                            day: d.day, isOpen: d.isOpen,
+                            hours: d.hours.map { h in TimeRange(open: h.open, close: h.close) }
+                        )
+                    },
+                    temporaryStatus: gqlSchedule.temporaryStatus.map { ts in
+                        BranchTemporaryStatus(
+                            temporallyClosed: ts.temporallyClosed,
+                            temporallyOpen: ts.temporallyOpen,
+                            reason: ts.reason
+                        )
+                    }
+                )
+                completion(.success(schedule))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+
     /// Obtener businessId + nombre de una sucursal para scope de KYC por merchant.
     func fetchBranchBusinessContext(
         branchId: String,

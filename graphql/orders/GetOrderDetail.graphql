@@ -13,6 +13,7 @@ query GetOrderDetail($id: String!, $jwt: String!) {
         paymentMethod
         paymentStatus
         deliveryMode
+        scheduledFor
         createdAt
         updatedAt
         lastStatusAt
@@ -104,12 +105,9 @@ query GetOrderDetail($id: String!, $jwt: String!) {
             avatarUrl
             accounts {
                 cardNumber
+                confirmPhone
                 cardHolderName
-                bankName
-                isActive
-            }
-            phones {
-                phone
+                pagoQr
                 isActive
             }
             coordinates {

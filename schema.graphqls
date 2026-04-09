@@ -91,6 +91,8 @@ type Query {
   myCurrentDelivery(jwt: String!): OrderType
   "Historial de pedidos del repartidor autenticado"
   myDeliveries(jwt: String!, status: OrderStatusEnum = null, page: Int! = 1, pageSize: Int! = 20): [OrderType!]!
+  "Historial cursor-based de pedidos entregados del repartidor autenticado"
+  myDeliveredOrders(jwt: String!, first: Int! = 20, after: String = null, filter: DeliveredOrdersFilterInput = null): DeliveredOrdersConnectionType!
   "Estadísticas del repartidor autenticado"
   myDeliveryStats(jwt: String!): DeliveryPersonStatsType!
   "Mis solicitudes de vinculación a sucursales"
@@ -124,7 +126,7 @@ type Query {
   "Obtiene el estado KYC de un intento de pago en efectivo"
   cashKycStatus(paymentAttemptId: String!, jwt: String!): CashKycStatusResult!
   "Obtiene estado KYC reusable por cuenta para un merchant"
-  cashKycStatusByAccount(merchantId: String!, jwt: String!, branchId: String = null): CashKycAccountStatusResult!
+  cashKycStatusByAccount(merchantId: String!, jwt: String!, branchId: String = null, customerId: String = null): CashKycAccountStatusResult!
   "Obtiene política KYC de efectivo por merchant/branch sin requerir orden"
   cashKycPolicyByMerchant(merchantId: String!, jwt: String!, branchId: String = null): CashKycPolicyResult!
   "Obtiene estado global KYC de la cuenta del usuario para cash"
@@ -292,7 +294,7 @@ type BranchType {
   address: String
   coordinates: CoordinatesType!
   phone: String!
-  schedule: JSON!
+  schedule: BranchScheduleType!
   managerIds: [String!]!
   isActive: Boolean!
   status: String
@@ -302,10 +304,9 @@ type BranchType {
   tipos: [BranchTipo!]!
   paymentMethodIds: [String!]!
   useAppMessaging: Boolean!
+  pickupEnabled: Boolean!
   vehicles: [BranchVehicle!]!
   accounts: [TransferAccountType!]!
-  qrPayments: [QrPaymentType!]!
-  phones: [TransferPhoneType!]!
   deliveryRadius: Float
   acceptedCurrency: AcceptedCurrency
   exchangeRate: Int
@@ -346,18 +347,29 @@ type CoordinatesType {
   type: String!
   coordinates: [Float!]!
 }
+type BranchScheduleType {
+  days: [DayScheduleType!]!
+  temporaryStatus: TemporaryStatusType
+}
+type DayScheduleType {
+  day: Int!
+  isOpen: Boolean!
+  hours: [TimeRangeType!]!
+}
+type TimeRangeType {
+  open: String!
+  close: String!
+}
+type TemporaryStatusType {
+  temporallyClosed: Boolean!
+  temporallyOpen: Boolean!
+  reason: String
+}
 type TransferAccountType {
   cardNumber: String!
-  cardHolderName: String!
-  bankName: String!
-  isActive: Boolean!
-}
-type QrPaymentType {
-  value: String!
-  isActive: Boolean!
-}
-type TransferPhoneType {
-  phone: String!
+  confirmPhone: String!
+  cardHolderName: String
+  pagoQr: String
   isActive: Boolean!
 }
 type ProductType {
@@ -500,7 +512,7 @@ type ScoredBranchType {
   address: String
   coordinates: CoordinatesType!
   phone: String!
-  schedule: JSON!
+  schedule: BranchScheduleType!
   managerIds: [String!]!
   isActive: Boolean!
   status: String
@@ -510,10 +522,9 @@ type ScoredBranchType {
   tipos: [BranchTipo!]!
   paymentMethodIds: [String!]!
   useAppMessaging: Boolean!
+  pickupEnabled: Boolean!
   vehicles: [BranchVehicle!]!
   accounts: [TransferAccountType!]!
-  qrPayments: [QrPaymentType!]!
-  phones: [TransferPhoneType!]!
   deliveryRadius: Float
   acceptedCurrency: AcceptedCurrency
   exchangeRate: Int
@@ -571,7 +582,7 @@ type NearbyBranchType {
   address: String
   coordinates: CoordinatesType!
   phone: String!
-  schedule: JSON!
+  schedule: BranchScheduleType!
   managerIds: [String!]!
   isActive: Boolean!
   status: String
@@ -581,10 +592,9 @@ type NearbyBranchType {
   tipos: [BranchTipo!]!
   paymentMethodIds: [String!]!
   useAppMessaging: Boolean!
+  pickupEnabled: Boolean!
   vehicles: [BranchVehicle!]!
   accounts: [TransferAccountType!]!
-  qrPayments: [QrPaymentType!]!
-  phones: [TransferPhoneType!]!
   deliveryRadius: Float
   acceptedCurrency: AcceptedCurrency
   exchangeRate: Int
@@ -940,6 +950,7 @@ type OrderType {
   currentPaymentAttemptId: String
   paidAt: DateTime
   deadlineAt: DateTime
+  scheduledFor: DateTime
   resubmissionCount: Int!
   assignedAt: DateTime
   pickedUpAt: DateTime
@@ -1090,6 +1101,32 @@ type OrderTrackingType {
   estimatedMinutes: Int
   distanceKm: Float
   routePolyline: String
+}
+type DeliveredOrdersConnectionType {
+  edges: [DeliveredOrdersEdgeType!]!
+  pageInfo: DeliveredOrdersPageInfoType!
+  totalCount: Int!
+}
+type DeliveredOrdersEdgeType {
+  cursor: String!
+  node: DeliveredOrderType!
+}
+type DeliveredOrderType {
+  orderId: String!
+  orderNumber: String!
+  deliveredAt: DateTime!
+  merchantName: String!
+  customerDisplayName: String!
+  addressSummary: String!
+  city: String
+  visibleAmount: Float!
+  currency: String!
+  finalStatus: DeliveredOrderFinalStatusEnum!
+  hasDeliveryEvidence: Boolean!
+}
+type DeliveredOrdersPageInfoType {
+  hasNextPage: Boolean!
+  endCursor: String
 }
 type DeliveryPersonStatsType {
   totalDeliveries: Int!
@@ -1587,7 +1624,7 @@ type BranchSyncType {
   address: String
   coordinates: CoordinatesSyncType!
   phone: String!
-  schedule: JSON!
+  schedule: BranchScheduleType!
   isActive: Boolean!
   status: String
   avatar: String
@@ -1764,7 +1801,7 @@ type Mutation {
   "Iniciar un pago para un pedido"
   initiatePayment(orderId: String!, paymentMethodId: String!, jwt: String!, includeDeliveryFee: Boolean! = true, sendsSmsNotification: Boolean! = false): InitiatePaymentResult!
   "Confirmar que el cliente envió el pago (para métodos manuales)"
-  confirmPaymentSent(paymentAttemptId: String!, proofUrl: String!, jwt: String!): PaymentAttemptType!
+  confirmPaymentSent(paymentAttemptId: String!, jwt: String!, proofUrl: String = null): PaymentAttemptType!
   "Negocio confirma que recibió el pago"
   confirmPaymentReceived(paymentAttemptId: String!, jwt: String!): PaymentAttemptType!
   "Repartidor confirma que recibió el pago en efectivo"
@@ -2112,6 +2149,12 @@ enum VehicleTypeEnum {
   AUTO
   A_PIE
 }
+enum DeliveredOrderFinalStatusEnum {
+  DELIVERED
+  DISPUTED
+  REVERSED
+  FRAUD_HIDDEN
+}
 enum DeliveryRequestStatusEnum {
   PENDING
   ACCEPTED
@@ -2206,6 +2249,13 @@ input AiAssistantChatInput {
   "Enable streaming mode (requires GraphQL subscription)"
   stream: Boolean! = false
 }
+input DeliveredOrdersFilterInput {
+  fromDate: DateTime = null
+  toDate: DateTime = null
+  search: String = null
+  branchId: String = null
+  city: String = null
+}
 input RegisterInput {
   name: String!
   email: String!
@@ -2278,7 +2328,7 @@ input RegisterBranchInput {
   name: String!
   coordinates: CoordinatesInput!
   phone: String!
-  schedule: JSON!
+  schedule: BranchScheduleInput!
   tipos: [BranchTipo!]!
   paymentMethodIds: [String!]!
   address: String = null
@@ -2289,25 +2339,34 @@ input RegisterBranchInput {
   acceptedCurrency: AcceptedCurrency = null
   exchangeRate: Int = null
   accounts: [TransferAccountInput!] = null
-  qrPayments: [QrPaymentInput!] = null
-  phones: [TransferPhoneInput!] = null
 }
 input CoordinatesInput {
   lat: Float!
   lng: Float!
 }
+input BranchScheduleInput {
+  ranges: [DayRangeInput!]!
+  temporaryStatus: TemporaryStatusInput = null
+}
+input DayRangeInput {
+  fromDay: Int!
+  toDay: Int!
+  isOpen: Boolean! = true
+  hours: [TimeRangeInput!]! = []
+}
+input TimeRangeInput {
+  open: String!
+  close: String!
+}
+input TemporaryStatusInput {
+  temporallyClosed: Boolean! = false
+  temporallyOpen: Boolean! = false
+  reason: String = null
+}
 input TransferAccountInput {
   cardNumber: String!
-  cardHolderName: String!
-  bankName: String!
-  isActive: Boolean! = true
-}
-input QrPaymentInput {
-  value: String!
-  isActive: Boolean! = true
-}
-input TransferPhoneInput {
-  phone: String!
+  confirmPhone: String!
+  cardHolderName: String = null
   isActive: Boolean! = true
 }
 input UpdateBusinessInput {
@@ -2326,7 +2385,7 @@ input CreateBranchInput {
   name: String!
   coordinates: CoordinatesInput!
   phone: String!
-  schedule: JSON!
+  schedule: BranchScheduleInput!
   tipos: [BranchTipo!]!
   paymentMethodIds: [String!]!
   address: String = null
@@ -2335,12 +2394,11 @@ input CreateBranchInput {
   coverImage: String = null
   socialMedia: JSON = null
   useAppMessaging: Boolean! = true
+  pickupEnabled: Boolean! = false
   vehicles: [BranchVehicle!] = null
   acceptedCurrency: AcceptedCurrency = null
   exchangeRate: Int = null
   accounts: [TransferAccountInput!] = null
-  qrPayments: [QrPaymentInput!] = null
-  phones: [TransferPhoneInput!] = null
   cashKycEnabled: Boolean! = false
   cashKycPolicyVersion: String! = "cash-kyc-v1"
   cashKycMinConfidence: Float! = 0.85
@@ -2351,7 +2409,7 @@ input UpdateBranchInput {
   address: String = null
   coordinates: CoordinatesInput = null
   phone: String = null
-  schedule: JSON = null
+  schedule: BranchScheduleInput = null
   isActive: Boolean = null
   socialMedia: JSON = null
   managerIds: [String!] = null
@@ -2360,12 +2418,11 @@ input UpdateBranchInput {
   tipos: [BranchTipo!] = null
   paymentMethodIds: [String!] = null
   useAppMessaging: Boolean = null
+  pickupEnabled: Boolean = null
   vehicles: [BranchVehicle!] = null
   acceptedCurrency: AcceptedCurrency = null
   exchangeRate: Int = null
   accounts: [TransferAccountInput!] = null
-  qrPayments: [QrPaymentInput!] = null
-  phones: [TransferPhoneInput!] = null
   acceptsQvapay: Boolean = null
   acceptsZelle: Boolean = null
   qvapayUsername: String = null
@@ -2474,6 +2531,7 @@ input CreateOrderInput {
   paymentIntentId: String = null
   comments: String = null
   promoCode: String = null
+  scheduledFor: DateTime = null
 }
 input OrderItemInput {
   quantity: Int!

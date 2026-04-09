@@ -256,19 +256,25 @@ private struct StoreProductsCardFront: View {
                         onGradientExtracted?(newGradient)
                     }
             } placeholder: {
-                Image("generic_logo")
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .onAppear {
-                        extractFallbackGradient()
-                    }
+                ZStack {
+                    Color.gray.opacity(0.15)
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .llegoPrimary))
+                        .scaleEffect(0.7)
+                }
+                .onAppear {
+                    extractFallbackGradient()
+                }
             } failure: { _, _ in
-                Image("generic_logo")
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .onAppear {
-                        extractFallbackGradient()
-                    }
+                ZStack {
+                    Color.gray.opacity(0.15)
+                    Image(systemName: "storefront")
+                        .font(.system(size: 16))
+                        .foregroundColor(.gray.opacity(0.5))
+                }
+                .onAppear {
+                    extractFallbackGradient()
+                }
             }
             .frame(width: 44, height: 44)
             .clipShape(Circle())
@@ -572,11 +578,14 @@ private struct StoreMapPin: View {
                             .clipShape(Circle())
                         },
                         failure: {
-                            Image("generic_logo")
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 42, height: 42)
-                                .clipShape(Circle())
+                            ZStack {
+                                Color.gray.opacity(0.15)
+                                Image(systemName: "storefront")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.gray.opacity(0.5))
+                            }
+                            .frame(width: 42, height: 42)
+                            .clipShape(Circle())
                         }
                     )
                 }

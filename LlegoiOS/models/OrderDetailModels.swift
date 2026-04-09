@@ -17,6 +17,7 @@ struct OrderDetail: Identifiable {
     let updatedAt: Date
     let lastStatusAt: Date
     let deadlineAt: Date?
+    let scheduledFor: Date?
     let deliveryVerificationCode: String?
     let isEditable: Bool
     let canCancel: Bool
@@ -171,8 +172,9 @@ struct OrderDetailComment: Identifiable {
 struct OrderTransferAccount: Identifiable {
     let id = UUID()
     let cardNumber: String
+    let confirmPhone: String
     let cardHolderName: String
-    let bankName: String
+    let pagoQr: String?
 }
 
 // MARK: - Transfer Phone

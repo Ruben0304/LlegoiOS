@@ -6,9 +6,10 @@ struct OrderDetailView: View {
     @StateObject private var viewModel: OrderDetailViewModel
     @StateObject private var gradientManager = GradientStateManager.shared
     @ObservedObject private var cartManager = CartManager.shared
-    @State private var showCancelAlert = false
+    @State private var showCancelOptions = false
     @State private var showReplaceCartAlert = false
     @State private var showCartEditor = false
+    @State private var showTracking = false
     @State private var now = Date()
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
@@ -50,7 +51,7 @@ struct OrderDetailView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
-                    .padding(.bottom, 100)
+                    .padding(.bottom, 16)
                 } else if let errorMessage = viewModel.errorMessage {
                     VStack(spacing: 16) {
                         Image(systemName: "exclamationmark.triangle")
@@ -70,27 +71,36 @@ struct OrderDetailView: View {
                 }
             }
             .refreshable { viewModel.refresh() }
-
-            // Bottom action buttons
-            if let order = viewModel.order {
-                VStack {
-                    Spacer()
-                    bottomActions(order)
-                }
-            }
         }
         .navigationTitle("Pedido #\(viewModel.order?.orderNumber.suffix(6) ?? "")")
         .navigationBarTitleDisplayMode(.inline)
-        .alert("Cancelar Pedido", isPresented: $showCancelAlert) {
-            Button("No", role: .cancel) {}
-            Button("Sí, cancelar", role: .destructive) {
+        .toolbar {
+            if let order = viewModel.order {
+                orderDetailToolbarItems(order)
+            }
+        }
+        .navigationDestination(isPresented: $showTracking) {
+            if let order = viewModel.order {
+                OrderTrackingView(orderId: order.id)
+            }
+        }
+        .confirmationDialog(
+            "Cancelar pedido",
+            isPresented: $showCancelOptions,
+            titleVisibility: .visible
+        ) {
+            Button("Llevarme al carrito con estos productos") {
+                handleCancelAndGoToCart()
+            }
+            Button("Solo cancelar", role: .destructive) {
                 viewModel.cancelOrder {
                     onDismiss?()
                     dismiss()
                 }
             }
+            Button("No cancelar", role: .cancel) {}
         } message: {
-            Text("¿Estás seguro de que deseas cancelar este pedido?")
+            Text("¿Quieres ir al carrito con los productos de este pedido? Útil si quieres agregarle algo o hacer un pequeño cambio manteniendo los demás productos.")
         }
         .alert("Reemplazar carrito", isPresented: $showReplaceCartAlert) {
             Button("Cancelar", role: .cancel) {}
@@ -148,13 +158,6 @@ struct OrderDetailView: View {
         .fullScreenCover(isPresented: $showCartEditor) {
             NavigationStack {
                 CartView()
-                    .toolbar {
-                        ToolbarItem(placement: .navigationBarLeading) {
-                            CloseButton {
-                                showCartEditor = false
-                            }
-                        }
-                    }
             }
         }
         .background(
@@ -237,6 +240,10 @@ struct OrderDetailView: View {
 
                 Divider()
 
+                if let scheduledFor = order.scheduledFor {
+                    scheduledBadge(scheduledFor)
+                }
+
                 HStack(spacing: 16) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Total")
@@ -266,6 +273,32 @@ struct OrderDetailView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Scheduled Badge
+
+    private func scheduledBadge(_ date: Date) -> some View {
+        let havana = TimeZone(identifier: "America/Havana") ?? .current
+        let cal = Calendar.current
+        let dayLabel = cal.isDateInToday(date) ? "Hoy" : "Mañana"
+        let formatter = DateFormatter()
+        formatter.timeZone = havana
+        formatter.dateFormat = "h:mm a"
+        formatter.locale = Locale(identifier: "es_CU")
+        let timeStr = formatter.string(from: date)
+
+        return HStack(spacing: 8) {
+            Image(systemName: "calendar.clock")
+                .font(.system(size: 14, weight: .semibold))
+            Text("Programado para \(dayLabel) a las \(timeStr)")
+                .font(.system(size: 14, weight: .medium))
+        }
+        .foregroundColor(gradientManager.currentAccentColor)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(gradientManager.currentAccentColor.opacity(0.1))
+        .cornerRadius(10)
     }
 
     // MARK: - Items Section
@@ -314,6 +347,21 @@ struct OrderDetailView: View {
         } else {
             openCartEditor()
         }
+    }
+
+    private func handleCancelAndGoToCart() {
+        guard let order = viewModel.order else { return }
+        let cartItems = order.items.map { item in
+            CartItemLocal(
+                productId: item.productId,
+                quantity: item.quantity,
+                basePrice: item.price,
+                finalUnitPrice: item.price
+            )
+        }
+        cartManager.replaceCart(items: cartItems)
+        viewModel.cancelOrder()
+        showCartEditor = true
     }
 
     private func openCartEditor() {
@@ -681,7 +729,7 @@ struct OrderDetailView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
-                    if viewModel.canInitiatePayment(for: order) {
+                    if !viewModel.transferPaymentConfirmed && viewModel.canInitiatePayment(for: order) {
                         HStack(spacing: 8) {
                             Image(systemName: "info.circle.fill")
                                 .font(.system(size: 14))
@@ -695,6 +743,19 @@ struct OrderDetailView: View {
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(gradientManager.currentAccentColor.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    } else if viewModel.transferPaymentConfirmed || order.paymentStatus == .validated {
+                        HStack(spacing: 8) {
+                            Image(systemName: "clock.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(.orange)
+                            Text("Tu transferencia fue enviada. Esperando confirmación del negocio.")
+                                .font(.system(size: 13))
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.orange.opacity(0.08))
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
                 }
@@ -806,111 +867,84 @@ struct OrderDetailView: View {
         }
     }
 
-    // MARK: - Bottom Actions
+    // MARK: - Bottom Toolbar
 
-    private func bottomActions(_ order: OrderDetail) -> some View {
-        VStack(spacing: 0) {
-            Divider()
-                .background(Color.gray.opacity(0.2))
-            HStack(spacing: 10) {
-                let shouldShowPay = viewModel.canInitiatePayment(for: order)
-                let shouldShowAccept = OrderPermissionPolicy.canAcceptModifications(
-                    status: order.status)
-                    && !viewModel.canResubmitOrder
-                let shouldShowResubmit = viewModel.canResubmitOrder
-
-                if order.canCancel {
-                    Button {
-                        showCancelAlert = true
-                    } label: {
-                        Text("Cancelar")
-                            .font(.system(size: 16, weight: .semibold))
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                    }
-                    .modifier(GlassProminentButtonModifier())
-                    .tint(.red)
-                }
-
-                if shouldShowAccept {
-                    Button {
-                        viewModel.acceptModifications {
-                            onDismiss?()
-                            dismiss()
-                        }
-                    } label: {
-                        Text("Aceptar cambios")
-                            .font(.system(size: 16, weight: .semibold))
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                    }
-                    .modifier(GlassProminentButtonModifier())
-                    .tint(gradientManager.currentAccentColor)
-                }
-
-                if shouldShowResubmit {
-                    Button {
-                        viewModel.resubmitOrder()
-                    } label: {
-                        HStack(spacing: 8) {
-                            if viewModel.isProcessing {
-                                ProgressView()
-                                    .tint(.white)
-                            } else {
-                                Image(systemName: "arrow.clockwise.circle.fill")
-                                    .font(.system(size: 16, weight: .semibold))
-                            }
-                            Text("Reenviar")
-                                .font(.system(size: 16, weight: .semibold))
-                        }
-                        .frame(maxWidth: .infinity)
+    @ToolbarContentBuilder
+    private func orderDetailToolbarItems(_ order: OrderDetail) -> some ToolbarContent {
+        if order.canCancel {
+            ToolbarItem(placement: .bottomBar) {
+                Button {
+                    showCancelOptions = true
+                } label: {
+                    Text("Cancelar")
+                        .font(.system(size: 16, weight: .semibold))
+                        .frame(minWidth: 120)
                         .frame(height: 52)
-                    }
-                    .modifier(GlassProminentButtonModifier())
-                    .tint(gradientManager.currentAccentColor)
-                    .disabled(viewModel.isProcessing)
                 }
-
-                if shouldShowPay {
-                    Button {
-                        viewModel.initiatePayment()
-                    } label: {
-                        HStack(spacing: 10) {
-                            if viewModel.isInitiatingPayment {
-                                ProgressView()
-                                    .tint(.white)
-                            } else {
-                                Image(
-                                    systemName: paymentIconName(
-                                        for: viewModel.paymentMethod, fallback: order.paymentMethod)
-                                )
-                                .font(.system(size: 16, weight: .semibold))
-                            }
-                            Text("Pagar \(order.formattedTotal)")
-                                .font(.system(size: 16, weight: .semibold))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 52)
-                    }
-                    .modifier(GlassProminentButtonModifier())
-                    .tint(gradientManager.currentAccentColor)
-                    .disabled(viewModel.isInitiatingPayment || viewModel.isProcessing)
-                }
-
-                if OrderPermissionPolicy.canShowTracking(status: order.status), !order.isPickup {
-                    NavigationLink(destination: OrderTrackingView(orderId: order.id)) {
-                        Text("Ver tracking")
-                            .font(.system(size: 16, weight: .semibold))
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 52)
-                    }
-                    .modifier(GlassProminentButtonModifier())
-                    .tint(gradientManager.currentAccentColor)
-                }
+                .modifier(GlassProminentButtonModifier())
+                .tint(.red)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(.ultraThinMaterial)
+        }
+
+        if OrderPermissionPolicy.canAcceptModifications(status: order.status) {
+            ToolbarItem(placement: .bottomBar) {
+                Button {
+                    viewModel.acceptModifications {
+                        onDismiss?()
+                        dismiss()
+                    }
+                } label: {
+                    Text("Aceptar cambios")
+                        .font(.system(size: 16, weight: .semibold))
+                        .frame(minWidth: 140)
+                        .frame(height: 52)
+                }
+                .modifier(GlassProminentButtonModifier())
+                .tint(.green)
+            }
+        }
+
+
+        if !viewModel.transferPaymentConfirmed && viewModel.canInitiatePayment(for: order) {
+            ToolbarItem(placement: .bottomBar) {
+                Button {
+                    viewModel.initiatePayment()
+                } label: {
+                    HStack(spacing: 10) {
+                        if viewModel.isInitiatingPayment {
+                            ProgressView().tint(.white)
+                        } else {
+                            Image(
+                                systemName: paymentIconName(
+                                    for: viewModel.paymentMethod, fallback: order.paymentMethod)
+                            )
+                            .font(.system(size: 16, weight: .semibold))
+                        }
+                        Text("Pagar \(order.formattedTotal)")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                    .frame(minWidth: 150)
+                    .frame(height: 52)
+                }
+                .modifier(GlassProminentButtonModifier())
+                .tint(.blue)
+                .disabled(viewModel.isInitiatingPayment || viewModel.isProcessing)
+            }
+        }
+
+        if OrderPermissionPolicy.canShowTracking(status: order.status), !order.isPickup {
+            ToolbarItem(placement: .bottomBar) {
+                Button {
+                    showTracking = true
+                } label: {
+                    Text("Ver tracking")
+                        .font(.system(size: 16, weight: .semibold))
+                        .frame(minWidth: 140)
+                        .frame(height: 52)
+                }
+                .modifier(GlassProminentButtonModifier())
+                .tint(.teal)
+            }
         }
     }
 

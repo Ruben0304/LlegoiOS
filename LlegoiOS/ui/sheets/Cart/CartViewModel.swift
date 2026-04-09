@@ -70,6 +70,11 @@ class CartViewModel: ObservableObject {
     @Published private(set) var branchAcceptedCurrency: String?
     @Published private(set) var cashKycMerchantId: String?
     @Published private(set) var cashKycBranchId: String?
+    @Published private(set) var branchOpenStatus: BranchOpenStatus?
+    @Published private(set) var branchSchedule: BranchSchedule?
+
+    // Scheduled order
+    @Published var scheduledFor: Date?
 
     // MARK: - AI Suggestions
     @Published var suggestedProducts: [Product] = []
@@ -374,6 +379,7 @@ class CartViewModel: ObservableObject {
                         print("📍 Branch ID: \(branchId)")
                         self.fetchBranchAcceptedCurrency(branchId: branchId)
                         self.fetchCashKycMerchantContext(branchId: branchId)
+                        self.fetchBranchScheduleStatus(branchId: branchId)
                         // Estimar envío usando el branchId del primer producto
                         self.fetchDeliveryFeeEstimate(branchId: branchId)
                         if self.selectedPickup == nil || self.selectedPickup?.branchId != branchId {
@@ -755,6 +761,21 @@ class CartViewModel: ObservableObject {
         }
     }
 
+    private func fetchBranchScheduleStatus(branchId: String) {
+        repository.fetchBranchSchedule(branchId: branchId) { [weak self] result in
+            guard let self = self else { return }
+            Task { @MainActor in
+                switch result {
+                case .success(let schedule):
+                    self.branchSchedule = schedule
+                    self.branchOpenStatus = schedule?.currentStatus()
+                case .failure(let error):
+                    print("⚠️ Error loading branch schedule: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
     var includeDeliveryFeeInAppPayment: Bool {
         fulfillmentMode == .delivery && deliveryFeePaymentMode == .sameCurrency
     }
@@ -855,7 +876,8 @@ class CartViewModel: ObservableObject {
             deliveryAddress: deliveryAddress,
             paymentMethod: "pending",  // Temporary, will be updated by payment
             paymentIntentId: nil,
-            comments: comments
+            comments: comments,
+            scheduledFor: scheduledFor
         ) { [weak self] result in
             guard let self = self else { return }
 
@@ -1138,7 +1160,8 @@ class CartViewModel: ObservableObject {
             deliveryAddress: deliveryAddress,
             paymentMethod: paymentMethod,
             paymentIntentId: paymentIntentId,
-            comments: comments
+            comments: comments,
+            scheduledFor: scheduledFor
         ) { [weak self] result in
             Task { @MainActor in
                 guard let self = self else { return }

@@ -45,15 +45,16 @@ class StoreMapViewModel: ObservableObject {
                             id: branchGraphQL.id,
                             name: branchGraphQL.name,
                             etaMinutes: self.calculateETA(deliveryRadius: branchGraphQL.deliveryRadius),
-                            logoUrl: branchGraphQL.avatarUrl ?? "",
-                            bannerUrl: branchGraphQL.coverUrl ?? "",
+                            logoUrl: branchGraphQL.preferredAvatarSmallUrl ?? branchGraphQL.avatarUrl ?? "",
+                            bannerUrl: branchGraphQL.preferredCoverFastUrl ?? branchGraphQL.coverUrl ?? "",
                             address: branchGraphQL.address,
                             rating: nil,
                             description: branchGraphQL.description,
                             coordinate: CLLocationCoordinate2D(
                                 latitude: branchGraphQL.coordinates.latitude,
                                 longitude: branchGraphQL.coordinates.longitude
-                            )
+                            ),
+                            schedule: branchGraphQL.schedule
                         )
                     }
                     self.hasLoaded = true

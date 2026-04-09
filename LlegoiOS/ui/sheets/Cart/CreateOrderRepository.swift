@@ -18,6 +18,7 @@ final class CreateOrderRepository {
         paymentIntentId: String? = nil,
         comments: String? = nil,
         promoCode: String? = nil,
+        scheduledFor: Date? = nil,
         completion: @escaping @Sendable (Result<CreatedOrder, Error>) -> Void
     ) {
         let client = apolloClient
@@ -44,6 +45,7 @@ final class CreateOrderRepository {
                     paymentIntentId: paymentIntentId,
                     comments: comments,
                     promoCode: promoCode,
+                    scheduledFor: scheduledFor,
                     jwt: jwt,
                     completion: completion
                 )
@@ -180,6 +182,7 @@ final class CreateOrderRepository {
         paymentIntentId: String?,
         comments: String?,
         promoCode: String?,
+        scheduledFor: Date?,
         jwt: String,
         completion: @escaping @Sendable (Result<CreatedOrder, Error>) -> Void
     ) {
@@ -208,6 +211,7 @@ final class CreateOrderRepository {
                 paymentStatus
                 createdAt
                 deliveryMode
+                scheduledFor
                 items {
                   itemType
                   itemId
@@ -314,7 +318,8 @@ final class CreateOrderRepository {
                     paymentMethod: paymentMethod,
                     paymentIntentId: paymentIntentId,
                     comments: comments,
-                    promoCode: promoCode
+                    promoCode: promoCode,
+                    scheduledFor: scheduledFor.map { iso8601String(from: $0) }
                 )
             )
         )
@@ -491,6 +496,14 @@ final class CreateOrderRepository {
         case .unknown: return "PROMO"
         }
     }
+
+    /// Converts a Date to ISO 8601 UTC string for the backend (e.g. "2026-04-10T00:00:00.000Z")
+    private func iso8601String(from date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        return formatter.string(from: date)
+    }
 }
 
 // MARK: - Input Models
@@ -597,6 +610,7 @@ private struct MixedCreateOrderRequestPayload: Encodable {
         let paymentIntentId: String?
         let comments: String?
         let promoCode: String?
+        let scheduledFor: String?
     }
 
     struct Item: Encodable {
@@ -673,6 +687,7 @@ private struct MixedCreateOrderResponse: Decodable {
             let paymentStatus: String
             let createdAt: String
             let deliveryMode: String?
+            let scheduledFor: String?
             let items: [Item]
             let discounts: [Discount]
             let deliveryAddress: DeliveryAddress?

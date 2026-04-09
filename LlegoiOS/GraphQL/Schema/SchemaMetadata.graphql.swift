@@ -41,6 +41,7 @@ public extension LlegoAPI {
       case "BranchLikeType": return LlegoAPI.Objects.BranchLikeType
       case "BranchSuggestionType": return LlegoAPI.Objects.BranchSuggestionType
       case "BranchSyncType": return LlegoAPI.Objects.BranchSyncType
+      case "BranchScheduleType": return LlegoAPI.Objects.BranchScheduleType
       case "BranchType": return LlegoAPI.Objects.BranchType
       case "BusinessSyncType": return LlegoAPI.Objects.BusinessSyncType
       case "BusinessType": return LlegoAPI.Objects.BusinessType
@@ -53,6 +54,7 @@ public extension LlegoAPI {
       case "ComboType": return LlegoAPI.Objects.ComboType
       case "CoordinatesSyncType": return LlegoAPI.Objects.CoordinatesSyncType
       case "CoordinatesType": return LlegoAPI.Objects.CoordinatesType
+      case "DayScheduleType": return LlegoAPI.Objects.DayScheduleType
       case "DeliveryAddressType": return LlegoAPI.Objects.DeliveryAddressType
       case "DeliveryFeeEstimateType": return LlegoAPI.Objects.DeliveryFeeEstimateType
       case "DeliveryPersonType": return LlegoAPI.Objects.DeliveryPersonType
@@ -101,8 +103,9 @@ public extension LlegoAPI {
       case "ShowcaseType": return LlegoAPI.Objects.ShowcaseType
       case "Subscription": return LlegoAPI.Objects.Subscription
       case "TransferAccountType": return LlegoAPI.Objects.TransferAccountType
-      case "TransferPhoneType": return LlegoAPI.Objects.TransferPhoneType
       case "TronDealerPaymentResult": return LlegoAPI.Objects.TronDealerPaymentResult
+      case "TemporaryStatusType": return LlegoAPI.Objects.TemporaryStatusType
+      case "TimeRangeType": return LlegoAPI.Objects.TimeRangeType
       case "TutorialType": return LlegoAPI.Objects.TutorialType
       case "UserData": return LlegoAPI.Objects.UserData
       case "UserType": return LlegoAPI.Objects.UserType

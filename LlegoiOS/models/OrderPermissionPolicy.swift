@@ -11,12 +11,7 @@ enum OrderPermissionPolicy {
         .onTheWay,
     ]
 
-    private static let resubmitEnabledStatuses: Set<OrderStatusEnum> = [
-        .modifiedByStore,
-        .rejectedByStore,
-        .awaitingDeliveryAcceptance,
-        .pendingPayment,
-    ]
+
 
     private static let slaDeadlineStatuses: Set<OrderStatusEnum> = [
         .pendingAcceptance,
@@ -34,9 +29,7 @@ enum OrderPermissionPolicy {
         trackingEnabledStatuses.contains(status.normalizedForContract)
     }
 
-    static func canResubmit(status: OrderStatusEnum) -> Bool {
-        resubmitEnabledStatuses.contains(status.normalizedForContract)
-    }
+
 
     static func shouldShowDeadline(status: OrderStatusEnum) -> Bool {
         slaDeadlineStatuses.contains(status.normalizedForContract)
@@ -62,7 +55,7 @@ enum OrderPermissionPolicy {
         paymentMethodType: String?
     ) -> Bool {
         guard paymentEnabledStatuses.contains(status.normalizedForContract),
-            paymentStatus != .completed
+            paymentStatus == .pending || paymentStatus == .failed
         else {
             return false
         }

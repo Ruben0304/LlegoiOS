@@ -73,12 +73,13 @@ class StoreListViewModel: ObservableObject {
                             logoUrl: branchGraphQL.preferredAvatarSmallUrl ?? self.defaultLogoUrl,
                             bannerUrl: branchGraphQL.preferredCoverFastUrl ?? self.defaultBannerUrl,
                             address: branchGraphQL.address,
-                            rating: nil, // TODO: Add rating when available in backend
+                            rating: nil,
                             description: branchGraphQL.description,
                             coordinate: CLLocationCoordinate2D(
                                 latitude: branchGraphQL.coordinates.latitude,
                                 longitude: branchGraphQL.coordinates.longitude
-                            )
+                            ),
+                            schedule: branchGraphQL.schedule
                         )
                     }
 

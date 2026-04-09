@@ -61,6 +61,23 @@ struct ProductListView: View {
         productCounts.values.reduce(0, +)
     }
 
+    private var shouldShowInitialBranchSkeleton: Bool {
+        guard initialBranchId != nil else { return false }
+        guard activeViewModel.filteredProducts.isEmpty else { return false }
+        guard !activeViewModel.isSearching else { return false }
+
+        if activeViewModel.isLoading {
+            return true
+        }
+
+        switch activeViewModel.state {
+        case .idle, .loading:
+            return true
+        case .success, .error:
+            return false
+        }
+    }
+
     // MARK: - Refresh Function
     private func refreshProducts() async {
         await withCheckedContinuation { continuation in
@@ -84,7 +101,9 @@ struct ProductListView: View {
                 }
 
                 // Contenido principal
-                if activeViewModel.isLoading {
+                if shouldShowInitialBranchSkeleton {
+                    searchSkeletonView
+                } else if activeViewModel.isLoading {
                     loadingState
                 } else if activeViewModel.isSearching {
                     searchSkeletonView

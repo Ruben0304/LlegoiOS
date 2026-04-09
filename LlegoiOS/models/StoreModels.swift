@@ -102,6 +102,7 @@ struct BranchGraphQL: Identifiable, Sendable {
     let deliveryRadius: Double?
     let facilities: [String]?
     let createdAt: String
+    let schedule: BranchSchedule?
     let products: [BranchProductGraphQL]  // Productos anidados (opcional, puede estar vacío)
 
     init(
@@ -110,6 +111,7 @@ struct BranchGraphQL: Identifiable, Sendable {
         avatarUrlBaja: String? = nil, avatarUrlAlta: String? = nil, coverUrl: String?,
         coverUrlBaja: String? = nil, coverUrlAlta: String? = nil, deliveryRadius: Double?,
         facilities: [String]?, createdAt: String,
+        schedule: BranchSchedule? = nil,
         products: [BranchProductGraphQL] = []
     ) {
         self.id = id
@@ -129,6 +131,7 @@ struct BranchGraphQL: Identifiable, Sendable {
         self.deliveryRadius = deliveryRadius
         self.facilities = facilities
         self.createdAt = createdAt
+        self.schedule = schedule
         self.products = products
     }
 

@@ -59,6 +59,7 @@ mutation CreateOrder($input: CreateOrderInput!, $jwt: String!) {
         pickupAddress {
             street
         }
+        scheduledFor
         branch {
             id
             name

@@ -1,3 +1,4 @@
+import CoreImage.CIFilterBuiltins
 import PhotosUI
 import SwiftUI
 
@@ -431,10 +432,10 @@ private struct TransferAccountCard: View {
         VStack(spacing: 0) {
             // Bank name row
             HStack {
-                Image(systemName: "building.columns.fill")
+                Image(systemName: "phone.fill")
                     .font(.system(size: 13))
                     .foregroundColor(gradientManager.currentAccentColor)
-                Text(account.bankName)
+                Text(account.confirmPhone)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(.secondary)
                 Spacer()
@@ -453,18 +454,19 @@ private struct TransferAccountCard: View {
                 .padding(.vertical, 10)
 
             // Card number row
-            HStack(spacing: 10) {
-                VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
                     Text("Número de tarjeta")
-                        .font(.system(size: 11))
+                        .font(.system(size: 12))
                         .foregroundColor(.secondary)
+                    Spacer()
                     Text(formattedCardNumber)
-                        .font(.system(size: 18, weight: .bold, design: .monospaced))
+                        .font(.system(size: 16, weight: .bold, design: .monospaced))
                         .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                         .tracking(1.5)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                 }
-
-                Spacer()
 
                 Button {
                     onCopy(account.cardNumber.replacingOccurrences(of: " ", with: ""))
@@ -472,11 +474,11 @@ private struct TransferAccountCard: View {
                     HStack(spacing: 5) {
                         Image(systemName: "doc.on.doc")
                             .font(.system(size: 13, weight: .semibold))
-                        Text("Copiar")
+                        Text("Copiar número")
                             .font(.system(size: 13, weight: .semibold))
                     }
                     .foregroundColor(.white)
-                    .padding(.horizontal, 14)
+                    .frame(maxWidth: .infinity)
                     .padding(.vertical, 9)
                     .background(
                         RoundedRectangle(cornerRadius: 10)
@@ -502,6 +504,35 @@ private struct TransferAccountCard: View {
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 Spacer()
             }
+
+            // Pago QR
+            if let qrString = account.pagoQr, !qrString.isEmpty,
+                let qrImage = generateQRCode(from: qrString)
+            {
+                Divider()
+                    .padding(.vertical, 10)
+
+                VStack(spacing: 10) {
+                    Label("Pago QR", systemImage: "qrcode")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+
+                    Image(uiImage: qrImage)
+                        .interpolation(.none)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 180, height: 180)
+                        .padding(12)
+                        .background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                    Text("Escanea con tu app de banco para pagar")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+            }
         }
         .padding(16)
         .background(
@@ -511,6 +542,19 @@ private struct TransferAccountCard: View {
                     color: .black.opacity(colorScheme == .dark ? 0.25 : 0.07),
                     radius: 8, x: 0, y: 4)
         )
+    }
+
+    private func generateQRCode(from string: String) -> UIImage? {
+        let context = CIContext()
+        let filter = CIFilter.qrCodeGenerator()
+        guard let data = string.data(using: .utf8) else { return nil }
+        filter.message = data
+        filter.correctionLevel = "M"
+        guard let ciImage = filter.outputImage else { return nil }
+        let scale = UIScreen.main.scale * 8
+        let scaled = ciImage.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+        guard let cgImage = context.createCGImage(scaled, from: scaled.extent) else { return nil }
+        return UIImage(cgImage: cgImage)
     }
 
     private var formattedCardNumber: String {

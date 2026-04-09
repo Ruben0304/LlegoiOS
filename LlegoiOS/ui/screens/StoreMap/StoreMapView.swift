@@ -143,11 +143,14 @@ struct StoreMapView: View {
                                     .clipShape(Circle())
                                 },
                                 failure: {
-                                    Image("generic_logo")
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                        .frame(width: 42, height: 42)
-                                        .clipShape(Circle())
+                                    ZStack {
+                                        Color.gray.opacity(0.15)
+                                        Image(systemName: "storefront")
+                                            .font(.system(size: 16))
+                                            .foregroundColor(.gray.opacity(0.5))
+                                    }
+                                    .frame(width: 42, height: 42)
+                                    .clipShape(Circle())
                                 }
                             )
                         }
@@ -299,8 +302,14 @@ private struct StoreMapOptionsModal: View {
                             switch phase {
                             case .success(let image):
                                 image.resizable().scaledToFill()
+                            case .empty:
+                                ZStack {
+                                    Color.gray.opacity(0.15)
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .llegoPrimary))
+                                }
                             default:
-                                Image("generic_cover").resizable().scaledToFill()
+                                Color.gray.opacity(0.15)
                             }
                         }
                     )
@@ -321,9 +330,12 @@ private struct StoreMapOptionsModal: View {
                         }
                     },
                     failure: {
-                        Image("generic_logo")
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
+                        ZStack {
+                            Color.gray.opacity(0.15)
+                            Image(systemName: "storefront")
+                                .font(.system(size: 24))
+                                .foregroundColor(.gray.opacity(0.5))
+                        }
                     }
                 )
                 .frame(width: 88, height: 88)

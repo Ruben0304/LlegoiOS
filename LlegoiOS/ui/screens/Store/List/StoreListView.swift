@@ -414,6 +414,28 @@ struct StoreWithCoordinates: Identifiable {
     let rating: Double?
     let description: String?
     let coordinate: CLLocationCoordinate2D
+    let schedule: BranchSchedule?
+
+    init(
+        id: String, name: String, etaMinutes: Int, logoUrl: String, bannerUrl: String,
+        address: String?, rating: Double?, description: String? = nil,
+        coordinate: CLLocationCoordinate2D, schedule: BranchSchedule? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.etaMinutes = etaMinutes
+        self.logoUrl = logoUrl
+        self.bannerUrl = bannerUrl
+        self.address = address
+        self.rating = rating
+        self.description = description
+        self.coordinate = coordinate
+        self.schedule = schedule
+    }
+
+    var isOpenNow: Bool? {
+        schedule?.currentStatus().isOpen
+    }
 
     func toStore() -> Store {
         Store(
@@ -813,9 +835,12 @@ private struct StoreListCard: View {
                 }
             },
             failure: {
-                Image("generic_logo")
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
+                ZStack {
+                    Color.gray.opacity(0.15)
+                    Image(systemName: "storefront")
+                        .font(.system(size: 18))
+                        .foregroundColor(.gray.opacity(0.5))
+                }
             }
         )
         .frame(width: 48, height: 48)
@@ -887,11 +912,14 @@ private struct FullScreenMapView: View {
                                     .clipShape(Circle())
                                 },
                                 failure: {
-                                    Image("generic_logo")
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                        .frame(width: 42, height: 42)
-                                        .clipShape(Circle())
+                                    ZStack {
+                                        Color.gray.opacity(0.15)
+                                        Image(systemName: "storefront")
+                                            .font(.system(size: 16))
+                                            .foregroundColor(.gray.opacity(0.5))
+                                    }
+                                    .frame(width: 42, height: 42)
+                                    .clipShape(Circle())
                                 }
                             )
                         }

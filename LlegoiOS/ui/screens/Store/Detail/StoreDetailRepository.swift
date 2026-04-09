@@ -37,6 +37,23 @@ class StoreDetailRepository {
                     return
                 }
 
+                let schedule = BranchSchedule(
+                    days: branch.schedule.days.map { d in
+                        DaySchedule(
+                            day: d.day,
+                            isOpen: d.isOpen,
+                            hours: d.hours.map { h in TimeRange(open: h.open, close: h.close) }
+                        )
+                    },
+                    temporaryStatus: branch.schedule.temporaryStatus.map { ts in
+                        BranchTemporaryStatus(
+                            temporallyClosed: ts.temporallyClosed,
+                            temporallyOpen: ts.temporallyOpen,
+                            reason: ts.reason
+                        )
+                    }
+                )
+
                 let branchDetail = BranchDetailGraphQL(
                     id: branch.id,
                     businessId: branch.businessId,
@@ -60,6 +77,7 @@ class StoreDetailRepository {
                     socialMedia: nil,
                     acceptedCurrency: branch.acceptedCurrency?.value?.rawValue,
                     exchangeRate: branch.exchangeRate,
+                    schedule: schedule,
                     showcases: branch.showcases.map { showcase in
                         ShowcaseGraphQL(
                             id: showcase.id,
@@ -431,6 +449,7 @@ struct BranchDetailGraphQL: Identifiable, Sendable {
     let socialMedia: [String: String]?
     let acceptedCurrency: String?
     let exchangeRate: Int?
+    let schedule: BranchSchedule?
     let showcases: [ShowcaseGraphQL]
 
     var preferredAvatarLargeUrl: String? {

@@ -444,14 +444,14 @@ final class OrderDetailRepository {
             .map { account in
                 OrderTransferAccount(
                     cardNumber: account.cardNumber,
+                    confirmPhone: account.confirmPhone,
                     cardHolderName: account.cardHolderName,
-                    bankName: account.bankName
+                    pagoQr: account.pagoQr
                 )
             }
 
-        let transferPhones = order.branch.phones
-            .filter { $0.isActive }
-            .map { OrderTransferPhone(phone: $0.phone) }
+        let transferPhones: [OrderTransferPhone] =
+            order.branch.phone.isEmpty ? [] : [OrderTransferPhone(phone: order.branch.phone)]
 
         return OrderDetail(
             id: order.id,
@@ -468,6 +468,7 @@ final class OrderDetailRepository {
             updatedAt: parseDate(order.updatedAt) ?? Date(),
             lastStatusAt: parseDate(order.lastStatusAt) ?? Date(),
             deadlineAt: order.deadlineAt.flatMap { parseDate($0) },
+            scheduledFor: order.scheduledFor.flatMap { parseDate($0) },
             deliveryVerificationCode: technicalStatus == .onTheWay
                 ? order.deliveryVerificationCode
                 : nil,

@@ -15,6 +15,8 @@ struct StoreDetailView: View {
     @State private var selectedComboId: String?
     @State private var selectedShowcase: ShowcaseGraphQL?
     @State private var showShowcaseAddedToast: Bool = false
+    @State private var extractedStoreGradient: ExtractedGradient = .placeholder
+    @State private var hasExtractedStoreGradient: Bool = false
 
     // Default images - Empty strings to trigger AsyncImage failure -> shows generic assets
     private let defaultLogoUrl = ""
@@ -26,11 +28,140 @@ struct StoreDetailView: View {
         return Int(radius * 5 + 10)
     }
 
+    // Secciones que ya no se usan se eliminan para limpiar el código
+    /*
     @ViewBuilder
-    private var currencyBadgeIfNeeded: some View {
-        if let currency = viewModel.branchDetail?.acceptedCurrency {
-            currencyBadge(currency: currency, exchangeRate: viewModel.branchDetail?.exchangeRate)
+    private var currencyBadgeIfNeeded: some View { ... }
+    
+    @ViewBuilder
+    private var scheduleStatusBadge: some View { ... }
+    */
+
+    private var scheduleStatus: BranchOpenStatus? {
+        viewModel.branchDetail?.schedule?.currentStatus()
+    }
+
+    @ViewBuilder
+    private var scheduleSection: some View {
+        if let schedule = viewModel.branchDetail?.schedule {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    sectionHeader(
+                        icon: "clock.fill",
+                        title: "Horario",
+                        subtitle: "Días y horas de atención"
+                    )
+                    Spacer()
+                    if let status = scheduleStatus {
+                        HStack(spacing: 5) {
+                            Circle()
+                                .fill(status.isOpen ? Color.green : Color.red)
+                                .frame(width: 7, height: 7)
+                            Text(status.label)
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(status.isOpen ? Color.green : Color.red)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill((status.isOpen ? Color.green : Color.red).opacity(0.1))
+                        )
+                    }
+                }
+
+                if let ts = schedule.temporaryStatus {
+                    if ts.temporallyClosed {
+                        HStack(spacing: 8) {
+                            Image(systemName: "moon.zzz.fill")
+                                .font(.system(size: 12))
+                                .foregroundColor(.orange)
+                            Text(ts.reason ?? "Temporalmente cerrado")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.orange)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(Color.orange.opacity(0.1))
+                        )
+                    } else if ts.temporallyOpen {
+                        HStack(spacing: 8) {
+                            Image(systemName: "sun.max.fill")
+                                .font(.system(size: 12))
+                                .foregroundColor(.green)
+                            Text(ts.reason ?? "Abierto excepcionalmente")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.green)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(Color.green.opacity(0.1))
+                        )
+                    }
+                }
+
+                let todayIndex = Calendar.current.component(.weekday, from: Date()) - 1
+                let sortedDays = schedule.days.sorted { $0.day < $1.day }
+                VStack(spacing: 0) {
+                    ForEach(Array(sortedDays.enumerated()), id: \.element.day) { index, day in
+                        scheduleRow(day: day, isToday: day.day == todayIndex)
+                        if index < sortedDays.count - 1 {
+                            Divider().padding(.leading, 14)
+                        }
+                    }
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color(.secondarySystemBackground))
+                )
+            }
+            .padding(.horizontal, 20)
         }
+    }
+
+    private func scheduleRow(day: DaySchedule, isToday: Bool) -> some View {
+        let dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
+        let name = day.day < dayNames.count ? dayNames[day.day] : "Día \(day.day)"
+        let accent = gradientManager.currentAccentColor
+        return HStack(spacing: 10) {
+            Text(name)
+                .font(.system(size: 14, weight: isToday ? .bold : .regular))
+                .foregroundColor(isToday ? .primary : .secondary)
+                .frame(width: 36, alignment: .leading)
+            if isToday {
+                Text("Hoy")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(accent)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(accent.opacity(0.12)))
+            }
+            Spacer()
+            if !day.isOpen || day.hours.isEmpty {
+                Text("Cerrado")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.red.opacity(0.7))
+            } else {
+                VStack(alignment: .trailing, spacing: 2) {
+                    ForEach(Array(day.hours.enumerated()), id: \.offset) { _, range in
+                        Text("\(range.open) – \(range.close)")
+                            .font(.system(size: 13, weight: isToday ? .semibold : .regular))
+                            .foregroundColor(isToday ? .primary : .secondary)
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(isToday ? accent.opacity(0.05) : Color.clear)
     }
 
     @ViewBuilder
@@ -154,6 +285,19 @@ struct StoreDetailView: View {
         return nil
     }
 
+    private var gradientSourceURL: URL? {
+        if let logoUrl = store?.logoUrl,
+           !logoUrl.isEmpty,
+           let url = URL(string: logoUrl) {
+            return url
+        }
+        return nil
+    }
+
+    private var resolvedStoreGradient: ExtractedGradient? {
+        hasExtractedStoreGradient ? extractedStoreGradient : nil
+    }
+
     // Initializer that accepts full Store (existing code compatibility)
     init(store: Store) {
         self.initialStore = store
@@ -179,6 +323,16 @@ struct StoreDetailView: View {
             GeometryReader { geometry in
                 ZStack(alignment: .top) {
                     Color.llegoSurface.ignoresSafeArea()
+
+                    GradientAsyncBackground(
+                        url: gradientSourceURL,
+                        cacheKey: "store_detail_logo_\(storeId)",
+                        gradient: $extractedStoreGradient
+                    )
+                    .frame(width: 0, height: 0)
+                    .opacity(0.001)
+                    .allowsHitTesting(false)
+                    .id(gradientSourceURL?.absoluteString ?? "no-store-gradient-source")
 
                     // LOADING STATE - Indicador nativo
                     if initialStore == nil && viewModel.isLoading {
@@ -227,14 +381,13 @@ struct StoreDetailView: View {
                                     AsyncImage(url: URL(string: store.bannerUrl)) { phase in
                                         switch phase {
                                         case .empty:
-                                            Image("generic_cover")
-                                                .resizable()
-                                                .aspectRatio(contentMode: .fill)
-                                                .frame(width: bannerGeo.size.width, height: 260)
-                                                .clipped()
-                                                .overlay(
-                                                    CircularLoadingIndicator(color: .llegoPrimary, lineWidth: 5, size: 50, useHDR: true)
-                                                )
+                                            ZStack {
+                                                Color.gray.opacity(0.15)
+                                                ProgressView()
+                                                    .progressViewStyle(CircularProgressViewStyle(tint: .llegoPrimary))
+                                                    .scaleEffect(1.5)
+                                            }
+                                            .frame(width: bannerGeo.size.width, height: 260)
                                         case .success(let image):
                                             image
                                                 .resizable()
@@ -242,17 +395,11 @@ struct StoreDetailView: View {
                                                 .frame(width: bannerGeo.size.width, height: 260)
                                                 .clipped()
                                         case .failure:
-                                            Image("generic_cover")
-                                                .resizable()
-                                                .aspectRatio(contentMode: .fill)
+                                            Color.gray.opacity(0.15)
                                                 .frame(width: bannerGeo.size.width, height: 260)
-                                                .clipped()
                                         @unknown default:
-                                            Image("generic_cover")
-                                                .resizable()
-                                                .aspectRatio(contentMode: .fill)
+                                            Color.gray.opacity(0.15)
                                                 .frame(width: bannerGeo.size.width, height: 260)
-                                                .clipped()
                                         }
                                     }
                                 }
@@ -291,38 +438,42 @@ struct StoreDetailView: View {
                                             )
                                             .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
                                     case .failure:
-                                        Image("generic_logo")
-                                            .resizable()
-                                            .aspectRatio(contentMode: .fill)
-                                            .frame(width: 110, height: 110)
-                                            .clipShape(Circle())
-                                            .overlay(
-                                                Circle()
-                                                    .stroke(Color.white, lineWidth: 5)
-                                            )
-                                            .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
+                                        ZStack {
+                                            Circle().fill(Color.gray.opacity(0.15))
+                                            Image(systemName: "storefront")
+                                                .font(.system(size: 32))
+                                                .foregroundColor(.gray.opacity(0.5))
+                                        }
+                                        .frame(width: 110, height: 110)
+                                        .overlay(
+                                            Circle()
+                                                .stroke(Color.white, lineWidth: 5)
+                                        )
+                                        .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
                                     @unknown default:
-                                        Image("generic_logo")
-                                            .resizable()
-                                            .aspectRatio(contentMode: .fill)
-                                            .frame(width: 110, height: 110)
-                                            .clipShape(Circle())
-                                            .overlay(
-                                                Circle()
-                                                    .stroke(Color.white, lineWidth: 5)
-                                            )
-                                            .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
+                                        ZStack {
+                                            Circle().fill(Color.gray.opacity(0.15))
+                                            Image(systemName: "storefront")
+                                                .font(.system(size: 32))
+                                                .foregroundColor(.gray.opacity(0.5))
+                                        }
+                                        .frame(width: 110, height: 110)
+                                        .overlay(
+                                            Circle()
+                                                .stroke(Color.white, lineWidth: 5)
+                                        )
+                                        .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
                                     }
                                 }
                                 .padding(.leading, 20)
                                 .offset(y: 55)
                             }
                             .frame(maxWidth: .infinity)
-                            .padding(.bottom, 75)
+                            .padding(.bottom, 75) // Restaurar el padding bottom original para que el contenido baje
 
                             // Main Content
-                            VStack(alignment: .leading, spacing: 20) {
-                                VStack(alignment: .leading, spacing: 14) {
+                            VStack(alignment: .leading, spacing: 32) {
+                                VStack(alignment: .leading, spacing: 16) {
                                     HStack(alignment: .top, spacing: 12) {
                                         VStack(alignment: .leading, spacing: 6) {
                                             Text(store.name)
@@ -348,218 +499,290 @@ struct StoreDetailView: View {
                                         if let rating = store.rating {
                                             HStack(spacing: 4) {
                                                 Image(systemName: "star.fill")
-                                                    .font(.system(size: 11, weight: .bold))
+                                                    .font(.system(size: 12, weight: .bold))
                                                     .foregroundColor(.yellow)
                                                 Text(String(format: "%.1f", rating))
-                                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                                    .font(.system(size: 15, weight: .bold, design: .rounded))
                                                     .foregroundColor(.primary)
                                             }
-                                            .padding(.horizontal, 10)
-                                            .padding(.vertical, 7)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 8)
                                             .background(
                                                 Capsule()
-                                                    .fill(Color.yellow.opacity(0.14))
+                                                    .fill(Color.yellow.opacity(0.15))
                                             )
                                         }
                                     }
 
-                                    HStack(spacing: 10) {
-                                        infoPill(
-                                            icon: "bolt.fill",
-                                            text: "Entrega en \(store.etaMinutes) min",
-                                            tint: .llegoPrimary
-                                        )
-                                        currencyBadgeIfNeeded
+                                    HStack(spacing: 12) {
+                                        // Tiempo de entrega (Estilo minimalista oscuro)
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "clock.fill")
+                                                .font(.system(size: 11, weight: .semibold))
+                                            Text("\(store.etaMinutes) min")
+                                                .font(.system(size: 13, weight: .bold))
+                                        }
+                                        .foregroundColor(.primary)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                        .background(Color.black.opacity(0.05))
+                                        .clipShape(Capsule())
+
+                                        // Estado del horario
+                                        if let status = scheduleStatus {
+                                            HStack(spacing: 6) {
+                                                Circle()
+                                                    .fill(status.isOpen ? Color.green : Color.red)
+                                                    .frame(width: 6, height: 6)
+                                                Text(status.label)
+                                                    .font(.system(size: 13, weight: .bold))
+                                                    .foregroundColor(status.isOpen ? Color.green : Color.red)
+                                            }
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 8)
+                                            .background(
+                                                Capsule()
+                                                    .strokeBorder((status.isOpen ? Color.green : Color.red).opacity(0.3), lineWidth: 1)
+                                                    .background(Capsule().fill((status.isOpen ? Color.green : Color.red).opacity(0.05)))
+                                            )
+                                        }
+
+                                        // Moneda
+                                        if let currency = viewModel.branchDetail?.acceptedCurrency {
+                                            let style = currencyBadgeStyle(currency: currency)
+                                            HStack(spacing: 4) {
+                                                Text(style.label)
+                                                    .font(.system(size: 12, weight: .bold))
+                                                    .foregroundColor(.primary)
+                                            }
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 8)
+                                            .background(
+                                                Capsule()
+                                                    .strokeBorder(Color.black.opacity(0.1), lineWidth: 1)
+                                                    .background(Capsule().fill(Color.white))
+                                            )
+                                        }
                                     }
                                 }
-                                .padding(18)
-                                .background(storeSectionCardBackground)
+                                .padding(.horizontal, 20)
+
+                                Divider()
+                                    .padding(.horizontal, 20)
+
+                                scheduleSection
 
                                 if let socialMedia = viewModel.socialMedia, !socialMedia.isEmpty {
-                                    VStack(alignment: .leading, spacing: 12) {
-                                        sectionHeader(
-                                            icon: "person.2.fill",
-                                            title: "Conéctate con nosotros",
-                                            subtitle: "Canales oficiales de esta tienda"
-                                        )
+                                    VStack(alignment: .leading, spacing: 16) {
+                                        Divider()
+                                            .padding(.horizontal, 20)
 
-                                        HStack(spacing: 12) {
-                                            if let instagramUrl = viewModel.getSocialMediaUrl(for: "instagram") {
-                                                SocialButton(
-                                                    iconAsset: "Instagram",
-                                                    title: "Instagram",
-                                                    gradient: [Color.pink, Color.purple, Color.orange],
-                                                    url: instagramUrl
-                                                )
-                                            }
-
-                                            if let facebookUrl = viewModel.getSocialMediaUrl(for: "facebook") {
-                                                SocialButton(
-                                                    iconAsset: "Facebook",
-                                                    title: "Facebook",
-                                                    color: Color.blue,
-                                                    url: facebookUrl
-                                                )
-                                            }
-                                        }
-                                    }
-                                    .padding(18)
-                                    .background(storeSectionCardBackground)
-                                }
-
-                                VStack(alignment: .leading, spacing: 12) {
-                                    sectionHeader(
-                                        icon: "map.fill",
-                                        title: "Ubicación",
-                                        subtitle: "Dirección de la sucursal"
-                                    )
-
-                                    if viewModel.hasCoordinates,
-                                       let coordinates = viewModel.branchDetail?.coordinates {
-                                        Map(position: mapPositionBinding) {
-                                            Marker("", coordinate: CLLocationCoordinate2D(latitude: coordinates.latitude, longitude: coordinates.longitude))
-                                        }
-                                        .frame(height: 200)
-                                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                                .stroke(Color.black.opacity(0.08), lineWidth: 1)
-                                        )
-                                        .onAppear {
-                                            region = MKCoordinateRegion(
-                                                center: CLLocationCoordinate2D(latitude: coordinates.latitude, longitude: coordinates.longitude),
-                                                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-                                            )
-                                        }
-                                    } else {
-                                        VStack(spacing: 10) {
-                                            Image(systemName: "map")
-                                                .font(.system(size: 30, weight: .medium))
-                                                .foregroundColor(.secondary.opacity(0.7))
-                                            Text("Sin ubicación disponible")
-                                                .font(.system(size: 15, weight: .semibold))
-                                                .foregroundColor(.secondary)
-                                            Text("Esta tienda aún no ha configurado su ubicación")
-                                                .font(.system(size: 12, weight: .medium))
-                                                .foregroundColor(.secondary.opacity(0.85))
-                                        }
-                                        .frame(maxWidth: .infinity)
-                                        .frame(height: 170)
-                                        .background(Color.black.opacity(0.03))
-                                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                    }
-                                }
-                                .padding(18)
-                                .background(storeSectionCardBackground)
-
-                                if !viewModel.siblingBranches.isEmpty {
-                                    VStack(alignment: .leading, spacing: 14) {
-                                        sectionHeader(
-                                            icon: "building.2.fill",
-                                            title: "Otras sedes",
-                                            subtitle: "Más sucursales del negocio"
-                                        )
-
-                                        if viewModel.isLoadingSiblings {
-                                            HStack {
-                                                Spacer()
-                                                ProgressView()
-                                                    .padding(.vertical, 12)
-                                                Spacer()
-                                            }
-                                        } else {
-                                            ScrollView(.horizontal, showsIndicators: false) {
-                                                HStack(spacing: 12) {
-                                                    ForEach(viewModel.siblingBranches, id: \.id) { branch in
-                                                        NavigationLink(destination: StoreDetailView(storeId: branch.id)) {
-                                                            SiblingBranchCard(
-                                                                branch: branch,
-                                                                eta: calculateETA(deliveryRadius: branch.deliveryRadius)
-                                                            )
-                                                        }
-                                                        .buttonStyle(.plain)
-                                                    }
-                                                }
-                                                .padding(.horizontal, 2)
-                                                .padding(.bottom, 6)
-                                            }
-                                        }
-                                    }
-                                    .padding(18)
-                                    .background(storeSectionCardBackground)
-                                }
-
-                                if viewModel.isLoadingCombos || !viewModel.branchCombos.isEmpty {
-                                    combosSection(store: store)
-                                }
-
-                                if !viewModel.branchShowcases.isEmpty {
-                                    showcasesSection()
-                                }
-
-                                if viewModel.isLoadingProducts || !viewModel.branchProducts.isEmpty {
-                                    VStack(alignment: .leading, spacing: 14) {
-                                        HStack {
+                                        VStack(alignment: .leading, spacing: 12) {
                                             sectionHeader(
-                                                icon: "bag.fill",
-                                                title: "Productos",
-                                                subtitle: "\(viewModel.branchProducts.count) disponibles"
+                                                icon: "person.2.fill",
+                                                title: "Conéctate con nosotros",
+                                                subtitle: "Canales oficiales de esta tienda"
                                             )
-                                            Spacer()
-                                            NavigationLink(destination: ProductListView(branchId: storeId, branchName: store.name)) {
-                                                HStack(spacing: 4) {
-                                                    Text("Ver todos")
-                                                        .font(.system(size: 13, weight: .semibold))
-                                                    Image(systemName: "chevron.right")
-                                                        .font(.system(size: 11, weight: .bold))
-                                                }
-                                                .foregroundColor(gradientManager.currentAccentColor)
-                                            }
-                                        }
 
-                                        if viewModel.isLoadingProducts {
-                                            HStack {
-                                                Spacer()
-                                                ProgressView()
-                                                    .padding(.vertical, 14)
-                                                Spacer()
-                                            }
-                                        } else {
-                                            LazyVGrid(
-                                                columns: [
-                                                    GridItem(.flexible(), spacing: 14),
-                                                    GridItem(.flexible(), spacing: 14),
-                                                ],
-                                                spacing: 18
-                                            ) {
-                                                ForEach(Array(viewModel.branchProducts.prefix(4)), id: \.id) { product in
-                                                    ProductCard(
-                                                        product: Product(
-                                                            id: product.id,
-                                                            name: product.name,
-                                                            shop: store.name,
-                                                            weight: "",
-                                                            price: formatPrice(price: product.price, currency: product.currency),
-                                                            imageUrl: product.imageUrl
-                                                        ),
-                                                        count: .constant(0),
-                                                        onIncrement: {},
-                                                        onDecrement: {},
-                                                        onProductTap: {
-                                                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                                            selectedProductId = product.id
-                                                        }
+                                            HStack(spacing: 12) {
+                                                if let instagramUrl = viewModel.getSocialMediaUrl(for: "instagram") {
+                                                    SocialButton(
+                                                        iconAsset: "Instagram",
+                                                        title: "Instagram",
+                                                        gradient: [Color.pink, Color.purple, Color.orange],
+                                                        url: instagramUrl
+                                                    )
+                                                }
+
+                                                if let facebookUrl = viewModel.getSocialMediaUrl(for: "facebook") {
+                                                    SocialButton(
+                                                        iconAsset: "Facebook",
+                                                        title: "Facebook",
+                                                        color: Color.blue,
+                                                        url: facebookUrl
                                                     )
                                                 }
                                             }
                                         }
+                                        .padding(.horizontal, 20)
                                     }
-                                    .padding(18)
-                                    .background(storeSectionCardBackground)
+                                }
+
+                                VStack(alignment: .leading, spacing: 16) {
+                                    Divider()
+                                        .padding(.horizontal, 20)
+
+                                    VStack(alignment: .leading, spacing: 12) {
+                                        sectionHeader(
+                                            icon: "map.fill",
+                                            title: "Ubicación",
+                                            subtitle: "Dirección de la sucursal"
+                                        )
+
+                                        if viewModel.hasCoordinates,
+                                           let coordinates = viewModel.branchDetail?.coordinates {
+                                            Map(position: mapPositionBinding) {
+                                                Marker("", coordinate: CLLocationCoordinate2D(latitude: coordinates.latitude, longitude: coordinates.longitude))
+                                            }
+                                            .frame(height: 200)
+                                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                                    .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                                            )
+                                            .onAppear {
+                                                region = MKCoordinateRegion(
+                                                    center: CLLocationCoordinate2D(latitude: coordinates.latitude, longitude: coordinates.longitude),
+                                                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+                                                )
+                                            }
+                                        } else {
+                                            VStack(spacing: 10) {
+                                                Image(systemName: "map")
+                                                    .font(.system(size: 30, weight: .medium))
+                                                    .foregroundColor(.secondary.opacity(0.7))
+                                                Text("Sin ubicación disponible")
+                                                    .font(.system(size: 15, weight: .semibold))
+                                                    .foregroundColor(.secondary)
+                                                Text("Esta tienda aún no ha configurado su ubicación")
+                                                    .font(.system(size: 12, weight: .medium))
+                                                    .foregroundColor(.secondary.opacity(0.85))
+                                            }
+                                            .frame(maxWidth: .infinity)
+                                            .frame(height: 170)
+                                            .background(Color.black.opacity(0.03))
+                                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                        }
+                                    }
+                                    .padding(.horizontal, 20)
+                                }
+
+                                if !viewModel.siblingBranches.isEmpty {
+                                    VStack(alignment: .leading, spacing: 16) {
+                                        Divider()
+                                            .padding(.horizontal, 20)
+
+                                        VStack(alignment: .leading, spacing: 14) {
+                                            sectionHeader(
+                                                icon: "building.2.fill",
+                                                title: "Otras sedes",
+                                                subtitle: "Más sucursales del negocio"
+                                            )
+                                            .padding(.horizontal, 20)
+
+                                            if viewModel.isLoadingSiblings {
+                                                HStack {
+                                                    Spacer()
+                                                    ProgressView()
+                                                        .padding(.vertical, 12)
+                                                    Spacer()
+                                                }
+                                            } else {
+                                                ScrollView(.horizontal, showsIndicators: false) {
+                                                    HStack(spacing: 12) {
+                                                        ForEach(viewModel.siblingBranches, id: \.id) { branch in
+                                                            NavigationLink(destination: StoreDetailView(storeId: branch.id)) {
+                                                                SiblingBranchCard(
+                                                                    branch: branch,
+                                                                    eta: calculateETA(deliveryRadius: branch.deliveryRadius)
+                                                                )
+                                                            }
+                                                            .buttonStyle(.plain)
+                                                        }
+                                                    }
+                                                    .padding(.horizontal, 20)
+                                                    .padding(.bottom, 6)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if viewModel.isLoadingCombos || !viewModel.branchCombos.isEmpty {
+                                    VStack(alignment: .leading, spacing: 16) {
+                                        Divider()
+                                            .padding(.horizontal, 20)
+                                        combosSection(store: store)
+                                    }
+                                }
+
+                                if !viewModel.branchShowcases.isEmpty {
+                                    VStack(alignment: .leading, spacing: 16) {
+                                        Divider()
+                                            .padding(.horizontal, 20)
+                                        showcasesSection()
+                                    }
+                                }
+
+                                if viewModel.isLoadingProducts || !viewModel.branchProducts.isEmpty {
+                                    VStack(alignment: .leading, spacing: 16) {
+                                        Divider()
+                                            .padding(.horizontal, 20)
+
+                                        VStack(alignment: .leading, spacing: 14) {
+                                            HStack {
+                                                sectionHeader(
+                                                    icon: "bag.fill",
+                                                    title: "Productos",
+                                                    subtitle: "\(viewModel.branchProducts.count) disponibles"
+                                                )
+                                                Spacer()
+                                                NavigationLink(destination: ProductListView(branchId: storeId, branchName: store.name, storeGradient: resolvedStoreGradient)) {
+                                                    HStack(spacing: 4) {
+                                                        Text("Ver todos")
+                                                            .font(.system(size: 13, weight: .semibold))
+                                                        Image(systemName: "chevron.right")
+                                                            .font(.system(size: 11, weight: .bold))
+                                                    }
+                                                    .foregroundColor(gradientManager.currentAccentColor)
+                                                }
+                                            }
+                                            .padding(.horizontal, 20)
+
+                                            if viewModel.isLoadingProducts {
+                                                HStack {
+                                                    Spacer()
+                                                    ProgressView()
+                                                        .padding(.vertical, 14)
+                                                    Spacer()
+                                                }
+                                            } else {
+                                                LazyVGrid(
+                                                    columns: [
+                                                        GridItem(.flexible(), spacing: 14),
+                                                        GridItem(.flexible(), spacing: 14),
+                                                    ],
+                                                    spacing: 18
+                                                ) {
+                                                    ForEach(Array(viewModel.branchProducts.prefix(4)), id: \.id) { product in
+                                                        ProductCard(
+                                                            product: Product(
+                                                                id: product.id,
+                                                                name: product.name,
+                                                                shop: store.name,
+                                                                weight: "",
+                                                                price: formatPrice(price: product.price, currency: product.currency),
+                                                                imageUrl: product.imageUrl
+                                                            ),
+                                                            count: .constant(0),
+                                                            onIncrement: {},
+                                                            onDecrement: {},
+                                                            onProductTap: {
+                                                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                                                selectedProductId = product.id
+                                                            }
+                                                        )
+                                                    }
+                                                }
+                                                .padding(.horizontal, 20)
+                                            }
+                                        }
+                                    }
                                 }
                             }
-                            .padding(.horizontal, 20)
                             .padding(.bottom, 40)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.llegoSurface) // Quitar la hoja blanca
                         }
                         }
                         .ignoresSafeArea(edges: .top)
@@ -581,16 +804,37 @@ struct StoreDetailView: View {
                     Button(action: {
                         toggleBranchLike()
                     }) {
-                        Image(systemName: branchLikesManager.isLiked(branchId: storeId) ? "heart.fill" : "heart")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(branchLikesManager.isLiked(branchId: storeId) ? .red : .primary)
+                        ZStack(alignment: .bottomTrailing) {
+                            Image(systemName: branchLikesManager.isLiked(branchId: storeId) ? "heart.fill" : "heart")
+                                .font(.system(size: 17, weight: .semibold))
+                            if !branchLikesManager.isLiked(branchId: storeId) {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .background(Circle().fill(Color.white))
+                                    .offset(x: 2, y: 2)
+                            }
+                        }
+                        .foregroundColor(gradientManager.currentAccentColor)
                     }
+                    .accessibilityLabel(
+                        branchLikesManager.isLiked(branchId: storeId)
+                            ? "Quitar de favoritos" : "Agregar a favoritos"
+                    )
+                    .accessibilityHint("Este botón agrega o quita este negocio de favoritos")
                 }
             }
             .onAppear {
                 // ALWAYS load full details from backend, even if we have initialStore
                 // This ensures we get products, siblings, business info, etc.
                 viewModel.loadBranchDetail(id: storeId)
+            }
+            .onChange(of: extractedStoreGradient) { _, _ in
+                if gradientSourceURL != nil {
+                    hasExtractedStoreGradient = true
+                }
+            }
+            .onChange(of: gradientSourceURL?.absoluteString) { _, newValue in
+                hasExtractedStoreGradient = newValue != nil
             }
             .fullScreenCover(item: $selectedProductId) { productId in
                 ProductDetailView(productId: productId)
@@ -638,16 +882,6 @@ struct StoreDetailView: View {
         )
     }
 
-    private var storeSectionCardBackground: some View {
-        RoundedRectangle(cornerRadius: 24, style: .continuous)
-            .fill(Color.white.opacity(0.95))
-            .overlay(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
-            )
-            .shadow(color: Color.black.opacity(0.06), radius: 14, x: 0, y: 4)
-    }
-
     private func sectionHeader(icon: String, title: String, subtitle: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
@@ -688,6 +922,7 @@ struct StoreDetailView: View {
                 title: "Vitrinas",
                 subtitle: "Pide por descripción manual"
             )
+            .padding(.horizontal, 20)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
@@ -766,12 +1001,10 @@ struct StoreDetailView: View {
                         )
                     }
                 }
-                .padding(.horizontal, 2)
+                .padding(.horizontal, 20)
                 .frame(height: 292)
             }
         }
-        .padding(18)
-        .background(storeSectionCardBackground)
     }
 
     // MARK: - Combos Section
@@ -786,6 +1019,7 @@ struct StoreDetailView: View {
                     ? "\(viewModel.branchCombos.count) \(viewModel.branchCombos.count == 1 ? "combo disponible" : "combos disponibles")"
                     : "Cargando combos"
             )
+            .padding(.horizontal, 20)
 
             if viewModel.isLoadingCombos {
                 HStack {
@@ -826,13 +1060,11 @@ struct StoreDetailView: View {
                             .frame(width: 220)
                         }
                     }
-                    .padding(.horizontal, 2)
+                    .padding(.horizontal, 20)
                     .padding(.vertical, 4)
                 }
             }
         }
-        .padding(18)
-        .background(storeSectionCardBackground)
     }
 
     // MARK: - Helper Methods
@@ -1025,9 +1257,12 @@ struct SiblingBranchCard: View {
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                 case .failure:
-                    Image("generic_logo")
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
+                    ZStack {
+                        Color.gray.opacity(0.1)
+                        Image(systemName: "storefront")
+                            .font(.system(size: 22))
+                            .foregroundColor(.gray.opacity(0.4))
+                    }
                 @unknown default:
                     Color.gray.opacity(0.1)
                 }

@@ -25,6 +25,7 @@ final class OrderDetailViewModel: ObservableObject {
     @Published var showTransferSheet = false
     @Published var activePaymentAttemptId: String?
     @Published var isConfirmingTransfer = false
+    @Published var transferPaymentConfirmed = false
 
     private let repository = OrderDetailRepository()
     private let paymentRepository = PaymentRepository()
@@ -54,7 +55,12 @@ final class OrderDetailViewModel: ObservableObject {
 
                 switch result {
                 case .success(let detail):
+                    print("📊 Order refreshed: status=\(detail.status.rawValue), customerVisibleStatus=\(detail.customerVisibleStatus.rawValue), paymentStatus=\(detail.paymentStatus.rawValue)")
                     self.order = detail
+                    // Reset flag local si el backend ya refleja que el pago avanzó
+                    if detail.paymentStatus != .pending || detail.status != .pendingPayment {
+                        self.transferPaymentConfirmed = false
+                    }
                     self.loadPaymentMethodIfNeeded(for: detail)
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
@@ -122,33 +128,6 @@ final class OrderDetailViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Resubmit Order
-
-    func resubmitOrder(onSuccess: @escaping @Sendable () -> Void = {}) {
-        guard let order = order, OrderPermissionPolicy.canResubmit(status: order.status) else {
-            return
-        }
-
-        isProcessing = true
-        errorMessage = nil
-
-        repository.resubmitOrder(orderId: orderId) { [weak self] result in
-            Task { @MainActor in
-                guard let self = self else { return }
-                self.isProcessing = false
-
-                switch result {
-                case .success(let updatedOrder):
-                    self.order = updatedOrder
-                    self.successMessage = "Pedido reenviado"
-                    self.loadPaymentMethodIfNeeded(for: updatedOrder)
-                    onSuccess()
-                case .failure(let error):
-                    self.errorMessage = error.localizedDescription
-                }
-            }
-        }
-    }
 
     // MARK: - Add Comment
 
@@ -293,6 +272,9 @@ final class OrderDetailViewModel: ObservableObject {
     }
 
     func canInitiatePayment(for order: OrderDetail) -> Bool {
+        // Si el cliente ya confirmó la transferencia en esta sesión, no mostrar botón de pago
+        if transferPaymentConfirmed { return false }
+
         // Usar el método del paymentMethod cargado, o el paymentMethod de la orden como fallback
         let methodType = paymentMethod?.method ?? order.paymentMethod
         
@@ -443,10 +425,6 @@ final class OrderDetailViewModel: ObservableObject {
         return OrderPermissionPolicy.canAcceptModifications(status: status)
     }
 
-    var canResubmitOrder: Bool {
-        guard let status = order?.status else { return false }
-        return OrderPermissionPolicy.canResubmit(status: status)
-    }
 
     var canCancelOrder: Bool {
         order?.canCancel ?? false
@@ -687,6 +665,7 @@ final class OrderDetailViewModel: ObservableObject {
                     return
                 }
 
+                print("🔍 initiatePayment → orderId: \(order.id), paymentMethodId: \(methodId), jwtPrefix: \(String(jwt.prefix(20)))...")
                 let result = try await paymentRepository.initiatePayment(
                     orderId: order.id,
                     paymentMethodId: methodId,
@@ -707,10 +686,7 @@ final class OrderDetailViewModel: ObservableObject {
                         self.refresh()
                         self.showPaymentAlertMessage("El estado del pedido cambió. Actualizamos la información.")
                     } else {
-                        // Si falla el initiate, mostramos el sheet de todas formas
-                        // para que el usuario vea los datos bancarios
-                        self.activePaymentAttemptId = nil
-                        self.showTransferSheet = true
+                        self.showPaymentAlertMessage(error.localizedDescription)
                     }
                 }
             }
@@ -734,12 +710,21 @@ final class OrderDetailViewModel: ObservableObject {
                     // Sin comprobante: ConfirmTransferByShortcut
                     try await repository.confirmTransferByShortcut(paymentAttemptId: attemptId)
                 }
-                // Si no hay attemptId, no podemos confirmar por API pero igual cerramos
+                // Si no hay attemptId no podemos confirmar por API — mostrar error
+                if activePaymentAttemptId == nil {
+                    await MainActor.run {
+                        self.isConfirmingTransfer = false
+                        self.showPaymentAlertMessage("No se pudo registrar tu pago: no hay un intento de pago activo. Intenta de nuevo o contacta al negocio.")
+                    }
+                    return
+                }
 
+                print("✅ confirmTransfer success, transferPaymentConfirmed = true")
                 await MainActor.run {
                     self.isConfirmingTransfer = false
                     self.showTransferSheet = false
                     self.activePaymentAttemptId = nil
+                    self.transferPaymentConfirmed = true
                     self.successMessage = proofImageData != nil
                         ? "¡Listo! Tu comprobante fue enviado. El negocio lo revisará en breve."
                         : "¡Listo! El negocio revisará tu pago y confirmará el pedido."
@@ -749,12 +734,12 @@ final class OrderDetailViewModel: ObservableObject {
                 await MainActor.run { self.refresh() }
 
             } catch {
+                print("⚠️ confirmTransfer error: \(error.localizedDescription)")
                 await MainActor.run {
                     self.isConfirmingTransfer = false
-                    // Cerramos el sheet y mostramos mensaje de éxito igual
-                    // porque la transferencia ya se realizó aunque falle el confirm
                     self.showTransferSheet = false
                     self.activePaymentAttemptId = nil
+                    self.transferPaymentConfirmed = true
                     self.successMessage = "Tu pago fue registrado. El negocio lo revisará en breve."
                     self.refresh()
                 }

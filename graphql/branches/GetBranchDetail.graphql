@@ -23,7 +23,21 @@ query GetBranchDetail($id: String!) {
         deliveryRadius
         acceptedCurrency
         exchangeRate
-        schedule
+        schedule {
+            days {
+                day
+                isOpen
+                hours {
+                    open
+                    close
+                }
+            }
+            temporaryStatus {
+                temporallyClosed
+                temporallyOpen
+                reason
+            }
+        }
         createdAt
         showcases(activeOnly: true) {
             id

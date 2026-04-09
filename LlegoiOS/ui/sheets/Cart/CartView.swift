@@ -49,6 +49,7 @@ struct CartView: View {
     @State private var showBankTransferSheet = false
     @State private var showOrderConfirmation = false
     @State private var showTransferSmsSheet = false
+    @State private var showScheduledOrderPicker = false
     @State private var pendingTransferPaymentMethodId: String?
     @State private var preInitiatedPaymentResult: InitiatePaymentResultModel?
     @State private var cashKycFlowContext: CashKycFlowContext?
@@ -210,6 +211,16 @@ struct CartView: View {
             Button("Cancelar", role: .cancel) {}
         } message: {
             Text(deliveryAddressAlertMessage)
+        }
+        .sheet(isPresented: $showScheduledOrderPicker) {
+            if let schedule = viewModel.branchSchedule {
+                ScheduledOrderPickerView(
+                    schedule: schedule,
+                    selectedDate: $viewModel.scheduledFor
+                )
+                .presentationDetents([.height(380)])
+                .presentationDragIndicator(.visible)
+            }
         }
         .sheet(item: $cashKycFlowContext) { context in
             CashKycFlowSheet(context: context) {
@@ -1092,9 +1103,13 @@ struct CartView: View {
                     multipleBranchesBanner
                 }
 
+                storeClosedBanner
+
                 if viewModel.isStorePickupEnabled && viewModel.isPickupAvailableForCurrentCart {
                     fulfillmentSelectorCard
                 }
+
+                scheduledOrderCard
 
                 priceBreakdown
             }
@@ -1682,6 +1697,76 @@ struct CartView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    // MARK: - Scheduled Order Card
+
+    private var scheduledOrderCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "calendar.clock")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(gradientManager.currentAccentColor)
+                Text("Programar pedido")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(gradientManager.currentAccentColor)
+                Spacer()
+                if viewModel.scheduledFor != nil {
+                    Button(action: { viewModel.scheduledFor = nil }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+
+            if let date = viewModel.scheduledFor {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                    Text(formattedScheduledDate(date))
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(.primary)
+                }
+            } else {
+                Text("Elige una franja horaria para hoy o mañana")
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
+            }
+
+            Button(action: { showScheduledOrderPicker = true }) {
+                HStack(spacing: 6) {
+                    Image(systemName: viewModel.scheduledFor != nil ? "pencil" : "clock")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text(viewModel.scheduledFor != nil ? "Cambiar hora" : "Seleccionar hora")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .foregroundColor(gradientManager.currentAccentColor)
+                .frame(maxWidth: .infinity)
+                .frame(height: 40)
+                .background(gradientManager.currentAccentColor.opacity(0.1))
+                .cornerRadius(12)
+            }
+            .buttonStyle(.plain)
+            .disabled(viewModel.branchSchedule == nil)
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white)
+                .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+        )
+    }
+
+    private func formattedScheduledDate(_ date: Date) -> String {
+        let havana = TimeZone(identifier: "America/Havana") ?? .current
+        let cal = Calendar.current
+        let dayLabel = cal.isDateInToday(date) ? "Hoy" : "Mañana"
+        let formatter = DateFormatter()
+        formatter.timeZone = havana
+        formatter.dateFormat = "h:mm a"
+        formatter.locale = Locale(identifier: "es_CU")
+        return "\(dayLabel) a las \(formatter.string(from: date))"
+    }
+
     // MARK: - Fulfillment Selector
 
     private var fulfillmentSelectorCard: some View {
@@ -1790,6 +1875,30 @@ struct CartView: View {
         )
     }
 
+    @ViewBuilder
+    private var storeClosedBanner: some View {
+        if let status = viewModel.branchOpenStatus, !status.isOpen {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(Color.red)
+                    .frame(width: 8, height: 8)
+                Text(status.label)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.red)
+                Spacer()
+                Text("Puedes hacer el pedido igualmente")
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.red.opacity(0.08))
+            )
+        }
+    }
+
     private func openMyOrdersFromCart() {
         showOrdersFromCart = true
     }
@@ -1822,7 +1931,9 @@ struct CartView: View {
                         Text(method.name)
                             .font(.system(size: 13, weight: .bold))
                             .lineLimit(1)
+                            .truncationMode(.tail)
                     }
+                    .frame(maxWidth: 120)
                 } else {
                     Image(systemName: "creditcard")
                         .font(.system(size: 15, weight: .semibold))

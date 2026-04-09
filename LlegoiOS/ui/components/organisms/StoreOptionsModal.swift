@@ -23,18 +23,19 @@ struct StoreOptionsModal: View {
                                 .scaledToFill()
                                 .frame(width: geometry.size.width, height: 180)
                                 .clipped()
-                        case .empty, .failure:
-                            Image("generic_cover")
-                                .resizable()
-                                .scaledToFill()
+                        case .empty:
+                            ZStack {
+                                Color.gray.opacity(0.15)
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .llegoPrimary))
+                            }
+                            .frame(width: geometry.size.width, height: 180)
+                        case .failure:
+                            Color.gray.opacity(0.15)
                                 .frame(width: geometry.size.width, height: 180)
-                                .clipped()
                         @unknown default:
-                            Image("generic_cover")
-                                .resizable()
-                                .scaledToFill()
+                            Color.gray.opacity(0.15)
                                 .frame(width: geometry.size.width, height: 180)
-                                .clipped()
                         }
                     }
                     .overlay(
@@ -68,9 +69,12 @@ struct StoreOptionsModal: View {
                         }
                     },
                     failure: {
-                        Image("generic_logo")
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
+                        ZStack {
+                            Color.gray.opacity(0.15)
+                            Image(systemName: "storefront")
+                                .font(.system(size: 28))
+                                .foregroundColor(.gray.opacity(0.5))
+                        }
                     }
                 )
                 .frame(width: 88, height: 88)
@@ -93,7 +97,24 @@ struct StoreOptionsModal: View {
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
-                
+
+                if let isOpen = store.isOpenNow {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(isOpen ? Color.green : Color.red)
+                            .frame(width: 8, height: 8)
+                        Text(isOpen ? "Abierto ahora" : "Cerrado ahora")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(isOpen ? Color.green : Color.red)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 7)
+                    .background(
+                        Capsule()
+                            .fill((isOpen ? Color.green : Color.red).opacity(0.1))
+                    )
+                }
+
                 if let address = store.address {
                     HStack(spacing: 6) {
                         Image(systemName: "location.fill")
@@ -131,13 +152,7 @@ struct StoreOptionsModal: View {
                     label: "min"
                 )
                 
-                // Estado
-                InfoPill(
-                    icon: "checkmark.circle.fill",
-                    iconColor: .green,
-                    value: "Abierto",
-                    label: "Ahora"
-                )
+
             }
             .padding(.horizontal, 24)
             .opacity(isAnimated ? 1 : 0)

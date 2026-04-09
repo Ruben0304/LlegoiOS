@@ -70,6 +70,22 @@ class StoreListRepository {
                             )
                         }
 
+                        let mappedSchedule = BranchSchedule(
+                            days: edge.node.schedule.days.map { d in
+                                DaySchedule(
+                                    day: d.day, isOpen: d.isOpen,
+                                    hours: d.hours.map { h in TimeRange(open: h.open, close: h.close) }
+                                )
+                            },
+                            temporaryStatus: edge.node.schedule.temporaryStatus.map { ts in
+                                BranchTemporaryStatus(
+                                    temporallyClosed: ts.temporallyClosed,
+                                    temporallyOpen: ts.temporallyOpen,
+                                    reason: ts.reason
+                                )
+                            }
+                        )
+
                         return BranchGraphQL(
                             id: edge.node.id,
                             businessId: edge.node.businessId,
@@ -91,6 +107,7 @@ class StoreListRepository {
                             deliveryRadius: edge.node.deliveryRadius,
                             facilities: nil,
                             createdAt: edge.node.createdAt,
+                            schedule: mappedSchedule,
                             products: mappedProducts
                         )
                     }
@@ -141,6 +158,22 @@ class StoreListRepository {
                                             )
                                         }
 
+                                        let mappedSchedule = BranchSchedule(
+                                            days: edge.node.schedule.days.map { d in
+                                                DaySchedule(
+                                                    day: d.day, isOpen: d.isOpen,
+                                                    hours: d.hours.map { h in TimeRange(open: h.open, close: h.close) }
+                                                )
+                                            },
+                                            temporaryStatus: edge.node.schedule.temporaryStatus.map { ts in
+                                                BranchTemporaryStatus(
+                                                    temporallyClosed: ts.temporallyClosed,
+                                                    temporallyOpen: ts.temporallyOpen,
+                                                    reason: ts.reason
+                                                )
+                                            }
+                                        )
+
                                         return BranchGraphQL(
                                             id: edge.node.id,
                                             businessId: edge.node.businessId,
@@ -162,6 +195,7 @@ class StoreListRepository {
                                             deliveryRadius: edge.node.deliveryRadius,
                                             facilities: nil,
                                             createdAt: edge.node.createdAt,
+                                            schedule: mappedSchedule,
                                             products: mappedProducts
                                         )
                                     }

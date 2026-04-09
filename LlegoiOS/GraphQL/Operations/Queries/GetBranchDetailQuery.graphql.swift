@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetBranchDetail"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetBranchDetail($id: String!) { branch(id: $id) { __typename id businessId name acceptsQvapay acceptsZelle qvapayUsername zelleEmail address coordinates { __typename type coordinates } phone status avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta deliveryRadius acceptedCurrency exchangeRate schedule createdAt showcases(activeOnly: true) { __typename id title description imageUrl isActive createdAt items { __typename id name description price availability } } } }"#
+        #"query GetBranchDetail($id: String!) { branch(id: $id) { __typename id businessId name acceptsQvapay acceptsZelle qvapayUsername zelleEmail address coordinates { __typename type coordinates } phone status avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta deliveryRadius acceptedCurrency exchangeRate schedule { __typename days { __typename day isOpen hours { __typename open close } } temporaryStatus { __typename temporallyClosed temporallyOpen reason } } createdAt showcases(activeOnly: true) { __typename id title description imageUrl isActive createdAt items { __typename id name description price availability } } } }"#
       ))
 
     public var id: String
@@ -65,7 +65,7 @@ public extension LlegoAPI {
           .field("deliveryRadius", Double?.self),
           .field("acceptedCurrency", GraphQLEnum<LlegoAPI.AcceptedCurrency>?.self),
           .field("exchangeRate", Int?.self),
-          .field("schedule", LlegoAPI.JSON.self),
+          .field("schedule", Schedule.self),
           .field("createdAt", LlegoAPI.DateTime.self),
           .field("showcases", [Showcase].self, arguments: ["activeOnly": true]),
         ] }
@@ -99,10 +99,98 @@ public extension LlegoAPI {
         public var deliveryRadius: Double? { __data["deliveryRadius"] }
         public var acceptedCurrency: GraphQLEnum<LlegoAPI.AcceptedCurrency>? { __data["acceptedCurrency"] }
         public var exchangeRate: Int? { __data["exchangeRate"] }
-        public var schedule: LlegoAPI.JSON { __data["schedule"] }
+        public var schedule: Schedule { __data["schedule"] }
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
         /// Showcases from this branch
         public var showcases: [Showcase] { __data["showcases"] }
+
+        /// Branch.Schedule
+        ///
+        /// Parent Type: `BranchScheduleType`
+        public struct Schedule: LlegoAPI.SelectionSet {
+          @_spi(Unsafe) public let __data: DataDict
+          @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+          @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.BranchScheduleType }
+          @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+            .field("__typename", String.self),
+            .field("days", [Day].self),
+            .field("temporaryStatus", TemporaryStatus?.self),
+          ] }
+          @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+            GetBranchDetailQuery.Data.Branch.Schedule.self
+          ] }
+
+          public var days: [Day] { __data["days"] }
+          public var temporaryStatus: TemporaryStatus? { __data["temporaryStatus"] }
+
+          /// Branch.Schedule.Day
+          ///
+          /// Parent Type: `DayScheduleType`
+          public struct Day: LlegoAPI.SelectionSet {
+            @_spi(Unsafe) public let __data: DataDict
+            @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+            @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.DayScheduleType }
+            @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+              .field("__typename", String.self),
+              .field("day", Int.self),
+              .field("isOpen", Bool.self),
+              .field("hours", [Hour].self),
+            ] }
+            @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+              GetBranchDetailQuery.Data.Branch.Schedule.Day.self
+            ] }
+
+            public var day: Int { __data["day"] }
+            public var isOpen: Bool { __data["isOpen"] }
+            public var hours: [Hour] { __data["hours"] }
+
+            /// Branch.Schedule.Day.Hour
+            ///
+            /// Parent Type: `TimeRangeType`
+            public struct Hour: LlegoAPI.SelectionSet {
+              @_spi(Unsafe) public let __data: DataDict
+              @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+              @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.TimeRangeType }
+              @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+                .field("__typename", String.self),
+                .field("open", String.self),
+                .field("close", String.self),
+              ] }
+              @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+                GetBranchDetailQuery.Data.Branch.Schedule.Day.Hour.self
+              ] }
+
+              public var open: String { __data["open"] }
+              public var close: String { __data["close"] }
+            }
+          }
+
+          /// Branch.Schedule.TemporaryStatus
+          ///
+          /// Parent Type: `TemporaryStatusType`
+          public struct TemporaryStatus: LlegoAPI.SelectionSet {
+            @_spi(Unsafe) public let __data: DataDict
+            @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+            @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.TemporaryStatusType }
+            @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+              .field("__typename", String.self),
+              .field("temporallyClosed", Bool.self),
+              .field("temporallyOpen", Bool.self),
+              .field("reason", String?.self),
+            ] }
+            @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+              GetBranchDetailQuery.Data.Branch.Schedule.TemporaryStatus.self
+            ] }
+
+            public var temporallyClosed: Bool { __data["temporallyClosed"] }
+            public var temporallyOpen: Bool { __data["temporallyOpen"] }
+            public var reason: String? { __data["reason"] }
+          }
+        }
 
         /// Branch.Coordinates
         ///

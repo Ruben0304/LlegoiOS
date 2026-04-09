@@ -23,6 +23,21 @@ query GetBranches($first: Int! = 20, $after: String, $businessId: String, $tipo:
         coverUrlBaja
         coverUrlAlta
         deliveryRadius
+        schedule {
+            days {
+                day
+                isOpen
+                hours {
+                    open
+                    close
+                }
+            }
+            temporaryStatus {
+                temporallyClosed
+                temporallyOpen
+                reason
+            }
+        }
         createdAt
         score
         distanceKm
