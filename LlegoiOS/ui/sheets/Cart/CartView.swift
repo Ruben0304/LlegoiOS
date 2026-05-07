@@ -153,6 +153,7 @@ struct CartView: View {
                         onDismiss: {
                             showOrderConfirmation = false
                             dismiss()
+                            NotificationCenter.default.post(name: .openOrdersFromCheckout, object: nil)
                         }
                     )
                 }

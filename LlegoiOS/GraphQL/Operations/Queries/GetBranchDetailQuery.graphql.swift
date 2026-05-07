@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetBranchDetail"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetBranchDetail($id: String!) { branch(id: $id) { __typename id businessId name acceptsQvapay acceptsZelle qvapayUsername zelleEmail address coordinates { __typename type coordinates } phone status avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta deliveryRadius acceptedCurrency exchangeRate schedule { __typename days { __typename day isOpen hours { __typename open close } } temporaryStatus { __typename temporallyClosed temporallyOpen reason } } createdAt showcases(activeOnly: true) { __typename id title description imageUrl isActive createdAt items { __typename id name description price availability } } } }"#
+        #"query GetBranchDetail($id: String!) { branch(id: $id) { __typename id businessId name acceptsQvapay acceptsZelle qvapayUsername zelleEmail address coordinates { __typename type coordinates } phone status avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta deliveryRadius acceptedCurrency exchangeRate schedule { __typename days { __typename day isOpen hours { __typename open close } } temporaryStatus { __typename temporallyClosed temporallyOpen reason } } catalogOnly createdAt showcases(activeOnly: true) { __typename id title description imageUrl isActive createdAt items { __typename id name description price availability } } } }"#
       ))
 
     public var id: String
@@ -66,6 +66,7 @@ public extension LlegoAPI {
           .field("acceptedCurrency", GraphQLEnum<LlegoAPI.AcceptedCurrency>?.self),
           .field("exchangeRate", Int?.self),
           .field("schedule", Schedule.self),
+          .field("catalogOnly", Bool.self),
           .field("createdAt", LlegoAPI.DateTime.self),
           .field("showcases", [Showcase].self, arguments: ["activeOnly": true]),
         ] }
@@ -100,9 +101,31 @@ public extension LlegoAPI {
         public var acceptedCurrency: GraphQLEnum<LlegoAPI.AcceptedCurrency>? { __data["acceptedCurrency"] }
         public var exchangeRate: Int? { __data["exchangeRate"] }
         public var schedule: Schedule { __data["schedule"] }
+        public var catalogOnly: Bool { __data["catalogOnly"] }
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
         /// Showcases from this branch
         public var showcases: [Showcase] { __data["showcases"] }
+
+        /// Branch.Coordinates
+        ///
+        /// Parent Type: `CoordinatesType`
+        public struct Coordinates: LlegoAPI.SelectionSet {
+          @_spi(Unsafe) public let __data: DataDict
+          @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+          @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.CoordinatesType }
+          @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+            .field("__typename", String.self),
+            .field("type", String.self),
+            .field("coordinates", [Double].self),
+          ] }
+          @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+            GetBranchDetailQuery.Data.Branch.Coordinates.self
+          ] }
+
+          public var type: String { __data["type"] }
+          public var coordinates: [Double] { __data["coordinates"] }
+        }
 
         /// Branch.Schedule
         ///
@@ -190,27 +213,6 @@ public extension LlegoAPI {
             public var temporallyOpen: Bool { __data["temporallyOpen"] }
             public var reason: String? { __data["reason"] }
           }
-        }
-
-        /// Branch.Coordinates
-        ///
-        /// Parent Type: `CoordinatesType`
-        public struct Coordinates: LlegoAPI.SelectionSet {
-          @_spi(Unsafe) public let __data: DataDict
-          @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
-
-          @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.CoordinatesType }
-          @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
-            .field("__typename", String.self),
-            .field("type", String.self),
-            .field("coordinates", [Double].self),
-          ] }
-          @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
-            GetBranchDetailQuery.Data.Branch.Coordinates.self
-          ] }
-
-          public var type: String { __data["type"] }
-          public var coordinates: [Double] { __data["coordinates"] }
         }
 
         /// Branch.Showcase

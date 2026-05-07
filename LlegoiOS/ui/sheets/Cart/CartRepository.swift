@@ -312,6 +312,43 @@ class CartRepository {
         }
     }
 
+    // MARK: - Service Fee Rate
+
+    /// Obtener la tasa de cargo de servicio configurada en el backend
+    func fetchServiceFeeRate(
+        completion: @escaping @Sendable (Result<Double, Error>) -> Void
+    ) {
+        let client = apolloClient
+
+        client.fetchCompat(
+            query: LlegoAPI.GetServiceFeeRateQuery(),
+            cachePolicy: .fetchIgnoringCacheData
+        ) { result in
+            switch result {
+            case .success(let graphQLResult):
+                if let errors = graphQLResult.errors {
+                    print("❌ GraphQL Errors fetching service fee rate:")
+                    errors.forEach { print("  - \($0.localizedDescription)") }
+                    completion(
+                        .failure(
+                            NSError(
+                                domain: "GraphQL", code: -1,
+                                userInfo: [NSLocalizedDescriptionKey: "Error obteniendo cargo de servicio"]
+                            )))
+                    return
+                }
+                if let rate = graphQLResult.data?.getServiceFeeRate {
+                    completion(.success(rate))
+                } else {
+                    completion(.success(0.10))  // fallback por defecto
+                }
+            case .failure(let error):
+                print("❌ Network error fetching service fee rate: \(error.localizedDescription)")
+                completion(.failure(error))
+            }
+        }
+    }
+
     // MARK: - AI Suggestions
 
     /// Obtener todos los productos de un branch para enviar a Apple Intelligence

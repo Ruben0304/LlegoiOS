@@ -38,6 +38,7 @@ query GetBranches($first: Int! = 20, $after: String, $businessId: String, $tipo:
                 reason
             }
         }
+        catalogOnly
         createdAt
         score
         distanceKm

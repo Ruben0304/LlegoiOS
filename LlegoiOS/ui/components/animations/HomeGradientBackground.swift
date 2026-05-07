@@ -63,6 +63,14 @@ struct HomeGradientBackground: View {
                 veryLight: Color(red: 0.90, green: 0.88, blue: 0.94),
                 overlay: Color(red: 0.25, green: 0.22, blue: 0.48)
             )
+        case 4: // Ropa - Rosa fucsia / magenta (chic fashion)
+            return (
+                dark: Color(red: 0.55, green: 0.12, blue: 0.32),
+                medium: Color(red: 0.78, green: 0.25, blue: 0.50),
+                light: Color(red: 0.92, green: 0.55, blue: 0.72),
+                veryLight: Color(red: 0.98, green: 0.90, blue: 0.94),
+                overlay: Color(red: 0.45, green: 0.08, blue: 0.25)
+            )
         default:
             return (
                 dark: Color(red: 0.5, green: 0.15, blue: 0.1),

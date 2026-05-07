@@ -95,7 +95,8 @@ class StoreDetailRepository {
                                 )
                             }
                         )
-                    }
+                    },
+                    catalogOnly: branch.catalogOnly
                 )
 
                 print(
@@ -451,6 +452,7 @@ struct BranchDetailGraphQL: Identifiable, Sendable {
     let exchangeRate: Int?
     let schedule: BranchSchedule?
     let showcases: [ShowcaseGraphQL]
+    let catalogOnly: Bool
 
     var preferredAvatarLargeUrl: String? {
         avatarLargeURL(low: avatarUrlBaja, original: avatarUrl, high: avatarUrlAlta)

@@ -85,14 +85,16 @@ class ProductListViewModel: ObservableObject {
 
     private var selectedCategoryId: String? {
         guard let selectedCategory else { return nil }
-        if selectedCategory == "all" { return nil }
-        if let byId = categories.first(where: { $0.id == selectedCategory }) {
-            return byId.isAll ? nil : byId.id
+        var categoryId: String? = nil
+        if selectedCategory == "all" {
+            categoryId = nil
+        } else if let byId = categories.first(where: { $0.id == selectedCategory }) {
+            categoryId = byId.isAll ? nil : byId.id
+        } else if let byName = categories.first(where: { $0.name == selectedCategory }) {
+            categoryId = byName.isAll ? nil : byName.id
         }
-        if let byName = categories.first(where: { $0.name == selectedCategory }) {
-            return byName.isAll ? nil : byName.id
-        }
-        return nil
+        print("ℹ️ ProductListViewModel.selectedCategoryId - Selected category: \(selectedCategory ?? "nil"), Resolved ID: \(categoryId ?? "nil")")
+        return categoryId
     }
 
     init() {
@@ -103,6 +105,12 @@ class ProductListViewModel: ObservableObject {
     }
 
     func loadCategories() {
+        if branchId != nil {
+            // En vista de negocio, las categorías se obtienen junto a productos
+            // usando branchProductCategories(onlyUsed: true) en la misma operación.
+            return
+        }
+
         isLoadingCategories = true
 
         // Obtener el tipo de negocio actual
@@ -180,73 +188,123 @@ class ProductListViewModel: ObservableObject {
         }
 
         print(
-            "📦 ProductListViewModel.loadProducts - branchId: \(branchId ?? "nil"), isRefreshing: \(isRefreshing), hasLoaded: \(hasLoaded)"
+            "📦 ProductListViewModel.loadProducts - branchId: \(branchId ?? "nil"), categoryId: \(selectedCategoryId ?? "nil"), isRefreshing: \(isRefreshing), hasLoaded: \(hasLoaded)"
         )
+
+        if let branchId {
+            repository.fetchBranchProductsWithCategories(
+                first: 8,
+                after: nil,
+                branchId: branchId,
+                categoryId: selectedCategoryId,
+                radiusKm: effectiveRadiusKm,
+                onlyUsedCategories: true
+            ) { [weak self] result in
+                guard let self = self else { return }
+                Task { @MainActor in
+                    switch result {
+                    case .success(let payload):
+                        // Actualizar categorías reales usadas por este negocio.
+                        var mappedCategories: [ProductCategory] = [
+                            ProductCategory(
+                                id: "all",
+                                name: "Todos",
+                                icon: "square.grid.2x2",
+                                isFeatured: false,
+                                isAll: true
+                            )
+                        ]
+                        mappedCategories.append(
+                            contentsOf: payload.categories.map {
+                                ProductCategory(
+                                    id: $0.id,
+                                    name: $0.name,
+                                    icon: $0.iconIos,
+                                    isFeatured: false,
+                                    isAll: false
+                                )
+                            }
+                        )
+                        self.categories = mappedCategories
+                        self.handleLoadProductsResult(
+                            .success((products: payload.products, pageInfo: payload.pageInfo)),
+                            isRefreshing: isRefreshing
+                        )
+                    case .failure(let error):
+                        self.handleLoadProductsResult(.failure(error), isRefreshing: isRefreshing)
+                    }
+                }
+            }
+            return
+        }
 
         repository.fetchProducts(
             first: 8, after: nil, branchId: branchId, categoryId: selectedCategoryId,
-            radiusKm: effectiveRadiusKm
-        ) { [weak self] result in
-            guard let self = self else { return }
-
-            Task { @MainActor in
-                switch result {
-                case .success(let (productsGraphQL, pageInfo)):
-                    // Mapear productos GraphQL a modelos UI
-                    self.products = productsGraphQL.map { productGraphQL in
-                        Product(
-                            id: productGraphQL.id,
-                            name: productGraphQL.name,
-                            shop: productGraphQL.businessName,
-                            shopLogoUrl: productGraphQL.businessLogoUrl,
-                            weight: "0",
-                            price: self.formatPrice(
-                                price: productGraphQL.price,
-                                currency: productGraphQL.currency
-                            ),
-                            imageUrl: productGraphQL.imageUrl
-                        )
-                    }
-
-                    // Update pagination state
-                    self.currentCursor = pageInfo.endCursor
-                    self.hasNextPage = pageInfo.hasNextPage
-                    self.totalCount = pageInfo.totalCount
-
-                    self.applyFiltersAndSort()
-
-                    // Marcar como completado
-                    self.isLoading = false
-                    self.hasLoaded = true
-                    if !isRefreshing {
-                        self.state = .success
-                    }
-
-                    print(
-                        "✅ Loaded \(self.products.count) products (hasNextPage: \(pageInfo.hasNextPage), totalCount: \(pageInfo.totalCount))"
-                            + (self.branchId != nil ? " for branch \(self.branchId!)" : ""))
-
-                case .failure(let error):
-                    self.isLoading = false
-
-                    // Mejorar mensaje de error para offline
-                    let nsError = error as NSError
-                    let isNetworkError =
-                        nsError.domain == NSURLErrorDomain
-                        && (nsError.code == NSURLErrorNotConnectedToInternet
-                            || nsError.code == NSURLErrorTimedOut
-                            || nsError.code == NSURLErrorCannotConnectToHost
-                            || nsError.code == NSURLErrorNetworkConnectionLost)
-
-                    let errorMessage =
-                        isNetworkError
-                        ? "No hay conexión a internet y no hay productos guardados en caché"
-                        : "Error al cargar productos: \(error.localizedDescription)"
-
-                    print("❌ ShopViewModel error: \(errorMessage)")
-                    self.state = .error(errorMessage)
+            radiusKm: effectiveRadiusKm,
+            completion: { [weak self] result in
+                guard let self = self else { return }
+                Task { @MainActor in
+                    self.handleLoadProductsResult(result, isRefreshing: isRefreshing)
                 }
             }
+        )
+    }
+
+    private func handleLoadProductsResult(
+        _ result: Result<(products: [ProductGraphQL], pageInfo: PageInfo), Error>,
+        isRefreshing: Bool
+    ) {
+        switch result {
+        case .success(let (productsGraphQL, pageInfo)):
+            products = productsGraphQL.map { productGraphQL in
+                Product(
+                    id: productGraphQL.id,
+                    name: productGraphQL.name,
+                    shop: productGraphQL.businessName,
+                    shopLogoUrl: productGraphQL.businessLogoUrl,
+                    weight: "0",
+                    price: formatPrice(
+                        price: productGraphQL.price,
+                        currency: productGraphQL.currency
+                    ),
+                    imageUrl: productGraphQL.imageUrl
+                )
+            }
+
+            currentCursor = pageInfo.endCursor
+            hasNextPage = pageInfo.hasNextPage
+            totalCount = pageInfo.totalCount
+
+            applyFiltersAndSort()
+
+            isLoading = false
+            hasLoaded = true
+            if !isRefreshing {
+                state = .success
+            }
+
+            print(
+                "✅ Loaded \(products.count) products (hasNextPage: \(pageInfo.hasNextPage), totalCount: \(pageInfo.totalCount))"
+                    + (branchId != nil ? " for branch \(branchId!)" : ""))
+
+        case .failure(let error):
+            isLoading = false
+
+            let nsError = error as NSError
+            let isNetworkError =
+                nsError.domain == NSURLErrorDomain
+                && (nsError.code == NSURLErrorNotConnectedToInternet
+                    || nsError.code == NSURLErrorTimedOut
+                    || nsError.code == NSURLErrorCannotConnectToHost
+                    || nsError.code == NSURLErrorNetworkConnectionLost)
+
+            let errorMessage =
+                isNetworkError
+                ? "No hay conexión a internet y no hay productos guardados en caché"
+                : "Error al cargar productos: \(error.localizedDescription)"
+
+            print("❌ ShopViewModel error: \(errorMessage)")
+            state = .error(errorMessage)
         }
     }
 
@@ -370,14 +428,7 @@ class ProductListViewModel: ObservableObject {
         // Note: When using vector search, text search is already done by the backend
         // So we skip the local text search when sourceProducts is provided
 
-        // Aplicar filtro de categoría
-        if let category = selectedCategory {
-            result = result.filter { product in
-                // Filtrar por nombre del producto que contenga la categoría
-                product.name.localizedCaseInsensitiveContains(category)
-                    || category.localizedCaseInsensitiveContains(product.name)
-            }
-        }
+        // El filtro de categoría se aplica en backend con categoryId.
 
         // El filtro de distancia ahora se aplica en el backend via radiusKm
         // No necesitamos filtrar localmente

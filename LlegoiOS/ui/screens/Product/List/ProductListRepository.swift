@@ -5,6 +5,42 @@ import Foundation
 class ProductListRepository {
     private let apolloClient = ApolloClientManager.shared.apollo
 
+    private static func mapProduct(_ node: LlegoAPI.GetProductsQuery.Data.Products.Edge.Node) -> ProductGraphQL {
+        ProductGraphQL(
+            id: node.id,
+            branchId: node.branchId,
+            name: node.name,
+            price: node.price,
+            currency: node.currency,
+            imageUrl: node.imageUrlBaja,
+            availability: node.availability,
+            createdAt: node.createdAt,
+            businessName: node.business?.name ?? "Tienda",
+            distanceKm: node.distanceKm,
+            categoryId: node.categoryId,
+            categoryName: node.category?.name ?? node.categoryName
+        )
+    }
+
+    private static func mapBranchProduct(_ node: LlegoAPI.GetBranchProductsWithCategoriesQuery.Data.Products.Edge.Node)
+        -> ProductGraphQL
+    {
+        ProductGraphQL(
+            id: node.id,
+            branchId: node.branchId,
+            name: node.name,
+            price: node.price,
+            currency: node.currency,
+            imageUrl: node.imageUrlBaja,
+            availability: node.availability,
+            createdAt: node.createdAt,
+            businessName: node.business?.name ?? "Tienda",
+            distanceKm: node.distanceKm,
+            categoryId: node.categoryId,
+            categoryName: node.category?.name ?? node.categoryName
+        )
+    }
+
     // Fetch all products from GraphQL with cursor pagination
     @MainActor func fetchProducts(
         first: Int = 20, after: String? = nil, branchId: String? = nil, categoryId: String? = nil,
@@ -168,6 +204,136 @@ class ProductListRepository {
         }
     }
 
+    @MainActor func fetchBranchProductsWithCategories(
+        first: Int = 20,
+        after: String? = nil,
+        branchId: String,
+        categoryId: String? = nil,
+        radiusKm: Double? = nil,
+        onlyUsedCategories: Bool = true,
+        completion: @escaping @Sendable (
+            Result<(
+                products: [ProductGraphQL],
+                categories: [ProductCategoryGraphQL],
+                pageInfo: PageInfo
+            ), Error>
+        ) -> Void
+    ) {
+        let jwt = AuthManager.shared.getAccessToken()
+        let query = LlegoAPI.GetBranchProductsWithCategoriesQuery(
+            first: Int32(100),
+            after: .none,
+            branchId: branchId,
+            categoryId: categoryId.map { .some($0) } ?? .none,
+            availableOnly: .none,
+            radiusKm: radiusKm.map { .some($0) } ?? .none,
+            jwt: jwt.map { .some($0) } ?? .none,
+            onlyUsed: onlyUsedCategories
+        )
+
+        let cachePolicy: ApolloCompatCachePolicy = .fetchIgnoringCacheData
+
+        apolloClient.fetchCompat(query: query, cachePolicy: cachePolicy) {
+            [apolloClient = self.apolloClient] result in
+            switch result {
+            case .success(let graphQLResult):
+                if let errors = graphQLResult.errors {
+                    completion(
+                        .failure(
+                            NSError(
+                                domain: "GraphQL", code: -1,
+                                userInfo: [NSLocalizedDescriptionKey: errors.map(\.localizedDescription).joined(separator: "\n")]
+                            )))
+                    return
+                }
+
+                guard let data = graphQLResult.data else {
+                    let emptyPageInfo = PageInfo(
+                        hasNextPage: false, hasPreviousPage: false, startCursor: nil,
+                        endCursor: nil, totalCount: 0)
+                    completion(.success((products: [], categories: [], pageInfo: emptyPageInfo)))
+                    return
+                }
+
+                let mappedProducts = data.products.edges.map { Self.mapBranchProduct($0.node) }
+                let mappedCategories = data.branchProductCategories.map { category in
+                    ProductCategoryGraphQL(
+                        id: category.id,
+                        branchType: category.branchType,
+                        name: category.name,
+                        iconIos: category.iconIos,
+                        iconWeb: category.iconWeb,
+                        iconAndroid: category.iconAndroid
+                    )
+                }
+
+                let pageInfo = PageInfo(
+                    hasNextPage: data.products.pageInfo.hasNextPage,
+                    hasPreviousPage: data.products.pageInfo.hasPreviousPage,
+                    startCursor: data.products.pageInfo.startCursor,
+                    endCursor: data.products.pageInfo.endCursor,
+                    totalCount: Int(data.products.pageInfo.totalCount)
+                )
+
+                completion(.success((products: mappedProducts, categories: mappedCategories, pageInfo: pageInfo)))
+
+            case .failure(let error):
+                let nsError = error as NSError
+                let isNetworkError =
+                    nsError.domain == NSURLErrorDomain
+                    && (nsError.code == NSURLErrorNotConnectedToInternet
+                        || nsError.code == NSURLErrorTimedOut
+                        || nsError.code == NSURLErrorCannotConnectToHost
+                        || nsError.code == NSURLErrorNetworkConnectionLost)
+
+                guard isNetworkError else {
+                    completion(.failure(error))
+                    return
+                }
+
+                apolloClient.fetchCompat(query: query, cachePolicy: .returnCacheDataDontFetch) { cacheResult in
+                    switch cacheResult {
+                    case .success(let graphQLResult):
+                        guard let data = graphQLResult.data else {
+                            let emptyPageInfo = PageInfo(
+                                hasNextPage: false, hasPreviousPage: false, startCursor: nil,
+                                endCursor: nil, totalCount: 0)
+                            completion(.success((products: [], categories: [], pageInfo: emptyPageInfo)))
+                            return
+                        }
+
+                        let mappedProducts = data.products.edges.map { Self.mapBranchProduct($0.node) }
+                        let mappedCategories = data.branchProductCategories.map { category in
+                            ProductCategoryGraphQL(
+                                id: category.id,
+                                branchType: category.branchType,
+                                name: category.name,
+                                iconIos: category.iconIos,
+                                iconWeb: category.iconWeb,
+                                iconAndroid: category.iconAndroid
+                            )
+                        }
+
+                        let pageInfo = PageInfo(
+                            hasNextPage: data.products.pageInfo.hasNextPage,
+                            hasPreviousPage: data.products.pageInfo.hasPreviousPage,
+                            startCursor: data.products.pageInfo.startCursor,
+                            endCursor: data.products.pageInfo.endCursor,
+                            totalCount: Int(data.products.pageInfo.totalCount)
+                        )
+
+                        completion(.success((products: mappedProducts, categories: mappedCategories, pageInfo: pageInfo)))
+                    case .failure:
+                        let emptyPageInfo = PageInfo(
+                            hasNextPage: false, hasPreviousPage: false, startCursor: nil,
+                            endCursor: nil, totalCount: 0)
+                        completion(.success((products: [], categories: [], pageInfo: emptyPageInfo)))
+                    }
+                }
+            }
+        }
+    }
+
     // Search products with vector search (with automatic fallback to text search)
     @MainActor func searchProducts(
         query: String, first: Int = 20, after: String? = nil, branchId: String? = nil,
@@ -182,13 +348,17 @@ class ProductListRepository {
         // Obtener tipo de branch global
         let branchType = BranchTypeManager.shared.selectedType.rawValue
 
+        let branchTipoParam: GraphQLNullable<GraphQLEnum<LlegoAPI.BranchTipo>> =
+            branchId == nil
+            ? (LlegoAPI.BranchTipo(rawValue: branchType.uppercased()).map { .some(GraphQLEnum($0)) } ?? .none)
+            : .none
+
         let searchQuery = LlegoAPI.SearchProductsQuery(
             query: query,
             first: Int32(first),
             after: after.map { .some($0) } ?? .none,
             useVectorSearch: .some(useVectorSearch),
-            branchTipo: LlegoAPI.BranchTipo(rawValue: branchType.uppercased()).map { .some(GraphQLEnum($0)) }
-                ?? .none,
+            branchTipo: branchTipoParam,
             categoryId: categoryId.map { .some($0) } ?? .none,
             radiusKm: radiusKm.map { .some($0) } ?? .none,
             jwt: jwt.map { .some($0) } ?? .none
@@ -238,9 +408,7 @@ class ProductListRepository {
                             first: Int32(first),
                             after: after.map { .some($0) } ?? .none,
                             useVectorSearch: .some(false),
-                            branchTipo: LlegoAPI.BranchTipo(rawValue: branchType.uppercased()).map {
-                                .some(GraphQLEnum($0))
-                            } ?? .none,
+                            branchTipo: branchTipoParam,
                             categoryId: categoryId.map { .some($0) } ?? .none,
                             radiusKm: radiusKm.map { .some($0) } ?? .none,
                             jwt: jwt.map { .some($0) } ?? .none

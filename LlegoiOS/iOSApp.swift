@@ -29,13 +29,33 @@ struct iOSApp: App {
             print("❌ Error creando ModelContainer: \(error.localizedDescription)")
         }
 
-        let key = "pk_test_FAKE_KEY_DO_NOT_USE_1234567890"
-        StripeAPI.defaultPublishableKey = key
+        // Fetch the Stripe publishable key from the backend at startup.
+        // This keeps the key centralized in the backend env vars (STRIPE_PUBLISHABLE_KEY).
+        Task {
+            guard let url = URL(string: "https://llegobackend-production.up.railway.app/stripe/config") else { return }
+            do {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let key = json["publishable_key"] as? String,
+                   key.hasPrefix("pk_") {
+                    StripeAPI.defaultPublishableKey = key
+                    print("✅ Stripe configured: \(key.prefix(20))...")
+                } else {
+                    print("⚠️ Stripe config: unexpected response format")
+                }
+            } catch {
+                print("⚠️ Failed to fetch Stripe config: \(error.localizedDescription)")
+            }
+        }
 
         _ = CartRecommendationsManager.shared
 
         // Limpiar caché de Apollo en cada inicio para evitar datos desactualizados
         ApolloClientManager.shared.clearDataCache()
+
+        Task {
+            await ServerClock.shared.sync()
+        }
     }
 
     var body: some Scene {

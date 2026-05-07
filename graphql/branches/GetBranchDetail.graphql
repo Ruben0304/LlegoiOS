@@ -38,6 +38,7 @@ query GetBranchDetail($id: String!) {
                 reason
             }
         }
+        catalogOnly
         createdAt
         showcases(activeOnly: true) {
             id

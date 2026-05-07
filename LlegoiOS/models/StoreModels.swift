@@ -104,6 +104,7 @@ struct BranchGraphQL: Identifiable, Sendable {
     let createdAt: String
     let schedule: BranchSchedule?
     let products: [BranchProductGraphQL]  // Productos anidados (opcional, puede estar vacío)
+    let catalogOnly: Bool
 
     init(
         id: String, businessId: String, name: String, description: String? = nil, address: String,
@@ -112,7 +113,8 @@ struct BranchGraphQL: Identifiable, Sendable {
         coverUrlBaja: String? = nil, coverUrlAlta: String? = nil, deliveryRadius: Double?,
         facilities: [String]?, createdAt: String,
         schedule: BranchSchedule? = nil,
-        products: [BranchProductGraphQL] = []
+        products: [BranchProductGraphQL] = [],
+        catalogOnly: Bool = false
     ) {
         self.id = id
         self.businessId = businessId
@@ -133,6 +135,7 @@ struct BranchGraphQL: Identifiable, Sendable {
         self.createdAt = createdAt
         self.schedule = schedule
         self.products = products
+        self.catalogOnly = catalogOnly
     }
 
     var preferredAvatarSmallUrl: String? {

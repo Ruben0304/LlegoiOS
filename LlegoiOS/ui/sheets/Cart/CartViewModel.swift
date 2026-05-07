@@ -108,9 +108,8 @@ class CartViewModel: ObservableObject {
         fulfillmentMode == .delivery
     }
 
-    // MARK: - Service Fee Constants
-    private let standardServiceFeeRate: Double = 0.15  // 15%
-    private let discountedServiceFeeRate: Double = 0.10  // 10% con descuento
+    // MARK: - Service Fee Rate (fetched from backend, fallback 10%)
+    @Published var serviceFeeRate: Double = 0.10
 
     init() {
         bindGlobalRecommendations()
@@ -170,9 +169,9 @@ class CartViewModel: ObservableObject {
         deliveryFeeEstimate?.zoneName
     }
 
-    /// Tasa de servicio actual (15% normal, 10% con descuento)
+    /// Tasa de servicio actual (obtenida del backend)
     var currentServiceFeeRate: Double {
-        hasWatchedAds ? discountedServiceFeeRate : standardServiceFeeRate
+        serviceFeeRate
     }
 
     /// Porcentaje de servicio formateado
@@ -185,10 +184,8 @@ class CartViewModel: ObservableObject {
         subtotal * currentServiceFeeRate
     }
 
-    /// Ahorro por ver anuncios
-    var adSavings: Double {
-        hasWatchedAds ? subtotal * (standardServiceFeeRate - discountedServiceFeeRate) : 0
-    }
+    /// Ahorro por ver anuncios (sin efecto mientras el backend maneja la tasa)
+    var adSavings: Double { 0 }
 
     var total: Double {
         subtotal + payableDeliveryFee + serviceFee
@@ -262,19 +259,15 @@ class CartViewModel: ObservableObject {
         formatPrice(total, currency: selectedCurrency)
     }
 
-    /// Total si viera los anuncios (para mostrar incentivo)
-    var totalWithDiscount: Double {
-        subtotal + payableDeliveryFee + (subtotal * discountedServiceFeeRate)
-    }
+    /// Total si viera los anuncios (igual al total normal ya que la tasa viene del backend)
+    var totalWithDiscount: Double { total }
 
     var formattedTotalWithDiscount: String {
-        formatPrice(totalWithDiscount, currency: selectedCurrency)
+        formattedTotal
     }
 
     /// Ahorro potencial si ve los anuncios
-    var potentialSavings: Double {
-        subtotal * (standardServiceFeeRate - discountedServiceFeeRate)
-    }
+    var potentialSavings: Double { 0 }
 
     var formattedPotentialSavings: String {
         formatPrice(potentialSavings, currency: selectedCurrency)
@@ -287,12 +280,27 @@ class CartViewModel: ObservableObject {
         }
     }
 
+    // MARK: - Service Fee
+
+    /// Obtener la tasa de cargo de servicio desde el backend
+    func fetchServiceFeeRate() {
+        repository.fetchServiceFeeRate { [weak self] result in
+            Task { @MainActor in
+                guard let self = self else { return }
+                if case .success(let rate) = result {
+                    self.serviceFeeRate = rate
+                }
+            }
+        }
+    }
+
     // MARK: - Actions
 
     /// Cargar productos del carrito (desde local + GraphQL)
     func loadCart() {
         state = .loading
         errorMessage = nil
+        fetchServiceFeeRate()
 
         repository.fetchCartProducts { [weak self] result in
             guard let self = self else { return }

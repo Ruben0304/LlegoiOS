@@ -5,7 +5,7 @@ import SwiftUI
 struct OrderTrackingView: View {
     @StateObject private var viewModel: OrderTrackingViewModel
     @ObservedObject private var cartManager = CartManager.shared
-    @State private var now = Date()
+    @State private var now = ServerClock.shared.now
     @State private var showReplaceCartAlert = false
     @State private var showCartEditor = false
     private let deadlineTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -69,7 +69,7 @@ struct OrderTrackingView: View {
         .onReceive(viewModel.$currentDeliveryLocation) { _ in
             updateMapRegion()
         }
-        .onReceive(deadlineTimer) { now = $0 }
+        .onReceive(deadlineTimer) { _ in now = ServerClock.shared.now }
     }
 
     // MARK: - Map Annotations

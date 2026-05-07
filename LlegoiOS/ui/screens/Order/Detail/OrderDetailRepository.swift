@@ -445,7 +445,7 @@ final class OrderDetailRepository {
                 OrderTransferAccount(
                     cardNumber: account.cardNumber,
                     confirmPhone: account.confirmPhone,
-                    cardHolderName: account.cardHolderName,
+                    cardHolderName: account.cardHolderName ?? "",
                     pagoQr: account.pagoQr
                 )
             }
@@ -460,6 +460,7 @@ final class OrderDetailRepository {
             customerVisibleStatus: visibleStatus,
             subtotal: order.subtotal,
             deliveryFee: order.deliveryFee,
+            serviceCharge: order.serviceCharge,
             total: order.total,
             currency: order.currency,
             paymentMethod: order.paymentMethod,
@@ -469,13 +470,12 @@ final class OrderDetailRepository {
             lastStatusAt: parseDate(order.lastStatusAt) ?? Date(),
             deadlineAt: order.deadlineAt.flatMap { parseDate($0) },
             scheduledFor: order.scheduledFor.flatMap { parseDate($0) },
-            deliveryVerificationCode: technicalStatus == .onTheWay
-                ? order.deliveryVerificationCode
-                : nil,
+            deliveryVerificationCode: order.deliveryVerificationCode,
             isEditable: order.isEditable,
             canCancel: order.canCancel,
             estimatedDeliveryTime: order.estimatedDeliveryTime.flatMap { parseDate($0) },
             estimatedMinutesRemaining: order.estimatedMinutesRemaining,
+            estimatedMinutes: nil,
             deliveryMode: fulfillmentMode,
             pickupAddress: fulfillmentMode == .pickup
                 ? OrderPickupAddress(

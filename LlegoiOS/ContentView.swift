@@ -201,6 +201,7 @@ struct MainAppView: View {
                         ToolbarItem(placement: .navigationBarLeading) {
                             CloseButton {
                                 showOrdersFromCheckout = false
+                                selectedTab = 0
                             }
                         }
                     }

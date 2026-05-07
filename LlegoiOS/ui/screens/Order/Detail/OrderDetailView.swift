@@ -10,7 +10,7 @@ struct OrderDetailView: View {
     @State private var showReplaceCartAlert = false
     @State private var showCartEditor = false
     @State private var showTracking = false
-    @State private var now = Date()
+    @State private var now = ServerClock.shared.now
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     private let deadlineTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -167,7 +167,7 @@ struct OrderDetailView: View {
                 onCompletion: viewModel.handleStripePaymentResult
             )
         )
-        .onReceive(deadlineTimer) { now = $0 }
+        .onReceive(deadlineTimer) { _ in now = ServerClock.shared.now }
     }
 
     // MARK: - Order Gradient Background
@@ -256,7 +256,21 @@ struct OrderDetailView: View {
 
                     Spacer()
 
-                    if let eta = order.estimatedMinutesRemaining {
+                    if let minutes = order.estimatedMinutes,
+                       [.accepted, .preparing].contains(order.displayStatus) {
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text("Tiempo de preparación")
+                                .font(.system(size: 13))
+                                .foregroundColor(.secondary)
+                            HStack(spacing: 4) {
+                                Image(systemName: "clock.fill")
+                                    .font(.system(size: 14))
+                                Text("\(minutes) min")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                            .foregroundColor(gradientManager.currentAccentColor)
+                        }
+                    } else if let eta = order.estimatedMinutesRemaining {
                         VStack(alignment: .trailing, spacing: 4) {
                             Text("Tiempo estimado")
                                 .font(.system(size: 13))
@@ -450,6 +464,9 @@ struct OrderDetailView: View {
                         title: order.isPickup ? "Recogida" : "Envío",
                         value: order.isPickup ? "$0.00" : order.formattedDeliveryFee
                     )
+                    if order.serviceCharge > 0 {
+                        priceRow(title: "Cargo de servicio", value: order.formattedServiceCharge)
+                    }
 
                     ForEach(order.discounts) { discount in
                         priceRow(
@@ -653,22 +670,8 @@ struct OrderDetailView: View {
                 }
             }
 
-            if order.status == .onTheWay,
-                let deliveryCode = order.deliveryVerificationCode,
-                !deliveryCode.isEmpty
-            {
-                card {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Código de verificación de entrega")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(Color.adaptiveOnSurface(colorScheme))
-                        Text(deliveryCode)
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
-                            .kerning(2)
-                            .foregroundColor(gradientManager.currentAccentColor)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
+            if let deliveryCode = order.deliveryVerificationCode, !deliveryCode.isEmpty {
+                deliveryCodeCard(deliveryCode)
             }
         }
     }
@@ -946,6 +949,7 @@ struct OrderDetailView: View {
                 .tint(.teal)
             }
         }
+
     }
 
     // MARK: - Helpers
@@ -1068,6 +1072,113 @@ struct OrderDetailView: View {
         let minutes = remaining / 60
         let seconds = remaining % 60
         return String(format: "\(absolute) • Vence en %02d:%02d", minutes, seconds)
+    }
+
+    // MARK: - Delivery Verification Code Card
+
+    @State private var codeCopied = false
+
+    private func deliveryCodeCard(_ code: String) -> some View {
+        Button {
+            UIPasteboard.general.string = code
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                codeCopied = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                withAnimation { codeCopied = false }
+            }
+        } label: {
+            VStack(spacing: 0) {
+                // Top strip — label row
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.shield.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text("Código de verificación de entrega")
+                        .font(.system(size: 12, weight: .semibold))
+                        .tracking(0.3)
+                    Spacer()
+                    Image(systemName: codeCopied ? "checkmark" : "doc.on.doc")
+                        .font(.system(size: 12, weight: .medium))
+                        .contentTransition(.symbolEffect(.replace))
+                }
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [Color.orange, Color(red: 1, green: 0.75, blue: 0.2)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .padding(.horizontal, 18)
+                .padding(.top, 14)
+                .padding(.bottom, 10)
+
+                Divider()
+                    .overlay(
+                        LinearGradient(
+                            colors: [Color.orange.opacity(0.4), Color.yellow.opacity(0.3), Color.orange.opacity(0.1)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+
+                // Code row
+                HStack(alignment: .center) {
+                    Text(code)
+                        .font(.system(size: 38, weight: .black, design: .monospaced))
+                        .kerning(6)
+                        .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+
+                    Spacer()
+
+                    Text(codeCopied ? "Copiado" : "Toca para\ncopiar")
+                        .font(.system(size: 11, weight: .medium))
+                        .multilineTextAlignment(.trailing)
+                        .foregroundColor(.secondary)
+                        .opacity(0.7)
+                }
+                .padding(.horizontal, 18)
+                .padding(.vertical, 14)
+
+                // Bottom warning
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 12))
+                        .foregroundColor(.orange)
+                        .padding(.top, 1)
+                    Text("Comparte este código **solo cuando tengas el pedido en tus manos**. Dárselo antes equivale a confirmar la entrega sin haberla recibido.")
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.orange.opacity(0.07))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .padding(.horizontal, 14)
+                .padding(.bottom, 14)
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(Color.cardBackground(colorScheme))
+                    .shadow(color: Color.orange.opacity(colorScheme == .dark ? 0.25 : 0.15), radius: 14, x: 0, y: 5)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                Color.orange.opacity(0.9),
+                                Color(red: 1, green: 0.75, blue: 0.2).opacity(0.6),
+                                Color.orange.opacity(0.2),
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.5
+                    )
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {

@@ -23,11 +23,12 @@ struct ProductListView: View {
     let initialBranchId: String?
     let branchName: String?
     let storeGradient: ExtractedGradient?
+    let catalogOnly: Bool
 
     // ViewModel propio para cuando hay branchId (no compartido)
     @StateObject private var branchViewModel = ProductListViewModel()
 
-    init(viewModel: ProductListViewModel? = nil, category: String? = nil, branchId: String? = nil, branchName: String? = nil, storeGradient: ExtractedGradient? = nil) {
+    init(viewModel: ProductListViewModel? = nil, category: String? = nil, branchId: String? = nil, branchName: String? = nil, storeGradient: ExtractedGradient? = nil, catalogOnly: Bool = false) {
         // Si hay branchId, usaremos branchViewModel (StateObject propio)
         // Si no hay branchId, usamos el viewModel pasado o creamos uno nuevo
         self._viewModel = ObservedObject(wrappedValue: viewModel ?? ProductListViewModel())
@@ -35,6 +36,7 @@ struct ProductListView: View {
         self.initialBranchId = branchId
         self.branchName = branchName
         self.storeGradient = storeGradient
+        self.catalogOnly = catalogOnly
     }
 
     // ViewModel activo: usa branchViewModel si hay branchId, sino usa el viewModel compartido
@@ -59,6 +61,13 @@ struct ProductListView: View {
 
     private var totalCartItems: Int {
         productCounts.values.reduce(0, +)
+    }
+
+    private var shouldShowCategoryScroll: Bool {
+        if initialBranchId != nil {
+            return !activeViewModel.categories.isEmpty
+        }
+        return isSearchFocused
     }
 
     private var shouldShowInitialBranchSkeleton: Bool {
@@ -127,8 +136,11 @@ struct ProductListView: View {
                     print("🏪 ProductListView.onAppear - No branchId (general product list)")
                 }
 
-                // Cargar categorías dinámicamente desde el backend
-                activeViewModel.loadCategories()
+                // En listado general cargamos categorías por branchType.
+                // En listado por negocio, llegan en la misma query de productos.
+                if initialBranchId == nil {
+                    activeViewModel.loadCategories()
+                }
 
                 // Forzar recarga cuando hay branchId para asegurar que se carguen los productos de esa tienda
                 print("🏪 ProductListView.onAppear - Calling loadProducts with branchId: \(activeViewModel.branchId ?? "nil"), isRefreshing: \(initialBranchId != nil)")
@@ -214,18 +226,20 @@ struct ProductListView: View {
                         .accessibilityLabel("Favoritos")
                     }
 
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button(action: {
-                            showCart = true
-                        }) {
-                            Image(systemName: "cart")
-                                .font(.system(size: 16, weight: .semibold))
-                                .frame(width: 30, height: 30)
-                                .foregroundColor(gradientManager.currentAccentColor)
+                    if !catalogOnly {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button(action: {
+                                showCart = true
+                            }) {
+                                Image(systemName: "cart")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .frame(width: 30, height: 30)
+                                    .foregroundColor(gradientManager.currentAccentColor)
+                            }
+                            .badge(cartManager.cartItemCount)
+                            .id("cart-toolbar-badge-\(cartManager.cartItemCount)")
+                            .accessibilityLabel("Carrito")
                         }
-                        .badge(cartManager.cartItemCount)
-                        .id("cart-toolbar-badge-\(cartManager.cartItemCount)")
-                        .accessibilityLabel("Carrito")
                     }
                 }
 
@@ -246,7 +260,7 @@ struct ProductListView: View {
                 }
             }
             .fullScreenCover(item: $selectedProductId) { productId in
-                ProductDetailView(productId: productId)
+                ProductDetailView(productId: productId, catalogOnly: catalogOnly)
             }
             .fullScreenCover(isPresented: $showCart) {
                 CartView()
@@ -254,13 +268,12 @@ struct ProductListView: View {
         }
     }
 
-
     // MARK: - Results Counter
 
 
     private var productsGrid: some View {
         ScrollView {
-            if isSearchFocused {
+            if shouldShowCategoryScroll {
                 categoryScroll
                     .transition(.asymmetric(
                         insertion: .move(edge: .top).combined(with: .opacity),
@@ -369,7 +382,7 @@ struct ProductListView: View {
 
     private var emptyStateScroll: some View {
         ScrollView {
-            if isSearchFocused {
+            if shouldShowCategoryScroll {
                 categoryScroll
                     .transition(.asymmetric(
                         insertion: .move(edge: .top).combined(with: .opacity),

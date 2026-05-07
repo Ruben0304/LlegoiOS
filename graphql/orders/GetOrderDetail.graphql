@@ -8,6 +8,7 @@ query GetOrderDetail($id: String!, $jwt: String!) {
         deliveryVerificationCode
         subtotal
         deliveryFee
+        serviceCharge
         total
         currency
         paymentMethod
@@ -21,6 +22,7 @@ query GetOrderDetail($id: String!, $jwt: String!) {
         canCancel
         estimatedDeliveryTime
         estimatedMinutesRemaining
+        estimatedMinutes
         items {
             itemType
             itemId

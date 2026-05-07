@@ -22,7 +22,7 @@ struct StripeConfig {
 
     /// Modo de desarrollo: usa datos mock sin llamar al backend
     /// ⚠️ ACTIVAR SOLO PARA TESTING. Desactivar cuando el backend esté listo.
-    static let useMockData = true
+    static let useMockData = false
 
     // MARK: - Apple Pay Configuration
 

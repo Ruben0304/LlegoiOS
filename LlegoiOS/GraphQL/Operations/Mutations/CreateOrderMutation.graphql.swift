@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "CreateOrder"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"mutation CreateOrder($input: CreateOrderInput!, $jwt: String!) { createOrder(input: $input, jwt: $jwt) { __typename id orderNumber status subtotal deliveryFee total currency paymentMethod paymentStatus createdAt deliveryMode scheduledFor items { __typename itemType itemId productId name basePrice finalPrice price quantity imageUrl lineTotal discountType discountValue comboSelections { __typename slotId slotName selectedOptions { __typename productId name price quantity priceAdjustment modifiers { __typename name priceAdjustment } } } } discounts { __typename id title amount type } deliveryAddress { __typename street city reference addressType buildingName floor apartment deliveryInstructions } pickupAddress { __typename street } branch { __typename id name avatarUrl } business { __typename id name } } }"#
+        #"mutation CreateOrder($input: CreateOrderInput!, $jwt: String!) { createOrder(input: $input, jwt: $jwt) { __typename id orderNumber status subtotal deliveryFee total currency paymentMethod paymentStatus createdAt deliveryMode items { __typename itemType itemId productId name basePrice finalPrice price quantity imageUrl lineTotal discountType discountValue comboSelections { __typename slotId slotName selectedOptions { __typename productId name price quantity priceAdjustment modifiers { __typename name priceAdjustment } } } } discounts { __typename id title amount type } deliveryAddress { __typename street city reference addressType buildingName floor apartment deliveryInstructions } pickupAddress { __typename street } scheduledFor branch { __typename id name avatarUrl } business { __typename id name } } }"#
       ))
 
     public var input: CreateOrderInput
@@ -67,11 +67,11 @@ public extension LlegoAPI {
           .field("paymentStatus", GraphQLEnum<LlegoAPI.PaymentStatusEnum>.self),
           .field("createdAt", LlegoAPI.DateTime.self),
           .field("deliveryMode", String.self),
-          .field("scheduledFor", LlegoAPI.DateTime?.self),
           .field("items", [Item].self),
           .field("discounts", [Discount].self),
           .field("deliveryAddress", DeliveryAddress.self),
           .field("pickupAddress", PickupAddress?.self),
+          .field("scheduledFor", LlegoAPI.DateTime?.self),
           .field("branch", Branch.self),
           .field("business", Business.self),
         ] }
@@ -90,7 +90,6 @@ public extension LlegoAPI {
         public var paymentStatus: GraphQLEnum<LlegoAPI.PaymentStatusEnum> { __data["paymentStatus"] }
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
         public var deliveryMode: String { __data["deliveryMode"] }
-        public var scheduledFor: LlegoAPI.DateTime? { __data["scheduledFor"] }
         /// Order items
         public var items: [Item] { __data["items"] }
         /// Applied discounts
@@ -99,6 +98,7 @@ public extension LlegoAPI {
         public var deliveryAddress: DeliveryAddress { __data["deliveryAddress"] }
         /// Pickup address (branch location)
         public var pickupAddress: PickupAddress? { __data["pickupAddress"] }
+        public var scheduledFor: LlegoAPI.DateTime? { __data["scheduledFor"] }
         /// Branch preparing the order
         public var branch: Branch { __data["branch"] }
         /// Business owning the branch

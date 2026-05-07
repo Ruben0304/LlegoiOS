@@ -108,7 +108,8 @@ class StoreListRepository {
                             facilities: nil,
                             createdAt: edge.node.createdAt,
                             schedule: mappedSchedule,
-                            products: mappedProducts
+                            products: mappedProducts,
+                            catalogOnly: edge.node.catalogOnly
                         )
                     }
 
@@ -196,7 +197,8 @@ class StoreListRepository {
                                             facilities: nil,
                                             createdAt: edge.node.createdAt,
                                             schedule: mappedSchedule,
-                                            products: mappedProducts
+                                            products: mappedProducts,
+                                            catalogOnly: false
                                         )
                                     }
 
@@ -515,7 +517,8 @@ class StoreListRepository {
                                             deliveryRadius: edge.node.deliveryRadius,
                                             facilities: nil,
                                             createdAt: edge.node.createdAt,
-                                            products: mappedProducts
+                                            products: mappedProducts,
+                                            catalogOnly: false
                                         )
                                     }
 
@@ -584,7 +587,8 @@ class StoreListRepository {
                             deliveryRadius: edge.node.deliveryRadius,
                             facilities: nil,
                             createdAt: edge.node.createdAt,
-                            products: mappedProducts
+                            products: mappedProducts,
+                            catalogOnly: false
                         )
                     }
 

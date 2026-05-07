@@ -53,3 +53,85 @@ query GetProductCategories($branchType: String) {
     createdAt
   }
 }
+
+query GetBranchProductCategories($branchId: String!, $onlyUsed: Boolean! = true) {
+  branchProductCategories(branchId: $branchId, onlyUsed: $onlyUsed) {
+    id
+    branchType
+    name
+    iconIos
+    iconWeb
+    iconAndroid
+    createdAt
+  }
+}
+
+query GetBranchProductsWithCategories(
+  $first: Int! = 20
+  $after: String
+  $branchId: String!
+  $categoryId: String
+  $availableOnly: Boolean
+  $radiusKm: Float
+  $jwt: String
+  $onlyUsed: Boolean! = true
+) {
+  products(
+    first: $first
+    after: $after
+    branchId: $branchId
+    categoryId: $categoryId
+    availableOnly: $availableOnly
+    radiusKm: $radiusKm
+    jwt: $jwt
+  ) {
+    edges {
+      node {
+        id
+        branchId
+        name
+        price
+        currency
+        imageUrlBaja
+        availability
+        createdAt
+        distanceKm
+        score
+        categoryId
+        categoryName
+        category {
+          id
+          branchType
+          name
+          iconIos
+          iconWeb
+          iconAndroid
+        }
+        business {
+          id
+          name
+          avatarUrl
+          avatarUrlBaja
+          avatarUrlAlta
+        }
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      startCursor
+      endCursor
+      totalCount
+    }
+  }
+  branchProductCategories(branchId: $branchId, onlyUsed: $onlyUsed) {
+    id
+    branchType
+    name
+    iconIos
+    iconWeb
+    iconAndroid
+    createdAt
+  }
+}

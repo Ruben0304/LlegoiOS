@@ -55,7 +55,7 @@ final class OrderDetailViewModel: ObservableObject {
 
                 switch result {
                 case .success(let detail):
-                    print("📊 Order refreshed: status=\(detail.status.rawValue), customerVisibleStatus=\(detail.customerVisibleStatus.rawValue), paymentStatus=\(detail.paymentStatus.rawValue)")
+                    print("📊 Order refreshed: status=\(detail.status.rawValue), customerVisibleStatus=\(detail.customerVisibleStatus.rawValue), paymentStatus=\(detail.paymentStatus.rawValue), deliveryVerificationCode=\(detail.deliveryVerificationCode ?? "nil")")
                     self.order = detail
                     // Reset flag local si el backend ya refleja que el pago avanzó
                     if detail.paymentStatus != .pending || detail.status != .pendingPayment {

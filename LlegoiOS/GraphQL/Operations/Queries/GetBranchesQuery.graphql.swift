@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetBranches"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetBranches($first: Int! = 20, $after: String, $businessId: String, $tipo: BranchTipo, $radiusKm: Float, $productCategoryId: String, $jwt: String, $productsLimit: Int = 2) { branches( first: $first after: $after businessId: $businessId tipo: $tipo radiusKm: $radiusKm productCategoryId: $productCategoryId jwt: $jwt ) { __typename edges { __typename node { __typename id businessId name acceptsQvapay acceptsZelle qvapayUsername zelleEmail address coordinates { __typename type coordinates } phone status avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta deliveryRadius schedule { __typename days { __typename day isOpen hours { __typename open close } } temporaryStatus { __typename temporallyClosed temporallyOpen reason } } createdAt score distanceKm products(limit: $productsLimit, availableOnly: false) { __typename id name price currency imageUrlBaja } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
+        #"query GetBranches($first: Int! = 20, $after: String, $businessId: String, $tipo: BranchTipo, $radiusKm: Float, $productCategoryId: String, $jwt: String, $productsLimit: Int = 2) { branches( first: $first after: $after businessId: $businessId tipo: $tipo radiusKm: $radiusKm productCategoryId: $productCategoryId jwt: $jwt ) { __typename edges { __typename node { __typename id businessId name acceptsQvapay acceptsZelle qvapayUsername zelleEmail address coordinates { __typename type coordinates } phone status avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta deliveryRadius schedule { __typename days { __typename day isOpen hours { __typename open close } } temporaryStatus { __typename temporallyClosed temporallyOpen reason } } catalogOnly createdAt score distanceKm products(limit: $productsLimit, availableOnly: false) { __typename id name price currency imageUrlBaja } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
       ))
 
     public var first: Int32
@@ -144,6 +144,7 @@ public extension LlegoAPI {
               .field("coverUrlAlta", String?.self),
               .field("deliveryRadius", Double?.self),
               .field("schedule", Schedule.self),
+              .field("catalogOnly", Bool.self),
               .field("createdAt", LlegoAPI.DateTime.self),
               .field("score", Double.self),
               .field("distanceKm", Double?.self),
@@ -181,12 +182,34 @@ public extension LlegoAPI {
             public var coverUrlAlta: String? { __data["coverUrlAlta"] }
             public var deliveryRadius: Double? { __data["deliveryRadius"] }
             public var schedule: Schedule { __data["schedule"] }
+            public var catalogOnly: Bool { __data["catalogOnly"] }
             public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
             public var score: Double { __data["score"] }
             /// Distance in kilometers from user
             public var distanceKm: Double? { __data["distanceKm"] }
             /// Products from this branch
             public var products: [Product] { __data["products"] }
+
+            /// Branches.Edge.Node.Coordinates
+            ///
+            /// Parent Type: `CoordinatesType`
+            public struct Coordinates: LlegoAPI.SelectionSet {
+              @_spi(Unsafe) public let __data: DataDict
+              @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+              @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.CoordinatesType }
+              @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+                .field("__typename", String.self),
+                .field("type", String.self),
+                .field("coordinates", [Double].self),
+              ] }
+              @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+                GetBranchesQuery.Data.Branches.Edge.Node.Coordinates.self
+              ] }
+
+              public var type: String { __data["type"] }
+              public var coordinates: [Double] { __data["coordinates"] }
+            }
 
             /// Branches.Edge.Node.Schedule
             ///
@@ -208,6 +231,9 @@ public extension LlegoAPI {
               public var days: [Day] { __data["days"] }
               public var temporaryStatus: TemporaryStatus? { __data["temporaryStatus"] }
 
+              /// Branches.Edge.Node.Schedule.Day
+              ///
+              /// Parent Type: `DayScheduleType`
               public struct Day: LlegoAPI.SelectionSet {
                 @_spi(Unsafe) public let __data: DataDict
                 @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
@@ -227,6 +253,9 @@ public extension LlegoAPI {
                 public var isOpen: Bool { __data["isOpen"] }
                 public var hours: [Hour] { __data["hours"] }
 
+                /// Branches.Edge.Node.Schedule.Day.Hour
+                ///
+                /// Parent Type: `TimeRangeType`
                 public struct Hour: LlegoAPI.SelectionSet {
                   @_spi(Unsafe) public let __data: DataDict
                   @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
@@ -246,6 +275,9 @@ public extension LlegoAPI {
                 }
               }
 
+              /// Branches.Edge.Node.Schedule.TemporaryStatus
+              ///
+              /// Parent Type: `TemporaryStatusType`
               public struct TemporaryStatus: LlegoAPI.SelectionSet {
                 @_spi(Unsafe) public let __data: DataDict
                 @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
@@ -265,27 +297,6 @@ public extension LlegoAPI {
                 public var temporallyOpen: Bool { __data["temporallyOpen"] }
                 public var reason: String? { __data["reason"] }
               }
-            }
-
-            /// Branches.Edge.Node.Coordinates
-            ///
-            /// Parent Type: `CoordinatesType`
-            public struct Coordinates: LlegoAPI.SelectionSet {
-              @_spi(Unsafe) public let __data: DataDict
-              @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
-
-              @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.CoordinatesType }
-              @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
-                .field("__typename", String.self),
-                .field("type", String.self),
-                .field("coordinates", [Double].self),
-              ] }
-              @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
-                GetBranchesQuery.Data.Branches.Edge.Node.Coordinates.self
-              ] }
-
-              public var type: String { __data["type"] }
-              public var coordinates: [Double] { __data["coordinates"] }
             }
 
             /// Branches.Edge.Node.Product

@@ -6,7 +6,7 @@ struct RecentOrderCard: View {
     @StateObject private var gradientManager = GradientStateManager.shared
     @Environment(\.colorScheme) private var colorScheme
     @State private var showingTransferPayment = false
-    @State private var now = Date()
+    @State private var now = ServerClock.shared.now
     private let deadlineTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
@@ -31,7 +31,7 @@ struct RecentOrderCard: View {
                     color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.1), radius: 10, x: 0,
                     y: 5)
         )
-        .onReceive(deadlineTimer) { now = $0 }
+        .onReceive(deadlineTimer) { _ in now = ServerClock.shared.now }
     }
 
     // MARK: - Header Section

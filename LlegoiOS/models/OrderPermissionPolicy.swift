@@ -35,11 +35,12 @@ enum OrderPermissionPolicy {
         slaDeadlineStatuses.contains(status.normalizedForContract)
     }
 
+    @MainActor
     static func isTimedOutCancellation(status: OrderStatusEnum, deadlineAt: Date?) -> Bool {
         guard status.normalizedForContract == .cancelled, let deadlineAt else {
             return false
         }
-        return deadlineAt <= Date()
+        return deadlineAt <= ServerClock.shared.now
     }
 
     static func canShowTransferPaymentShortcut(

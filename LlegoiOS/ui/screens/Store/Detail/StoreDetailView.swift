@@ -563,6 +563,20 @@ struct StoreDetailView: View {
                                                     .background(Capsule().fill(Color.white))
                                             )
                                         }
+
+                                        // Solo catálogo
+                                        if viewModel.branchDetail?.catalogOnly == true {
+                                            HStack(spacing: 5) {
+                                                Image(systemName: "eye.fill")
+                                                    .font(.system(size: 11, weight: .semibold))
+                                                Text("Solo catálogo")
+                                                    .font(.system(size: 12, weight: .bold))
+                                            }
+                                            .foregroundColor(.white)
+                                            .padding(.horizontal, 12)
+                                            .padding(.vertical, 8)
+                                            .background(Capsule().fill(Color.llegoPrimary))
+                                        }
                                     }
                                 }
                                 .padding(.horizontal, 20)
@@ -706,7 +720,7 @@ struct StoreDetailView: View {
                                     }
                                 }
 
-                                if !viewModel.branchShowcases.isEmpty {
+                                if !viewModel.branchShowcases.isEmpty && viewModel.branchDetail?.catalogOnly != true {
                                     VStack(alignment: .leading, spacing: 16) {
                                         Divider()
                                             .padding(.horizontal, 20)
@@ -727,7 +741,7 @@ struct StoreDetailView: View {
                                                     subtitle: "\(viewModel.branchProducts.count) disponibles"
                                                 )
                                                 Spacer()
-                                                NavigationLink(destination: ProductListView(branchId: storeId, branchName: store.name, storeGradient: resolvedStoreGradient)) {
+                                                NavigationLink(destination: ProductListView(branchId: storeId, branchName: store.name, storeGradient: resolvedStoreGradient, catalogOnly: viewModel.branchDetail?.catalogOnly ?? false)) {
                                                     HStack(spacing: 4) {
                                                         Text("Ver todos")
                                                             .font(.system(size: 13, weight: .semibold))
@@ -837,7 +851,7 @@ struct StoreDetailView: View {
                 hasExtractedStoreGradient = newValue != nil
             }
             .fullScreenCover(item: $selectedProductId) { productId in
-                ProductDetailView(productId: productId)
+                ProductDetailView(productId: productId, catalogOnly: viewModel.branchDetail?.catalogOnly ?? false)
             }
             .fullScreenCover(item: $selectedComboId) { comboId in
                 ComboDetailView(comboId: comboId)

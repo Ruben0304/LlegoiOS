@@ -3,6 +3,7 @@ import UIKit
 
 struct ProductDetailView: View {
     let productId: String
+    var catalogOnly: Bool = false
 
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = ProductDetailViewModel()
@@ -105,36 +106,38 @@ struct ProductDetailView: View {
                     .accessibilityHint("Este botón agrega o quita este producto de favoritos")
                 }
 
-                ToolbarItem(placement: .topBarTrailing) {
-                    if cartManager.cartItemCount > 0 {
-                        Button(action: {
-                            showCart = true
-                        }) {
-                            Image(systemName: "cart")
-                                .foregroundColor(gradientManager.currentAccentColor)
+                if !catalogOnly {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        if cartManager.cartItemCount > 0 {
+                            Button(action: {
+                                showCart = true
+                            }) {
+                                Image(systemName: "cart")
+                                    .foregroundColor(gradientManager.currentAccentColor)
+                            }
+                            .badge(cartManager.cartItemCount)
+                            .id("cart-toolbar-badge-\(cartManager.cartItemCount)")
+                            .accessibilityLabel("Carrito")
+                        } else {
+                            Button(action: {
+                                showCart = true
+                            }) {
+                                Image(systemName: "cart")
+                                    .foregroundColor(gradientManager.currentAccentColor)
+                            }
+                            .accessibilityLabel("Carrito")
                         }
-                        .badge(cartManager.cartItemCount)
-                        .id("cart-toolbar-badge-\(cartManager.cartItemCount)")
-                        .accessibilityLabel("Carrito")
-                    } else {
-                        Button(action: {
-                            showCart = true
-                        }) {
-                            Image(systemName: "cart")
-                                .foregroundColor(gradientManager.currentAccentColor)
-                        }
-                        .accessibilityLabel("Carrito")
                     }
-                }
 
-                // Bottom bar flotante - Quantity control
-                ToolbarItem(placement: .bottomBar) {
-                    quantityControlView
-                }
+                    // Bottom bar flotante - Quantity control
+                    ToolbarItem(placement: .bottomBar) {
+                        quantityControlView
+                    }
 
-                // Bottom bar flotante - Add to cart button
-                ToolbarItem(placement: .bottomBar) {
-                    addToCartButton
+                    // Bottom bar flotante - Add to cart button
+                    ToolbarItem(placement: .bottomBar) {
+                        addToCartButton
+                    }
                 }
 
             }

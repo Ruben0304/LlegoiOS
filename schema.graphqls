@@ -63,6 +63,8 @@ type Query {
   productCategories(branchType: String = null): [ProductCategoryType!]!
   "Get product category by ID"
   productCategory(id: String!): ProductCategoryType
+  "Get product categories for a branch"
+  branchProductCategories(branchId: String!, onlyUsed: Boolean! = false): [ProductCategoryType!]!
   "Obtener un combo por ID"
   combo(comboId: String!): ComboType
   "Obtener todos los combos de una sucursal"
@@ -304,6 +306,7 @@ type BranchType {
   tipos: [BranchTipo!]!
   paymentMethodIds: [String!]!
   useAppMessaging: Boolean!
+  catalogOnly: Boolean!
   pickupEnabled: Boolean!
   vehicles: [BranchVehicle!]!
   accounts: [TransferAccountType!]!
@@ -522,6 +525,7 @@ type ScoredBranchType {
   tipos: [BranchTipo!]!
   paymentMethodIds: [String!]!
   useAppMessaging: Boolean!
+  catalogOnly: Boolean!
   pickupEnabled: Boolean!
   vehicles: [BranchVehicle!]!
   accounts: [TransferAccountType!]!
@@ -990,6 +994,8 @@ type OrderType {
   customerVisibleStatus: OrderStatusEnum!
   "Estimated minutes remaining for delivery"
   estimatedMinutesRemaining: Int
+  "Preparation time in minutes set by the business when accepting the order"
+  estimatedMinutes: Int
 }
 type OrderItemType {
   productId: String!
@@ -2418,6 +2424,7 @@ input UpdateBranchInput {
   tipos: [BranchTipo!] = null
   paymentMethodIds: [String!] = null
   useAppMessaging: Boolean = null
+  catalogOnly: Boolean = null
   pickupEnabled: Boolean = null
   vehicles: [BranchVehicle!] = null
   acceptedCurrency: AcceptedCurrency = null

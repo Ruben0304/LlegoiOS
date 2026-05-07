@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetOrderDetail"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetOrderDetail($id: String!, $jwt: String!) { order(id: $id, jwt: $jwt) { __typename id orderNumber status customerVisibleStatus deadlineAt deliveryVerificationCode subtotal deliveryFee total currency paymentMethod paymentStatus deliveryMode scheduledFor createdAt updatedAt lastStatusAt isEditable canCancel estimatedDeliveryTime estimatedMinutesRemaining items { __typename itemType itemId productId name basePrice finalPrice price quantity imageUrlMuyBaja imageUrl wasModifiedByStore lineTotal discountType discountValue comboSelections { __typename slotId slotName selectedOptions { __typename productId name price quantity priceAdjustment modifiers { __typename name priceAdjustment } } } } discounts { __typename id title amount type } deliveryAddress { __typename street city reference addressType buildingName floor apartment deliveryInstructions coordinates { __typename type coordinates } } pickupAddress { __typename street } deliveryPerson { __typename id name phone rating vehicleType vehiclePlate profileImageUrl isOnline } timeline { __typename status timestamp message actor } comments { __typename id author message timestamp } branch { __typename id name address phone avatarUrl accounts { __typename cardNumber confirmPhone cardHolderName pagoQr isActive } coordinates { __typename type coordinates } } business { __typename id name avatarUrl } } }"#
+        #"query GetOrderDetail($id: String!, $jwt: String!) { order(id: $id, jwt: $jwt) { __typename id orderNumber status customerVisibleStatus deadlineAt deliveryVerificationCode subtotal deliveryFee serviceCharge total currency paymentMethod paymentStatus deliveryMode scheduledFor createdAt updatedAt lastStatusAt isEditable canCancel estimatedDeliveryTime estimatedMinutesRemaining items { __typename itemType itemId productId name basePrice finalPrice price quantity imageUrlMuyBaja imageUrl wasModifiedByStore lineTotal discountType discountValue comboSelections { __typename slotId slotName selectedOptions { __typename productId name price quantity priceAdjustment modifiers { __typename name priceAdjustment } } } } discounts { __typename id title amount type } deliveryAddress { __typename street city reference addressType buildingName floor apartment deliveryInstructions coordinates { __typename type coordinates } } pickupAddress { __typename street } deliveryPerson { __typename id name phone rating vehicleType vehiclePlate profileImageUrl isOnline } timeline { __typename status timestamp message actor } comments { __typename id author message timestamp } branch { __typename id name address phone avatarUrl accounts { __typename cardNumber confirmPhone cardHolderName pagoQr isActive } coordinates { __typename type coordinates } } business { __typename id name avatarUrl } } }"#
       ))
 
     public var id: String
@@ -64,6 +64,7 @@ public extension LlegoAPI {
           .field("deliveryVerificationCode", String?.self),
           .field("subtotal", Double.self),
           .field("deliveryFee", Double.self),
+          .field("serviceCharge", Double.self),
           .field("total", Double.self),
           .field("currency", String.self),
           .field("paymentMethod", String.self),
@@ -101,6 +102,7 @@ public extension LlegoAPI {
         public var deliveryVerificationCode: String? { __data["deliveryVerificationCode"] }
         public var subtotal: Double { __data["subtotal"] }
         public var deliveryFee: Double { __data["deliveryFee"] }
+        public var serviceCharge: Double { __data["serviceCharge"] }
         public var total: Double { __data["total"] }
         public var currency: String { __data["currency"] }
         public var paymentMethod: String { __data["paymentMethod"] }
@@ -486,7 +488,7 @@ public extension LlegoAPI {
               .field("__typename", String.self),
               .field("cardNumber", String.self),
               .field("confirmPhone", String.self),
-              .field("cardHolderName", String.self),
+              .field("cardHolderName", String?.self),
               .field("pagoQr", String?.self),
               .field("isActive", Bool.self),
             ] }
@@ -496,7 +498,7 @@ public extension LlegoAPI {
 
             public var cardNumber: String { __data["cardNumber"] }
             public var confirmPhone: String { __data["confirmPhone"] }
-            public var cardHolderName: String { __data["cardHolderName"] }
+            public var cardHolderName: String? { __data["cardHolderName"] }
             public var pagoQr: String? { __data["pagoQr"] }
             public var isActive: Bool { __data["isActive"] }
           }

@@ -9,6 +9,7 @@ struct OrderDetail: Identifiable {
     let customerVisibleStatus: OrderStatusEnum
     let subtotal: Double
     let deliveryFee: Double
+    let serviceCharge: Double
     let total: Double
     let currency: String
     let paymentMethod: String
@@ -23,6 +24,7 @@ struct OrderDetail: Identifiable {
     let canCancel: Bool
     let estimatedDeliveryTime: Date?
     let estimatedMinutesRemaining: Int?
+    let estimatedMinutes: Int?
     let deliveryMode: FulfillmentMode?
     let pickupAddress: OrderPickupAddress?
     let estimatedReadyAt: Date?
@@ -51,6 +53,7 @@ struct OrderDetail: Identifiable {
 
     var formattedSubtotal: String { String(format: "$%.2f", subtotal) }
     var formattedDeliveryFee: String { String(format: "$%.2f", deliveryFee) }
+    var formattedServiceCharge: String { String(format: "$%.2f", serviceCharge) }
     var formattedTotal: String { String(format: "$%.2f", total) }
     var isPickup: Bool { deliveryMode == .pickup }
     var displayStatus: OrderStatusEnum {
