@@ -147,58 +147,64 @@ struct ProductFeedView: View {
     }
 
     // MARK: - Feed Content
+
     private var feedContent: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                // Categories filter chips
                 categoriesSection.padding(.top, 8)
 
-                // "Para ti" section - Featured products with large cards
-                if let paraTiSection = viewModel.paraTiSection, !paraTiSection.products.isEmpty {
-                    featuredProductsSection(section: paraTiSection)
+                ForEach(viewModel.sectionOrder, id: \.self) { slot in
+                    feedSlotView(slot)
                 }
 
-                // First dynamic section from backend (except para_ti)
-                if let firstSection = viewModel.horizontalSections.first,
-                    !viewModel.filteredProducts(for: firstSection).isEmpty
-                {
-                    dynamicSection(firstSection)
-                }
-
-                // Stores section (loaded separately) - forced as 3rd main section
-                if !viewModel.filteredStores.isEmpty {
-                    storesSection
-                }
-
-                // Combos section
-                if !viewModel.combos.isEmpty {
-                    combosSection
-                }
-
-                // Remaining dynamic sections
-                ForEach(Array(viewModel.horizontalSections.dropFirst())) { section in
-                    if !viewModel.filteredProducts(for: section).isEmpty {
-                        dynamicSection(section)
-                    }
-                }
-
-                // Tutorials section
-                if viewModel.showTutorials && !viewModel.tutorials.isEmpty {
-                    tutorialsSection
-                        .transition(
-                            .asymmetric(
-                                insertion: .opacity.combined(with: .move(edge: .top)),
-                                removal: .opacity.combined(with: .scale(scale: 0.95))
-                            ))
-                }
-
-                // Loading more indicator
                 if viewModel.isLoadingMore {
                     ProgressView().tint(gradientManager.currentAccentColor).padding(.vertical, 20)
                 }
             }
         }
         .refreshable { await refreshFeed() }
+    }
+
+    @ViewBuilder
+    private func feedSlotView(_ slot: ProductFeedViewModel.SectionSlot) -> some View {
+        switch slot {
+        case .paraTi:
+            if let section = viewModel.paraTiSection, !section.products.isEmpty {
+                featuredProductsSection(section: section)
+            }
+        case .pideDeNuevo:
+            if !viewModel.reorderItems.isEmpty {
+                reorderSection
+            }
+        case .dynamicFirst:
+            if let firstSection = viewModel.horizontalSections.first,
+               !viewModel.filteredProducts(for: firstSection).isEmpty {
+                dynamicSection(firstSection)
+            }
+        case .stores:
+            if !viewModel.filteredStores.isEmpty {
+                storesSection
+            }
+        case .combos:
+            if !viewModel.combos.isEmpty {
+                combosSection
+            }
+        case .dynamicRest:
+            ForEach(Array(viewModel.horizontalSections.dropFirst())) { section in
+                if !viewModel.filteredProducts(for: section).isEmpty {
+                    dynamicSection(section)
+                }
+            }
+        case .tutorials:
+            if viewModel.showTutorials && !viewModel.tutorials.isEmpty {
+                tutorialsSection
+                    .transition(
+                        .asymmetric(
+                            insertion: .opacity.combined(with: .move(edge: .top)),
+                            removal: .opacity.combined(with: .scale(scale: 0.95))
+                        ))
+            }
+        }
     }
 
     // MARK: - Categories Section
@@ -306,6 +312,14 @@ struct ProductFeedView: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
                 .background(Capsule().fill(Color.green))
+        case .horaDelDia:
+            let hour = Calendar.current.component(.hour, from: Date())
+            let icon = hour >= 6 && hour < 12 ? "sun.horizon.fill"
+                : hour >= 12 && hour < 20 ? "sun.max.fill"
+                : "moon.stars.fill"
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundColor(hour >= 6 && hour < 20 ? .orange : .indigo)
         default:
             EmptyView()
         }
@@ -389,6 +403,37 @@ struct ProductFeedView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 4)
+            }
+        }
+        .padding(.vertical, 10)
+    }
+
+    // MARK: - Pide de Nuevo Section
+    private var reorderSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Text("Pide de nuevo")
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(gradientManager.currentAccentColor)
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 14) {
+                    ForEach(viewModel.reorderItems) { item in
+                        ReorderItemCard(item: item, accentColor: gradientManager.currentAccentColor)
+                            .onTapGesture {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                selectedProductId = item.productId
+                            }
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
             }
         }
         .padding(.vertical, 10)
@@ -1139,6 +1184,64 @@ private struct CircleGlassEffectModifier: ViewModifier {
         } else {
             content
         }
+    }
+}
+
+// MARK: - Reorder Item Card
+struct ReorderItemCard: View {
+    let item: ReorderItem
+    let accentColor: Color
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ZStack {
+                if let imageUrl = item.imageUrl, !imageUrl.isEmpty {
+                    CachedAsyncImage(
+                        url: URL(string: imageUrl),
+                        cacheKey: "reorder_\(item.productId)",
+                        displaySize: CGSize(width: 120, height: 90),
+                        content: { image in image.resizable().scaledToFill() },
+                        placeholder: { AdaptiveShimmerView(cornerRadius: 12) },
+                        failure: { AdaptiveShimmerView(cornerRadius: 12) }
+                    )
+                    .frame(width: 120, height: 90)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                } else {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.gray.opacity(0.15))
+                        .frame(width: 120, height: 90)
+                        .overlay(
+                            Image(systemName: "bag.fill")
+                                .font(.system(size: 28))
+                                .foregroundColor(.gray.opacity(0.4))
+                        )
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.name)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                    .lineLimit(2)
+                    .frame(width: 120, height: 34, alignment: .topLeading)
+
+                Text(item.branchName)
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .frame(width: 120, alignment: .leading)
+            }
+        }
+        .frame(width: 120)
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.cardBackground(colorScheme))
+                .shadow(
+                    color: .black.opacity(colorScheme == .dark ? 0.3 : 0.08),
+                    radius: 8, x: 0, y: 4)
+        )
     }
 }
 

@@ -171,6 +171,7 @@ enum FeedSectionType: String {
     case masFavoriteados = "mas_favoriteados"
     case cercaTi = "cerca_ti"
     case tePodriagustar = "te_podria_gustar"
+    case horaDelDia = "hora_del_dia"
     case unknown
 
     init(rawValue: String) {
@@ -183,6 +184,7 @@ enum FeedSectionType: String {
         case "mas_favoriteados": self = .masFavoriteados
         case "cerca_ti": self = .cercaTi
         case "te_podria_gustar": self = .tePodriagustar
+        case "hora_del_dia": self = .horaDelDia
         default: self = .unknown
         }
     }
@@ -203,6 +205,18 @@ struct FeedSectionDiagnostic: Sendable {
     let reason: String?
     let totalBeforeDedup: Int?
     let totalAfterDedup: Int?
+}
+
+// MARK: - Reorder Item Model
+
+struct ReorderItem: Identifiable, Sendable {
+    let id: String
+    let productId: String
+    let name: String
+    let imageUrl: String?
+    let branchId: String
+    let branchName: String
+    let orderNumber: String
 }
 
 // MARK: - Feed Combo Model
@@ -276,6 +290,7 @@ class ProductFeedRepository {
         FeedSectionType.masFavoriteados.rawValue,
         FeedSectionType.cercaTi.rawValue,
         FeedSectionType.tePodriagustar.rawValue,
+        FeedSectionType.horaDelDia.rawValue,
     ]
 
     // MARK: - Complete Feed API (Single Query Optimization)
@@ -468,6 +483,49 @@ class ProductFeedRepository {
                 case .failure(let error):
                     continuation.resume(returning: .failure(error))
                 }
+            }
+        }
+    }
+
+    // MARK: - Reorder Items ("Pide de nuevo")
+
+    /// Fetch products from recent delivered orders for the "Pide de nuevo" section.
+    func fetchRecentOrderItems(jwt: String) async -> [ReorderItem] {
+        return await withCheckedContinuation { continuation in
+            let status: GraphQLNullable<GraphQLEnum<LlegoAPI.OrderStatusEnum>> = .some(.case(.delivered))
+            let query = LlegoAPI.GetMyOrdersQuery(
+                status: status,
+                limit: .some(5),
+                offset: .some(0),
+                jwt: jwt
+            )
+
+            ApolloClientManager.shared.apollo.fetchCompat(
+                query: query, cachePolicy: .fetchIgnoringCacheCompletely
+            ) { result in
+                var items: [ReorderItem] = []
+                var seenProductIds = Set<String>()
+
+                if case .success(let graphQLResult) = result,
+                   let orders = graphQLResult.data?.myOrders?.orders {
+                    for order in orders {
+                        for item in order.items {
+                            guard !seenProductIds.contains(item.productId) else { continue }
+                            seenProductIds.insert(item.productId)
+                            items.append(ReorderItem(
+                                id: "\(order.orderNumber)_\(item.productId)",
+                                productId: item.productId,
+                                name: item.name,
+                                imageUrl: item.imageUrlMuyBaja ?? item.imageUrl,
+                                branchId: order.branch.id,
+                                branchName: order.branch.name,
+                                orderNumber: order.orderNumber
+                            ))
+                        }
+                    }
+                }
+
+                continuation.resume(returning: Array(items.prefix(10)))
             }
         }
     }

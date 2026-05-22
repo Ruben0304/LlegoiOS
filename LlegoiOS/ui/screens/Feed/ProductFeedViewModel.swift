@@ -11,6 +11,25 @@ enum ProductFeedViewState {
 
 @MainActor
 class ProductFeedViewModel: ObservableObject {
+
+    // MARK: - Section Layout
+
+    /// Controls the render order of all feed sections.
+    /// Reorder this array to change how sections appear on screen.
+    enum SectionSlot: CaseIterable, Hashable {
+        case paraTi
+        case pideDeNuevo
+        case dynamicFirst
+        case stores
+        case combos
+        case dynamicRest
+        case tutorials
+    }
+
+    let sectionOrder: [SectionSlot] = [
+        .paraTi, .pideDeNuevo, .dynamicFirst, .stores, .combos, .dynamicRest, .tutorials,
+    ]
+
     // MARK: - Published Properties
     @Published var state: ProductFeedViewState = .idle
     @Published var isLoading: Bool = false
@@ -27,6 +46,9 @@ class ProductFeedViewModel: ObservableObject {
     @Published var featuredProducts: [FeedProduct] = []
     @Published var recentProducts: [FeedProduct] = []
     @Published var popularProducts: [FeedProduct] = []
+
+    // Reorder items for "Pide de nuevo" section (auth-gated)
+    @Published var reorderItems: [ReorderItem] = []
 
     // Filters
     @Published var selectedCategory: String? = nil
@@ -75,6 +97,7 @@ class ProductFeedViewModel: ObservableObject {
             currentCursor = nil
             hasNextPage = false
             hasLoaded = false
+            reorderItems = []
         }
 
         if !isRefreshing {
@@ -120,6 +143,14 @@ class ProductFeedViewModel: ObservableObject {
                 self.isLoading = false
                 self.hasLoaded = true
                 self.state = .success
+
+                // Load "Pide de nuevo" items in background when user is authenticated
+                if let jwt = AuthManager.shared.getAccessToken() {
+                    Task {
+                        self.reorderItems = await self.repository.fetchRecentOrderItems(jwt: jwt)
+                        print("🔄 [Feed] Pide de nuevo: \(self.reorderItems.count) items loaded")
+                    }
+                }
 
             case .failure(let error):
                 self.isLoading = false
