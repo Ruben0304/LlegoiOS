@@ -109,7 +109,11 @@ class OrderManager: ObservableObject {
     // Private properties
     private var timer: Timer?
     private var simulationStartTime: Date?
-    private let simulationDuration: TimeInterval = 30  // 30 segundos para prueba rápida
+    private var simulationDuration: TimeInterval {
+        // App Store demo account gets a faster simulation so the reviewer
+        // can complete the full flow without waiting.
+        AuthManager.shared.isDemoMode ? 15 : 30
+    }
     private var routePoints: [CLLocationCoordinate2D] = []
     private var currentRouteIndex: Int = 0
     private var realtimeSubscriptionTask: Task<Void, Never>?

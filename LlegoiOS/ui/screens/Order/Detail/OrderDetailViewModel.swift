@@ -299,6 +299,16 @@ final class OrderDetailViewModel: ObservableObject {
     }
 
     private func presentStripePaymentSheet(using attempt: PaymentAttemptModel) async throws {
+        // Demo mode: backend auto-completed the payment — no Stripe sheet needed.
+        // This also handles any case where the payment was already completed server-side.
+        if attempt.status.lowercased() == "completed" && attempt.stripeClientSecret == nil {
+            await MainActor.run {
+                self.showPaymentAlertMessage("✅ Pago procesado exitosamente.")
+            }
+            refreshAfterPayment()
+            return
+        }
+
         guard let clientSecret = attempt.stripeClientSecret else {
             throw NSError(
                 domain: "OrderDetailViewModel",

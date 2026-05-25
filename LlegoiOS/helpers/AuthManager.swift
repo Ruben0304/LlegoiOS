@@ -69,6 +69,12 @@ class AuthManager: ObservableObject {
     @Published var userId: String?
     @Published var isAuthenticated: Bool = false
 
+    /// True when logged in with the App Store review demo account.
+    /// Used to skip real payment flows and speed up order simulation.
+    var isDemoMode: Bool {
+        currentUser?.email.lowercased() == "demo@llego.app"
+    }
+
     private let sessionKey = "llego_auth_session"
     private let tokenKey = "llego_auth_token"
     private let userIdKey = "llego_auth_user_id"
