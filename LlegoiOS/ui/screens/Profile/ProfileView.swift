@@ -15,7 +15,8 @@ struct ProfileView: View {
     @State private var showingEditName = false
     @State private var showingPaymentMethods = false
     @State private var showingWallet = false
-    @State private var navigateToPlansAndPricing = false
+    // Suscripciones ocultas para revisión App Store (sin venta de planes por ahora)
+    // @State private var navigateToPlansAndPricing = false
     @State private var showOnboardingResetConfirmation = false
     @State private var cachedProfile: ProfileLocalCache.Snapshot? = ProfileLocalCache.load()
     @State private var didTriggerRefresh = false
@@ -218,6 +219,9 @@ struct ProfileView: View {
 
                                 // Botón de cerrar sesión
                                 signOutButton
+
+                                // Botón de eliminar cuenta
+                                deleteAccountButton
                             }
 
                             Spacer(minLength: 60)
@@ -242,20 +246,22 @@ struct ProfileView: View {
                 // ToolbarItem(placement: .navigationBarTrailing) {
                 //     customerLevelToolbarItem
                 // }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        navigateToPlansAndPricing = true
-                    }) {
-                        Image(systemName: "crown.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.llegoSecondary)
-                    }
-                    .accessibilityLabel("Planes y precios")
-                }
+                // Suscripciones ocultas para revisión App Store (sin venta de planes por ahora)
+                // ToolbarItem(placement: .navigationBarTrailing) {
+                //     Button(action: {
+                //         navigateToPlansAndPricing = true
+                //     }) {
+                //         Image(systemName: "crown.fill")
+                //             .font(.system(size: 16, weight: .semibold))
+                //             .foregroundColor(.llegoSecondary)
+                //     }
+                //     .accessibilityLabel("Planes y precios")
+                // }
             }
-            .navigationDestination(isPresented: $navigateToPlansAndPricing) {
-                PlansAndPricingView()
-            }
+            // Suscripciones ocultas para revisión App Store (sin venta de planes por ahora)
+            // .navigationDestination(isPresented: $navigateToPlansAndPricing) {
+            //     PlansAndPricingView()
+            // }
             .tint(gradientManager.currentAccentColor)
         }
         .fullScreenCover(isPresented: $showingWallet) {
@@ -295,6 +301,24 @@ struct ProfileView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(cashKycAlertMessage)
+        }
+        .alert("Eliminar cuenta", isPresented: $viewModel.showDeleteAccountConfirmation) {
+            Button("Cancelar", role: .cancel) {}
+            Button("Eliminar", role: .destructive) {
+                Task {
+                    await viewModel.deleteAccount()
+                }
+            }
+        } message: {
+            Text("Esta acción es permanente. Se eliminará tu cuenta y todos tus datos asociados (pedidos, direcciones y métodos de pago guardados). No podrás recuperarlos. ¿Deseas continuar?")
+        }
+        .alert("No se pudo eliminar la cuenta", isPresented: Binding(
+            get: { viewModel.deleteAccountError != nil },
+            set: { if !$0 { viewModel.deleteAccountError = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(viewModel.deleteAccountError ?? "Ocurrió un error. Inténtalo de nuevo.")
         }
     }
 
@@ -383,6 +407,41 @@ struct ProfileView: View {
             )
         }
         .buttonStyle(PlainButtonStyle())
+    }
+
+    // MARK: - Eliminar Cuenta
+    private var deleteAccountButton: some View {
+        Button(action: {
+            viewModel.showDeleteAccountConfirmation = true
+        }) {
+            HStack(spacing: 14) {
+                if viewModel.isDeletingAccount {
+                    ProgressView()
+                        .tint(.red)
+                } else {
+                    Image(systemName: "trash")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(.red)
+                }
+
+                Text(viewModel.isDeletingAccount ? "Eliminando cuenta..." : "Eliminar cuenta")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.red)
+
+                Spacer()
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.red.opacity(0.08))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.red.opacity(0.3), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+        .disabled(viewModel.isDeletingAccount)
     }
 
     // MARK: - Futuristic Profile Header con Mapa como Portada

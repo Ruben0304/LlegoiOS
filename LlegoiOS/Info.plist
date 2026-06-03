@@ -6,8 +6,14 @@
 	<true/>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>Usamos la cámara para capturar documento y selfie en la verificación de pago en efectivo.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Usamos tu galería para que adjuntes el comprobante de transferencia bancaria al confirmar un pago.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Llego usa tu ubicación para mostrarte tiendas y restaurantes cercanos, por ejemplo ordenándolos por distancia, y para calcular automáticamente el costo y el tiempo de entrega de tu pedido a tu dirección.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

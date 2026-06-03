@@ -387,6 +387,45 @@ class ProfileRepository {
         }
     }
     
+    // MARK: - Delete User (Eliminar cuenta)
+    func deleteUser(jwt: String) async throws {
+        return try await withCheckedThrowingContinuation { continuation in
+            let mutation = LlegoAPI.DeleteUserMutation(jwt: jwt)
+
+            apolloClient.performCompat(mutation: mutation) { result in
+                switch result {
+                case .success(let graphQLResult):
+                    if let errors = graphQLResult.errors {
+                        print("❌ GraphQL Errors (delete user):")
+                        errors.forEach { print("  - \($0.localizedDescription)") }
+                        continuation.resume(throwing: NSError(
+                            domain: "GraphQL",
+                            code: -1,
+                            userInfo: [NSLocalizedDescriptionKey: errors.first?.localizedDescription ?? "Error al eliminar la cuenta"]
+                        ))
+                        return
+                    }
+
+                    guard graphQLResult.data?.deleteUser == true else {
+                        continuation.resume(throwing: NSError(
+                            domain: "GraphQL",
+                            code: -2,
+                            userInfo: [NSLocalizedDescriptionKey: "No se pudo eliminar la cuenta. Inténtalo de nuevo."]
+                        ))
+                        return
+                    }
+
+                    print("✅ Cuenta eliminada")
+                    continuation.resume(returning: ())
+
+                case .failure(let error):
+                    print("❌ Error en delete user: \(error.localizedDescription)")
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
     // MARK: - Search Users
     func searchUsers(jwt: String, query: String) async throws -> [SearchUserResult] {
         return try await withCheckedThrowingContinuation { continuation in

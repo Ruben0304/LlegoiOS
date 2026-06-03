@@ -22,6 +22,11 @@ class ProfileViewModel: ObservableObject {
     @Published var showEditUsernameSheet: Bool = false
     @Published var editingUsername: String = ""
 
+    // Account deletion
+    @Published var showDeleteAccountConfirmation: Bool = false
+    @Published var isDeletingAccount: Bool = false
+    @Published var deleteAccountError: String?
+
     // Recent orders
     @Published var recentOrders: [RecentOrder] = []
     @Published var isLoadingOrders: Bool = false
@@ -249,6 +254,27 @@ class ProfileViewModel: ObservableObject {
         state = .unauthenticated
         ProfileLocalCache.clear()
         print("✅ Sesión cerrada")
+    }
+
+    func deleteAccount() async {
+        guard !isDeletingAccount else { return }
+        guard let token = authManager.getAccessToken() else {
+            signOut()
+            return
+        }
+
+        isDeletingAccount = true
+        deleteAccountError = nil
+        defer { isDeletingAccount = false }
+
+        do {
+            try await repository.deleteUser(jwt: token)
+            // Limpiar toda la sesión local tras eliminar la cuenta en el backend
+            signOut()
+        } catch {
+            deleteAccountError = error.localizedDescription
+            print("❌ Error al eliminar cuenta: \(error.localizedDescription)")
+        }
     }
 
     func refreshProfile() async {

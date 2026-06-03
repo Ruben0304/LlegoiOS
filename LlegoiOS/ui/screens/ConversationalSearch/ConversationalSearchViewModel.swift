@@ -23,33 +23,13 @@ class ConversationalSearchViewModel: ObservableObject {
     @Published var messages: [ConversationalChatMessage] = []
     @Published var isTyping: Bool = false
     @Published var errorMessage: String?
-    @Published var selectedProvider: ConversationalAIProvider = .llegoAI
-    @Published private(set) var appleIntelligenceStatus: AppleIntelligenceSupportStatus =
-        .unsupportedDevice
+    let selectedProvider: ConversationalAIProvider = .llegoAI
 
     private let repository = ConversationalSearchRepository()
     private let locationManager = UserLocationManager.shared
-    private let localAIAssistantService = LocalAIAssistantService.shared
     private var activeStreamingAssistantMessageId: UUID?
 
-    init() {
-        refreshAppleIntelligenceAvailability()
-    }
-
-    func refreshAppleIntelligenceAvailability() {
-        let status = localAIAssistantService.currentAvailability()
-        appleIntelligenceStatus = status
-        if status.isAvailable {
-            selectedProvider = .appleIntelligence
-        } else {
-            selectedProvider = .llegoAI
-        }
-    }
-
-    var appleIntelligenceAvailabilityMessage: String? {
-        guard !appleIntelligenceStatus.isAvailable else { return nil }
-        return appleIntelligenceStatus.userErrorMessage
-    }
+    func refreshAppleIntelligenceAvailability() {}
 
     func sendMessage(_ text: String) {
         print("\n╔═══════════════════════════════════════════════════╗")
@@ -80,7 +60,6 @@ class ConversationalSearchViewModel: ObservableObject {
             onStreamEvent: { [weak self] event in
                 Task { @MainActor in
                     guard let self else { return }
-                    guard self.selectedProvider == .llegoAI else { return }
 
                     switch event {
                     case .started:
@@ -274,14 +253,11 @@ class ConversationalSearchViewModel: ObservableObject {
         print("🎯 [VIEWMODEL] Modo: \(mode.title)")
 
         let welcomeText: String
-        let providerLabel = selectedProvider.title
         switch mode {
         case .search:
-            welcomeText =
-                "Hola. Estás usando \(providerLabel). Dime qué producto buscas y te ayudo a encontrarlo."
+            welcomeText = "Hola. Dime qué producto buscas y te ayudo a encontrarlo."
         case .purchase:
-            welcomeText =
-                "Modo compra activado con \(providerLabel). Dime qué quieres comprar y te ayudo."
+            welcomeText = "Modo compra activado. Dime qué quieres comprar y te ayudo."
         }
 
         print("💬 [VIEWMODEL] Texto de bienvenida: \"\(welcomeText)\"")
@@ -309,9 +285,10 @@ class ConversationalSearchViewModel: ObservableObject {
                     Ya usaste tus consultas gratis en este dispositivo. Pásate a Plan Pro para seguir usando AI Chat.\(quotaSummary)
                     """,
                 isFromUser: false,
-                timestamp: Date(),
-                actionTitle: "Ir a Planes",
-                action: .openPlans
+                timestamp: Date()
+                // Suscripciones ocultas para revisión App Store (sin venta de planes por ahora)
+                // actionTitle: "Ir a Planes",
+                // action: .openPlans
             )
         case .quotaExceeded:
             return ConversationalChatMessage(
@@ -320,9 +297,10 @@ class ConversationalSearchViewModel: ObservableObject {
                     Llegaste al máximo de consultas de tu plan actual. Mejora tu plan para continuar.\(quotaSummary)
                     """,
                 isFromUser: false,
-                timestamp: Date(),
-                actionTitle: "Ver planes",
-                action: .openPlans
+                timestamp: Date()
+                // Suscripciones ocultas para revisión App Store (sin venta de planes por ahora)
+                // actionTitle: "Ver planes",
+                // action: .openPlans
             )
         case .deviceIdRequired:
             return ConversationalChatMessage(
