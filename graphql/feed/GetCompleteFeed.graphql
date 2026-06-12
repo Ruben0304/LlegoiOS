@@ -52,6 +52,7 @@ query GetCompleteFeed(
     }
     timestamp
     hasMore
+    explorarHasMore
   }
 
   # 2. Categories for filter chips

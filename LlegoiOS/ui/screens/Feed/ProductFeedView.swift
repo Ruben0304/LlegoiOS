@@ -225,7 +225,48 @@ struct ProductFeedView: View {
                             removal: .opacity.combined(with: .scale(scale: 0.95))
                         ))
             }
+        case .explorar:
+            if !viewModel.explorarProducts.isEmpty {
+                explorarSection
+            }
         }
+    }
+
+    // MARK: - Explorar Section (vertical infinite grid)
+    private var explorarSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Explora otras opciones")
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                .padding(.horizontal, 20)
+
+            LazyVGrid(
+                columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)],
+                spacing: 14
+            ) {
+                ForEach(viewModel.explorarProducts) { product in
+                    ExplorarProductCard(
+                        product: product, accentColor: gradientManager.currentAccentColor
+                    )
+                    .onTapGesture {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        selectedProductId = product.id
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+
+            if viewModel.isLoadingExplorar {
+                ProgressView()
+                    .tint(gradientManager.currentAccentColor)
+                    .padding(.vertical, 16)
+                    .frame(maxWidth: .infinity)
+            } else if viewModel.hasMoreExplorar {
+                Color.clear.frame(height: 1)
+                    .onAppear { viewModel.loadMoreExplorar() }
+            }
+        }
+        .padding(.vertical, 10)
     }
 
     // MARK: - Categories Section
@@ -1529,6 +1570,67 @@ struct FeaturedStoreCard: View {
                         .foregroundColor(accentColor.opacity(0.5))
                 )
         }
+    }
+}
+
+// MARK: - Explorar Product Card
+
+struct ExplorarProductCard: View {
+    let product: FeedProduct
+    let accentColor: Color
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            CachedAsyncImage(
+                url: URL(string: product.imageUrlBaja),
+                cacheKey: "explorar_\(product.id)",
+                content: { image in image.resizable().scaledToFill() },
+                placeholder: { AdaptiveShimmerView(cornerRadius: 0) },
+                failure: {
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.12))
+                        .overlay(
+                            Image(systemName: "photo")
+                                .font(.system(size: 28))
+                                .foregroundColor(.gray.opacity(0.35))
+                        )
+                }
+            )
+            .frame(maxWidth: .infinity)
+            .frame(height: 110)
+            .clipped()
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(product.name)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 0) {
+                    Text(product.formattedPrice)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(accentColor)
+                    Spacer()
+                }
+
+                if let branchName = product.branchName.isEmpty ? nil : product.branchName {
+                    Text(branchName)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.cardBackground(colorScheme))
+                .shadow(color: .black.opacity(0.07), radius: 6, x: 0, y: 2)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 }
 

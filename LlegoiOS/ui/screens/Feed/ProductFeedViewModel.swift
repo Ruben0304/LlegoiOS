@@ -25,10 +25,11 @@ class ProductFeedViewModel: ObservableObject {
         case dynamicRest
         case featuredStore
         case tutorials
+        case explorar
     }
 
     let sectionOrder: [SectionSlot] = [
-        .paraTi, .dynamicFirst, .pideDeNuevoInline, .stores, .combos, .dynamicRest, .featuredStore, .tutorials,
+        .paraTi, .dynamicFirst, .pideDeNuevoInline, .stores, .combos, .dynamicRest, .featuredStore, .tutorials, .explorar,
     ]
 
     // MARK: - Published Properties
@@ -58,6 +59,12 @@ class ProductFeedViewModel: ObservableObject {
     @Published var hasMoreFeedPages: Bool = false
     @Published var feedPage: Int = 0
     @Published var moreSections: [FeedSection] = []
+
+    // Explorar section state (vertical infinite-scroll catch-all)
+    @Published var explorarProducts: [FeedProduct] = []
+    @Published var hasMoreExplorar: Bool = false
+    @Published var explorarPage: Int = 0
+    @Published var isLoadingExplorar: Bool = false
 
     // Legacy cursor pagination
     @Published var hasNextPage: Bool = false
@@ -107,6 +114,9 @@ class ProductFeedViewModel: ObservableObject {
             feedPage = 0
             hasMoreFeedPages = false
             moreSections = []
+            explorarProducts = []
+            hasMoreExplorar = false
+            explorarPage = 0
         }
 
         if !isRefreshing {
@@ -126,6 +136,12 @@ class ProductFeedViewModel: ObservableObject {
             case .success(let (feedResponse, categories, stores, tutorials, combos)):
                 self.feedSections = feedResponse.sections
                 self.hasMoreFeedPages = feedResponse.hasMore
+                // Seed explorar section products from the initial feed load
+                if let explorarSection = feedResponse.sections.first(where: { $0.sectionId == "explorar" }) {
+                    self.explorarProducts = explorarSection.products
+                    self.hasMoreExplorar = feedResponse.explorarHasMore
+                    self.explorarPage = 0
+                }
                 self.categories = categories
                 self.stores = stores
                 self.tutorials = tutorials
@@ -224,6 +240,30 @@ class ProductFeedViewModel: ObservableObject {
         }
     }
 
+    func loadMoreExplorar() {
+        guard !isLoadingExplorar, hasMoreExplorar else { return }
+        isLoadingExplorar = true
+        let nextPage = explorarPage + 1
+
+        Task {
+            let result = await repository.fetchMoreExplorar(
+                page: nextPage, categoryId: selectedCategory)
+
+            self.isLoadingExplorar = false
+
+            switch result {
+            case .success(let (products, hasMore)):
+                self.explorarProducts.append(contentsOf: products)
+                self.explorarPage = nextPage
+                self.hasMoreExplorar = hasMore
+                print("🔭 Explorar page \(nextPage): +\(products.count) productos")
+
+            case .failure:
+                break
+            }
+        }
+    }
+
     func loadMoreProducts() {
         guard !isLoadingMore, hasNextPage, let cursor = currentCursor else { return }
 
@@ -311,9 +351,11 @@ class ProductFeedViewModel: ObservableObject {
         return feedSections.first(where: { $0.sectionId == type.rawValue })
     }
 
-    /// Get all sections except "para_ti" (which is rendered separately at the top)
+    /// Get all sections except "para_ti" (large cards at top) and "explorar" (vertical grid at bottom)
     var horizontalSections: [FeedSection] {
-        return feedSections.filter { $0.sectionId != FeedSectionType.paraTi.rawValue }
+        return feedSections.filter {
+            $0.sectionId != FeedSectionType.paraTi.rawValue && $0.sectionId != "explorar"
+        }
     }
 
     /// Get "para_ti" section (featured products with large cards)

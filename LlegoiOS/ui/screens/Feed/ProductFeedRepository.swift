@@ -197,6 +197,7 @@ struct FeedResponse: Sendable {
     let sectionDiagnostics: [FeedSectionDiagnostic]
     let timestamp: String
     let hasMore: Bool
+    let explorarHasMore: Bool
 }
 
 struct FeedSectionDiagnostic: Sendable {
@@ -375,7 +376,8 @@ class ProductFeedRepository {
                             sections: sections,
                             sectionDiagnostics: sectionDiagnostics,
                             timestamp: String(describing: data.getFeed.timestamp),
-                            hasMore: data.getFeed.hasMore
+                            hasMore: data.getFeed.hasMore,
+                            explorarHasMore: data.getFeed.explorarHasMore
                         )
 
                         // Parse categories
@@ -550,9 +552,73 @@ class ProductFeedRepository {
                             sections: sections,
                             sectionDiagnostics: [],
                             timestamp: String(describing: data.getFeed.timestamp),
-                            hasMore: data.getFeed.hasMore
+                            hasMore: data.getFeed.hasMore,
+                            explorarHasMore: data.getFeed.explorarHasMore
                         )
                         continuation.resume(returning: .success(feedResponse))
+                    } else {
+                        continuation.resume(returning: .failure(NSError(
+                            domain: "GraphQL", code: -1,
+                            userInfo: [NSLocalizedDescriptionKey: "No data returned"]
+                        )))
+                    }
+                case .failure(let error):
+                    continuation.resume(returning: .failure(error))
+                }
+            }
+        }
+    }
+
+    // MARK: - Explorar More (pagination for explorar section)
+
+    /// Fetch the next page of the "Explora otras opciones" section.
+    /// Passes sections=["explorar"] so only the catch-all section is generated on the backend.
+    func fetchMoreExplorar(page: Int, categoryId: String? = nil) async -> Result<([FeedProduct], Bool), Error> {
+        let jwt = AuthManager.shared.getAccessToken()
+        let branchTypeRaw = BranchTypeManager.shared.selectedType.rawValue
+        print("🔭 [Feed] fetchMoreExplorar page=\(page)")
+
+        return await withCheckedContinuation { continuation in
+            let query = LlegoAPI.GetFeedQuery(
+                jwt: jwt.map { .some($0) } ?? .none,
+                first: .some(20),
+                page: .some(0),
+                explorarPage: .some(Int32(page)),
+                sections: .some(["explorar"]),
+                branchTipo: branchTypeRaw,
+                productCategoryId: categoryId.map { .some($0) } ?? .none
+            )
+
+            ApolloClientManager.shared.apollo.fetchCompat(
+                query: query, cachePolicy: .fetchIgnoringCacheCompletely
+            ) { result in
+                switch result {
+                case .success(let graphQLResult):
+                    if let data = graphQLResult.data {
+                        let explorarSection = data.getFeed.sections.first { $0.sectionId == "explorar" }
+                        let products = (explorarSection?.products ?? []).map { product -> FeedProduct in
+                            FeedProduct(
+                                id: product.id,
+                                name: product.name,
+                                price: product.price,
+                                currency: product.currency,
+                                imageUrlBaja: product.imageUrlBaja,
+                                imageUrlMedia: product.imageUrlMedia,
+                                distanceKm: nil,
+                                branchId: product.branchId,
+                                branchName: product.branch?.name ?? "",
+                                branchAvatarUrl: nil,
+                                branchAddress: product.branch?.address,
+                                branchTipos: product.branch?.tipos.compactMap { $0.rawValue } ?? [],
+                                businessName: product.branch?.name ?? "",
+                                categoryId: product.categoryId,
+                                categoryName: product.categoryName,
+                                availability: product.availability,
+                                score: product.score,
+                                productDescription: product.description
+                            )
+                        }
+                        continuation.resume(returning: .success((products, data.getFeed.explorarHasMore)))
                     } else {
                         continuation.resume(returning: .failure(NSError(
                             domain: "GraphQL", code: -1,
@@ -682,7 +748,8 @@ class ProductFeedRepository {
                             sections: sections,
                             sectionDiagnostics: sectionDiagnostics,
                             timestamp: String(describing: data.getFeed.timestamp),
-                            hasMore: false
+                            hasMore: false,
+                            explorarHasMore: false
                         )
                         continuation.resume(returning: .success(feedResponse))
                     } else if let errors = graphQLResult.errors, !errors.isEmpty {
