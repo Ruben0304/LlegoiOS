@@ -11,12 +11,20 @@ class CartManager: ObservableObject {
     @Published private(set) var localItems: [CartItemLocal] = []
     @Published private(set) var localShowcaseItems: [ShowcaseCartItemLocal] = []
 
-    private let userDefaults = UserDefaults.standard
+    private let userDefaults: UserDefaults
     private let cartKey = "llego_cart_items"
     private let showcaseCartKey = "llego_showcase_cart_items"
     private let apolloClient = ApolloClientManager.shared.apollo
 
     private init() {
+        self.userDefaults = .standard
+        loadCartItems()
+        loadShowcaseCartItems()
+        updateItemCount()
+    }
+
+    init(userDefaults: UserDefaults) {
+        self.userDefaults = userDefaults
         loadCartItems()
         loadShowcaseCartItems()
         updateItemCount()

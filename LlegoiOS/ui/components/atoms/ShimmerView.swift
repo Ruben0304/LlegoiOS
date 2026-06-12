@@ -1,42 +1,49 @@
 import SwiftUI
 
 // MARK: - Shimmer Effect
-/// Animación shimmer/skeleton para estados de carga de imágenes
+/// Animación shimmer/skeleton para estados de carga de imágenes.
+/// Implementación sin `GeometryReader`: el barrido se logra animando los
+/// `UnitPoint` del gradiente (Animatable), lo que es mucho más barato en GPU
+/// y no fuerza medición de layout en cada frame. La animación se detiene al
+/// salir de pantalla para no consumir el MainActor mientras se hace scroll.
 struct ShimmerView: View {
     var cornerRadius: CGFloat = 0
-    @State private var phase: CGFloat = -1
+    @State private var startPoint = UnitPoint(x: -1.0, y: 0.5)
+    @State private var endPoint = UnitPoint(x: 0.0, y: 0.5)
 
     var body: some View {
-        GeometryReader { geo in
-            let width = geo.size.width
-            let height = geo.size.height
+        ZStack {
+            Color(red: 230/255, green: 232/255, blue: 236/255)
 
-            ZStack {
-                Color(red: 230/255, green: 232/255, blue: 236/255)
-
-                LinearGradient(
-                    stops: [
-                        .init(color: Color.clear, location: 0),
-                        .init(color: Color.white.opacity(0.55), location: 0.4),
-                        .init(color: Color.white.opacity(0.55), location: 0.6),
-                        .init(color: Color.clear, location: 1),
-                    ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-                .frame(width: width * 2.5)
-                .offset(x: phase * width * 2.5)
-            }
-            .frame(width: width, height: height)
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            LinearGradient(
+                stops: [
+                    .init(color: Color.clear, location: 0),
+                    .init(color: Color.white.opacity(0.55), location: 0.45),
+                    .init(color: Color.white.opacity(0.55), location: 0.55),
+                    .init(color: Color.clear, location: 1),
+                ],
+                startPoint: startPoint,
+                endPoint: endPoint
+            )
         }
-        .onAppear {
-            withAnimation(
-                .linear(duration: 1.4)
-                .repeatForever(autoreverses: false)
-            ) {
-                phase = 1
-            }
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .onAppear { startAnimating() }
+        .onDisappear { stopAnimating() }
+    }
+
+    private func startAnimating() {
+        startPoint = UnitPoint(x: -1.0, y: 0.5)
+        endPoint = UnitPoint(x: 0.0, y: 0.5)
+        withAnimation(.linear(duration: 1.4).repeatForever(autoreverses: false)) {
+            startPoint = UnitPoint(x: 1.0, y: 0.5)
+            endPoint = UnitPoint(x: 2.0, y: 0.5)
+        }
+    }
+
+    private func stopAnimating() {
+        withAnimation(.linear(duration: 0)) {
+            startPoint = UnitPoint(x: -1.0, y: 0.5)
+            endPoint = UnitPoint(x: 0.0, y: 0.5)
         }
     }
 }
@@ -45,7 +52,8 @@ struct ShimmerView: View {
 struct AdaptiveShimmerView: View {
     var cornerRadius: CGFloat = 0
     @Environment(\.colorScheme) private var colorScheme
-    @State private var phase: CGFloat = -1
+    @State private var startPoint = UnitPoint(x: -1.0, y: 0.5)
+    @State private var endPoint = UnitPoint(x: 0.0, y: 0.5)
 
     var body: some View {
         let baseColor = colorScheme == .dark
@@ -53,36 +61,38 @@ struct AdaptiveShimmerView: View {
             : Color(red: 230/255, green: 232/255, blue: 236/255)
         let highlightOpacity: Double = colorScheme == .dark ? 0.12 : 0.55
 
-        GeometryReader { geo in
-            let width = geo.size.width
-            let height = geo.size.height
+        ZStack {
+            baseColor
 
-            ZStack {
-                baseColor
-
-                LinearGradient(
-                    stops: [
-                        .init(color: Color.clear, location: 0),
-                        .init(color: Color.white.opacity(highlightOpacity), location: 0.4),
-                        .init(color: Color.white.opacity(highlightOpacity), location: 0.6),
-                        .init(color: Color.clear, location: 1),
-                    ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-                .frame(width: width * 2.5)
-                .offset(x: phase * width * 2.5)
-            }
-            .frame(width: width, height: height)
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            LinearGradient(
+                stops: [
+                    .init(color: Color.clear, location: 0),
+                    .init(color: Color.white.opacity(highlightOpacity), location: 0.45),
+                    .init(color: Color.white.opacity(highlightOpacity), location: 0.55),
+                    .init(color: Color.clear, location: 1),
+                ],
+                startPoint: startPoint,
+                endPoint: endPoint
+            )
         }
-        .onAppear {
-            withAnimation(
-                .linear(duration: 1.4)
-                .repeatForever(autoreverses: false)
-            ) {
-                phase = 1
-            }
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        .onAppear { startAnimating() }
+        .onDisappear { stopAnimating() }
+    }
+
+    private func startAnimating() {
+        startPoint = UnitPoint(x: -1.0, y: 0.5)
+        endPoint = UnitPoint(x: 0.0, y: 0.5)
+        withAnimation(.linear(duration: 1.4).repeatForever(autoreverses: false)) {
+            startPoint = UnitPoint(x: 1.0, y: 0.5)
+            endPoint = UnitPoint(x: 2.0, y: 0.5)
+        }
+    }
+
+    private func stopAnimating() {
+        withAnimation(.linear(duration: 0)) {
+            startPoint = UnitPoint(x: -1.0, y: 0.5)
+            endPoint = UnitPoint(x: 0.0, y: 0.5)
         }
     }
 }

@@ -24,24 +24,7 @@ struct StripeConfig {
     /// ⚠️ ACTIVAR SOLO PARA TESTING. Desactivar cuando el backend esté listo.
     static let useMockData = false
 
-    // MARK: - Apple Pay Configuration
-
-    /// Apple Pay Merchant ID
-    /// IMPORTANTE: Debes crear este Merchant ID en:
-    /// https://developer.apple.com/account/resources/identifiers/list/merchant
-    /// Formato: merchant.com.tu-empresa.tu-app
-    static let applePayMerchantId = "merchant.com.llego.ios"
-
-    /// País del comerciante (código de 2 letras ISO)
-    static let merchantCountryCode = "US"
-
-    /// Nombre que aparecerá en Apple Pay
-    static let merchantDisplayName = "Llego"
-
     // MARK: - Payment Methods Configuration
-
-    /// Habilitar Apple Pay
-    static let enableApplePay = true
 
     /// Habilitar pagos a plazos (Affirm, Afterpay, Klarna, etc.)
     /// NOTA: Estos métodos se mostrarán automáticamente si:

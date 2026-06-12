@@ -5,11 +5,11 @@
 @_spi(Execution) @_spi(Unsafe) import ApolloAPI
 
 public extension LlegoAPI {
-  struct GetServiceFeeRateQuery: GraphQLQuery {
-    public static let operationName: String = "GetServiceFeeRate"
+  struct GetDiscountedServiceFeeRateQuery: GraphQLQuery {
+    public static let operationName: String = "GetDiscountedServiceFeeRate"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetServiceFeeRate { getServiceFeeRate }"#
+        #"query GetDiscountedServiceFeeRate { getDiscountedServiceFeeRate }"#
       ))
 
     public init() {}
@@ -20,14 +20,14 @@ public extension LlegoAPI {
 
       @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.Query }
       @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
-        .field("getServiceFeeRate", Double.self),
+        .field("getDiscountedServiceFeeRate", Double.self),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
-        GetServiceFeeRateQuery.Data.self
+        GetDiscountedServiceFeeRateQuery.Data.self
       ] }
 
-      /// Retorna la tasa de cargo de servicio configurada en el servidor (fracción, ej: 0.10 = 10%)
-      public var getServiceFeeRate: Double { __data["getServiceFeeRate"] }
+      /// Tasa de cargo de servicio reducida tras ver videos promocionales (fracción, ej: 0.05 = 5%)
+      public var getDiscountedServiceFeeRate: Double { __data["getDiscountedServiceFeeRate"] }
     }
   }
 

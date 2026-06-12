@@ -35,7 +35,6 @@ struct HomeView: View {
     @State private var navigateToOrders: Bool = false
     @State private var navigateToConversationalSearch: Bool = false
     @State private var showCart: Bool = false
-    @State private var navigateToPlansAndPricing: Bool = false
     @State private var isCheckingAccount: Bool = false
     @State private var redirectToOrdersAfterLogin: Bool = false
     @State private var cartSubtotal: Double = 0
@@ -43,7 +42,6 @@ struct HomeView: View {
     // Carousel state
     @State private var currentIndex: Int = 0
     @State private var scaleEffect: CGFloat = 1.0
-    @State private var showTshirtCustomizer = false
 
     // Long press states
     @State private var isPressing: Bool = false
@@ -73,8 +71,6 @@ struct HomeView: View {
             return Color(red: 0.737, green: 0.514, blue: 0.345)
         case 3: // Perfumería - Azul morado/Lavanda (estilo Sauvage)
             return Color(red: 0.50, green: 0.45, blue: 0.70)
-        case 4: // Ropa - Rosa fucsia / magenta
-            return Color(red: 0.85, green: 0.30, blue: 0.55)
         default:
             return Color(red: 0.9, green: 0.3, blue: 0.2)
         }
@@ -121,14 +117,6 @@ struct HomeView: View {
                 Feature(icon: "star.fill", title: "Exclusivos", subtitle: "Edición limitada"),
                 Feature(icon: "heart.fill", title: "Bestsellers", subtitle: "Los más vendidos")
             ]
-        case 4: // Ropa
-            return [
-                Feature(icon: "tshirt.fill", title: "Casual", subtitle: "Día a día"),
-                Feature(icon: "figure.dress.line.vertical.figure", title: "Mujer", subtitle: "Última moda"),
-                Feature(icon: "figure.stand", title: "Hombre", subtitle: "Estilo moderno"),
-                Feature(icon: "shoe.fill", title: "Calzado", subtitle: "Tendencias"),
-                Feature(icon: "bag.fill", title: "Accesorios", subtitle: "Complementos")
-            ]
         default:
             return []
         }
@@ -167,12 +155,6 @@ struct HomeView: View {
                 cameraPosition: SCNVector3(x: -0.3, y: 1.2, z: 3.5),
                 customScale: 0.9,
                 initialRotationY: Float.pi
-            ),
-            CategoryModel3D(
-                name: "Ropa",
-                fileName: "ropa.usdz",
-                description: "Moda y Tendencias",
-                icon: "tshirt.fill"
             )
         ]
     }
@@ -342,24 +324,17 @@ struct HomeView: View {
 
                         Spacer()
 
-                        // CTA de ropa (solo cuando index=4) o texto de instrucción habitual
-                        Group {
-                            if currentIndex == 4 {
-                                ropaCTA
-                            } else {
-                                Text("Manten presionado\npara encontrar lo que buscas...")
-                                    .font(.system(size: 20, weight: .light, design: .rounded))
-                                    .foregroundColor(Color(red: 0.32, green: 0.35, blue: 0.4))
-                                    .multilineTextAlignment(.center)
-                                    .frame(maxWidth: .infinity, alignment: .center)
-                                    .lineLimit(2)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                        }
-                        .padding(.horizontal, 40)
-                        .padding(.bottom, 44)
-                        .opacity(isPressing ? 0 : 1)
-                        .animation(.easeOut(duration: 0.2), value: isPressing)
+                        Text("Manten presionado\npara encontrar lo que buscas...")
+                            .font(.system(size: 20, weight: .light, design: .rounded))
+                            .foregroundColor(Color(red: 0.32, green: 0.35, blue: 0.4))
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.horizontal, 40)
+                            .padding(.bottom, 44)
+                            .opacity(isPressing ? 0 : 1)
+                            .animation(.easeOut(duration: 0.2), value: isPressing)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     
@@ -401,9 +376,6 @@ struct HomeView: View {
             .fullScreenCover(isPresented: $showCart) {
                 CartView()
             }
-            .fullScreenCover(isPresented: $showTshirtCustomizer) {
-                TshirtCustomizerView()
-            }
             .navigationDestination(isPresented: $navigateToLogin) {
                 LoginView(viewModel: ProfileViewModel()) {
                     navigateToLogin = false
@@ -422,9 +394,6 @@ struct HomeView: View {
             }
             .navigationDestination(isPresented: $navigateToOrders) {
                 OrderListView()
-            }
-            .navigationDestination(isPresented: $navigateToPlansAndPricing) {
-                PlansAndPricingView()
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -531,74 +500,6 @@ struct HomeView: View {
                 pressSoundStopTimer = nil
             }
         }
-    }
-
-    // MARK: - Ropa CTA
-
-    private var ropaCTA: some View {
-        Button {
-            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-            showTshirtCustomizer = true
-        } label: {
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle()
-                        .fill(Color.white.opacity(0.20))
-                        .frame(width: 52, height: 52)
-                    Image(systemName: "tshirt.fill")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(.white)
-                }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 6) {
-                        Text("Diseña tu prenda")
-                            .font(.system(size: 15, weight: .heavy, design: .rounded))
-                            .foregroundStyle(.white)
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(Color(red: 0.92, green: 0.55, blue: 0.72))
-                    }
-                    Text("Editor 3D · sube PNGs · escoge color y estilo")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.80))
-                }
-
-                Spacer(minLength: 0)
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(10)
-                    .background(Circle().fill(Color.white.opacity(0.18)))
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 13)
-            .background(
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.55, green: 0.12, blue: 0.32),
-                        Color(red: 0.78, green: 0.25, blue: 0.50)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.20), lineWidth: 1)
-            )
-            .shadow(
-                color: Color(red: 0.78, green: 0.25, blue: 0.50).opacity(0.55),
-                radius: 16, x: 0, y: 8
-            )
-        }
-        .buttonStyle(.plain)
-        .transition(.asymmetric(
-            insertion: .opacity.combined(with: .move(edge: .bottom)),
-            removal: .opacity
-        ))
     }
 
     // MARK: - Entrance Animations

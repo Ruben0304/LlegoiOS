@@ -48,33 +48,16 @@ struct PaymentMethod: Identifiable, Equatable {
         // Map method type to icon and color
         let (imageType, color) = iconAndColor(for: model.method, code: model.code, iconUrl: model.iconUrl)
         
-        // Check if it's Stripe
-        let isStripe = model.method.lowercased() == "stripe" || model.method.lowercased() == "card"
-        
-        // Use instructions as description if available, except for Stripe
-        let description: String
-        if isStripe {
-            description = "Próximamente disponible"
-        } else {
-            description = model.instructions ?? defaultDescription(for: model.method)
-        }
-        
-        // Modify name for Stripe
-        let name: String
-        if isStripe {
-            name = "Stripe próximamente"
-        } else {
-            name = model.name
-        }
-        
+        let description = model.instructions ?? defaultDescription(for: model.method)
+
         return PaymentMethod(
             id: model.id,
-            name: name,
+            name: model.name,
             description: description,
             imageType: imageType,
             color: color,
             currency: model.currency,
-            isEnabled: !isStripe // Stripe está deshabilitado
+            isEnabled: true
         )
     }
     
@@ -117,7 +100,7 @@ struct PaymentMethod: Identifiable, Equatable {
         case "transfer", "transfermovil":
             return "Transferencia bancaria"
         case "stripe", "card":
-            return "Próximamente disponible"
+            return "Pago con tarjeta internacional"
         case "cash":
             return "Pago al recibir"
         default:

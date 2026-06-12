@@ -94,6 +94,7 @@ public extension LlegoAPI {
       case "ProductSuggestionType": return LlegoAPI.Objects.ProductSuggestionType
       case "ProductSyncType": return LlegoAPI.Objects.ProductSyncType
       case "ProductType": return LlegoAPI.Objects.ProductType
+      case "PromotionalVideoType": return LlegoAPI.Objects.PromotionalVideoType
       case "Query": return LlegoAPI.Objects.Query
       case "QvaPayPaymentResult": return LlegoAPI.Objects.QvaPayPaymentResult
       case "SavedAddressType": return LlegoAPI.Objects.SavedAddressType

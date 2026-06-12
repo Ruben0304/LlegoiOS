@@ -1,7 +1,6 @@
 import Foundation
 import SwiftUI
 import Combine
-import PassKit
 import StripePaymentSheet
 
 enum WalletCurrency: String, CaseIterable, Identifiable {
@@ -28,7 +27,7 @@ enum WalletCurrency: String, CaseIterable, Identifiable {
 }
 
 @MainActor
-class WalletViewModel: NSObject, ObservableObject {
+class WalletViewModel: ObservableObject {
     static let shared = WalletViewModel()
 
     @Published var balance: Double = 0.0
@@ -62,48 +61,9 @@ class WalletViewModel: NSObject, ObservableObject {
     private let authManager = AuthManager.shared
     private var searchTask: Task<Void, Never>?
 
-    // MARK: - Apple Pay
-    private let merchantID = "merchant.com.llego.ios"
-    private let supportedNetworks: [PKPaymentNetwork] = [.visa, .masterCard, .amex, .discover]
-    private var paymentCompletionHandler: ((Bool, String?) -> Void)?
-    private var pendingRechargeAmount: Double = 0.0
     private var pendingRechargeCurrency: WalletCurrency = .usd
 
-    private override init() {
-        super.init()
-    }
-
-    // MARK: - Apple Pay Diagnostics
-    func getApplePayDiagnostics() -> String {
-        var diagnostics = "🔍 Diagnóstico de Apple Pay:\n\n"
-        
-        // 1. Verificar disponibilidad básica
-        let canMakePayments = PKPaymentAuthorizationController.canMakePayments()
-        diagnostics += "1. Dispositivo soporta Apple Pay: \(canMakePayments ? "✅ Sí" : "❌ No")\n"
-        
-        // 2. Verificar tarjetas configuradas
-        let canMakePaymentsWithCards = PKPaymentAuthorizationController.canMakePayments(usingNetworks: supportedNetworks)
-        diagnostics += "2. Tarjetas configuradas: \(canMakePaymentsWithCards ? "✅ Sí" : "❌ No")\n"
-        
-        // 3. Merchant ID
-        diagnostics += "3. Merchant ID: \(merchantID)\n"
-        
-        // 4. Redes soportadas
-        diagnostics += "4. Redes soportadas: \(supportedNetworks.map { $0.rawValue }.joined(separator: ", "))\n"
-        
-        // 5. Recomendaciones
-        diagnostics += "\n💡 Recomendaciones:\n"
-        if !canMakePayments {
-            diagnostics += "- Este dispositivo no soporta Apple Pay\n"
-        } else if !canMakePaymentsWithCards {
-            diagnostics += "- Abre la app Wallet y agrega una tarjeta\n"
-            diagnostics += "- Puedes usar tarjetas de prueba: 4111 1111 1111 1111\n"
-        } else {
-            diagnostics += "- Todo está configurado correctamente ✅\n"
-        }
-        
-        return diagnostics
-    }
+    private init() {}
 
     // MARK: - Load Balance Only (for Home)
     func loadBalance() {
@@ -232,103 +192,6 @@ class WalletViewModel: NSObject, ObservableObject {
         }
     }
 
-    // MARK: - Apple Pay Recharge
-    func processApplePayRecharge(for currency: WalletCurrency) {
-        guard let amount = Double(rechargeAmount), amount > 0 else {
-            return
-        }
-
-        // Verificar disponibilidad básica
-        guard PKPaymentAuthorizationController.canMakePayments() else {
-            successMessage = "Apple Pay no está disponible en este dispositivo"
-            showSuccessMessage = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                self.showSuccessMessage = false
-            }
-            return
-        }
-
-        // Verificar si hay tarjetas configuradas
-        let canMakePaymentsWithCards = PKPaymentAuthorizationController.canMakePayments(usingNetworks: supportedNetworks)
-        if !canMakePaymentsWithCards {
-            successMessage = "Por favor, agrega una tarjeta a Apple Wallet primero"
-            showSuccessMessage = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                self.showSuccessMessage = false
-            }
-            return
-        }
-
-        pendingRechargeAmount = amount
-        pendingRechargeCurrency = currency
-
-        let request = createPaymentRequest(amount: amount, currency: currency)
-        
-        // Validar el request antes de presentar
-        guard request.paymentSummaryItems.count > 0 else {
-            successMessage = "Error al crear la solicitud de pago"
-            showSuccessMessage = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                self.showSuccessMessage = false
-            }
-            return
-        }
-
-        let controller = PKPaymentAuthorizationController(paymentRequest: request)
-        controller.delegate = self
-
-        controller.present { presented in
-            if !presented {
-                print("❌ Apple Pay no se pudo presentar")
-                print("Merchant ID: \(self.merchantID)")
-                print("Currency: \(currency.currencyCode)")
-                print("Amount: \(amount)")
-                
-                self.successMessage = "No se pudo presentar Apple Pay. Verifica tu configuración."
-                self.showSuccessMessage = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                    self.showSuccessMessage = false
-                }
-            } else {
-                print("✅ Apple Pay presentado correctamente")
-            }
-        }
-    }
-
-    private func createPaymentRequest(amount: Double, currency: WalletCurrency) -> PKPaymentRequest {
-        let request = PKPaymentRequest()
-        request.merchantIdentifier = merchantID
-        request.merchantCapabilities = .threeDSecure
-        request.countryCode = "US"
-        request.currencyCode = currency.currencyCode
-        request.supportedNetworks = supportedNetworks
-
-        let rechargeItem = PKPaymentSummaryItem(
-            label: "Recarga Wallet \(currency.currencyCode)",
-            amount: NSDecimalNumber(value: amount),
-            type: .final
-        )
-
-        let total = PKPaymentSummaryItem(
-            label: "Llego",
-            amount: NSDecimalNumber(value: amount),
-            type: .final
-        )
-
-        request.paymentSummaryItems = [rechargeItem, total]
-        
-        // Opcional pero recomendado
-        request.requiredBillingContactFields = [.emailAddress, .name]
-        
-        print("📱 Payment Request creado:")
-        print("  - Merchant ID: \(merchantID)")
-        print("  - Currency: \(currency.currencyCode)")
-        print("  - Amount: \(amount)")
-        print("  - Items: \(request.paymentSummaryItems.count)")
-
-        return request
-    }
-
     // MARK: - Stripe Recharge
     func processStripeRecharge(for currency: WalletCurrency) {
         guard let amount = Double(rechargeAmount), amount > 0 else {
@@ -349,14 +212,6 @@ class WalletViewModel: NSObject, ObservableObject {
                 var configuration = PaymentSheet.Configuration()
                 configuration.merchantDisplayName = "Llego"
                 configuration.allowsDelayedPaymentMethods = true
-                
-                // Configurar Apple Pay si está disponible
-                if PKPaymentAuthorizationController.canMakePayments() {
-                    configuration.applePay = .init(
-                        merchantId: "merchant.com.llego.ios",
-                        merchantCountryCode: "US"
-                    )
-                }
                 
                 // 3. Crear el Payment Sheet y cerrar el sheet de recarga
                 await MainActor.run {
@@ -789,81 +644,3 @@ class WalletViewModel: NSObject, ObservableObject {
     }
 }
 
-// MARK: - PKPaymentAuthorizationControllerDelegate
-extension WalletViewModel: PKPaymentAuthorizationControllerDelegate {
-
-    func paymentAuthorizationController(
-        _ controller: PKPaymentAuthorizationController,
-        didAuthorizePayment payment: PKPayment,
-        handler completion: @escaping (PKPaymentAuthorizationResult) -> Void
-    ) {
-        print("✅ Payment authorized")
-        print("📦 Payment token: \(payment.token)")
-        print("📧 Billing contact: \(payment.billingContact?.emailAddress ?? "N/A")")
-
-        Task {
-            guard let jwt = await authManager.getAccessToken() else {
-                print("❌ No JWT token available")
-                await MainActor.run {
-                    completion(PKPaymentAuthorizationResult(status: .failure, errors: nil))
-                }
-                return
-            }
-
-            do {
-                let currencyCode = self.pendingRechargeCurrency == .usd ? "usd" : "local"
-                print("💰 Procesando recarga: \(self.pendingRechargeAmount) \(currencyCode)")
-                
-                let _ = try await self.repository.depositMoney(
-                    jwt: jwt,
-                    amount: self.pendingRechargeAmount,
-                    currency: currencyCode,
-                    source: "apple_pay",
-                    description: "Recarga via Apple Pay"
-                )
-
-                print("✅ Recarga procesada exitosamente")
-
-                // Reload wallet balance
-                try await Task.sleep(nanoseconds: 500_000_000)
-                let walletBalance = try await self.repository.fetchWalletBalance(jwt: jwt)
-
-                await MainActor.run {
-                    self.balance = walletBalance.usd
-                    self.cupBalance = walletBalance.local
-                    self.showRechargeSheet = false
-                    self.rechargeAmount = ""
-
-                    let formattedAmount = String(format: "%.2f", self.pendingRechargeAmount)
-                    self.successMessage = "¡Recarga Apple Pay exitosa! \(self.pendingRechargeCurrency.symbol)\(formattedAmount) \(self.pendingRechargeCurrency.currencyCode)"
-                    self.showSuccessMessage = true
-
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                        self.showSuccessMessage = false
-                    }
-
-                    completion(PKPaymentAuthorizationResult(status: .success, errors: nil))
-                }
-            } catch {
-                print("❌ Error procesando Apple Pay: \(error.localizedDescription)")
-                await MainActor.run {
-                    self.successMessage = "Error: \(error.localizedDescription)"
-                    self.showSuccessMessage = true
-
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                        self.showSuccessMessage = false
-                    }
-
-                    completion(PKPaymentAuthorizationResult(status: .failure, errors: nil))
-                }
-            }
-        }
-    }
-
-    func paymentAuthorizationControllerDidFinish(_ controller: PKPaymentAuthorizationController) {
-        print("🏁 Apple Pay controller dismissed")
-        controller.dismiss {
-            print("✅ Dismiss completed")
-        }
-    }
-}

@@ -553,6 +553,7 @@ final class OrderDetailRepository {
             case .validated: return .validated
             case .completed: return .completed
             case .failed: return .failed
+            case .cancelled: return .failed
             }
         case .unknown:
             return .pending

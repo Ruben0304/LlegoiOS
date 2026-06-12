@@ -197,9 +197,7 @@ class ConversationalSearchViewModel: ObservableObject {
             responseType: current.responseType,
             productEntities: current.productEntities,
             branchEntities: current.branchEntities,
-            confidence: current.confidence,
-            actionTitle: current.actionTitle,
-            action: current.action
+            confidence: current.confidence
         )
         messages[index] = updated
     }

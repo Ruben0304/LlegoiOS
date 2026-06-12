@@ -1,0 +1,18 @@
+query GetActivePromotionalVideos {
+  activePromotionalVideos {
+    id
+    title
+    description
+    videoUrl
+    videoUrlSigned
+    duration
+    appTarget
+    thumbnailUrl
+    thumbnailUrlSigned
+    branchId
+    branchName
+    branchAvatarUrl
+    order
+    tags
+  }
+}

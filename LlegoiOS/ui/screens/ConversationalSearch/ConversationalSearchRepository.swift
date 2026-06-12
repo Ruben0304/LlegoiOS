@@ -9,7 +9,6 @@ import Foundation
 
 @MainActor
 final class ConversationalSearchRepository {
-    private let localAIAssistantService = LocalAIAssistantService.shared
     private let backendClient = AIChatBackendClient(baseURL: ApolloClientManager.baseURL)
     private var activeBackendTask: Task<Void, Never>?
     private var activeBackendRequestId: UUID?
@@ -20,43 +19,11 @@ final class ConversationalSearchRepository {
         onStreamEvent: (@Sendable (AIChatStreamEvent) -> Void)? = nil,
         completion: @escaping @Sendable (Result<AIChatData, Error>) -> Void
     ) {
-        switch provider {
-        case .appleIntelligence:
-            sendMessageWithAppleIntelligence(message: message, completion: completion)
-        case .llegoAI:
-            sendMessageWithBackend(
-                message: message,
-                onStreamEvent: onStreamEvent,
-                completion: completion
-            )
-        }
-    }
-
-    private func sendMessageWithAppleIntelligence(
-        message: String,
-        completion: @escaping @Sendable (Result<AIChatData, Error>) -> Void
-    ) {
-        Task { @MainActor in
-            guard let jwt = AuthManager.shared.getAccessToken() else {
-                completion(.failure(LocalAIAssistantError.unauthenticated))
-                return
-            }
-
-            let sessionId =
-                AuthManager.shared.userId ?? DeviceIDManager.shared.getDeviceId()
-                ?? UUID().uuidString
-
-            do {
-                let output = try await localAIAssistantService.sendMessage(
-                    message: message,
-                    sessionId: sessionId,
-                    jwt: jwt
-                )
-                completion(.success(mapLocalOutputToChatData(output)))
-            } catch {
-                completion(.failure(error))
-            }
-        }
+        sendMessageWithBackend(
+            message: message,
+            onStreamEvent: onStreamEvent,
+            completion: completion
+        )
     }
 
     private func sendMessageWithBackend(
@@ -131,47 +98,6 @@ final class ConversationalSearchRepository {
         }
     }
 
-    private func mapLocalOutputToChatData(_ output: LocalAIAssistantOutput) -> AIChatData {
-        let products = output.products.map {
-            AIChatProductEntity(
-                id: $0.id,
-                branchId: nil,
-                name: $0.name,
-                description: $0.description,
-                price: $0.price,
-                currency: $0.currency,
-                imageUrl: $0.imageUrl,
-                availability: $0.availability,
-                branchName: $0.branchName,
-                branchAvatarUrl: $0.branchAvatarUrl,
-                branchAddress: $0.branchAddress,
-                branchPhone: $0.branchPhone,
-                reason: $0.reason
-            )
-        }
-
-        let branches = output.branches.map {
-            AIChatBranchEntity(
-                id: $0.id,
-                name: $0.name,
-                address: $0.address,
-                phone: $0.phone,
-                status: $0.status,
-                avatarUrl: $0.avatarUrl,
-                coordinates: AIChatCoordinates(
-                    type: $0.coordinatesType, coordinates: $0.coordinates),
-                reason: $0.reason
-            )
-        }
-
-        return AIChatData(
-            responseType: output.responseType,
-            aiText: output.aiText,
-            productEntities: products,
-            branchEntities: branches,
-            confidence: output.confidence
-        )
-    }
 }
 
 private actor AIChatBackendClient {

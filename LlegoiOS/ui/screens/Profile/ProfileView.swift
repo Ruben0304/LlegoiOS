@@ -203,13 +203,14 @@ struct ProfileView: View {
                             // customerLevelSection
 
                             if !viewModel.isRefreshingProfile {
-                                walletQuickAccessSection
+                                // Wallet oculto temporalmente
+                                // walletQuickAccessSection
 
                                 // Vista previa de pedidos recientes
                                 recentOrdersSection
 
-                                // Preferencia de AI para recomendaciones
-                                aiPreferenceSection
+                                // Preferencia de AI para recomendaciones (motor de recomendaciones) oculto temporalmente
+                                // aiPreferenceSection
 
                                 // Tutoriales
                                 tutorialsSection

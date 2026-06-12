@@ -1,5 +1,4 @@
 import SwiftUI
-import PassKit
 import StripePaymentSheet
 
 struct WalletView: View {
@@ -236,35 +235,6 @@ struct WalletView: View {
                         
                         // Info Cards
                         VStack(spacing: 12) {
-                            // Apple Pay Info
-                            HStack(spacing: 12) {
-                                Image(systemName: "apple.logo")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(.black)
-                                
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Paga con Apple Pay")
-                                        .font(.system(size: 15, weight: .semibold))
-                                        .foregroundColor(.primary)
-                                    
-                                    Text("Seguro, rápido y privado")
-                                        .font(.system(size: 13))
-                                        .foregroundColor(.secondary)
-                                }
-                                
-                                Spacer()
-                                
-                                Image(systemName: "checkmark.seal.fill")
-                                    .font(.system(size: 20))
-                                    .foregroundColor(.green)
-                            }
-                            .padding(16)
-                            .background(
-                                RoundedRectangle(cornerRadius: 14)
-                                    .fill(Color(.systemBackground))
-                                    .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
-                            )
-                            
                             // Security Info
                             HStack(spacing: 12) {
                                 Image(systemName: "lock.shield.fill")
@@ -633,7 +603,6 @@ struct LocalRechargeSheet: View {
     var onCupTransferTap: (String) -> Void
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isAmountFocused: Bool
-    @State private var showDiagnostics = false
 
     var body: some View {
         NavigationView {
@@ -706,15 +675,15 @@ struct LocalRechargeSheet: View {
                     if let amount = Double(sanitizedAmount), amount > 0 {
                         VStack(spacing: 12) {
                             if selectedCurrency == .usd {
-                                // Apple Pay Button
+                                // Stripe Button
                                 Button(action: {
                                     viewModel.rechargeAmount = sanitizedAmount
-                                    viewModel.processApplePayRecharge(for: selectedCurrency)
+                                    viewModel.processStripeRecharge(for: selectedCurrency)
                                 }) {
                                     HStack {
-                                        Image(systemName: "apple.logo")
-                                            .font(.system(size: 20))
-                                        Text("Pagar con Apple Pay")
+                                        Image(systemName: "creditcard.fill")
+                                            .font(.system(size: 18))
+                                        Text("Pagar con tarjeta")
                                             .font(.system(size: 17, weight: .semibold))
                                     }
                                     .foregroundColor(.white)
@@ -722,29 +691,9 @@ struct LocalRechargeSheet: View {
                                     .padding()
                                     .background(
                                         RoundedRectangle(cornerRadius: 14)
-                                            .fill(Color.black)
+                                            .fill(Color.llegoPrimary)
                                     )
                                 }
-
-                                // Stripe Button (Deshabilitado - Próximamente)
-                                Button(action: {
-                                    // No hacer nada - botón deshabilitado
-                                }) {
-                                    HStack {
-                                        Image(systemName: "creditcard.fill")
-                                            .font(.system(size: 18))
-                                        Text("Stripe próximamente")
-                                            .font(.system(size: 17, weight: .semibold))
-                                    }
-                                    .foregroundColor(.white.opacity(0.6))
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 14)
-                                            .fill(Color.gray.opacity(0.4))
-                                    )
-                                }
-                                .disabled(true)
 
                                 // Manual Test Button
                                 Button(action: {
@@ -859,24 +808,11 @@ struct LocalRechargeSheet: View {
             .navigationTitle("Recargar Wallet")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: {
-                        showDiagnostics = true
-                    }) {
-                        Image(systemName: "info.circle")
-                    }
-                }
-                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Cerrar") {
                         dismiss()
                     }
                 }
-            }
-            .alert("Diagnóstico Apple Pay", isPresented: $showDiagnostics) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(viewModel.getApplePayDiagnostics())
             }
             .onAppear {
                 isAmountFocused = true

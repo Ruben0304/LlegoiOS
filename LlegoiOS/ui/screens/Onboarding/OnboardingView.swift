@@ -50,19 +50,19 @@ struct OnboardingView: View {
         OnboardingPageData(
             title: "Mira las cartas de\ntus lugares favoritos",
             description: "Explora los menús completos de restaurantes, tiendas y dulcerías de tu zona.",
-            media: .placeholder(icon: "menucard.fill", label: "Foto / video de menús reales"),
+            media: .video(name: "cartas", ext: "mov"),
             style: .devicePreview
         ),
         OnboardingPageData(
             title: "Pide a domicilio",
             description: "Lo que quieras, directo a tu puerta. Pago seguro y entrega rápida.",
-            media: .placeholder(icon: "bag.fill.badge.plus", label: "Video del flujo de pedido"),
+            media: .video(name: "domicilio", ext: "mov"),
             style: .devicePreview
         ),
         OnboardingPageData(
             title: "Encuentra lugares\nnuevos cerca de ti",
             description: "Descubre los mejores negocios de tu zona basados en tu ubicación.",
-            media: .placeholder(icon: "map.fill", label: "Mapa real con pines de negocios"),
+            media: .video(name: "lugares", ext: "mov"),
             style: .devicePreview
         ),
     ]
@@ -102,7 +102,7 @@ struct OnboardingView: View {
                     if isIntroPhase {
                         OnboardingIntroPage(
                             page: pages[0],
-                            topPadding: geometry.safeAreaInsets.top + 24
+                            topPadding: geometry.safeAreaInsets.top + 70
                         )
                         .transition(.opacity)
                     } else {
@@ -205,7 +205,7 @@ struct OnboardingAmbientBackground: View {
     }
 }
 
-// MARK: - Preview Phase (device frame + text)
+// MARK: - Preview Phase (device frame + text overlaid sobre blur interno del video)
 struct OnboardingPreviewPhase: View {
     let previewPages: [OnboardingPageData]
     let activeIndex: Int
@@ -216,46 +216,56 @@ struct OnboardingPreviewPhase: View {
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
-                .frame(height: geometry.safeAreaInsets.top + 12)
+                .frame(height: geometry.safeAreaInsets.top + 90)
 
             OnboardingDeviceFrame(
                 pages: previewPages,
                 activeIndex: activeIndex,
                 accentColor: accentColor
             )
-            .frame(height: geometry.size.height * 0.55)
+            .frame(height: geometry.size.height * 0.72)
             .scaleEffect(framePressed ? 0.985 : 1.0)
-            .padding(.horizontal, 24)
-
-            Spacer(minLength: 16)
-
-            // Text block — overlapping pages, only the active one is visible.
-            // Coordinated transition: outgoing slides left, incoming slides from right.
-            ZStack {
-                ForEach(Array(previewPages.enumerated()), id: \.element.id) { index, page in
-                    if index == activeIndex {
-                        OnboardingTextBlock(
-                            title: page.title,
-                            description: page.description
-                        )
-                        .transition(
-                            .asymmetric(
-                                insertion: .move(edge: .trailing).combined(with: .opacity),
-                                removal: .move(edge: .leading).combined(with: .opacity)
+            .padding(.horizontal, 16)
+            .overlay(alignment: .bottom) {
+                // El texto va sobre la zona del video que ya está blureada por dentro del teléfono.
+                ZStack {
+                    ForEach(Array(previewPages.enumerated()), id: \.element.id) { index, page in
+                        if index == activeIndex {
+                            OnboardingTextBlock(
+                                title: page.title,
+                                description: page.description
                             )
-                        )
+                            .transition(
+                                .asymmetric(
+                                    insertion: .move(edge: .trailing).combined(with: .opacity),
+                                    removal: .move(edge: .leading).combined(with: .opacity)
+                                )
+                            )
+                        }
                     }
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 28)
+                .padding(.bottom, 60)
+                .allowsHitTesting(false)
             }
-            .frame(maxWidth: .infinity)
-            .frame(minHeight: 140)
-            .padding(.horizontal, 24)
 
             Spacer(minLength: 0)
-            Spacer()
-                .frame(height: 180) // reserve space for bottom controls
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+// MARK: - Native iOS Blur (UIVisualEffectView, sin tint blanco encima del fondo oscuro)
+struct OnboardingBlurView: UIViewRepresentable {
+    var style: UIBlurEffect.Style = .systemUltraThinMaterialDark
+
+    func makeUIView(context: Context) -> UIVisualEffectView {
+        UIVisualEffectView(effect: UIBlurEffect(style: style))
+    }
+
+    func updateUIView(_ uiView: UIVisualEffectView, context: Context) {
+        uiView.effect = UIBlurEffect(style: style)
     }
 }
 
@@ -290,8 +300,9 @@ struct OnboardingDeviceFrame: View {
                     .shadow(color: .black.opacity(0.55), radius: 30, x: 0, y: 22)
                     .shadow(color: accentColor.opacity(0.35), radius: 45, x: 0, y: 8)
 
-                // Inner screen with horizontal rail
-                ZStack {
+                // Inner screen: rail de videos + blur nativo en la parte inferior.
+                // Todo clippeado a las esquinas redondeadas del teléfono.
+                ZStack(alignment: .bottom) {
                     HStack(spacing: 0) {
                         ForEach(Array(pages.enumerated()), id: \.element.id) { index, page in
                             OnboardingMediaSlot(
@@ -308,6 +319,36 @@ struct OnboardingDeviceFrame: View {
                     }
                     .frame(width: innerWidth, alignment: .leading)
                     .offset(x: -CGFloat(activeIndex) * innerWidth)
+
+                    // Blur nativo iOS aplicado SOLO al video, en su parte inferior.
+                    // Fuera del marco, el fondo oscuro sigue visible a pantalla completa.
+                    OnboardingBlurView(style: .systemUltraThinMaterialDark)
+                        .frame(width: innerWidth, height: innerHeight * 0.48)
+                        .mask(
+                            LinearGradient(
+                                stops: [
+                                    .init(color: .clear, location: 0.0),
+                                    .init(color: .black.opacity(0.65), location: 0.22),
+                                    .init(color: .black, location: 0.5),
+                                    .init(color: .black, location: 1.0),
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+
+                    // Tinte oscuro adicional sobre el blur para mejor contraste del texto.
+                    LinearGradient(
+                        stops: [
+                            .init(color: .clear, location: 0.0),
+                            .init(color: .black.opacity(0.25), location: 0.6),
+                            .init(color: .black.opacity(0.55), location: 1.0),
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    .frame(width: innerWidth, height: innerHeight * 0.48)
+                    .allowsHitTesting(false)
                 }
                 .frame(width: innerWidth, height: innerHeight)
                 .mask(
@@ -335,13 +376,6 @@ struct OnboardingDeviceFrame: View {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .strokeBorder(Color.white.opacity(0.15), lineWidth: 1)
                     .frame(width: phoneWidth, height: phoneHeight)
-                    .allowsHitTesting(false)
-
-                // Dynamic Island
-                Capsule()
-                    .fill(Color.black)
-                    .frame(width: phoneWidth * 0.28, height: phoneHeight * 0.035)
-                    .offset(y: -phoneHeight / 2 + bezel + (phoneHeight * 0.04))
                     .allowsHitTesting(false)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -691,17 +725,35 @@ struct OnboardingLoopingVideoView: UIViewRepresentable {
     }
 
     private func resolveVideoURL() -> URL? {
-        Bundle.main.url(
-            forResource: resourceName,
-            withExtension: resourceExtension,
-            subdirectory: "resources/videos"
-        )
-            ?? Bundle.main.url(
+        // Bundle lookup is case-sensitive; intentamos varias variantes de la extensión
+        // por si el archivo fue añadido como .MOV vs .mov.
+        let extensionVariants = [
+            resourceExtension,
+            resourceExtension.lowercased(),
+            resourceExtension.uppercased(),
+        ]
+
+        for ext in extensionVariants {
+            if let url = Bundle.main.url(
                 forResource: resourceName,
-                withExtension: resourceExtension,
+                withExtension: ext,
+                subdirectory: "resources/videos"
+            ) {
+                return url
+            }
+            if let url = Bundle.main.url(
+                forResource: resourceName,
+                withExtension: ext,
                 subdirectory: "videos"
-            )
-            ?? Bundle.main.url(forResource: resourceName, withExtension: resourceExtension)
+            ) {
+                return url
+            }
+            if let url = Bundle.main.url(forResource: resourceName, withExtension: ext) {
+                return url
+            }
+        }
+
+        return nil
     }
 
     final class Coordinator {

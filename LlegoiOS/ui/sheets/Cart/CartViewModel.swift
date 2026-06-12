@@ -111,6 +111,9 @@ class CartViewModel: ObservableObject {
     // MARK: - Service Fee Rate (fetched from backend, fallback 10%)
     @Published var serviceFeeRate: Double = 0.10
 
+    /// Tasa reducida aplicada tras ver los videos promocionales (fallback 5%)
+    @Published var discountedServiceFeeRate: Double = 0.05
+
     init() {
         bindGlobalRecommendations()
     }
@@ -169,9 +172,9 @@ class CartViewModel: ObservableObject {
         deliveryFeeEstimate?.zoneName
     }
 
-    /// Tasa de servicio actual (obtenida del backend)
+    /// Tasa de servicio actual: reducida si el usuario vio las promociones
     var currentServiceFeeRate: Double {
-        serviceFeeRate
+        hasWatchedAds ? discountedServiceFeeRate : serviceFeeRate
     }
 
     /// Porcentaje de servicio formateado
@@ -184,8 +187,13 @@ class CartViewModel: ObservableObject {
         subtotal * currentServiceFeeRate
     }
 
-    /// Ahorro por ver anuncios (sin efecto mientras el backend maneja la tasa)
-    var adSavings: Double { 0 }
+    /// Ahorro en el cargo de servicio al aplicar la tasa reducida
+    private var serviceFeeSavingsAmount: Double {
+        max(0, subtotal * (serviceFeeRate - discountedServiceFeeRate))
+    }
+
+    /// Ahorro ya aplicado por ver las promociones
+    var adSavings: Double { hasWatchedAds ? serviceFeeSavingsAmount : 0 }
 
     var total: Double {
         subtotal + payableDeliveryFee + serviceFee
@@ -259,15 +267,17 @@ class CartViewModel: ObservableObject {
         formatPrice(total, currency: selectedCurrency)
     }
 
-    /// Total si viera los anuncios (igual al total normal ya que la tasa viene del backend)
-    var totalWithDiscount: Double { total }
-
-    var formattedTotalWithDiscount: String {
-        formattedTotal
+    /// Total si viera las promociones (cargo de servicio con tasa reducida)
+    var totalWithDiscount: Double {
+        subtotal + payableDeliveryFee + subtotal * discountedServiceFeeRate
     }
 
-    /// Ahorro potencial si ve los anuncios
-    var potentialSavings: Double { 0 }
+    var formattedTotalWithDiscount: String {
+        formatPrice(totalWithDiscount, currency: selectedCurrency)
+    }
+
+    /// Ahorro potencial si ve las promociones
+    var potentialSavings: Double { serviceFeeSavingsAmount }
 
     var formattedPotentialSavings: String {
         formatPrice(potentialSavings, currency: selectedCurrency)
@@ -289,6 +299,14 @@ class CartViewModel: ObservableObject {
                 guard let self = self else { return }
                 if case .success(let rate) = result {
                     self.serviceFeeRate = rate
+                }
+            }
+        }
+        repository.fetchDiscountedServiceFeeRate { [weak self] result in
+            Task { @MainActor in
+                guard let self = self else { return }
+                if case .success(let rate) = result {
+                    self.discountedServiceFeeRate = rate
                 }
             }
         }
@@ -1016,7 +1034,11 @@ class CartViewModel: ObservableObject {
         shortcutPollingError = nil
 
         pollingTask = Task {
-            while !Task.isCancelled {
+            let maxAttempts = 60  // 60 × 5s = 5 minutos máximo
+            var attempts = 0
+
+            while !Task.isCancelled && attempts < maxAttempts {
+                attempts += 1
                 guard let jwt = await authManager.getAccessToken() else { break }
                 do {
                     let attempt = try await paymentRepository.confirmTransferByShortcut(
@@ -1043,8 +1065,19 @@ class CartViewModel: ObservableObject {
                 }
                 try? await Task.sleep(nanoseconds: 5_000_000_000)  // 5 segundos
             }
+
             await MainActor.run {
                 self.isPollingShortcut = false
+            }
+
+            // Timeout tras 5 minutos sin confirmar
+            if attempts >= maxAttempts {
+                let timeoutError = NSError(
+                    domain: "CartViewModel",
+                    code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: "No pudimos verificar tu transferencia automáticamente. Contacta al negocio para confirmar tu pago."]
+                )
+                onError(timeoutError)
             }
         }
     }

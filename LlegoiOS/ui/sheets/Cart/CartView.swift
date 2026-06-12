@@ -35,7 +35,6 @@ struct CartView: View {
     @State private var selectedCurrency: Currency = .CUP
     @State private var selectedPaymentMethod: PaymentMethod?
     @State private var showPaymentMethodPicker = false
-    @State private var navigateToPlans = false
     @State private var showOrdersFromCart = false
 
     // MARK: - Stripe PaymentSheet
@@ -156,9 +155,6 @@ struct CartView: View {
                             NotificationCenter.default.post(name: .openOrdersFromCheckout, object: nil)
                         }
                     )
-                }
-                .navigationDestination(isPresented: $navigateToPlans) {
-                    PlansAndPricingView()
                 }
                 .fullScreenCover(isPresented: $showOrdersFromCart, content: ordersFromCartCover)
         }
@@ -609,11 +605,22 @@ struct CartView: View {
                         playSuccessFeedback()
                         executePaymentProcessing(paymentMethod: paymentMethod)
                     } else {
-                        // ❌ Fallo o Cancelación
-                        if let error = authenticationError as? LAError {
-                            // Manejar errores específicos si es necesario
-                            print("Authentication failed: \(error.localizedDescription)")
+                        // ❌ Fallo o Cancelación — mostrar mensaje al usuario
+                        let message: String
+                        if let laError = authenticationError as? LAError {
+                            switch laError.code {
+                            case .userCancel, .appCancel:
+                                message = "Autenticación cancelada."
+                            case .biometryLockout:
+                                message = "Face ID bloqueado por demasiados intentos. Desbloquea el dispositivo e intenta de nuevo."
+                            default:
+                                message = "No se pudo verificar tu identidad. Intenta de nuevo."
+                            }
+                        } else {
+                            message = "No se pudo verificar tu identidad. Intenta de nuevo."
                         }
+                        paymentAlertMessage = message
+                        showPaymentAlert = true
                     }
                 }
             }
@@ -1382,7 +1389,7 @@ struct CartView: View {
 
         // Configurar PaymentSheet
         var configuration = PaymentSheet.Configuration()
-        configuration.merchantDisplayName = StripeConfig.merchantDisplayName
+        configuration.merchantDisplayName = "Llego"
 
         // Solo configurar customer si no estamos en modo mock
         if !StripeConfig.useMockData && response.customer != "cus_mock" {
@@ -1394,17 +1401,6 @@ struct CartView: View {
             print("✅ Customer configurado: \(response.customer)")
         } else {
             print("🧪 [MOCK MODE] Omitiendo configuración de Customer")
-        }
-
-        // MARK: - Apple Pay Configuration
-        if StripeConfig.enableApplePay {
-            configuration.applePay = .init(
-                merchantId: StripeConfig.applePayMerchantId,
-                merchantCountryCode: StripeConfig.merchantCountryCode
-            )
-            print("🍎 Apple Pay habilitado")
-            print("   Merchant ID: \(StripeConfig.applePayMerchantId)")
-            print("   Country: \(StripeConfig.merchantCountryCode)")
         }
 
         // Permitir métodos de pago diferidos (como cuentas bancarias)
@@ -2242,10 +2238,15 @@ struct CartView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 13)
         .fullScreenCover(isPresented: $showAdView) {
-            AdWatcherView(onComplete: {
-                viewModel.activateAdDiscount()
-                showAdView = false
-            })
+            PromoStoriesView(
+                onComplete: {
+                    viewModel.activateAdDiscount()
+                    showAdView = false
+                },
+                onClose: {
+                    showAdView = false
+                }
+            )
         }
     }
 

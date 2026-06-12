@@ -8,7 +8,6 @@ enum BranchType: String {
     case tienda = "tienda"
     case dulceria = "dulceria"
     case perfumeria = "perfumeria"
-    case ropa = "ropa"
 }
 
 /// Manages the global branch type filter across the application
@@ -23,7 +22,7 @@ class BranchTypeManager: ObservableObject {
     /// Default is restaurante (index 0 in HomeView)
     @Published var selectedType: BranchType = .restaurante
 
-    private init() {}
+    init() {}
 
     /// Update the selected branch type
     func setType(_ type: BranchType) {
@@ -35,7 +34,6 @@ class BranchTypeManager: ObservableObject {
     /// - 1: Tiendas -> tienda
     /// - 2: Dulcería -> dulceria
     /// - 3: Perfumería -> perfumeria
-    /// - 4: Ropa -> ropa
     func setTypeFromCategoryIndex(_ index: Int) {
         switch index {
         case 0:
@@ -46,8 +44,6 @@ class BranchTypeManager: ObservableObject {
             selectedType = .dulceria
         case 3:
             selectedType = .perfumeria
-        case 4:
-            selectedType = .ropa
         default:
             selectedType = .restaurante
         }

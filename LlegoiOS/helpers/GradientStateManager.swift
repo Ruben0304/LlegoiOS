@@ -40,8 +40,6 @@ class GradientStateManager: ObservableObject {
                 currentAccentColor = Color(red: 0.737, green: 0.514, blue: 0.345)
             case 3: // Perfumería - Azul morado/Lavanda (estilo Sauvage)
                 currentAccentColor = Color(red: 0.50, green: 0.45, blue: 0.70)
-            case 4: // Ropa - Rosa fucsia / magenta (chic fashion)
-                currentAccentColor = Color(red: 0.85, green: 0.30, blue: 0.55)
             default:
                 currentAccentColor = Color(red: 0.9, green: 0.3, blue: 0.2)
             }
@@ -86,13 +84,6 @@ class GradientStateManager: ObservableObject {
                 medium: Color(red: 0.48, green: 0.45, blue: 0.68),
                 light: Color(red: 0.65, green: 0.62, blue: 0.78),
                 veryLight: Color(red: 0.90, green: 0.88, blue: 0.94)
-            )
-        case 4: // Ropa - Rosa fucsia / magenta (chic fashion)
-            return (
-                dark: Color(red: 0.55, green: 0.12, blue: 0.32),
-                medium: Color(red: 0.78, green: 0.25, blue: 0.50),
-                light: Color(red: 0.92, green: 0.55, blue: 0.72),
-                veryLight: Color(red: 0.98, green: 0.90, blue: 0.94)
             )
         default:
             return (

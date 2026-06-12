@@ -1,6 +1,6 @@
 import Combine
 import Foundation
-import PassKit
+import UIKit
 import StripePaymentSheet
 
 @MainActor
@@ -321,13 +321,6 @@ final class OrderDetailViewModel: ObservableObject {
         configuration.merchantDisplayName = "Llego"
         configuration.allowsDelayedPaymentMethods = true
         configuration.returnURL = StripeConfig.returnURL
-
-        if StripeConfig.enableApplePay, PKPaymentAuthorizationController.canMakePayments() {
-            configuration.applePay = .init(
-                merchantId: StripeConfig.applePayMerchantId,
-                merchantCountryCode: StripeConfig.merchantCountryCode
-            )
-        }
 
         self.paymentSheet = PaymentSheet(
             paymentIntentClientSecret: clientSecret,
@@ -704,29 +697,24 @@ final class OrderDetailViewModel: ObservableObject {
     }
 
     func confirmTransferPaymentSent(proofImageData: Data?) {
+        // Guard al inicio: sin attemptId no hay nada que confirmar
+        guard let attemptId = activePaymentAttemptId else {
+            showPaymentAlertMessage("No hay un intento de pago activo. Intenta de nuevo o contacta al negocio.")
+            return
+        }
         isConfirmingTransfer = true
 
         Task {
             do {
-                if let proofData = proofImageData,
-                    let attemptId = activePaymentAttemptId
-                {
+                if let proofData = proofImageData {
                     // Con comprobante: ConfirmPaymentSent
                     let base64 = proofData.base64EncodedString()
                     let proofUrl = "data:image/jpeg;base64,\(base64)"
                     try await repository.confirmPaymentSent(
                         paymentAttemptId: attemptId, proofUrl: proofUrl)
-                } else if let attemptId = activePaymentAttemptId {
+                } else {
                     // Sin comprobante: ConfirmTransferByShortcut
                     try await repository.confirmTransferByShortcut(paymentAttemptId: attemptId)
-                }
-                // Si no hay attemptId no podemos confirmar por API — mostrar error
-                if activePaymentAttemptId == nil {
-                    await MainActor.run {
-                        self.isConfirmingTransfer = false
-                        self.showPaymentAlertMessage("No se pudo registrar tu pago: no hay un intento de pago activo. Intenta de nuevo o contacta al negocio.")
-                    }
-                    return
                 }
 
                 print("✅ confirmTransfer success, transferPaymentConfirmed = true")
@@ -747,11 +735,8 @@ final class OrderDetailViewModel: ObservableObject {
                 print("⚠️ confirmTransfer error: \(error.localizedDescription)")
                 await MainActor.run {
                     self.isConfirmingTransfer = false
-                    self.showTransferSheet = false
-                    self.activePaymentAttemptId = nil
-                    self.transferPaymentConfirmed = true
-                    self.successMessage = "Tu pago fue registrado. El negocio lo revisará en breve."
-                    self.refresh()
+                    // Sheet permanece abierto para que el usuario pueda reintentar
+                    self.showPaymentAlertMessage("No pudimos registrar tu pago. Verifica tu conexión e intenta de nuevo.")
                 }
             }
         }

@@ -6,37 +6,22 @@ struct PaymentMethodCard: View {
     let onTap: () -> Void
     @ObservedObject private var gradientManager = GradientStateManager.shared
 
-    // Computed property para verificar si es Stripe
-    private var isStripe: Bool {
-        paymentMethod.method.lowercased() == "stripe" || paymentMethod.method.lowercased() == "card"
-    }
-    
     var body: some View {
-        Button(action: {
-            // Solo ejecutar acción si no es Stripe
-            if !isStripe {
-                onTap()
-            }
-        }) {
+        Button(action: onTap) {
             HStack(spacing: 16) {
                 // Icon
                 paymentMethodIcon
                     .frame(width: 50, height: 50)
-                    .background(iconBackgroundColor.opacity(isStripe ? 0.05 : 0.1))
+                    .background(iconBackgroundColor.opacity(0.1))
                     .cornerRadius(12)
-                    .opacity(isStripe ? 0.5 : 1.0)
-                
+
                 // Info
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(isStripe ? "Stripe próximamente" : paymentMethod.name)
+                    Text(paymentMethod.name)
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(isStripe ? .secondary : .primary)
-                    
-                    if isStripe {
-                        Text("Próximamente disponible")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary.opacity(0.7))
-                    } else if let instructions = paymentMethod.instructions, !instructions.isEmpty {
+                        .foregroundColor(.primary)
+
+                    if let instructions = paymentMethod.instructions, !instructions.isEmpty {
                         Text(instructions)
                             .font(.system(size: 13))
                             .foregroundColor(.secondary)
@@ -46,17 +31,16 @@ struct PaymentMethodCard: View {
                             .font(.system(size: 13))
                             .foregroundColor(.secondary)
                     }
-                    
-                    // Commission info (no mostrar para Stripe)
-                    if !isStripe && paymentMethod.commissionPercent > 0 {
+
+                    if paymentMethod.commissionPercent > 0 {
                         Text("Comisión: \(String(format: "%.1f", paymentMethod.commissionPercent))%")
                             .font(.system(size: 11, weight: .medium))
                             .foregroundColor(.orange)
                     }
                 }
-                
+
                 Spacer()
-                
+
                 // Currency badge
                 Text(paymentMethod.currency.uppercased())
                     .font(.system(size: 12, weight: .bold))
@@ -65,10 +49,8 @@ struct PaymentMethodCard: View {
                     .padding(.vertical, 4)
                     .background(currencyColor)
                     .cornerRadius(8)
-                    .opacity(isStripe ? 0.5 : 1.0)
-                
-                // Selection indicator (no mostrar para Stripe)
-                if isSelected && !isStripe {
+
+                if isSelected {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 24))
                         .foregroundColor(.llegoAccent)
@@ -78,16 +60,14 @@ struct PaymentMethodCard: View {
             .background(
                 RoundedRectangle(cornerRadius: 16)
                     .fill(Color(.systemBackground))
-                    .shadow(color: isSelected ? Color.llegoAccent.opacity(0.3) : Color.black.opacity(isStripe ? 0.02 : 0.05), radius: isSelected ? 8 : 4, x: 0, y: 2)
+                    .shadow(color: isSelected ? Color.llegoAccent.opacity(0.3) : Color.black.opacity(0.05), radius: isSelected ? 8 : 4, x: 0, y: 2)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
                     .stroke(isSelected ? Color.llegoAccent : Color.clear, lineWidth: 2)
             )
-            .opacity(isStripe ? 0.6 : 1.0)
         }
         .buttonStyle(PlainButtonStyle())
-        .disabled(isStripe)
     }
     
     // MARK: - Icon
@@ -174,7 +154,7 @@ struct PaymentMethodCard: View {
         case "transfer", "transfermovil":
             return "Transferencia bancaria"
         case "stripe", "card":
-            return "Próximamente disponible"
+            return "Pago con tarjeta internacional"
         case "cash":
             return "Pago en efectivo al recibir"
         default:

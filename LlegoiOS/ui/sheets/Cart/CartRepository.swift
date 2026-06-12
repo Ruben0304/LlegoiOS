@@ -349,6 +349,41 @@ class CartRepository {
         }
     }
 
+    /// Obtener la tasa de cargo de servicio reducida (tras ver promociones)
+    func fetchDiscountedServiceFeeRate(
+        completion: @escaping @Sendable (Result<Double, Error>) -> Void
+    ) {
+        let client = apolloClient
+
+        client.fetchCompat(
+            query: LlegoAPI.GetDiscountedServiceFeeRateQuery(),
+            cachePolicy: .fetchIgnoringCacheData
+        ) { result in
+            switch result {
+            case .success(let graphQLResult):
+                if let errors = graphQLResult.errors {
+                    print("❌ GraphQL Errors fetching discounted service fee rate:")
+                    errors.forEach { print("  - \($0.localizedDescription)") }
+                    completion(
+                        .failure(
+                            NSError(
+                                domain: "GraphQL", code: -1,
+                                userInfo: [NSLocalizedDescriptionKey: "Error obteniendo cargo con descuento"]
+                            )))
+                    return
+                }
+                if let rate = graphQLResult.data?.getDiscountedServiceFeeRate {
+                    completion(.success(rate))
+                } else {
+                    completion(.success(0.05))  // fallback por defecto
+                }
+            case .failure(let error):
+                print("❌ Network error fetching discounted service fee rate: \(error.localizedDescription)")
+                completion(.failure(error))
+            }
+        }
+    }
+
     // MARK: - AI Suggestions
 
     /// Obtener todos los productos de un branch para enviar a Apple Intelligence
