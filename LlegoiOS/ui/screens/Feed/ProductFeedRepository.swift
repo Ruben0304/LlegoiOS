@@ -571,9 +571,8 @@ class ProductFeedRepository {
     /// Fetch products from recent delivered orders for the "Pide de nuevo" section.
     func fetchRecentOrderItems(jwt: String) async -> [ReorderItem] {
         return await withCheckedContinuation { continuation in
-            let status: GraphQLNullable<GraphQLEnum<LlegoAPI.OrderStatusEnum>> = .some(.case(.delivered))
             let query = LlegoAPI.GetMyOrdersQuery(
-                status: status,
+                status: .none,
                 limit: .some(5),
                 offset: .some(0),
                 jwt: jwt
