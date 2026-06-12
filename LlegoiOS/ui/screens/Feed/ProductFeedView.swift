@@ -229,6 +229,35 @@ struct ProductFeedView: View {
             if !viewModel.explorarProducts.isEmpty {
                 explorarSection
             }
+        case .destacados:
+            creativeCarousel(sectionId: "destacados")
+        case .ofertas:
+            creativeCarousel(sectionId: "ofertas")
+        }
+    }
+
+    // MARK: - Creative Sections (Destacados / Ofertas — paid placements)
+    @ViewBuilder
+    private func creativeCarousel(sectionId: String) -> some View {
+        if let section = viewModel.creativeSections.first(where: { $0.sectionId == sectionId }),
+            !section.items.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(section.title)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                    .padding(.horizontal, 20)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 14) {
+                        ForEach(section.items) { item in
+                            CreativeCard(item: item)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 6)
+                }
+            }
+            .padding(.vertical, 10)
         }
     }
 

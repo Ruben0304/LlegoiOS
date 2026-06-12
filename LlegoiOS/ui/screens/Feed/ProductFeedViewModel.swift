@@ -26,10 +26,12 @@ class ProductFeedViewModel: ObservableObject {
         case featuredStore
         case tutorials
         case explorar
+        case destacados
+        case ofertas
     }
 
     let sectionOrder: [SectionSlot] = [
-        .paraTi, .dynamicFirst, .pideDeNuevoInline, .stores, .combos, .dynamicRest, .featuredStore, .tutorials, .explorar,
+        .paraTi, .destacados, .dynamicFirst, .pideDeNuevoInline, .stores, .combos, .ofertas, .dynamicRest, .featuredStore, .tutorials, .explorar,
     ]
 
     // MARK: - Published Properties
@@ -78,6 +80,9 @@ class ProductFeedViewModel: ObservableObject {
 
     // Combos from backend
     @Published var combos: [FeedCombo] = []
+
+    // Paid creative sections (Destacados / Ofertas)
+    @Published var creativeSections: [FeedCreativeSection] = []
 
     // MARK: - Private Properties
     private var hasLoaded: Bool = false
@@ -135,6 +140,7 @@ class ProductFeedViewModel: ObservableObject {
             switch result {
             case .success(let (feedResponse, categories, stores, tutorials, combos)):
                 self.feedSections = feedResponse.sections
+                self.creativeSections = feedResponse.creativeSections
                 self.hasMoreFeedPages = feedResponse.hasMore
                 // Seed explorar section products from the initial feed load
                 if let explorarSection = feedResponse.sections.first(where: { $0.sectionId == "explorar" }) {

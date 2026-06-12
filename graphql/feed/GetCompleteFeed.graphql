@@ -53,6 +53,44 @@ query GetCompleteFeed(
     timestamp
     hasMore
     explorarHasMore
+    creativeSections {
+      sectionId
+      title
+      items {
+        campaignId
+        branchId
+        businessId
+        placement
+        ctaDeeplink
+        branchName
+        branchAvatarUrl
+        creative {
+          aspectRatio
+          animationPreset
+          background {
+            type
+            colors
+            angle
+            imageUrl
+          }
+          texts {
+            role
+            value
+            color
+            size
+            weight
+          }
+          badge {
+            text
+            style
+          }
+          cta {
+            label
+            deeplink
+          }
+        }
+      }
+    }
   }
 
   # 2. Categories for filter chips

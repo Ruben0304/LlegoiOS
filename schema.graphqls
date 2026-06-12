@@ -2347,6 +2347,61 @@ type FeedResponse {
   sections: [FeedSection!]!
   sectionDiagnostics: [FeedSectionDiagnostic!]!
   timestamp: DateTime!
+  hasMore: Boolean!
+  explorarHasMore: Boolean!
+  creativeSections: [FeedCreativeSection!]!
+}
+
+type FeedCreativeSection {
+  title: String!
+  sectionId: String!
+  items: [FeedCreativeType!]!
+}
+
+type FeedCreativeType {
+  campaignId: String!
+  branchId: String!
+  businessId: String!
+  placement: String!
+  creative: CreativeSpecType!
+  ctaDeeplink: String
+  branchName: String
+  branchAvatarUrl: String
+}
+
+type CreativeSpecType {
+  aspectRatio: String!
+  background: CreativeBackgroundType!
+  texts: [CreativeTextType!]!
+  animationPreset: String!
+  badge: CreativeBadgeType
+  cta: CreativeCTAType
+}
+
+type CreativeBackgroundType {
+  type: String!
+  colors: [String!]!
+  angle: Int!
+  imagePath: String
+  imageUrl: String
+}
+
+type CreativeTextType {
+  role: String!
+  value: String!
+  color: String!
+  size: String!
+  weight: String!
+}
+
+type CreativeBadgeType {
+  text: String!
+  style: String!
+}
+
+type CreativeCTAType {
+  label: String!
+  deeplink: String
 }
 
 type FeedSection {
@@ -2578,6 +2633,12 @@ enum ImageQuality {
 }
 
 type Mutation {
+  """Registrar una impresión de campaña"""
+  trackAdImpression(id: String!): Boolean!
+
+  """Registrar un clic de campaña"""
+  trackAdClick(id: String!): Boolean!
+
   """Register a new user"""
   register(input: RegisterInput!, jwt: String = null): AuthResponse!
 

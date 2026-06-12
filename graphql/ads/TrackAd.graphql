@@ -1,0 +1,7 @@
+mutation TrackAdImpression($id: String!) {
+  trackAdImpression(id: $id)
+}
+
+mutation TrackAdClick($id: String!) {
+  trackAdClick(id: $id)
+}

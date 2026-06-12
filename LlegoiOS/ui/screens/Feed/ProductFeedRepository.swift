@@ -198,6 +198,25 @@ struct FeedResponse: Sendable {
     let timestamp: String
     let hasMore: Bool
     let explorarHasMore: Bool
+    // Paid creative sections (Destacados / Ofertas). Default keeps secondary
+    // fetch constructors (pagination / explorar) source-compatible.
+    let creativeSections: [FeedCreativeSection]
+
+    init(
+        sections: [FeedSection],
+        sectionDiagnostics: [FeedSectionDiagnostic],
+        timestamp: String,
+        hasMore: Bool,
+        explorarHasMore: Bool,
+        creativeSections: [FeedCreativeSection] = []
+    ) {
+        self.sections = sections
+        self.sectionDiagnostics = sectionDiagnostics
+        self.timestamp = timestamp
+        self.hasMore = hasMore
+        self.explorarHasMore = explorarHasMore
+        self.creativeSections = creativeSections
+    }
 }
 
 struct FeedSectionDiagnostic: Sendable {
@@ -372,12 +391,56 @@ class ProductFeedRepository {
                             )
                         }
 
+                        // Parse paid creative sections (Destacados / Ofertas)
+                        let creativeSections = data.getFeed.creativeSections.map {
+                            cs -> FeedCreativeSection in
+                            let items = cs.items.map { it -> FeedCreativeItem in
+                                let c = it.creative
+                                let spec = CreativeSpec(
+                                    aspectRatio: c.aspectRatio,
+                                    animationPreset: c.animationPreset,
+                                    background: CreativeSpec.Background(
+                                        type: c.background.type,
+                                        colors: c.background.colors,
+                                        angle: c.background.angle,
+                                        imageUrl: c.background.imageUrl
+                                    ),
+                                    texts: c.texts.map {
+                                        CreativeSpec.TextLayer(
+                                            role: $0.role, value: $0.value, color: $0.color,
+                                            size: $0.size, weight: $0.weight)
+                                    },
+                                    badge: c.badge.map {
+                                        CreativeSpec.Badge(text: $0.text, style: $0.style)
+                                    },
+                                    cta: c.cta.map {
+                                        CreativeSpec.CTA(label: $0.label, deeplink: $0.deeplink)
+                                    }
+                                )
+                                return FeedCreativeItem(
+                                    id: it.campaignId,
+                                    campaignId: it.campaignId,
+                                    branchId: it.branchId,
+                                    businessId: it.businessId,
+                                    placement: it.placement,
+                                    ctaDeeplink: it.ctaDeeplink,
+                                    branchName: it.branchName,
+                                    branchAvatarUrl: it.branchAvatarUrl,
+                                    creative: spec
+                                )
+                            }
+                            return FeedCreativeSection(
+                                id: cs.sectionId, sectionId: cs.sectionId, title: cs.title,
+                                items: items)
+                        }
+
                         let feedResponse = FeedResponse(
                             sections: sections,
                             sectionDiagnostics: sectionDiagnostics,
                             timestamp: String(describing: data.getFeed.timestamp),
                             hasMore: data.getFeed.hasMore,
-                            explorarHasMore: data.getFeed.explorarHasMore
+                            explorarHasMore: data.getFeed.explorarHasMore,
+                            creativeSections: creativeSections
                         )
 
                         // Parse categories
