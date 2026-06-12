@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetCompleteFeed"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetCompleteFeed($jwt: String, $first: Int, $page: Int, $sections: [String!], $branchTipo: String!, $branchTipoEnum: BranchTipo, $radiusKm: Float, $categoryId: String) { getFeed( jwt: $jwt first: $first page: $page sections: $sections branchTipo: $branchTipo productCategoryId: $categoryId ) { __typename sections { __typename sectionId title description totalCount products { __typename id name price currency imageUrlBaja imageUrlMedia branchId categoryId branch { __typename name address tipos } categoryName availability score description } } sectionDiagnostics { __typename sectionId title status reason totalBeforeDedup totalAfterDedup } timestamp hasMore explorarHasMore } productCategories(branchType: $branchTipo) { __typename id name iconIos } branches( first: 15 tipo: $branchTipoEnum radiusKm: $radiusKm productCategoryId: $categoryId ) { __typename edges { __typename node { __typename id businessId name avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta address distanceKm } } } activeTutorials { __typename id title description videoUrl videoUrlSigned duration appTarget thumbnailUrl thumbnailUrlSigned order tags } allCombos(availableOnly: true) { __typename id branchId name description imageUrl currency availability discountType discountValue finalPrice savings startingFinalPrice startingSavings representativeProducts { __typename id name imageUrl } slots { __typename id isFree } giftOptions { __typename productId } branch { __typename id name avatarUrl avatarUrlBaja avatarUrlAlta } } }"#
+        #"query GetCompleteFeed($jwt: String, $first: Int, $page: Int, $sections: [String!], $branchTipo: String!, $branchTipoEnum: BranchTipo, $radiusKm: Float, $categoryId: String) { getFeed( jwt: $jwt first: $first page: $page sections: $sections branchTipo: $branchTipo productCategoryId: $categoryId ) { __typename sections { __typename sectionId title description totalCount products { __typename id name price currency imageUrlBaja imageUrlMedia branchId categoryId branch { __typename name address tipos } categoryName availability score description } } sectionDiagnostics { __typename sectionId title status reason totalBeforeDedup totalAfterDedup } timestamp hasMore explorarHasMore creativeSections { __typename sectionId title items { __typename campaignId branchId businessId placement ctaDeeplink branchName branchAvatarUrl creative { __typename aspectRatio animationPreset background { __typename type colors angle imageUrl } texts { __typename role value color size weight } badge { __typename text style } cta { __typename label deeplink } } } } } productCategories(branchType: $branchTipo) { __typename id name iconIos } branches( first: 15 tipo: $branchTipoEnum radiusKm: $radiusKm productCategoryId: $categoryId ) { __typename edges { __typename node { __typename id businessId name avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta address distanceKm } } } activeTutorials { __typename id title description videoUrl videoUrlSigned duration appTarget thumbnailUrl thumbnailUrlSigned order tags } allCombos(availableOnly: true) { __typename id branchId name description imageUrl currency availability discountType discountValue finalPrice savings startingFinalPrice startingSavings representativeProducts { __typename id name imageUrl } slots { __typename id isFree } giftOptions { __typename productId } branch { __typename id name avatarUrl avatarUrlBaja avatarUrlAlta } } }"#
       ))
 
     public var jwt: GraphQLNullable<String>
@@ -24,7 +24,7 @@ public extension LlegoAPI {
     public init(
       jwt: GraphQLNullable<String>,
       first: GraphQLNullable<Int32>,
-      page: GraphQLNullable<Int32> = .none,
+      page: GraphQLNullable<Int32>,
       sections: GraphQLNullable<[String]>,
       branchTipo: String,
       branchTipoEnum: GraphQLNullable<GraphQLEnum<BranchTipo>>,
@@ -106,6 +106,7 @@ public extension LlegoAPI {
           .field("timestamp", LlegoAPI.DateTime.self),
           .field("hasMore", Bool.self),
           .field("explorarHasMore", Bool.self),
+          .field("creativeSections", [CreativeSection].self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
           GetCompleteFeedQuery.Data.GetFeed.self
@@ -116,6 +117,7 @@ public extension LlegoAPI {
         public var timestamp: LlegoAPI.DateTime { __data["timestamp"] }
         public var hasMore: Bool { __data["hasMore"] }
         public var explorarHasMore: Bool { __data["explorarHasMore"] }
+        public var creativeSections: [CreativeSection] { __data["creativeSections"] }
 
         /// GetFeed.Section
         ///
@@ -241,6 +243,185 @@ public extension LlegoAPI {
           public var reason: String? { __data["reason"] }
           public var totalBeforeDedup: Int? { __data["totalBeforeDedup"] }
           public var totalAfterDedup: Int? { __data["totalAfterDedup"] }
+        }
+
+        /// GetFeed.CreativeSection
+        ///
+        /// Parent Type: `FeedCreativeSection`
+        public struct CreativeSection: LlegoAPI.SelectionSet {
+          @_spi(Unsafe) public let __data: DataDict
+          @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+          @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.FeedCreativeSection }
+          @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+            .field("__typename", String.self),
+            .field("sectionId", String.self),
+            .field("title", String.self),
+            .field("items", [Item].self),
+          ] }
+          @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+            GetCompleteFeedQuery.Data.GetFeed.CreativeSection.self
+          ] }
+
+          public var sectionId: String { __data["sectionId"] }
+          public var title: String { __data["title"] }
+          public var items: [Item] { __data["items"] }
+
+          /// GetFeed.CreativeSection.Item
+          ///
+          /// Parent Type: `FeedCreativeType`
+          public struct Item: LlegoAPI.SelectionSet {
+            @_spi(Unsafe) public let __data: DataDict
+            @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+            @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.FeedCreativeType }
+            @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+              .field("__typename", String.self),
+              .field("campaignId", String.self),
+              .field("branchId", String.self),
+              .field("businessId", String.self),
+              .field("placement", String.self),
+              .field("ctaDeeplink", String?.self),
+              .field("branchName", String?.self),
+              .field("branchAvatarUrl", String?.self),
+              .field("creative", Creative.self),
+            ] }
+            @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+              GetCompleteFeedQuery.Data.GetFeed.CreativeSection.Item.self
+            ] }
+
+            public var campaignId: String { __data["campaignId"] }
+            public var branchId: String { __data["branchId"] }
+            public var businessId: String { __data["businessId"] }
+            public var placement: String { __data["placement"] }
+            public var ctaDeeplink: String? { __data["ctaDeeplink"] }
+            public var branchName: String? { __data["branchName"] }
+            public var branchAvatarUrl: String? { __data["branchAvatarUrl"] }
+            public var creative: Creative { __data["creative"] }
+
+            /// GetFeed.CreativeSection.Item.Creative
+            ///
+            /// Parent Type: `CreativeSpecType`
+            public struct Creative: LlegoAPI.SelectionSet {
+              @_spi(Unsafe) public let __data: DataDict
+              @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+              @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.CreativeSpecType }
+              @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+                .field("__typename", String.self),
+                .field("aspectRatio", String.self),
+                .field("animationPreset", String.self),
+                .field("background", Background.self),
+                .field("texts", [Text].self),
+                .field("badge", Badge?.self),
+                .field("cta", Cta?.self),
+              ] }
+              @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+                GetCompleteFeedQuery.Data.GetFeed.CreativeSection.Item.Creative.self
+              ] }
+
+              public var aspectRatio: String { __data["aspectRatio"] }
+              public var animationPreset: String { __data["animationPreset"] }
+              public var background: Background { __data["background"] }
+              public var texts: [Text] { __data["texts"] }
+              public var badge: Badge? { __data["badge"] }
+              public var cta: Cta? { __data["cta"] }
+
+              /// GetFeed.CreativeSection.Item.Creative.Background
+              ///
+              /// Parent Type: `CreativeBackgroundType`
+              public struct Background: LlegoAPI.SelectionSet {
+                @_spi(Unsafe) public let __data: DataDict
+                @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+                @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.CreativeBackgroundType }
+                @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+                  .field("__typename", String.self),
+                  .field("type", String.self),
+                  .field("colors", [String].self),
+                  .field("angle", Int.self),
+                  .field("imageUrl", String?.self),
+                ] }
+                @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+                  GetCompleteFeedQuery.Data.GetFeed.CreativeSection.Item.Creative.Background.self
+                ] }
+
+                public var type: String { __data["type"] }
+                public var colors: [String] { __data["colors"] }
+                public var angle: Int { __data["angle"] }
+                public var imageUrl: String? { __data["imageUrl"] }
+              }
+
+              /// GetFeed.CreativeSection.Item.Creative.Text
+              ///
+              /// Parent Type: `CreativeTextType`
+              public struct Text: LlegoAPI.SelectionSet {
+                @_spi(Unsafe) public let __data: DataDict
+                @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+                @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.CreativeTextType }
+                @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+                  .field("__typename", String.self),
+                  .field("role", String.self),
+                  .field("value", String.self),
+                  .field("color", String.self),
+                  .field("size", String.self),
+                  .field("weight", String.self),
+                ] }
+                @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+                  GetCompleteFeedQuery.Data.GetFeed.CreativeSection.Item.Creative.Text.self
+                ] }
+
+                public var role: String { __data["role"] }
+                public var value: String { __data["value"] }
+                public var color: String { __data["color"] }
+                public var size: String { __data["size"] }
+                public var weight: String { __data["weight"] }
+              }
+
+              /// GetFeed.CreativeSection.Item.Creative.Badge
+              ///
+              /// Parent Type: `CreativeBadgeType`
+              public struct Badge: LlegoAPI.SelectionSet {
+                @_spi(Unsafe) public let __data: DataDict
+                @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+                @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.CreativeBadgeType }
+                @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+                  .field("__typename", String.self),
+                  .field("text", String.self),
+                  .field("style", String.self),
+                ] }
+                @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+                  GetCompleteFeedQuery.Data.GetFeed.CreativeSection.Item.Creative.Badge.self
+                ] }
+
+                public var text: String { __data["text"] }
+                public var style: String { __data["style"] }
+              }
+
+              /// GetFeed.CreativeSection.Item.Creative.Cta
+              ///
+              /// Parent Type: `CreativeCTAType`
+              public struct Cta: LlegoAPI.SelectionSet {
+                @_spi(Unsafe) public let __data: DataDict
+                @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+                @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.CreativeCTAType }
+                @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+                  .field("__typename", String.self),
+                  .field("label", String.self),
+                  .field("deeplink", String?.self),
+                ] }
+                @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+                  GetCompleteFeedQuery.Data.GetFeed.CreativeSection.Item.Creative.Cta.self
+                ] }
+
+                public var label: String { __data["label"] }
+                public var deeplink: String? { __data["deeplink"] }
+              }
+            }
+          }
         }
       }
 

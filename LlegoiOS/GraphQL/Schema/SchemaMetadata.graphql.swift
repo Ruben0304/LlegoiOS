@@ -54,6 +54,11 @@ public extension LlegoAPI {
       case "ComboType": return LlegoAPI.Objects.ComboType
       case "CoordinatesSyncType": return LlegoAPI.Objects.CoordinatesSyncType
       case "CoordinatesType": return LlegoAPI.Objects.CoordinatesType
+      case "CreativeBackgroundType": return LlegoAPI.Objects.CreativeBackgroundType
+      case "CreativeBadgeType": return LlegoAPI.Objects.CreativeBadgeType
+      case "CreativeCTAType": return LlegoAPI.Objects.CreativeCTAType
+      case "CreativeSpecType": return LlegoAPI.Objects.CreativeSpecType
+      case "CreativeTextType": return LlegoAPI.Objects.CreativeTextType
       case "DayScheduleType": return LlegoAPI.Objects.DayScheduleType
       case "DeliveryAddressType": return LlegoAPI.Objects.DeliveryAddressType
       case "DeliveryFeeEstimateType": return LlegoAPI.Objects.DeliveryFeeEstimateType
@@ -61,6 +66,8 @@ public extension LlegoAPI {
       case "DeviceTokenType": return LlegoAPI.Objects.DeviceTokenType
       case "FavoriteCartType": return LlegoAPI.Objects.FavoriteCartType
       case "FeatureType": return LlegoAPI.Objects.FeatureType
+      case "FeedCreativeSection": return LlegoAPI.Objects.FeedCreativeSection
+      case "FeedCreativeType": return LlegoAPI.Objects.FeedCreativeType
       case "FeedProductType": return LlegoAPI.Objects.FeedProductType
       case "FeedResponse": return LlegoAPI.Objects.FeedResponse
       case "FeedSection": return LlegoAPI.Objects.FeedSection

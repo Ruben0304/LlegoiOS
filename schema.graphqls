@@ -345,7 +345,7 @@ type Query {
   hasRespondedToSurvey(surveyId: String!, jwt: String!): Boolean!
 
   """Get personalized feed with multiple sections"""
-  getFeed(branchTipo: String!, first: Int! = 10, radiusKm: Float = null, sections: [String!] = null, productCategoryId: String = null, jwt: String = null): FeedResponse!
+  getFeed(branchTipo: String!, first: Int! = 10, page: Int = 0, explorarPage: Int = 0, radiusKm: Float = null, sections: [String!] = null, productCategoryId: String = null, jwt: String = null): FeedResponse!
 
   """Get all tutorials"""
   tutorials: [TutorialType!]!
