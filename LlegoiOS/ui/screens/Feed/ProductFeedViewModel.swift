@@ -18,6 +18,7 @@ class ProductFeedViewModel: ObservableObject {
     /// Reorder this array to change how sections appear on screen.
     enum SectionSlot: CaseIterable, Hashable {
         case paraTi
+        case popularesCerca
         case dynamicFirst
         case pideDeNuevoInline
         case stores
@@ -31,7 +32,7 @@ class ProductFeedViewModel: ObservableObject {
     }
 
     let sectionOrder: [SectionSlot] = [
-        .paraTi, .destacados, .dynamicFirst, .pideDeNuevoInline, .stores, .combos, .ofertas, .dynamicRest, .featuredStore, .tutorials, .explorar,
+        .paraTi, .destacados, .popularesCerca, .dynamicFirst, .pideDeNuevoInline, .stores, .combos, .ofertas, .dynamicRest, .featuredStore, .tutorials,
     ]
 
     // MARK: - Published Properties
@@ -357,10 +358,12 @@ class ProductFeedViewModel: ObservableObject {
         return feedSections.first(where: { $0.sectionId == type.rawValue })
     }
 
-    /// Get all sections except "para_ti" (large cards at top) and "explorar" (vertical grid at bottom)
+    /// Get all sections except "para_ti", "populares_cerca" and "explorar" (rendered at fixed slots)
     var horizontalSections: [FeedSection] {
         return feedSections.filter {
-            $0.sectionId != FeedSectionType.paraTi.rawValue && $0.sectionId != "explorar"
+            $0.sectionId != FeedSectionType.paraTi.rawValue
+                && $0.sectionId != FeedSectionType.popularesCerca.rawValue
+                && $0.sectionId != "explorar"
         }
     }
 

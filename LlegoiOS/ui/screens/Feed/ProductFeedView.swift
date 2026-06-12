@@ -157,7 +157,7 @@ struct ProductFeedView: View {
                     feedSlotView(slot)
                 }
 
-                // Additional sections from page 2, 3... (infinite scroll)
+                // "Más de X" sections from page 2, 3... appear before Explorar
                 ForEach(viewModel.moreSections) { section in
                     if !viewModel.filteredProducts(for: section).isEmpty {
                         dynamicSection(section)
@@ -170,6 +170,11 @@ struct ProductFeedView: View {
                     Color.clear.frame(height: 1)
                         .onAppear { viewModel.loadNextFeedPage() }
                 }
+
+                // Explorar always comes last
+                if !viewModel.explorarProducts.isEmpty {
+                    explorarSection
+                }
             }
         }
         .refreshable { await refreshFeed() }
@@ -181,6 +186,11 @@ struct ProductFeedView: View {
         case .paraTi:
             if let section = viewModel.paraTiSection, !section.products.isEmpty {
                 featuredProductsSection(section: section)
+            }
+        case .popularesCerca:
+            if let section = viewModel.getSection(.popularesCerca),
+               !viewModel.filteredProducts(for: section).isEmpty {
+                featuredProductsSectionWithTitle(section: section)
             }
         case .pideDeNuevoInline:
             if let item = viewModel.topReorderItem {
@@ -329,6 +339,36 @@ struct ProductFeedView: View {
     // MARK: - Featured Products Section ("Para ti" with large cards)
     private func featuredProductsSection(section: FeedSection) -> some View {
         VStack(alignment: .leading, spacing: 0) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 16) {
+                    ForEach(viewModel.filteredProducts(for: section)) { product in
+                        FeaturedProductCard(product: product)
+                            .onTapGesture {
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                selectedProductId = product.id
+                            }
+                            .padding(.vertical, 12)
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+        }
+        .padding(.top, 6)
+        .padding(.bottom, 10)
+    }
+
+    // MARK: - Featured Section with Title (large cards + header)
+    private func featuredProductsSectionWithTitle(section: FeedSection) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text(section.title)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                Spacer()
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 4)
+
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 16) {
                     ForEach(viewModel.filteredProducts(for: section)) { product in
