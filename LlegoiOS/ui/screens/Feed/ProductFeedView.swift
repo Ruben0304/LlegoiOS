@@ -157,8 +157,18 @@ struct ProductFeedView: View {
                     feedSlotView(slot)
                 }
 
+                // Additional sections from page 2, 3... (infinite scroll)
+                ForEach(viewModel.moreSections) { section in
+                    if !viewModel.filteredProducts(for: section).isEmpty {
+                        dynamicSection(section)
+                    }
+                }
+
                 if viewModel.isLoadingMore {
                     ProgressView().tint(gradientManager.currentAccentColor).padding(.vertical, 20)
+                } else if viewModel.hasMoreFeedPages {
+                    Color.clear.frame(height: 1)
+                        .onAppear { viewModel.loadNextFeedPage() }
                 }
             }
         }
@@ -172,9 +182,14 @@ struct ProductFeedView: View {
             if let section = viewModel.paraTiSection, !section.products.isEmpty {
                 featuredProductsSection(section: section)
             }
-        case .pideDeNuevo:
-            if !viewModel.reorderItems.isEmpty {
-                reorderSection
+        case .pideDeNuevoInline:
+            if let item = viewModel.topReorderItem {
+                PideDeNuevoInlineCard(item: item, accentColor: gradientManager.currentAccentColor) {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    selectedProductId = item.productId
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 8)
             }
         case .dynamicFirst:
             if let firstSection = viewModel.horizontalSections.first,
@@ -194,6 +209,12 @@ struct ProductFeedView: View {
                 if !viewModel.filteredProducts(for: section).isEmpty {
                     dynamicSection(section)
                 }
+            }
+        case .featuredStore:
+            if let store = viewModel.featuredStore {
+                FeaturedStoreCard(store: store, accentColor: gradientManager.currentAccentColor)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 8)
             }
         case .tutorials:
             if viewModel.showTutorials && !viewModel.tutorials.isEmpty {
@@ -547,8 +568,8 @@ struct StoreCircleCard: View {
                     .fill(Color.cardBackground(colorScheme))
                     .frame(width: 100, height: 100)
                     .shadow(
-                        color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.15), radius: 10,
-                        x: 0, y: 5)
+                        color: Color.black.opacity(colorScheme == .dark ? 0.25 : 0.12), radius: 7,
+                        x: 0, y: 4)
 
                 if let avatarUrl = store.preferredAvatarSmallUrl {
                     CachedAsyncImage(
@@ -648,7 +669,7 @@ struct FeaturedProductCard: View {
         }
         .frame(width: 280, height: 350)
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: Color.black.opacity(0.15), radius: 10, x: 0, y: 5)
+        .shadow(color: Color.black.opacity(0.12), radius: 7, x: 0, y: 4)
     }
 
     @ViewBuilder
@@ -717,7 +738,7 @@ struct SmallProductCard: View {
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color.cardBackground(colorScheme))
                 .shadow(
-                    color: .black.opacity(colorScheme == .dark ? 0.3 : 0.08), radius: 8, x: 0, y: 4)
+                    color: .black.opacity(colorScheme == .dark ? 0.25 : 0.06), radius: 6, x: 0, y: 3)
         )
     }
 
@@ -835,7 +856,7 @@ struct CompactProductCard: View {
             RoundedRectangle(cornerRadius: 18)
                 .fill(Color.cardBackground(colorScheme))
                 .shadow(
-                    color: .black.opacity(colorScheme == .dark ? 0.3 : 0.1), radius: 10, x: 0, y: 5)
+                    color: .black.opacity(colorScheme == .dark ? 0.25 : 0.08), radius: 7, x: 0, y: 4)
         )
     }
 }
@@ -940,7 +961,7 @@ struct TutorialFeedCard: View {
                     .padding(10)
             }
             .cornerRadius(16)
-            .shadow(color: Color.black.opacity(0.1), radius: 8, x: 0, y: 4)
+            .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 3)
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -1162,7 +1183,7 @@ struct PromotionCard: View {
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color.cardBackground(colorScheme))
                 .shadow(
-                    color: .black.opacity(colorScheme == .dark ? 0.3 : 0.1), radius: 10, x: 0, y: 5)
+                    color: .black.opacity(colorScheme == .dark ? 0.25 : 0.08), radius: 7, x: 0, y: 4)
         )
     }
 }
@@ -1183,6 +1204,113 @@ private struct CircleGlassEffectModifier: ViewModifier {
             content.glassEffect(.regular.interactive())
         } else {
             content
+        }
+    }
+}
+
+// MARK: - Login Prompt Card
+struct LoginPromptCard: View {
+    let accentColor: Color
+    let onTap: () -> Void
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                accentColor.opacity(0.25),
+                                accentColor.opacity(0.08),
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 44, height: 44)
+
+                Image(systemName: "sparkles")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(accentColor)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Mejores recomendaciones para ti")
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text("Inicia sesión y descubre más productos personalizados.")
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundColor(Color.adaptiveOnSurface(colorScheme).opacity(0.65))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button(action: onTap) {
+                Text("Entrar")
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+            }
+            .modifier(LoginPromptButtonModifier(accentColor: accentColor))
+        }
+        .padding(14)
+        .modifier(LoginPromptCardGlassModifier(colorScheme: colorScheme))
+    }
+}
+
+private struct LoginPromptButtonModifier: ViewModifier {
+    let accentColor: Color
+
+    private var tintGradient: LinearGradient {
+        LinearGradient(
+            colors: [
+                accentColor,
+                accentColor.opacity(0.85),
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .buttonStyle(.glassProminent)
+                .buttonBorderShape(.capsule)
+                .tint(tintGradient)
+        } else {
+            content
+                .background(Capsule().fill(tintGradient))
+                .shadow(color: accentColor.opacity(0.3), radius: 8, x: 0, y: 4)
+        }
+    }
+}
+
+private struct LoginPromptCardGlassModifier: ViewModifier {
+    let colorScheme: ColorScheme
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(.regular, in: .rect(cornerRadius: 18))
+        } else {
+            content
+                .background(
+                    RoundedRectangle(cornerRadius: 18)
+                        .fill(.ultraThinMaterial)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18)
+                                .stroke(Color.white.opacity(colorScheme == .dark ? 0.1 : 0.5), lineWidth: 1)
+                        )
+                        .shadow(color: .black.opacity(colorScheme == .dark ? 0.3 : 0.08), radius: 10, x: 0, y: 4)
+                )
         }
     }
 }
@@ -1239,9 +1367,168 @@ struct ReorderItemCard: View {
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color.cardBackground(colorScheme))
                 .shadow(
-                    color: .black.opacity(colorScheme == .dark ? 0.3 : 0.08),
-                    radius: 8, x: 0, y: 4)
+                    color: .black.opacity(colorScheme == .dark ? 0.25 : 0.06),
+                    radius: 6, x: 0, y: 3)
         )
+    }
+}
+
+// MARK: - Pide de Nuevo Inline Card
+
+struct PideDeNuevoInlineCard: View {
+    let item: ReorderItem
+    let accentColor: Color
+    let onTap: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 14) {
+                if let imageUrl = item.imageUrl, !imageUrl.isEmpty {
+                    CachedAsyncImage(
+                        url: URL(string: imageUrl),
+                        cacheKey: "reorder_inline_\(item.productId)",
+                        displaySize: CGSize(width: 64, height: 64),
+                        content: { image in image.resizable().scaledToFill() },
+                        placeholder: { AdaptiveShimmerView(cornerRadius: 12) },
+                        failure: { AdaptiveShimmerView(cornerRadius: 12) }
+                    )
+                    .frame(width: 64, height: 64)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                } else {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.gray.opacity(0.15))
+                        .frame(width: 64, height: 64)
+                        .overlay(
+                            Image(systemName: "bag.fill")
+                                .font(.system(size: 24))
+                                .foregroundColor(.gray.opacity(0.4))
+                        )
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("¿Lo pides de nuevo?")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+                    Text(item.name)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                        .lineLimit(1)
+                    Text(item.branchName)
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Image(systemName: "arrow.right.circle.fill")
+                    .font(.system(size: 28))
+                    .foregroundColor(accentColor)
+            }
+            .padding(14)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.cardBackground(colorScheme))
+                    .shadow(
+                        color: .black.opacity(colorScheme == .dark ? 0.2 : 0.06),
+                        radius: 6, x: 0, y: 3)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Featured Store Card
+
+struct FeaturedStoreCard: View {
+    let store: FeedStore
+    let accentColor: Color
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        NavigationLink(destination: StoreDetailView(storeId: store.id)) {
+            ZStack(alignment: .bottomLeading) {
+                coverImage
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 140)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                LinearGradient(
+                    colors: [.black.opacity(0.65), .clear],
+                    startPoint: .bottom,
+                    endPoint: .center
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                HStack(alignment: .bottom, spacing: 12) {
+                    if let avatarUrl = store.preferredAvatarSmallUrl {
+                        CachedAsyncImage(
+                            url: URL(string: avatarUrl),
+                            cacheKey: "featured_store_avatar_\(store.id)",
+                            content: { image in image.resizable().scaledToFill() },
+                            placeholder: { Circle().fill(Color.white.opacity(0.3)) }
+                        )
+                        .frame(width: 44, height: 44)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(Color.white.opacity(0.6), lineWidth: 1.5))
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(store.name)
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                        if let address = store.address, !address.isEmpty {
+                            Text(address)
+                                .font(.system(size: 12))
+                                .foregroundColor(.white.opacity(0.8))
+                                .lineLimit(1)
+                        }
+                    }
+
+                    Spacer()
+
+                    Text("Ver tienda")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill(accentColor))
+                }
+                .padding(14)
+            }
+            .shadow(color: .black.opacity(colorScheme == .dark ? 0.3 : 0.1), radius: 8, x: 0, y: 4)
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var coverImage: some View {
+        if let coverUrl = store.preferredCoverFastUrl {
+            CachedAsyncImage(
+                url: URL(string: coverUrl),
+                cacheKey: "featured_store_cover_\(store.id)",
+                content: { image in image.resizable().scaledToFill() },
+                placeholder: { AdaptiveShimmerView(cornerRadius: 16) },
+                failure: {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(accentColor.opacity(0.2))
+                        .overlay(
+                            Image(systemName: "storefront.fill")
+                                .font(.system(size: 40))
+                                .foregroundColor(accentColor.opacity(0.5))
+                        )
+                }
+            )
+        } else {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(accentColor.opacity(0.2))
+                .overlay(
+                    Image(systemName: "storefront.fill")
+                        .font(.system(size: 40))
+                        .foregroundColor(accentColor.opacity(0.5))
+                )
+        }
     }
 }
 

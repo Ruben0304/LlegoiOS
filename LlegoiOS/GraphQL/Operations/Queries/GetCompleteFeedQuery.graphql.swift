@@ -9,11 +9,12 @@ public extension LlegoAPI {
     public static let operationName: String = "GetCompleteFeed"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetCompleteFeed($jwt: String, $first: Int, $sections: [String!], $branchTipo: String!, $branchTipoEnum: BranchTipo, $radiusKm: Float, $categoryId: String) { getFeed( jwt: $jwt first: $first sections: $sections branchTipo: $branchTipo productCategoryId: $categoryId ) { __typename sections { __typename sectionId title description totalCount products { __typename id name price currency imageUrlBaja imageUrlMedia branchId categoryId branch { __typename name address tipos } categoryName availability score description } } sectionDiagnostics { __typename sectionId title status reason totalBeforeDedup totalAfterDedup } timestamp } productCategories(branchType: $branchTipo) { __typename id name iconIos } branches( first: 15 tipo: $branchTipoEnum radiusKm: $radiusKm productCategoryId: $categoryId ) { __typename edges { __typename node { __typename id businessId name avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta address distanceKm } } } activeTutorials { __typename id title description videoUrl videoUrlSigned duration appTarget thumbnailUrl thumbnailUrlSigned order tags } allCombos(availableOnly: true) { __typename id branchId name description imageUrl currency availability discountType discountValue finalPrice savings startingFinalPrice startingSavings representativeProducts { __typename id name imageUrl } slots { __typename id isFree } giftOptions { __typename productId } branch { __typename id name avatarUrl avatarUrlBaja avatarUrlAlta } } }"#
+        #"query GetCompleteFeed($jwt: String, $first: Int, $page: Int, $sections: [String!], $branchTipo: String!, $branchTipoEnum: BranchTipo, $radiusKm: Float, $categoryId: String) { getFeed( jwt: $jwt first: $first page: $page sections: $sections branchTipo: $branchTipo productCategoryId: $categoryId ) { __typename sections { __typename sectionId title description totalCount products { __typename id name price currency imageUrlBaja imageUrlMedia branchId categoryId branch { __typename name address tipos } categoryName availability score description } } sectionDiagnostics { __typename sectionId title status reason totalBeforeDedup totalAfterDedup } timestamp hasMore } productCategories(branchType: $branchTipo) { __typename id name iconIos } branches( first: 15 tipo: $branchTipoEnum radiusKm: $radiusKm productCategoryId: $categoryId ) { __typename edges { __typename node { __typename id businessId name avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta address distanceKm } } } activeTutorials { __typename id title description videoUrl videoUrlSigned duration appTarget thumbnailUrl thumbnailUrlSigned order tags } allCombos(availableOnly: true) { __typename id branchId name description imageUrl currency availability discountType discountValue finalPrice savings startingFinalPrice startingSavings representativeProducts { __typename id name imageUrl } slots { __typename id isFree } giftOptions { __typename productId } branch { __typename id name avatarUrl avatarUrlBaja avatarUrlAlta } } }"#
       ))
 
     public var jwt: GraphQLNullable<String>
     public var first: GraphQLNullable<Int32>
+    public var page: GraphQLNullable<Int32>
     public var sections: GraphQLNullable<[String]>
     public var branchTipo: String
     public var branchTipoEnum: GraphQLNullable<GraphQLEnum<BranchTipo>>
@@ -23,6 +24,7 @@ public extension LlegoAPI {
     public init(
       jwt: GraphQLNullable<String>,
       first: GraphQLNullable<Int32>,
+      page: GraphQLNullable<Int32> = .none,
       sections: GraphQLNullable<[String]>,
       branchTipo: String,
       branchTipoEnum: GraphQLNullable<GraphQLEnum<BranchTipo>>,
@@ -31,6 +33,7 @@ public extension LlegoAPI {
     ) {
       self.jwt = jwt
       self.first = first
+      self.page = page
       self.sections = sections
       self.branchTipo = branchTipo
       self.branchTipoEnum = branchTipoEnum
@@ -41,6 +44,7 @@ public extension LlegoAPI {
     @_spi(Unsafe) public var __variables: Variables? { [
       "jwt": jwt,
       "first": first,
+      "page": page,
       "sections": sections,
       "branchTipo": branchTipo,
       "branchTipoEnum": branchTipoEnum,
@@ -57,6 +61,7 @@ public extension LlegoAPI {
         .field("getFeed", GetFeed.self, arguments: [
           "jwt": .variable("jwt"),
           "first": .variable("first"),
+          "page": .variable("page"),
           "sections": .variable("sections"),
           "branchTipo": .variable("branchTipo"),
           "productCategoryId": .variable("categoryId")
@@ -99,6 +104,7 @@ public extension LlegoAPI {
           .field("sections", [Section].self),
           .field("sectionDiagnostics", [SectionDiagnostic].self),
           .field("timestamp", LlegoAPI.DateTime.self),
+          .field("hasMore", Bool.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
           GetCompleteFeedQuery.Data.GetFeed.self
@@ -107,6 +113,7 @@ public extension LlegoAPI {
         public var sections: [Section] { __data["sections"] }
         public var sectionDiagnostics: [SectionDiagnostic] { __data["sectionDiagnostics"] }
         public var timestamp: LlegoAPI.DateTime { __data["timestamp"] }
+        public var hasMore: Bool { __data["hasMore"] }
 
         /// GetFeed.Section
         ///

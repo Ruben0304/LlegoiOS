@@ -196,6 +196,7 @@ struct FeedResponse: Sendable {
     let sections: [FeedSection]
     let sectionDiagnostics: [FeedSectionDiagnostic]
     let timestamp: String
+    let hasMore: Bool
 }
 
 struct FeedSectionDiagnostic: Sendable {
@@ -296,20 +297,21 @@ class ProductFeedRepository {
     // MARK: - Complete Feed API (Single Query Optimization)
 
     /// Fetch complete feed data (feed sections, categories, stores, tutorials, combos) in a single GraphQL query
-    func fetchCompleteFeed(first: Int = 10, radiusKm: Double? = nil, categoryId: String? = nil)
+    func fetchCompleteFeed(first: Int = 10, page: Int = 0, radiusKm: Double? = nil, categoryId: String? = nil)
         async -> Result<(FeedResponse, [FeedCategory], [FeedStore], [Tutorial], [FeedCombo]), Error>
     {
         let jwt = AuthManager.shared.getAccessToken()
         let branchTypeRaw = BranchTypeManager.shared.selectedType.rawValue
         let branchTipo = LlegoAPI.BranchTipo(rawValue: branchTypeRaw.uppercased())
         print(
-            "🧭 [Feed] GetCompleteFeed branchTipo=\(branchTypeRaw), branchTipoEnum=\(branchTipo?.rawValue ?? "nil")"
+            "🧭 [Feed] GetCompleteFeed branchTipo=\(branchTypeRaw), page=\(page), branchTipoEnum=\(branchTipo?.rawValue ?? "nil")"
         )
 
         return await withCheckedContinuation { continuation in
             let query = LlegoAPI.GetCompleteFeedQuery(
                 jwt: jwt.map { .some($0) } ?? .none,
                 first: .some(Int32(first)),
+                page: page > 0 ? .some(Int32(page)) : .none,
                 sections: .some(allSections),
                 branchTipo: branchTypeRaw,
                 branchTipoEnum: branchTipo.map { .some(GraphQLEnum($0)) } ?? .none,
@@ -372,7 +374,8 @@ class ProductFeedRepository {
                         let feedResponse = FeedResponse(
                             sections: sections,
                             sectionDiagnostics: sectionDiagnostics,
-                            timestamp: String(describing: data.getFeed.timestamp)
+                            timestamp: String(describing: data.getFeed.timestamp),
+                            hasMore: data.getFeed.hasMore
                         )
 
                         // Parse categories
@@ -487,6 +490,82 @@ class ProductFeedRepository {
         }
     }
 
+    // MARK: - More Feed Sections (pagination)
+
+    /// Fetch only feed sections for page N (no categories/stores/tutorials/combos).
+    /// Used for infinite scroll after the initial complete feed load.
+    func fetchMoreFeedSections(page: Int, categoryId: String? = nil) async -> Result<FeedResponse, Error> {
+        let jwt = AuthManager.shared.getAccessToken()
+        let branchTypeRaw = BranchTypeManager.shared.selectedType.rawValue
+        print("🧭 [Feed] GetFeed page=\(page)")
+
+        return await withCheckedContinuation { continuation in
+            let query = LlegoAPI.GetFeedQuery(
+                jwt: jwt.map { .some($0) } ?? .none,
+                first: .some(10),
+                page: .some(Int32(page)),
+                sections: .some(allSections),
+                branchTipo: branchTypeRaw,
+                productCategoryId: categoryId.map { .some($0) } ?? .none
+            )
+
+            ApolloClientManager.shared.apollo.fetchCompat(
+                query: query, cachePolicy: .fetchIgnoringCacheCompletely
+            ) { result in
+                switch result {
+                case .success(let graphQLResult):
+                    if let data = graphQLResult.data {
+                        let sections = data.getFeed.sections.map { section -> FeedSection in
+                            let products = section.products.map { product -> FeedProduct in
+                                FeedProduct(
+                                    id: product.id,
+                                    name: product.name,
+                                    price: product.price,
+                                    currency: product.currency,
+                                    imageUrlBaja: product.imageUrlBaja,
+                                    imageUrlMedia: product.imageUrlMedia,
+                                    distanceKm: nil,
+                                    branchId: product.branchId,
+                                    branchName: product.branch?.name ?? "",
+                                    branchAvatarUrl: nil,
+                                    branchAddress: product.branch?.address,
+                                    branchTipos: product.branch?.tipos.compactMap { $0.rawValue } ?? [],
+                                    businessName: product.branch?.name ?? "",
+                                    categoryId: product.categoryId,
+                                    categoryName: product.categoryName,
+                                    availability: product.availability,
+                                    score: product.score,
+                                    productDescription: product.description
+                                )
+                            }
+                            return FeedSection(
+                                sectionId: section.sectionId,
+                                title: section.title,
+                                description: section.description,
+                                products: products,
+                                totalCount: section.totalCount
+                            )
+                        }
+                        let feedResponse = FeedResponse(
+                            sections: sections,
+                            sectionDiagnostics: [],
+                            timestamp: String(describing: data.getFeed.timestamp),
+                            hasMore: data.getFeed.hasMore
+                        )
+                        continuation.resume(returning: .success(feedResponse))
+                    } else {
+                        continuation.resume(returning: .failure(NSError(
+                            domain: "GraphQL", code: -1,
+                            userInfo: [NSLocalizedDescriptionKey: "No data returned"]
+                        )))
+                    }
+                case .failure(let error):
+                    continuation.resume(returning: .failure(error))
+                }
+            }
+        }
+    }
+
     // MARK: - Reorder Items ("Pide de nuevo")
 
     /// Fetch products from recent delivered orders for the "Pide de nuevo" section.
@@ -507,7 +586,7 @@ class ProductFeedRepository {
                 var seenProductIds = Set<String>()
 
                 if case .success(let graphQLResult) = result,
-                   let orders = graphQLResult.data?.myOrders?.orders {
+                   let orders = graphQLResult.data?.myOrders.orders {
                     for order in orders {
                         for item in order.items {
                             guard !seenProductIds.contains(item.productId) else { continue }
@@ -603,7 +682,8 @@ class ProductFeedRepository {
                         let feedResponse = FeedResponse(
                             sections: sections,
                             sectionDiagnostics: sectionDiagnostics,
-                            timestamp: String(describing: data.getFeed.timestamp)
+                            timestamp: String(describing: data.getFeed.timestamp),
+                            hasMore: false
                         )
                         continuation.resume(returning: .success(feedResponse))
                     } else if let errors = graphQLResult.errors, !errors.isEmpty {

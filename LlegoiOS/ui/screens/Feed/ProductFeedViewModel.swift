@@ -18,16 +18,17 @@ class ProductFeedViewModel: ObservableObject {
     /// Reorder this array to change how sections appear on screen.
     enum SectionSlot: CaseIterable, Hashable {
         case paraTi
-        case pideDeNuevo
         case dynamicFirst
+        case pideDeNuevoInline
         case stores
         case combos
         case dynamicRest
+        case featuredStore
         case tutorials
     }
 
     let sectionOrder: [SectionSlot] = [
-        .paraTi, .pideDeNuevo, .dynamicFirst, .stores, .combos, .dynamicRest, .tutorials,
+        .paraTi, .dynamicFirst, .pideDeNuevoInline, .stores, .combos, .dynamicRest, .featuredStore, .tutorials,
     ]
 
     // MARK: - Published Properties
@@ -53,7 +54,12 @@ class ProductFeedViewModel: ObservableObject {
     // Filters
     @Published var selectedCategory: String? = nil
 
-    // Pagination
+    // Feed page pagination (infinite sections)
+    @Published var hasMoreFeedPages: Bool = false
+    @Published var feedPage: Int = 0
+    @Published var moreSections: [FeedSection] = []
+
+    // Legacy cursor pagination
     @Published var hasNextPage: Bool = false
     @Published var currentCursor: String? = nil
 
@@ -98,6 +104,9 @@ class ProductFeedViewModel: ObservableObject {
             hasNextPage = false
             hasLoaded = false
             reorderItems = []
+            feedPage = 0
+            hasMoreFeedPages = false
+            moreSections = []
         }
 
         if !isRefreshing {
@@ -116,6 +125,7 @@ class ProductFeedViewModel: ObservableObject {
             switch result {
             case .success(let (feedResponse, categories, stores, tutorials, combos)):
                 self.feedSections = feedResponse.sections
+                self.hasMoreFeedPages = feedResponse.hasMore
                 self.categories = categories
                 self.stores = stores
                 self.tutorials = tutorials
@@ -186,6 +196,31 @@ class ProductFeedViewModel: ObservableObject {
             $0.sectionId == FeedSectionType.tePodriagustar.rawValue
         }) {
             self.recentProducts = recentSection.products
+        }
+    }
+
+    func loadNextFeedPage() {
+        guard !isLoadingMore, hasMoreFeedPages else { return }
+        isLoadingMore = true
+        let nextPage = feedPage + 1
+
+        Task {
+            let result = await repository.fetchMoreFeedSections(
+                page: nextPage, categoryId: selectedCategory)
+
+            self.isLoadingMore = false
+
+            switch result {
+            case .success(let feedResponse):
+                let newSections = feedResponse.sections.filter { !$0.products.isEmpty }
+                self.moreSections.append(contentsOf: newSections)
+                self.feedPage = nextPage
+                self.hasMoreFeedPages = feedResponse.hasMore
+                print("📦 Feed page \(nextPage): \(newSections.count) secciones más")
+
+            case .failure:
+                break
+            }
         }
     }
 
@@ -260,6 +295,14 @@ class ProductFeedViewModel: ObservableObject {
             loadFeed(isRefreshing: false)
         }
     }
+
+    // MARK: - Inline Card Helpers
+
+    /// Top reorder item for the inline "pide de nuevo" card
+    var topReorderItem: ReorderItem? { reorderItems.first }
+
+    /// Store to highlight in the featured store card (best-scored or first available)
+    var featuredStore: FeedStore? { stores.first }
 
     // MARK: - Section Helpers
 

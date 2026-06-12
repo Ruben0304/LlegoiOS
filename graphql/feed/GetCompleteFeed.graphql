@@ -1,6 +1,7 @@
 query GetCompleteFeed(
   $jwt: String
   $first: Int
+  $page: Int
   $sections: [String!]
   $branchTipo: String!
   $branchTipoEnum: BranchTipo
@@ -11,6 +12,7 @@ query GetCompleteFeed(
   getFeed(
     jwt: $jwt
     first: $first
+    page: $page
     sections: $sections
     branchTipo: $branchTipo
     productCategoryId: $categoryId
@@ -49,6 +51,7 @@ query GetCompleteFeed(
       totalAfterDedup
     }
     timestamp
+    hasMore
   }
 
   # 2. Categories for filter chips

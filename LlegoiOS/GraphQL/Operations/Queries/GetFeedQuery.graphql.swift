@@ -9,11 +9,12 @@ public extension LlegoAPI {
     public static let operationName: String = "GetFeed"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetFeed($jwt: String, $first: Int = 10, $sections: [String!], $branchTipo: String!, $productCategoryId: String) { getFeed( first: $first jwt: $jwt sections: $sections branchTipo: $branchTipo productCategoryId: $productCategoryId ) { __typename sections { __typename sectionId title description totalCount products { __typename id branchId name description price currency availability score imageUrlBaja imageUrlMedia categoryId categoryName branch { __typename id name address tipos } } } sectionDiagnostics { __typename sectionId title status reason totalBeforeDedup totalAfterDedup } timestamp } }"#
+        #"query GetFeed($jwt: String, $first: Int = 10, $page: Int = 0, $sections: [String!], $branchTipo: String!, $productCategoryId: String) { getFeed( first: $first page: $page jwt: $jwt sections: $sections branchTipo: $branchTipo productCategoryId: $productCategoryId ) { __typename sections { __typename sectionId title description totalCount products { __typename id branchId name description price currency availability score imageUrlBaja imageUrlMedia categoryId categoryName branch { __typename id name address tipos } } } sectionDiagnostics { __typename sectionId title status reason totalBeforeDedup totalAfterDedup } timestamp hasMore } }"#
       ))
 
     public var jwt: GraphQLNullable<String>
     public var first: GraphQLNullable<Int32>
+    public var page: GraphQLNullable<Int32>
     public var sections: GraphQLNullable<[String]>
     public var branchTipo: String
     public var productCategoryId: GraphQLNullable<String>
@@ -21,12 +22,14 @@ public extension LlegoAPI {
     public init(
       jwt: GraphQLNullable<String>,
       first: GraphQLNullable<Int32> = 10,
+      page: GraphQLNullable<Int32> = 0,
       sections: GraphQLNullable<[String]>,
       branchTipo: String,
       productCategoryId: GraphQLNullable<String>
     ) {
       self.jwt = jwt
       self.first = first
+      self.page = page
       self.sections = sections
       self.branchTipo = branchTipo
       self.productCategoryId = productCategoryId
@@ -35,6 +38,7 @@ public extension LlegoAPI {
     @_spi(Unsafe) public var __variables: Variables? { [
       "jwt": jwt,
       "first": first,
+      "page": page,
       "sections": sections,
       "branchTipo": branchTipo,
       "productCategoryId": productCategoryId
@@ -48,6 +52,7 @@ public extension LlegoAPI {
       @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
         .field("getFeed", GetFeed.self, arguments: [
           "first": .variable("first"),
+          "page": .variable("page"),
           "jwt": .variable("jwt"),
           "sections": .variable("sections"),
           "branchTipo": .variable("branchTipo"),
@@ -74,6 +79,7 @@ public extension LlegoAPI {
           .field("sections", [Section].self),
           .field("sectionDiagnostics", [SectionDiagnostic].self),
           .field("timestamp", LlegoAPI.DateTime.self),
+          .field("hasMore", Bool.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
           GetFeedQuery.Data.GetFeed.self
@@ -82,6 +88,7 @@ public extension LlegoAPI {
         public var sections: [Section] { __data["sections"] }
         public var sectionDiagnostics: [SectionDiagnostic] { __data["sectionDiagnostics"] }
         public var timestamp: LlegoAPI.DateTime { __data["timestamp"] }
+        public var hasMore: Bool { __data["hasMore"] }
 
         /// GetFeed.Section
         ///
