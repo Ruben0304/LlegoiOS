@@ -54,11 +54,6 @@ public extension LlegoAPI {
       case "ComboType": return LlegoAPI.Objects.ComboType
       case "CoordinatesSyncType": return LlegoAPI.Objects.CoordinatesSyncType
       case "CoordinatesType": return LlegoAPI.Objects.CoordinatesType
-      case "CreativeBackgroundType": return LlegoAPI.Objects.CreativeBackgroundType
-      case "CreativeBadgeType": return LlegoAPI.Objects.CreativeBadgeType
-      case "CreativeCTAType": return LlegoAPI.Objects.CreativeCTAType
-      case "CreativeSpecType": return LlegoAPI.Objects.CreativeSpecType
-      case "CreativeTextType": return LlegoAPI.Objects.CreativeTextType
       case "DayScheduleType": return LlegoAPI.Objects.DayScheduleType
       case "DeliveryAddressType": return LlegoAPI.Objects.DeliveryAddressType
       case "DeliveryFeeEstimateType": return LlegoAPI.Objects.DeliveryFeeEstimateType

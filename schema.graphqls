@@ -2363,45 +2363,8 @@ type FeedCreativeType {
   branchId: String!
   businessId: String!
   placement: String!
-  creative: CreativeSpecType!
+  imageUrl: String!
   ctaDeeplink: String
-  branchName: String
-  branchAvatarUrl: String
-}
-
-type CreativeSpecType {
-  aspectRatio: String!
-  background: CreativeBackgroundType!
-  texts: [CreativeTextType!]!
-  animationPreset: String!
-  badge: CreativeBadgeType
-  cta: CreativeCTAType
-}
-
-type CreativeBackgroundType {
-  type: String!
-  colors: [String!]!
-  angle: Int!
-  imagePath: String
-  imageUrl: String
-}
-
-type CreativeTextType {
-  role: String!
-  value: String!
-  color: String!
-  size: String!
-  weight: String!
-}
-
-type CreativeBadgeType {
-  text: String!
-  style: String!
-}
-
-type CreativeCTAType {
-  label: String!
-  deeplink: String
 }
 
 type FeedSection {

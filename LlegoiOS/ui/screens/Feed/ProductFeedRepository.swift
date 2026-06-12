@@ -395,38 +395,14 @@ class ProductFeedRepository {
                         let creativeSections = data.getFeed.creativeSections.map {
                             cs -> FeedCreativeSection in
                             let items = cs.items.map { it -> FeedCreativeItem in
-                                let c = it.creative
-                                let spec = CreativeSpec(
-                                    aspectRatio: c.aspectRatio,
-                                    animationPreset: c.animationPreset,
-                                    background: CreativeSpec.Background(
-                                        type: c.background.type,
-                                        colors: c.background.colors,
-                                        angle: c.background.angle,
-                                        imageUrl: c.background.imageUrl
-                                    ),
-                                    texts: c.texts.map {
-                                        CreativeSpec.TextLayer(
-                                            role: $0.role, value: $0.value, color: $0.color,
-                                            size: $0.size, weight: $0.weight)
-                                    },
-                                    badge: c.badge.map {
-                                        CreativeSpec.Badge(text: $0.text, style: $0.style)
-                                    },
-                                    cta: c.cta.map {
-                                        CreativeSpec.CTA(label: $0.label, deeplink: $0.deeplink)
-                                    }
-                                )
-                                return FeedCreativeItem(
+                                FeedCreativeItem(
                                     id: it.campaignId,
                                     campaignId: it.campaignId,
                                     branchId: it.branchId,
                                     businessId: it.businessId,
                                     placement: it.placement,
-                                    ctaDeeplink: it.ctaDeeplink,
-                                    branchName: it.branchName,
-                                    branchAvatarUrl: it.branchAvatarUrl,
-                                    creative: spec
+                                    imageUrl: it.imageUrl,
+                                    ctaDeeplink: it.ctaDeeplink
                                 )
                             }
                             return FeedCreativeSection(
