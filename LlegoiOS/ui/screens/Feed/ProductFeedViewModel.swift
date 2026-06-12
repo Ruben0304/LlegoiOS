@@ -235,7 +235,7 @@ class ProductFeedViewModel: ObservableObject {
 
             switch result {
             case .success(let feedResponse):
-                let newSections = feedResponse.sections.filter { !$0.products.isEmpty }
+                let newSections = feedResponse.sections.filter { !$0.products.isEmpty && $0.sectionId != "explorar" }
                 self.moreSections.append(contentsOf: newSections)
                 self.feedPage = nextPage
                 self.hasMoreFeedPages = feedResponse.hasMore

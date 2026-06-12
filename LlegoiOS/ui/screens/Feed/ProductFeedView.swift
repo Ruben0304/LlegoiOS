@@ -1694,12 +1694,9 @@ struct ExplorarProductCard: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
         }
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color.cardBackground(colorScheme))
-                .shadow(color: .black.opacity(0.07), radius: 6, x: 0, y: 2)
-        )
+        .background(Color.cardBackground(colorScheme))
         .clipShape(RoundedRectangle(cornerRadius: 14))
+        .shadow(color: .black.opacity(colorScheme == .dark ? 0.25 : 0.08), radius: 6, x: 0, y: 3)
     }
 }
 
