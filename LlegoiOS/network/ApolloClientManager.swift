@@ -8,7 +8,7 @@ final class ApolloClientManager: @unchecked Sendable {
     private(set) lazy var apollo: ApolloClient = {
         let url = URL(string: "https://llegobackend-production.up.railway.app/graphql")!
         let store = ApolloStore(cache: cache)
-        return ApolloClient(url: url)
+        return ApolloClient(url: url, store: store)
     }()
 
     private lazy var cache: SQLiteNormalizedCache = {
