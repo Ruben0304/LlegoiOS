@@ -603,20 +603,22 @@ struct ProductDetailView: View {
                 .font(.system(size: 20, weight: .bold))
                 .foregroundColor(.primary)
                 .padding(.top, 8)
+                .padding(.horizontal, 20)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 14) {
+                HStack(spacing: 20) {
                     ForEach(viewModel.similarBranches, id: \.id) { branch in
                         Button {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             selectedSimilarStoreId = branch.id
                         } label: {
-                            SimilarBranchCard(branch: branch)
+                            SimilarBranchCircleCard(branch: branch)
                         }
                         .buttonStyle(.plain)
                     }
                 }
-                .padding(.vertical, 4)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
             }
         }
     }
@@ -753,58 +755,44 @@ struct ProductDetailView: View {
     }
 }
 
-private struct SimilarBranchCard: View {
+private struct SimilarBranchCircleCard: View {
     let branch: BranchGraphQL
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ZStack(alignment: .bottomLeading) {
-                AsyncImage(url: URL(string: branch.avatarUrlBaja ?? branch.avatarUrl ?? "")) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().aspectRatio(contentMode: .fill)
-                    default:
-                        Color.llegoBackground
-                            .overlay(
-                                Image(systemName: "storefront")
-                                    .font(.system(size: 28))
-                                    .foregroundColor(.secondary.opacity(0.5))
-                            )
+        VStack(spacing: 10) {
+            ZStack {
+                Circle()
+                    .fill(Color.cardBackground(colorScheme))
+                    .frame(width: 100, height: 100)
+                    .shadow(
+                        color: Color.black.opacity(colorScheme == .dark ? 0.25 : 0.12),
+                        radius: 7, x: 0, y: 4)
+
+                CachedAsyncImage(
+                    url: URL(string: branch.avatarUrlBaja ?? branch.avatarUrl ?? ""),
+                    cacheKey: "branch_avatar_\(branch.id)",
+                    content: { image in
+                        image.resizable().scaledToFill()
+                    },
+                    placeholder: { Circle().fill(Color.gray.opacity(0.2)) },
+                    failure: {
+                        Image(systemName: "storefront")
+                            .font(.system(size: 36))
+                            .foregroundColor(.gray)
                     }
-                }
-                .frame(width: 150, height: 100)
-                .clipped()
-
-                if !branch.products.isEmpty {
-                    Text("\(branch.products.count) producto\(branch.products.count == 1 ? "" : "s")")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(Color.black.opacity(0.55))
-                        .cornerRadius(6)
-                        .padding(6)
-                }
+                )
+                .frame(width: 88, height: 88)
+                .clipShape(Circle())
             }
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(branch.name)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-
-                Text(branch.address)
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 7)
+            Text(branch.name)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .frame(width: 100, height: 36, alignment: .top)
         }
-        .frame(width: 150)
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 2)
     }
 }
 
