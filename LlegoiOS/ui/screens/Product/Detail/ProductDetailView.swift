@@ -77,6 +77,11 @@ struct ProductDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
             .toolbarBackground(.hidden, for: .navigationBar)
+            .safeAreaInset(edge: .bottom) {
+                if !catalogOnly {
+                    bottomBarView
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(action: { dismiss() }) {
@@ -127,16 +132,6 @@ struct ProductDetailView: View {
                             }
                             .accessibilityLabel("Carrito")
                         }
-                    }
-
-                    // Bottom bar flotante - Quantity control
-                    ToolbarItem(placement: .bottomBar) {
-                        quantityControlView
-                    }
-
-                    // Bottom bar flotante - Add to cart button
-                    ToolbarItem(placement: .bottomBar) {
-                        addToCartButton
                     }
                 }
 
@@ -593,7 +588,17 @@ struct ProductDetailView: View {
         }
     }
 
-    // MARK: - Bottom Toolbar Views
+    // MARK: - Bottom Bar
+
+    private var bottomBarView: some View {
+        HStack(spacing: 12) {
+            quantityControlView
+            addToCartButton
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 10)
+        .background(.ultraThinMaterial)
+    }
 
     private var quantityControlView: some View {
         HStack(spacing: 0) {
