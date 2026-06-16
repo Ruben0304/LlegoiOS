@@ -69,7 +69,6 @@ struct ProductDetailView: View {
                                 .opacity(contentAppeared ? 1 : 0)
                                 .offset(y: contentAppeared ? 0 : 14)
                         }
-                        .padding(.bottom, 80)
                     }
                     .ignoresSafeArea(edges: .top)
                     .transition(.opacity)
@@ -78,11 +77,6 @@ struct ProductDetailView: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
             .toolbarBackground(.hidden, for: .navigationBar)
-            .safeAreaInset(edge: .bottom) {
-                if !catalogOnly {
-                    bottomBarView
-                }
-            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(action: { dismiss() }) {
@@ -136,6 +130,17 @@ struct ProductDetailView: View {
                     }
                 }
 
+            }
+            .safeAreaInset(edge: .bottom) {
+                if !catalogOnly, viewModel.productDetail != nil {
+                    HStack(spacing: 12) {
+                        quantityControlView
+                        Spacer(minLength: 0)
+                        addToCartButton
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 8)
+                }
             }
             .onAppear {
                 viewModel.loadProductDetail(id: productId)
@@ -625,16 +630,6 @@ struct ProductDetailView: View {
 
     // MARK: - Bottom Bar
 
-    private var bottomBarView: some View {
-        HStack(spacing: 12) {
-            quantityControlView
-            addToCartButton
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 10)
-        .background(.ultraThinMaterial)
-    }
-
     private var quantityControlView: some View {
         HStack(spacing: 0) {
             Button(action: decrementQuantity) {
@@ -656,31 +651,30 @@ struct ProductDetailView: View {
                     .frame(width: 36, height: 36)
             }
         }
-        .padding(.horizontal, 4)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .modifier(CapsuleGlassEffectModifier())
         .tint(gradientManager.currentAccentColor)
     }
 
     private var addToCartButton: some View {
-        ZStack {
-            Button(action: addToCart) {
-                HStack(spacing: 8) {
-                    Image(systemName: showAddedToCartFeedback ? "checkmark" : "cart")
-                        .contentTransition(.symbolEffect(.replace))
-                    Text(showAddedToCartFeedback ? "¡Agregado!" : "Añadir \(formatTotalPrice())")
-
-                }
-                .font(.system(size: 16, weight: .semibold))
-                .padding(.horizontal, 24)
-                .padding(.vertical, 12)
+        Button(action: addToCart) {
+            HStack(spacing: 8) {
+                Image(systemName: showAddedToCartFeedback ? "checkmark" : "cart")
+                    .contentTransition(.symbolEffect(.replace))
+                Text(showAddedToCartFeedback ? "¡Agregado!" : "Añadir \(formatTotalPrice())")
             }
-            .modifier(GlassProminentButtonModifier())
-            .tint(showAddedToCartFeedback ? .green : gradientManager.currentAccentColor)
-            .scaleEffect(showAddedToCartFeedback ? 1.05 : 1.0)
-            .animation(
-                .spring(response: 0.35, dampingFraction: 0.6), value: showAddedToCartFeedback
-            )
-            .disabled(showAddedToCartFeedback)
+            .font(.system(size: 16, weight: .semibold))
+            .padding(.horizontal, 24)
+            .padding(.vertical, 12)
         }
+        .modifier(GlassProminentButtonModifier())
+        .tint(showAddedToCartFeedback ? .green : gradientManager.currentAccentColor)
+        .scaleEffect(showAddedToCartFeedback ? 1.05 : 1.0)
+        .animation(
+            .spring(response: 0.35, dampingFraction: 0.6), value: showAddedToCartFeedback
+        )
+        .disabled(showAddedToCartFeedback)
     }
 
     // MARK: - Helpers
@@ -802,6 +796,23 @@ private struct GlassProminentButtonModifier: ViewModifier {
             content.buttonStyle(.glassProminent)
         } else {
             content.buttonStyle(.borderedProminent)
+        }
+    }
+}
+
+/// Da al control un fondo flotante de Liquid Glass en cápsula (iOS 26+),
+/// con un respaldo de material translúcido en versiones anteriores.
+private struct CapsuleGlassEffectModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.glassEffect(.regular.interactive(), in: .capsule)
+        } else {
+            content
+                .background(.regularMaterial, in: Capsule())
+                .overlay(
+                    Capsule()
+                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
+                )
         }
     }
 }

@@ -149,13 +149,15 @@ struct MainAppView: View {
                             }
                             .tag(2)
 
-                        ProfileView()
-                            .ignoresSafeArea(.container, edges: .bottom)
-                            .tabItem {
-                                Image(systemName: "person")
-                                Text("Cuenta")
-                            }
-                            .tag(3)
+                        NavigationStack {
+                            ProfileView()
+                        }
+                        .ignoresSafeArea(.container, edges: .bottom)
+                        .tabItem {
+                            Image(systemName: "person")
+                            Text("Cuenta")
+                        }
+                        .tag(3)
                     }
                     .tint(gradientManager.currentAccentColor)
                     .toolbarBackground(.hidden, for: .tabBar)

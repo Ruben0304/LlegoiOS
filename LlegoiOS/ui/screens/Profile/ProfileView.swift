@@ -178,8 +178,7 @@ struct ProfileView: View {
 
     // MARK: - Authenticated Profile View
     private var authenticatedProfileView: some View {
-        NavigationStack {
-            ZStack {
+        ZStack {
                 Color.llegoBackground.ignoresSafeArea()
 
                 ScrollView(.vertical, showsIndicators: true) {
@@ -264,7 +263,8 @@ struct ProfileView: View {
             //     PlansAndPricingView()
             // }
             .tint(gradientManager.currentAccentColor)
-        }
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbar(.hidden, for: .tabBar)
         .fullScreenCover(isPresented: $showingWallet) {
             WalletView()
         }
@@ -448,11 +448,10 @@ struct ProfileView: View {
     // MARK: - Futuristic Profile Header con Mapa como Portada
     private var futuristicProfileHeader: some View {
         ZStack(alignment: .bottom) {
-            // Mapa como portada de fondo
-            Map(position: .constant(.region(region)), interactionModes: []) {
-            }
-            .frame(height: 380)
-            .opacity(0.6)  // Opacidad base del mapa
+            // Mapa como portada de fondo (snapshot estático para evitar crash Metal MSAA en iOS 26)
+            MapSnapshotView(region: region)
+                .frame(height: 380)
+                .opacity(0.6)  // Opacidad base del mapa
             .overlay(
                 // Gradient overlay para efecto de desvanecimiento progresivo
                 LinearGradient(
@@ -2810,4 +2809,54 @@ private struct ProfileKycImagePicker: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+}
+
+// Genera un snapshot estático del mapa para evitar el crash Metal MSAA en iOS 26
+private struct MapSnapshotView: View {
+    let region: MKCoordinateRegion
+    @State private var snapshot: UIImage?
+
+    var body: some View {
+        Group {
+            if let snapshot = snapshot {
+                Image(uiImage: snapshot)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                LinearGradient(
+                    colors: [
+                        Color.llegoPrimary.opacity(0.25),
+                        Color.llegoAccent.opacity(0.15),
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        }
+        .task(id: "\(region.center.latitude),\(region.center.longitude)") {
+            await takeSnapshot()
+        }
+    }
+
+    private func takeSnapshot() async {
+        let options = MKMapSnapshotter.Options()
+        options.region = region
+        options.size = CGSize(width: UIScreen.main.bounds.width, height: 380)
+        options.scale = UIScreen.main.scale
+
+        let snapshotter = MKMapSnapshotter(options: options)
+        do {
+            let image = try await withCheckedThrowingContinuation {
+                (cont: CheckedContinuation<UIImage, Error>) in
+                snapshotter.start { snap, error in
+                    if let error { cont.resume(throwing: error) }
+                    else if let snap { cont.resume(returning: snap.image) }
+                    else { cont.resume(throwing: CancellationError()) }
+                }
+            }
+            await MainActor.run { snapshot = image }
+        } catch {
+            // El gradiente de fallback permanece visible
+        }
+    }
 }
