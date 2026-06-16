@@ -488,12 +488,6 @@ struct HomeView: View {
                 branchTypeManager.setTypeFromCategoryIndex(currentIndex)
                 // Load cart subtotal for toolbar
                 refreshCartSubtotal()
-                // DEBUG: Print full JWT token on Home screen appear
-                if let jwt = authManager.getAccessToken() {
-                    print("🔐 JWT (FULL): \(jwt)")
-                } else {
-                    print("🔐 JWT not available (no session)")
-                }
             }
             .onDisappear {
                 pressSoundStopTimer?.invalidate()

@@ -1357,7 +1357,7 @@ struct CartView: View {
             paymentRepository.createPaymentIntent(
                 amount: amountInCents,
                 currency: "usd",
-                customerEmail: "user@example.com", // TODO: Obtener email del usuario actual
+                customerEmail: AuthManager.shared.currentUser?.email ?? "",
                 metadata: [
                     "cart_items": String(viewModel.totalItems),
                     "subtotal": String(format: "%.2f", viewModel.subtotal),
