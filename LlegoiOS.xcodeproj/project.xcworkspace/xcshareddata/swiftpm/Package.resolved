@@ -1,6 +1,15 @@
 {
-  "originHash" : "c20ee05e47f32af2a68fe7dc3d76f42e0aad1bbf944eb44ee77a87f14519ce7b",
+  "originHash" : "eeedec42e276c77938795c48ec3b850a7bc69bdb0147a867d807f435fec83743",
   "pins" : [
+    {
+      "identity" : "apollo-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Ruben0304/apollo-ios",
+      "state" : {
+        "branch" : "main",
+        "revision" : "6ab81d15e821fd3b47c222981b74f6b744420637"
+      }
+    },
     {
       "identity" : "app-check",
       "kind" : "remoteSourceControl",
