@@ -17,6 +17,7 @@ class ProductDetailViewModel: ObservableObject {
     @Published var state: ProductDetailState = .idle
     @Published var productDetail: ProductDetailGraphQL?
     @Published var similarProducts: [Product] = []
+    @Published var similarBranches: [BranchGraphQL] = []
     @Published var isLoadingSimilarProducts: Bool = false
     @Published var selectedByListId: [String: VariantOption] = [:]
 
@@ -79,7 +80,8 @@ class ProductDetailViewModel: ObservableObject {
                     )
                     ProductCacheManager.shared.addProduct(cachedProduct)
                     
-                    self.loadSimilarProducts(using: detail.name, excludingProductId: id)
+                    self.loadSimilarProducts(productId: id)
+                    self.loadSimilarBranchesForProduct(productId: id)
 
                 case .failure(let error):
                     let message = "Error al cargar detalles: \(error.localizedDescription)"
@@ -91,26 +93,36 @@ class ProductDetailViewModel: ObservableObject {
         }
     }
 
-    func loadSimilarProducts(
-        using queryText: String, excludingProductId: String, forceRefresh: Bool = false
-    ) {
-        guard forceRefresh || loadedSimilarQuery != excludingProductId else {
-            return
-        }
-
-        loadedSimilarQuery = excludingProductId
+    func loadSimilarProducts(productId: String, forceRefresh: Bool = false) {
+        guard forceRefresh || loadedSimilarQuery != productId else { return }
+        loadedSimilarQuery = productId
         isLoadingSimilarProducts = true
 
-        repository.fetchSimilarProducts(productName: queryText, excludingProductId: excludingProductId) { [weak self] result in
+        repository.fetchSimilarProducts(productId: productId) { [weak self] result in
             Task { @MainActor in
                 guard let self else { return }
                 self.isLoadingSimilarProducts = false
                 switch result {
                 case .success(let products):
-                    self.similarProducts = Array(products.prefix(6))
-                    print("✅ [ProductDetailViewModel] \(self.similarProducts.count) similares")
+                    self.similarProducts = products
+                    print("✅ [ProductDetailViewModel] \(self.similarProducts.count) productos similares (Qdrant)")
                 case .failure:
                     self.similarProducts = []
+                }
+            }
+        }
+    }
+
+    func loadSimilarBranchesForProduct(productId: String) {
+        repository.fetchSimilarBranchesForProduct(productId: productId) { [weak self] result in
+            Task { @MainActor in
+                guard let self else { return }
+                switch result {
+                case .success(let branches):
+                    self.similarBranches = branches
+                    print("✅ [ProductDetailViewModel] \(self.similarBranches.count) tiendas similares (Qdrant)")
+                case .failure:
+                    self.similarBranches = []
                 }
             }
         }

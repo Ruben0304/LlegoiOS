@@ -136,28 +136,20 @@ final class ProductDetailRepository: @unchecked Sendable {
         }
     }
 
-    // MARK: - Fetch similar products via vector search (timeout 5s)
+    // MARK: - Fetch similar products via Qdrant recommend (timeout 5s)
     func fetchSimilarProducts(
-        productName: String,
-        excludingProductId: String,
+        productId: String,
         completion: @escaping @Sendable (Result<[Product], Error>) -> Void
     ) {
         let client = apolloClient
         Task {
             let jwt = await getJWT()
-            let query = LlegoAPI.SearchProductsQuery(
-                query: productName,
-                first: 7,
-                after: .none,
-                useVectorSearch: true,
-                branchTipo: .none,
-                categoryId: .none,
-                radiusKm: .none,
+            let query = LlegoAPI.GetSimilarProductsQuery(
+                productId: productId,
+                limit: .some(7),
                 jwt: jwt.map { .some($0) } ?? .none
             )
 
-            // Usamos withCheckedThrowingContinuation para que solo se resuelva una vez.
-            // La tarea de timeout lanza CancellationError si la red ya respondió.
             let products: [Product]
             do {
                 products = try await withThrowingTaskGroup(of: [Product].self) { group in
@@ -166,11 +158,9 @@ final class ProductDetailRepository: @unchecked Sendable {
                             client.fetchCompat(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
                                 switch result {
                                 case .success(let graphQLResult):
-                                    let edges = graphQLResult.data?.searchProducts.edges ?? []
-                                    let mapped = edges.compactMap { edge -> Product? in
-                                        let node = edge.node
-                                        guard node.id != excludingProductId else { return nil }
-                                        return Product(
+                                    let nodes = graphQLResult.data?.getSimilarProducts ?? []
+                                    let mapped = nodes.map { node in
+                                        Product(
                                             id: node.id,
                                             name: node.name,
                                             shop: node.business?.name ?? "",
@@ -191,7 +181,6 @@ final class ProductDetailRepository: @unchecked Sendable {
                         try await Task.sleep(nanoseconds: 5_000_000_000)
                         throw CancellationError()
                     }
-                    // Tomar el primer resultado (red o timeout)
                     let result = try await group.next() ?? []
                     group.cancelAll()
                     return result
@@ -200,6 +189,71 @@ final class ProductDetailRepository: @unchecked Sendable {
                 products = []
             }
             completion(.success(products))
+        }
+    }
+
+    // MARK: - Fetch branches with similar products via Qdrant (timeout 5s)
+    func fetchSimilarBranchesForProduct(
+        productId: String,
+        completion: @escaping @Sendable (Result<[BranchGraphQL], Error>) -> Void
+    ) {
+        let client = apolloClient
+        Task {
+            let jwt = await getJWT()
+            let query = LlegoAPI.GetBranchesForProductQuery(
+                productId: productId,
+                limit: .some(6),
+                jwt: jwt.map { .some($0) } ?? .none
+            )
+
+            let branches: [BranchGraphQL]
+            do {
+                branches = try await withThrowingTaskGroup(of: [BranchGraphQL].self) { group in
+                    group.addTask {
+                        try await withCheckedThrowingContinuation { continuation in
+                            client.fetchCompat(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
+                                switch result {
+                                case .success(let graphQLResult):
+                                    let nodes = graphQLResult.data?.getBranchesForProduct ?? []
+                                    let mapped = nodes.map { node in
+                                        BranchGraphQL(
+                                            id: node.id,
+                                            businessId: node.businessId,
+                                            name: node.name,
+                                            address: node.address ?? "",
+                                            coordinates: CoordinatesGraphQL(type: "Point", coordinates: []),
+                                            phone: "",
+                                            status: "",
+                                            avatarUrl: node.avatarUrl,
+                                            avatarUrlBaja: node.avatarUrlBaja,
+                                            avatarUrlAlta: node.avatarUrlAlta,
+                                            coverUrl: node.coverUrl,
+                                            coverUrlBaja: node.coverUrlBaja,
+                                            coverUrlAlta: node.coverUrlAlta,
+                                            deliveryRadius: node.deliveryRadius,
+                                            facilities: nil,
+                                            createdAt: node.createdAt
+                                        )
+                                    }
+                                    continuation.resume(returning: mapped)
+                                case .failure(let error):
+                                    continuation.resume(throwing: error)
+                                }
+                            }
+                        }
+                    }
+                    group.addTask {
+                        try await Task.sleep(nanoseconds: 5_000_000_000)
+                        throw CancellationError()
+                    }
+                    let result = try await group.next() ?? []
+                    group.cancelAll()
+                    return result
+                }
+            } catch {
+                branches = []
+            }
+            completion(.success(branches))
         }
     }
 

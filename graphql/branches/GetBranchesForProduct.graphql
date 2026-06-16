@@ -1,0 +1,24 @@
+query GetBranchesForProduct($productId: String!, $limit: Int, $jwt: String) {
+  getBranchesForProduct(productId: $productId, limit: $limit, jwt: $jwt) {
+    id
+    businessId
+    name
+    address
+    avatarUrl
+    avatarUrlBaja
+    avatarUrlAlta
+    coverUrl
+    coverUrlBaja
+    coverUrlAlta
+    deliveryRadius
+    catalogOnly
+    createdAt
+    products(limit: 2, availableOnly: false) {
+      id
+      name
+      price
+      currency
+      imageUrlBaja
+    }
+  }
+}

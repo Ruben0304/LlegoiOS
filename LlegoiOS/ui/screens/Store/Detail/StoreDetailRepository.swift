@@ -321,6 +321,57 @@ class StoreDetailRepository {
         }
     }
 
+    // MARK: - Similar Branches via Qdrant recommend
+
+    func fetchSimilarBranches(
+        branchId: String,
+        completion: @escaping @Sendable (Result<[BranchGraphQL], Error>) -> Void
+    ) {
+        let client = apolloClient
+
+        Task { @MainActor in
+            let jwt = AuthManager.shared.getAccessToken()
+
+            client.fetchCompat(
+                query: LlegoAPI.GetSimilarBranchesQuery(
+                    branchId: branchId,
+                    limit: .some(6),
+                    jwt: jwt.map { .some($0) } ?? .none
+                ),
+                cachePolicy: .fetchIgnoringCacheData
+            ) { result in
+                switch result {
+                case .success(let graphQLResult):
+                    let nodes = graphQLResult.data?.getSimilarBranches ?? []
+                    let mapped = nodes.map { node in
+                        BranchGraphQL(
+                            id: node.id,
+                            businessId: node.businessId,
+                            name: node.name,
+                            address: node.address ?? "",
+                            coordinates: CoordinatesGraphQL(type: "Point", coordinates: []),
+                            phone: "",
+                            status: "",
+                            avatarUrl: node.avatarUrl,
+                            avatarUrlBaja: node.avatarUrlBaja,
+                            avatarUrlAlta: node.avatarUrlAlta,
+                            coverUrl: node.coverUrl,
+                            coverUrlBaja: node.coverUrlBaja,
+                            coverUrlAlta: node.coverUrlAlta,
+                            deliveryRadius: node.deliveryRadius,
+                            facilities: nil,
+                            createdAt: node.createdAt
+                        )
+                    }
+                    completion(.success(mapped))
+                case .failure(let error):
+                    print("⚠️ [StoreDetail] fetchSimilarBranches failed: \(error.localizedDescription)")
+                    completion(.success([]))
+                }
+            }
+        }
+    }
+
     // MARK: - Branch Likes
 
     /// Like a branch (add to user's liked branches)

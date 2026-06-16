@@ -16,6 +16,7 @@ struct ProductDetailView: View {
     @State private var quantity: Int = 1
     @State private var showAddedToCartFeedback = false
     @State private var selectedSimilarProductId: String?
+    @State private var selectedSimilarStoreId: String?
     @State private var showCart = false
 
     // Computed property to get current product from ViewModel
@@ -147,6 +148,9 @@ struct ProductDetailView: View {
             .fullScreenCover(item: $selectedSimilarProductId) { productId in
                 ProductDetailView(productId: productId)
             }
+            .fullScreenCover(item: $selectedSimilarStoreId) { storeId in
+                StoreDetailView(storeId: storeId)
+            }
             .fullScreenCover(isPresented: $showCart) {
                 CartView()
             }
@@ -260,6 +264,11 @@ struct ProductDetailView: View {
 
             // Similar Products
             similarProductsSection
+
+            // Branches with similar products
+            if !viewModel.similarBranches.isEmpty {
+                similarBranchesSection
+            }
         }
         .padding(20)
         .padding(.bottom, 100)
@@ -588,6 +597,30 @@ struct ProductDetailView: View {
         }
     }
 
+    private var similarBranchesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Tiendas con productos similares")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(.primary)
+                .padding(.top, 8)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 14) {
+                    ForEach(viewModel.similarBranches, id: \.id) { branch in
+                        Button {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            selectedSimilarStoreId = branch.id
+                        } label: {
+                            SimilarBranchCard(branch: branch)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+    }
+
     // MARK: - Bottom Bar
 
     private var bottomBarView: some View {
@@ -717,6 +750,61 @@ struct ProductDetailView: View {
         withAnimation(.spring(response: 0.8, dampingFraction: 0.9).delay(0.08)) {
             contentAppeared = true
         }
+    }
+}
+
+private struct SimilarBranchCard: View {
+    let branch: BranchGraphQL
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ZStack(alignment: .bottomLeading) {
+                AsyncImage(url: URL(string: branch.avatarUrlBaja ?? branch.avatarUrl ?? "")) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    default:
+                        Color.llegoBackground
+                            .overlay(
+                                Image(systemName: "storefront")
+                                    .font(.system(size: 28))
+                                    .foregroundColor(.secondary.opacity(0.5))
+                            )
+                    }
+                }
+                .frame(width: 150, height: 100)
+                .clipped()
+
+                if !branch.products.isEmpty {
+                    Text("\(branch.products.count) producto\(branch.products.count == 1 ? "" : "s")")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color.black.opacity(0.55))
+                        .cornerRadius(6)
+                        .padding(6)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(branch.name)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+
+                Text(branch.address)
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 7)
+        }
+        .frame(width: 150)
+        .background(Color(.secondarySystemBackground))
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 2)
     }
 }
 

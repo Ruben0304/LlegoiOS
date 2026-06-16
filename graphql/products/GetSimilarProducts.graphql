@@ -1,0 +1,19 @@
+query GetSimilarProducts($productId: String!, $limit: Int, $jwt: String) {
+  getSimilarProducts(productId: $productId, limit: $limit, jwt: $jwt) {
+    id
+    branchId
+    name
+    description
+    weight
+    price
+    currency
+    imageUrlBaja
+    availability
+    createdAt
+    business {
+      id
+      name
+      avatarUrl
+    }
+  }
+}

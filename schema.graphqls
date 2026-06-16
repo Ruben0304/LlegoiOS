@@ -89,6 +89,12 @@ type Query {
   """
   getMyBranches(jwt: String!): [BranchType!]!
 
+  """Sucursales similares a la dada usando Qdrant recommend"""
+  getSimilarBranches(branchId: String!, limit: Int = null, jwt: String = null): [BranchType!]!
+
+  """Sucursales con más productos similares al producto dado"""
+  getBranchesForProduct(productId: String!, limit: Int = null, jwt: String = null): [BranchType!]!
+
   """Lista de productos con scoring por cercanía (paginado)"""
   products(first: Int = null, after: String = null, ids: [String!] = null, branchId: String = null, categoryId: String = null, availableOnly: Boolean! = false, branchTipo: BranchTipo = null, radiusKm: Float = null, jwt: String = null): ProductConnection!
 
@@ -110,6 +116,9 @@ type Query {
   Obtener productos de la misma branch/sucursal, excluyendo el producto dado
   """
   productsFromSameBranch(productId: String!, limit: Int! = 10, jwt: String = null): [ProductType!]!
+
+  """Productos similares al dado usando Qdrant recommend"""
+  getSimilarProducts(productId: String!, limit: Int = null, jwt: String = null): [ProductType!]!
 
   """Obtener vitrina por ID"""
   showcase(showcaseId: String!, jwt: String = null): ShowcaseType

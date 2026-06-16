@@ -1,0 +1,24 @@
+query GetSimilarBranches($branchId: String!, $limit: Int, $jwt: String) {
+  getSimilarBranches(branchId: $branchId, limit: $limit, jwt: $jwt) {
+    id
+    businessId
+    name
+    address
+    avatarUrl
+    avatarUrlBaja
+    avatarUrlAlta
+    coverUrl
+    coverUrlBaja
+    coverUrlAlta
+    deliveryRadius
+    catalogOnly
+    createdAt
+    products(limit: 2, availableOnly: false) {
+      id
+      name
+      price
+      currency
+      imageUrlBaja
+    }
+  }
+}

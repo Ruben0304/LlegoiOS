@@ -712,6 +712,38 @@ struct StoreDetailView: View {
                                     }
                                 }
 
+                                if !viewModel.similarBranches.isEmpty {
+                                    VStack(alignment: .leading, spacing: 16) {
+                                        Divider()
+                                            .padding(.horizontal, 20)
+
+                                        VStack(alignment: .leading, spacing: 14) {
+                                            sectionHeader(
+                                                icon: "sparkles",
+                                                title: "Tiendas similares",
+                                                subtitle: "Negocios con oferta parecida"
+                                            )
+                                            .padding(.horizontal, 20)
+
+                                            ScrollView(.horizontal, showsIndicators: false) {
+                                                HStack(spacing: 12) {
+                                                    ForEach(viewModel.similarBranches, id: \.id) { branch in
+                                                        NavigationLink(destination: StoreDetailView(storeId: branch.id)) {
+                                                            SiblingBranchCard(
+                                                                branch: branch,
+                                                                eta: calculateETA(deliveryRadius: branch.deliveryRadius)
+                                                            )
+                                                        }
+                                                        .buttonStyle(.plain)
+                                                    }
+                                                }
+                                                .padding(.horizontal, 20)
+                                                .padding(.bottom, 6)
+                                            }
+                                        }
+                                    }
+                                }
+
                                 if viewModel.isLoadingCombos || !viewModel.branchCombos.isEmpty {
                                     VStack(alignment: .leading, spacing: 16) {
                                         Divider()

@@ -18,6 +18,7 @@ class StoreDetailViewModel: ObservableObject {
     @Published var branchDetail: BranchDetailGraphQL?
     @Published var businessDetail: BusinessDetailGraphQL?
     @Published var siblingBranches: [BranchGraphQL] = []
+    @Published var similarBranches: [BranchGraphQL] = []
     @Published var branchProducts: [StoreProductGraphQL] = []
     @Published var branchCombos: [ComboDetailGraphQL] = []
     @Published var branchShowcases: [ShowcaseGraphQL] = []
@@ -77,6 +78,7 @@ class StoreDetailViewModel: ObservableObject {
                     self.loadSiblingBranches(businessId: detail.businessId, currentBranchId: id)
                     self.loadBranchProducts(branchId: id)
                     self.loadBranchCombos(branchId: id)
+                    self.loadSimilarBranches(branchId: id)
 
                 case .failure(let error):
                     let message = "Error al cargar detalles: \(error.localizedDescription)"
@@ -172,6 +174,21 @@ class StoreDetailViewModel: ObservableObject {
                 case .failure(let error):
                     print("⚠️ StoreDetailViewModel: Failed to load combos: \(error.localizedDescription)")
                     self.branchCombos = []
+                }
+            }
+        }
+    }
+
+    func loadSimilarBranches(branchId: String) {
+        repository.fetchSimilarBranches(branchId: branchId) { [weak self] result in
+            guard let self = self else { return }
+            Task { @MainActor in
+                switch result {
+                case .success(let branches):
+                    self.similarBranches = branches
+                    print("✅ StoreDetailViewModel: \(branches.count) tiendas similares (Qdrant)")
+                case .failure:
+                    self.similarBranches = []
                 }
             }
         }

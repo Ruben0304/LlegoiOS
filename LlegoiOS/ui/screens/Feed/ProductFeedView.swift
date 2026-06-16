@@ -240,7 +240,7 @@ struct ProductFeedView: View {
                 explorarSection
             }
         case .destacados:
-            creativeCarousel(sectionId: "destacados")
+            creativeCarousel(sectionId: "destacados", titleOverride: "Descubre ofertas para ti")
         case .ofertas:
             creativeCarousel(sectionId: "ofertas")
         }
@@ -248,11 +248,11 @@ struct ProductFeedView: View {
 
     // MARK: - Creative Sections (Destacados / Ofertas — paid placements)
     @ViewBuilder
-    private func creativeCarousel(sectionId: String) -> some View {
+    private func creativeCarousel(sectionId: String, titleOverride: String? = nil) -> some View {
         if let section = viewModel.creativeSections.first(where: { $0.sectionId == sectionId }),
             !section.items.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
-                Text(section.title)
+                Text(titleOverride ?? section.title)
                     .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                     .padding(.horizontal, 20)
