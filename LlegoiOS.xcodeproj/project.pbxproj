@@ -320,7 +320,7 @@
 			mainGroup = 87F968C42E8F622A00EC1A7C;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				87CB52942E90242F00618C59 /* XCLocalSwiftPackageReference "../apollo-ios" */,
+				87CB52942E90242F00618C59 /* XCRemoteSwiftPackageReference "apollo-ios" */,
 				87D766AE2E91C0B5003D2461 /* XCRemoteSwiftPackageReference "lottie-ios" */,
 				879D68492EB004D60045F86E /* XCRemoteSwiftPackageReference "stripe-ios-spm" */,
 				87348EA72EE9E4C20055BC0C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
@@ -770,12 +770,16 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCLocalSwiftPackageReference section */
-		87CB52942E90242F00618C59 /* XCLocalSwiftPackageReference "../apollo-ios" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = "../apollo-ios";
+/* Begin XCRemoteSwiftPackageReference section (apollo-ios fork) */
+		87CB52942E90242F00618C59 /* XCRemoteSwiftPackageReference "apollo-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Ruben0304/apollo-ios";
+			requirement = {
+				kind = branch;
+				branch = main;
+			};
 		};
-/* End XCLocalSwiftPackageReference section */
+/* End XCRemoteSwiftPackageReference section (apollo-ios fork) */
 
 /* Begin XCRemoteSwiftPackageReference section */
 		87348EA72EE9E4C20055BC0C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
@@ -827,22 +831,22 @@
 		};
 		87CB52962E90242F00618C59 /* Apollo */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 87CB52942E90242F00618C59 /* XCLocalSwiftPackageReference "../apollo-ios" */;
+			package = 87CB52942E90242F00618C59 /* XCRemoteSwiftPackageReference "apollo-ios" */;
 			productName = Apollo;
 		};
 		87CB52982E90242F00618C59 /* ApolloAPI */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 87CB52942E90242F00618C59 /* XCLocalSwiftPackageReference "../apollo-ios" */;
+			package = 87CB52942E90242F00618C59 /* XCRemoteSwiftPackageReference "apollo-ios" */;
 			productName = ApolloAPI;
 		};
 		87CB529A2E90242F00618C59 /* ApolloSQLite */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 87CB52942E90242F00618C59 /* XCLocalSwiftPackageReference "../apollo-ios" */;
+			package = 87CB52942E90242F00618C59 /* XCRemoteSwiftPackageReference "apollo-ios" */;
 			productName = ApolloSQLite;
 		};
 		87CB529C2E90242F00618C59 /* ApolloWebSocket */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 87CB52942E90242F00618C59 /* XCLocalSwiftPackageReference "../apollo-ios" */;
+			package = 87CB52942E90242F00618C59 /* XCRemoteSwiftPackageReference "apollo-ios" */;
 			productName = ApolloWebSocket;
 		};
 		87D766AF2E91C0B5003D2461 /* Lottie */ = {
