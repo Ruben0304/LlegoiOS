@@ -172,6 +172,7 @@ enum FeedSectionType: String {
     case cercaTi = "cerca_ti"
     case tePodriagustar = "te_podria_gustar"
     case horaDelDia = "hora_del_dia"
+    case recomendadoQdrant = "recomendado_qdrant"
     case unknown
 
     init(rawValue: String) {
@@ -185,6 +186,7 @@ enum FeedSectionType: String {
         case "cerca_ti": self = .cercaTi
         case "te_podria_gustar": self = .tePodriagustar
         case "hora_del_dia": self = .horaDelDia
+        case "recomendado_qdrant": self = .recomendadoQdrant
         default: self = .unknown
         }
     }
