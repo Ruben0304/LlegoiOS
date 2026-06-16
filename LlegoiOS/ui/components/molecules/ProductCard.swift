@@ -71,10 +71,12 @@ struct ProductCard: View {
             .buttonBorderShape(.roundedRectangle(radius: 26))
             .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
             .compositingGroup()
+            .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
         } else {
             // Let an outer container (e.g. NavigationLink) handle the tap.
             cardContent
                 .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+                .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
         }
     }
 
