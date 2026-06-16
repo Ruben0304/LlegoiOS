@@ -1,10 +1,9 @@
 #!/bin/sh
 
-# Genera Secrets.swift con la Stripe publishable key inyectada desde
-# la variable de entorno de Xcode Cloud (configurada como Secret en el workflow).
-# El archivo está en .gitignore y nunca se commitea.
+# Deriva la raíz del repo desde la ubicación de este script (ci_scripts/)
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
-cat > "$CI_WORKSPACE/LlegoiOS/network/Secrets.swift" <<EOF
+cat > "$REPO_ROOT/LlegoiOS/network/Secrets.swift" <<EOF
 import Foundation
 
 struct StripeSecrets {
@@ -12,4 +11,4 @@ struct StripeSecrets {
 }
 EOF
 
-echo "Secrets.swift generado correctamente."
+echo "Secrets.swift generado en $REPO_ROOT/LlegoiOS/network/Secrets.swift"
