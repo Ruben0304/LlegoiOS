@@ -188,6 +188,9 @@ class ProductFeedViewModel: ObservableObject {
             case .failure(let error):
                 self.isLoading = false
                 let nsError = error as NSError
+                print("❌ [FeedVM] loadFeed FAILURE: \(error.localizedDescription)")
+                print("   domain=\(nsError.domain) code=\(nsError.code)")
+                for (k, v) in nsError.userInfo { print("   userInfo[\(k)] = \(v)") }
                 let isNetworkError = nsError.domain == NSURLErrorDomain
                 let errorMessage =
                     isNetworkError

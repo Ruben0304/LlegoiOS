@@ -323,9 +323,8 @@ class ProductFeedRepository {
         let jwt = AuthManager.shared.getAccessToken()
         let branchTypeRaw = BranchTypeManager.shared.selectedType.rawValue
         let branchTipo = LlegoAPI.BranchTipo(rawValue: branchTypeRaw.uppercased())
-        print(
-            "🧭 [Feed] GetCompleteFeed branchTipo=\(branchTypeRaw), page=\(page), branchTipoEnum=\(branchTipo?.rawValue ?? "nil")"
-        )
+        let startTime = Date()
+        print("🧭 [Feed] GetCompleteFeed START branchTipo=\(branchTypeRaw), page=\(page), jwt=\(jwt != nil ? "yes" : "no")")
 
         return await withCheckedContinuation { continuation in
             let query = LlegoAPI.GetCompleteFeedQuery(
@@ -342,9 +341,14 @@ class ProductFeedRepository {
             ApolloClientManager.shared.apollo.fetchCompat(
                 query: query, cachePolicy: .fetchIgnoringCacheCompletely
             ) { result in
+                let elapsed = String(format: "%.2fs", Date().timeIntervalSince(startTime))
                 switch result {
                 case .success(let graphQLResult):
+                    if let errors = graphQLResult.errors, !errors.isEmpty {
+                        print("⚠️ [Feed] GetCompleteFeed GraphQL errors (\(elapsed)): \(errors.map { $0.localizedDescription }.joined(separator: "; "))")
+                    }
                     if let data = graphQLResult.data {
+                        print("✅ [Feed] GetCompleteFeed SUCCESS (\(elapsed)) sections=\(data.getFeed.sections.count) combos=\(data.allCombos.count) branches=\(data.branches.edges.count)")
                         // Parse feed sections
                         let sections = data.getFeed.sections.map { section -> FeedSection in
                             let products = section.products.map { product -> FeedProduct in
@@ -503,28 +507,27 @@ class ProductFeedRepository {
                         continuation.resume(
                             returning: .success((feedResponse, categories, stores, tutorials, combos)))
                     } else if let errors = graphQLResult.errors, !errors.isEmpty {
+                        let msg = errors.map { $0.localizedDescription }.joined(separator: ", ")
+                        print("❌ [Feed] GetCompleteFeed GraphQL-only errors (\(elapsed)): \(msg)")
                         continuation.resume(
                             returning: .failure(
-                                NSError(
-                                    domain: "GraphQL",
-                                    code: -1,
-                                    userInfo: [
-                                        NSLocalizedDescriptionKey: errors.map {
-                                            $0.localizedDescription
-                                        }.joined(separator: ", ")
-                                    ]
-                                )))
+                                NSError(domain: "GraphQL", code: -1,
+                                        userInfo: [NSLocalizedDescriptionKey: msg])))
                     } else {
+                        print("❌ [Feed] GetCompleteFeed no data & no errors (\(elapsed))")
                         continuation.resume(
                             returning: .failure(
-                                NSError(
-                                    domain: "GraphQL",
-                                    code: -1,
-                                    userInfo: [NSLocalizedDescriptionKey: "No data returned"]
-                                )))
+                                NSError(domain: "GraphQL", code: -1,
+                                        userInfo: [NSLocalizedDescriptionKey: "No data returned"])))
                     }
 
                 case .failure(let error):
+                    let nsErr = error as NSError
+                    print("❌ [Feed] GetCompleteFeed FAILURE (\(elapsed)): \(error.localizedDescription)")
+                    print("   domain=\(nsErr.domain) code=\(nsErr.code)")
+                    if let underlying = nsErr.userInfo[NSUnderlyingErrorKey] as? NSError {
+                        print("   underlying: \(underlying.domain) \(underlying.code) — \(underlying.localizedDescription)")
+                    }
                     continuation.resume(returning: .failure(error))
                 }
             }
