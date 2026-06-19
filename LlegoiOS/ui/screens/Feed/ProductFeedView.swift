@@ -357,9 +357,9 @@ struct ProductFeedView: View {
         .padding(.bottom, 10)
     }
 
-    // MARK: - Featured Section with Title (large cards + header)
+    // MARK: - Featured Section with Title (small cards + header)
     private func featuredProductsSectionWithTitle(section: FeedSection) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text(section.title)
                     .font(.system(size: 20, weight: .bold, design: .rounded))
@@ -367,24 +367,26 @@ struct ProductFeedView: View {
                 Spacer()
             }
             .padding(.horizontal, 20)
-            .padding(.bottom, 4)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
+                HStack(spacing: 14) {
                     ForEach(viewModel.filteredProducts(for: section)) { product in
-                        FeaturedProductCard(product: product)
-                            .onTapGesture {
-                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                                selectedProductId = product.id
-                            }
-                            .padding(.vertical, 12)
+                        SmallProductCard(
+                            product: product,
+                            accentColor: gradientManager.currentAccentColor,
+                            badge: nil
+                        )
+                        .onTapGesture {
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            selectedProductId = product.id
+                        }
+                        .padding(.vertical, 12)
                     }
                 }
                 .padding(.horizontal, 20)
             }
         }
-        .padding(.top, 6)
-        .padding(.bottom, 10)
+        .padding(.vertical, 10)
     }
 
     // MARK: - Dynamic Section (renders based on sectionId)
