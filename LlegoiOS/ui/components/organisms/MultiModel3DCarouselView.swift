@@ -7,6 +7,7 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
     let currentIndex: Int
     var allowsCameraControl: Bool = false
     var isAnimated: Bool = true
+    var onCurrentReady: (() -> Void)? = nil   // se llama cuando el modelo visible ya está en escena
 
     private let defaultCameraPosition = SCNVector3(x: 0, y: 1.2, z: 3.5)
     private let defaultCameraEulerAngles = SCNVector3(x: -Float.pi / 8, y: 0, z: 0)
@@ -57,18 +58,25 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
 
         sceneView.scene = scene
 
-        // Modelo visible: carga inmediata (caché = instantáneo en navegaciones de vuelta)
-        coordinator.loadAndAddModel(at: currentIndex, isVisible: true)
+        coordinator.onCurrentReady = onCurrentReady
 
-        // Resto: carga en background sin bloquear la UI
-        for index in models.indices where index != currentIndex {
-            coordinator.loadAndAddModel(at: index, isVisible: false)
+        // Modelo visible: PRIORIDAD ALTA para que aparezca cuanto antes (caché = instantáneo).
+        coordinator.loadAndAddModel(at: currentIndex, isVisible: true, qos: .userInitiated)
+
+        // Resto: un instante después y en baja prioridad, para no competir con el modelo visible.
+        let visibleIndex = currentIndex
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak coordinator] in
+            guard let coordinator else { return }
+            for index in models.indices where index != visibleIndex {
+                coordinator.loadAndAddModel(at: index, isVisible: false, qos: .utility)
+            }
         }
 
         return sceneView
     }
 
     func updateUIView(_ uiView: SCNView, context: Context) {
+        context.coordinator.onCurrentReady = onCurrentReady
         guard let cameraNode = context.coordinator.cameraNode else { return }
 
         let coordinator = context.coordinator
@@ -136,11 +144,12 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
         weak var scene: SCNScene?
         var models: [CategoryModel3D] = []
         var isAnimated: Bool = true
+        var onCurrentReady: (() -> Void)?
 
         // Wrapper para enviar SCNScene (no Sendable) a través de continuation
         private struct SceneBox: @unchecked Sendable { let scene: SCNScene? }
 
-        func loadAndAddModel(at index: Int, isVisible: Bool) {
+        func loadAndAddModel(at index: Int, isVisible: Bool, qos: DispatchQoS.QoSClass = .utility) {
             let model = models[index]
             let key = model.fileName.replacingOccurrences(of: ".usdz", with: "")
 
@@ -154,7 +163,7 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
             Task { [weak self] in
                 // Carga en hilo de fondo, resultado de vuelta al main actor
                 let box = await withCheckedContinuation { (continuation: CheckedContinuation<SceneBox, Never>) in
-                    DispatchQueue.global(qos: .utility).async {
+                    DispatchQueue.global(qos: qos).async {
                         continuation.resume(returning: SceneBox(scene: try? SCNScene(url: url, options: nil)))
                     }
                 }
@@ -206,6 +215,12 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
             }
 
             scene.rootNode.addChildNode(modelNode)
+
+            // Avisar que el modelo visible ya está en escena → ocultar el indicador de carga.
+            if index == currentIndex && shouldBeVisible {
+                let callback = onCurrentReady
+                DispatchQueue.main.async { callback?() }
+            }
         }
 
         func animateIn(node: SCNNode) {

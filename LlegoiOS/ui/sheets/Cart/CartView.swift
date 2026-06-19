@@ -1517,28 +1517,11 @@ struct CartView: View {
         VStack(alignment: .leading, spacing: 0) {
             // Header
             HStack(alignment: .top, spacing: 10) {
-                // Icono IA
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color(red: 0.36, green: 0.18, blue: 0.90),
-                                    Color(red: 0.55, green: 0.22, blue: 0.98),
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 34, height: 34)
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.white)
-                }
+                CartAIIcon()
 
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
-                        Text("Recomendado para ti")
+                        Text("Lo que le falta a tu carrito")
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(.primary)
                         if viewModel.isLoadingSuggestions {
@@ -1547,7 +1530,7 @@ struct CartView: View {
                                 .tint(.secondary)
                         }
                     }
-                    Text("Seleccionado con Inteligencia Artificial")
+                    Text("Seleccionado con Inteligencia Artificial para ti")
                         .font(.system(size: 12, weight: .regular))
                         .foregroundColor(Color(red: 0.45, green: 0.22, blue: 0.90))
                 }
@@ -2348,6 +2331,42 @@ private struct GlassProminentButtonModifier: ViewModifier {
             content.buttonStyle(.glassProminent)
         } else {
             content.buttonStyle(.borderedProminent)
+        }
+    }
+}
+
+private struct CartAIIcon: View {
+    @State private var rotation: Double = 0
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    AngularGradient(
+                        colors: [
+                            Color(red: 1.00, green: 0.42, blue: 0.62),
+                            Color(red: 0.75, green: 0.35, blue: 0.95),
+                            Color(red: 0.20, green: 0.52, blue: 1.00),
+                            Color(red: 0.10, green: 0.80, blue: 0.88),
+                            Color(red: 1.00, green: 0.42, blue: 0.62),
+                        ],
+                        center: .center
+                    )
+                )
+                .rotationEffect(.degrees(rotation))
+                .frame(width: 50, height: 50)
+
+            Image(systemName: "sparkles")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(.white)
+                .shadow(color: .black.opacity(0.25), radius: 2, x: 0, y: 1)
+        }
+        .frame(width: 34, height: 34)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .onAppear {
+            withAnimation(.linear(duration: 4).repeatForever(autoreverses: false)) {
+                rotation = 360
+            }
         }
     }
 }

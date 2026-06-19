@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetProductRecommendations"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetProductRecommendations($productIds: [String!]!, $limit: Int!, $jwt: String) { productRecommendations(productIds: $productIds, limit: $limit, jwt: $jwt) { __typename reasoning recommendations { __typename productId productName reasoning product { __typename id name description price currency image availability } } } }"#
+        #"query GetProductRecommendations($productIds: [String!]!, $limit: Int!, $jwt: String) { productRecommendations(productIds: $productIds, limit: $limit, jwt: $jwt) { __typename reasoning recommendations { __typename productId productName reasoning product { __typename id name description price currency imageUrlBaja availability } } } }"#
       ))
 
     public var productIds: [String]
@@ -111,7 +111,7 @@ public extension LlegoAPI {
               .field("description", String.self),
               .field("price", Double.self),
               .field("currency", String.self),
-              .field("image", String.self),
+              .field("imageUrlBaja", String.self),
               .field("availability", Bool.self),
             ] }
             @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
@@ -123,7 +123,8 @@ public extension LlegoAPI {
             public var description: String { __data["description"] }
             public var price: Double { __data["price"] }
             public var currency: String { __data["currency"] }
-            public var image: String { __data["image"] }
+            /// Presigned URL for the low quality product image (720x540)
+            public var imageUrlBaja: String { __data["imageUrlBaja"] }
             public var availability: Bool { __data["availability"] }
           }
         }

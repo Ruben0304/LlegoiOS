@@ -6,7 +6,6 @@ import SwiftUI
 import UIKit
 
 struct ProfileView: View {
-    @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = ProfileViewModel()
     @StateObject private var gradientManager = GradientStateManager.shared
     @ObservedObject private var userLocationManager = UserLocationManager.shared
@@ -89,28 +88,22 @@ struct ProfileView: View {
         .sheet(isPresented: $showingImagePicker) {
             ProfileImagePicker(image: $selectedImage)
         }
-        .fullScreenCover(
+        .navigationDestination(
             isPresented: Binding(
                 get: { !selectedOrderId.isEmpty },
-                set: { if !$0 { selectedOrderId = "" } }
-            )
-        ) {
-            NavigationStack {
-                OrderDetailView(orderId: selectedOrderId) {
-                    // Recargar los pedidos recientes cuando se cierra el detalle
-                    Task {
-                        await viewModel.loadRecentOrders()
-                        await viewModel.loadCompletedOrdersCount()
-                    }
-                }
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        CloseButton {
-                            selectedOrderId = ""
+                set: { isPresented in
+                    if !isPresented {
+                        selectedOrderId = ""
+                        // Recargar los pedidos recientes al volver del detalle
+                        Task {
+                            await viewModel.loadRecentOrders()
+                            await viewModel.loadCompletedOrdersCount()
                         }
                     }
                 }
-            }
+            )
+        ) {
+            OrderDetailView(orderId: selectedOrderId)
         }
     }
 
@@ -201,30 +194,28 @@ struct ProfileView: View {
                             // TODO: Reactivar en post-MVP (Cliente Oro / niveles)
                             // customerLevelSection
 
-                            if !viewModel.isRefreshingProfile {
-                                // Wallet oculto temporalmente
-                                // walletQuickAccessSection
+                            // Wallet oculto temporalmente
+                            // walletQuickAccessSection
 
-                                // Vista previa de pedidos recientes
-                                recentOrdersSection
+                            // Vista previa de pedidos recientes (maneja su propio loading)
+                            recentOrdersSection
 
-                                // Preferencia de AI para recomendaciones (motor de recomendaciones) oculto temporalmente
-                                // aiPreferenceSection
+                            // Preferencia de AI para recomendaciones (motor de recomendaciones) oculto temporalmente
+                            // aiPreferenceSection
 
-                                // Tutoriales
-                                tutorialsSection
+                            // Tutoriales
+                            tutorialsSection
 
-                                // Repetir onboarding en próximo inicio
-                                onboardingSection
+                            // Repetir onboarding en próximo inicio
+                            onboardingSection
 
-                                // Botón de cerrar sesión
-                                signOutButton
+                            // Botón de cerrar sesión
+                            signOutButton
 
-                                // Botón de eliminar cuenta
-                                deleteAccountButton
-                            }
+                            // Botón de eliminar cuenta
+                            deleteAccountButton
 
-                            Spacer(minLength: 60)
+                            Spacer(minLength: 40)
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 24)
@@ -232,39 +223,13 @@ struct ProfileView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .clipped()
-                .ignoresSafeArea(edges: .top)
+                .ignoresSafeArea(.container, edges: [.top, .bottom])
             }
 
-            .navigationBarBackButtonHidden(true)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    BackButton(action: {
-                        dismiss()
-                    })
-                }
-                // TODO: Reactivar en post-MVP (Cliente Oro / niveles)
-                // ToolbarItem(placement: .navigationBarTrailing) {
-                //     customerLevelToolbarItem
-                // }
-                // Suscripciones ocultas para revisión App Store (sin venta de planes por ahora)
-                // ToolbarItem(placement: .navigationBarTrailing) {
-                //     Button(action: {
-                //         navigateToPlansAndPricing = true
-                //     }) {
-                //         Image(systemName: "crown.fill")
-                //             .font(.system(size: 16, weight: .semibold))
-                //             .foregroundColor(.llegoSecondary)
-                //     }
-                //     .accessibilityLabel("Planes y precios")
-                // }
-            }
-            // Suscripciones ocultas para revisión App Store (sin venta de planes por ahora)
-            // .navigationDestination(isPresented: $navigateToPlansAndPricing) {
-            //     PlansAndPricingView()
-            // }
+            // TODO: Reactivar en post-MVP — Cliente Oro / niveles y Planes y precios
+            // (toolbar items eliminados al normalizar la navegación nativa)
             .tint(gradientManager.currentAccentColor)
             .toolbarBackground(.hidden, for: .navigationBar)
-            .toolbar(.hidden, for: .tabBar)
         .fullScreenCover(isPresented: $showingWallet) {
             WalletView()
         }
@@ -2843,6 +2808,7 @@ private struct MapSnapshotView: View {
         options.region = region
         options.size = CGSize(width: UIScreen.main.bounds.width, height: 380)
         options.scale = UIScreen.main.scale
+        options.traitCollection = UITraitCollection(userInterfaceStyle: .light)
 
         let snapshotter = MKMapSnapshotter(options: options)
         do {

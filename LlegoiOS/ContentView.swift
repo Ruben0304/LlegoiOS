@@ -18,20 +18,25 @@ struct ContentView: View {
     @State private var isOnboardingCompleted = false
 
     var body: some View {
-        if showOnboarding {
-            OnboardingView(isOnboardingCompleted: $isOnboardingCompleted)
-                .preferredColorScheme(.dark)  // Onboarding con fondo oscuro premium
-                .onAppear {
-                    OnboardingHelper.markOnboardingShown()
-                }
-                .onChange(of: isOnboardingCompleted) { _, completed in
-                    if completed {
-                        OnboardingHelper.completeOnboarding()
-                        showOnboarding = false
-                    }
-                }
-        } else {
+        ZStack {
+            // Home siempre renderizado en el fondo. Su animación de entrada
+            // se ejecuta mientras el onboarding lo cubre — cuando el overlay
+            // se desvanece, el carousel ya está en posición final.
             MainAppView(selectedTab: $selectedTab)
+
+            // Onboarding como overlay: corte directo al Home (el restaurante ya queda sobre el del Home).
+            if showOnboarding {
+                OnboardingView(isOnboardingCompleted: $isOnboardingCompleted)
+                    .preferredColorScheme(.dark)
+                    .zIndex(1000)
+                    .onAppear { OnboardingHelper.markOnboardingShown() }
+            }
+        }
+        .onChange(of: isOnboardingCompleted) { _, completed in
+            if completed {
+                OnboardingHelper.completeOnboarding()
+                showOnboarding = false   // sin animación → corte seco, sin fade
+            }
         }
         //        MainAppView(selectedTab: $selectedTab)
         //            .onAppear {

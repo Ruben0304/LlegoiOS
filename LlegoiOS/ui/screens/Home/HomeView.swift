@@ -42,6 +42,7 @@ struct HomeView: View {
     // Carousel state
     @State private var currentIndex: Int = 0
     @State private var scaleEffect: CGFloat = 1.0
+    @State private var carouselModelLoaded = false   // false → muestra ProgressView nativo
 
     // Long press states
     @State private var isPressing: Bool = false
@@ -184,8 +185,16 @@ struct HomeView: View {
                             models: models,
                             currentIndex: currentIndex,
                             allowsCameraControl: false,
-                            isAnimated: true
+                            isAnimated: true,
+                            onCurrentReady: { carouselModelLoaded = true }
                         )
+
+                        if !carouselModelLoaded {
+                            ProgressView()
+                                .progressViewStyle(.circular)
+                                .controlSize(.large)
+                                .tint(.white)
+                        }
                     }
                     .frame(width: 460, height: 600)
                     .scaleEffect(scaleEffect * 1.05)

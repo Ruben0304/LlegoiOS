@@ -1,16 +1,9 @@
-import AVFoundation
+import Combine
 import SwiftUI
 import UIKit
 
 // MARK: - Media Slot
-/// Define el tipo de contenido visual que ocupa la zona principal de cada página.
-/// Mantén esto en mente cuando reemplaces el placeholder por contenido real:
-/// - `.video`     → archivo .mov / .mp4 dentro del bundle (carpeta resources/videos o raíz)
-/// - `.image`     → asset registrado en Assets.xcassets (PNG / HEIC)
-/// - `.lottie`    → archivo .json de Lottie dentro del bundle
-/// - `.placeholder` → fallback decorativo con icono SF Symbol mientras no haya media real
 enum OnboardingMedia {
-    case video(name: String, ext: String)
     case image(assetName: String)
     case lottie(jsonName: String)
     case placeholder(icon: String, label: String)
@@ -40,29 +33,52 @@ struct OnboardingView: View {
     @State private var currentPage = 0
     @State private var framePressed = false
 
+    // Estado de la animación de salida 3D
+    @State private var triggerExitAnimation = false
+    @State private var isExiting = false
+    @State private var exitToHome = false   // mapea el SCNView a la pose EXACTA del restaurante en el Home
+    @State private var overlayBackgroundHidden = false   // al llegar: revela Home detrás, el restaurante sigue encima
+
+    // Long press para empezar (intro phase)
+    @State private var isHoldVibrating = false
+    @State private var isPressing = false
+    @State private var pressProgress = 0.0
+    @State private var pressLocation: CGPoint = .zero
+    @State private var pressTimer: Timer?
+
+    // Índice de paleta forzado para el gradiente (nil = cicla automáticamente)
+    @State private var forcedGradientIndex: Int? = nil
+
+    // Cinemática automática
+    @State private var cinematicStep = 0       // 0=bienvenida, 1=modelos, 2-5=highlights, 6=listo
+    @State private var modelsVisible = false
+    @State private var highlightedModelIndex: Int? = nil
+    @State private var cinematicFinished = false
+    @State private var gradientVisible = false     // el gradiente entra suave con los modelos
+
     private let pages: [OnboardingPageData] = [
         OnboardingPageData(
             title: "Llegó",
             description: "Delivery en Cuba. Pide en minutos y recibe en la puerta de tu casa",
-            media: .video(name: "onboarding", ext: "mov"),
+            media: .placeholder(icon: "bag.fill", label: "Llegó"),
             style: .introVideoFullscreen
         ),
         OnboardingPageData(
             title: "Mira las cartas de\ntus lugares favoritos",
             description: "Explora los menús completos de restaurantes, tiendas y dulcerías de tu zona.",
-            media: .video(name: "cartas", ext: "mov"),
+            media: .placeholder(icon: "fork.knife", label: "Menús completos"),
             style: .devicePreview
         ),
         OnboardingPageData(
             title: "Pide a domicilio",
             description: "Lo que quieras, directo a tu puerta. Pago seguro y entrega rápida.",
-            media: .video(name: "domicilio", ext: "mov"),
+            media: .placeholder(icon: "box.truck.fill", label: "Entrega rápida"),
             style: .devicePreview
         ),
         OnboardingPageData(
             title: "Encuentra lugares\nnuevos cerca de ti",
             description: "Descubre los mejores negocios de tu zona basados en tu ubicación.",
-            media: .video(name: "lugares", ext: "mov"),
+            media: .placeholder(icon: "map.fill", label: "Explora tu zona"),
             style: .devicePreview
         ),
     ]
@@ -84,10 +100,37 @@ struct OnboardingView: View {
                 // ------ Background ------
                 Group {
                     if isIntroPhase {
-                        OnboardingIntroVideoBackground(
-                            media: pages[0].media,
-                            isPlaying: scenePhase == .active
-                        )
+                        ZStack {
+                            // Fondo base claro: la bienvenida (paso 0) aparece sobre esto, sin gradiente.
+                            // Al llegar al Home (overlayBackgroundHidden) se vuelve transparente para
+                            // revelar Home detrás mientras el restaurante del onboarding sigue encima.
+                            Color(red: 0.96, green: 0.975, blue: 0.965)
+                                .opacity(overlayBackgroundHidden ? 0 : 1)
+
+                            // El gradiente de categorías entra con un fundido suave junto con los modelos.
+                            OnboardingHomeStyleGradient(forcedIndex: forcedGradientIndex)
+                                .opacity(overlayBackgroundHidden ? 0 : (gradientVisible ? 1 : 0))
+                                .animation(.easeInOut(duration: 1.2), value: gradientVisible)
+
+                            OnboardingScene3DView(
+                                triggerExit: triggerExitAnimation,
+                                isHoldVibrating: isHoldVibrating,
+                                modelsVisible: modelsVisible,
+                                highlightedIndex: highlightedModelIndex,
+                                cinematicFinished: cinematicFinished,
+                                exitHandoffScale: homeHandoffScale(in: geometry.size),
+                                onExitComplete: { completeOnboarding() }
+                            )
+                            // Handoff: el TAMAÑO se bakea en la escala del modelo 3D (evita que el modelo
+                            // se renderice gigante y se recorte por los lados). SwiftUI solo TRASLADA el
+                            // SCNView al punto exacto del restaurante en el Home.
+                            // La animación la conduce el withAnimation(completion:) de completeHoldPress,
+                            // así el overlay se retira justo cuando esta traslación termina (sin holgura).
+                            .offset(
+                                x: exitToHome ? homeHandoffOffset(in: geometry.size).width : 0,
+                                y: exitToHome ? homeHandoffOffset(in: geometry.size).height : 0
+                            )
+                        }
                     } else {
                         OnboardingAmbientBackground(
                             accentColor: gradientManager.currentAccentColor
@@ -97,63 +140,267 @@ struct OnboardingView: View {
                 .ignoresSafeArea()
                 .transition(.opacity)
 
-                // ------ Content phase ------
-                Group {
-                    if isIntroPhase {
-                        OnboardingIntroPage(
-                            page: pages[0],
-                            topPadding: geometry.safeAreaInsets.top + 70
-                        )
+                // ------ Overlay de la cinemática (solo intro) ------
+                if isIntroPhase && !isExiting {
+                    CinematicOverlay(
+                        step: cinematicStep,
+                        size: geometry.size,
+                        safeTop: geometry.safeAreaInsets.top,
+                        safeBottom: geometry.safeAreaInsets.bottom
+                    )
+                    .allowsHitTesting(false)
+                }
+
+                // ------ Páginas de preview (no intro) ------
+                if !isIntroPhase {
+                    OnboardingPreviewPhase(
+                        previewPages: previewPages,
+                        activeIndex: activePreviewIndex,
+                        accentColor: gradientManager.currentAccentColor,
+                        geometry: geometry,
+                        framePressed: framePressed
+                    )
+                    .transition(.scale(scale: 0.88).combined(with: .opacity))
+                }
+
+                // ------ Bottom controls ------
+                if !isExiting {
+                    VStack {
+                        Spacer()
+                        if isIntroPhase {
+                            // "Mantén presionado" — solo visible cuando termina la cinemática
+                            Text("Mantén presionado\npara empezar...")
+                                .font(.system(size: 26, weight: .light, design: .rounded))
+                                .foregroundColor(Color(red: 0.32, green: 0.35, blue: 0.4))
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.horizontal, 40)
+                                .padding(.bottom, max(geometry.safeAreaInsets.bottom, 24) + 80)
+                                .opacity(cinematicFinished && !isPressing ? 1 : 0)
+                                .animation(.easeIn(duration: 0.5), value: cinematicFinished)
+                                .animation(.easeOut(duration: 0.2), value: isPressing)
+                        } else {
+                            VStack(spacing: 22) {
+                                OnboardingPageIndicator(
+                                    count: pages.count,
+                                    currentIndex: currentPage,
+                                    accentColor: gradientManager.currentAccentColor
+                                )
+                                OnboardingPrimaryButton(
+                                    title: isLastPage ? "Comenzar" : "Siguiente",
+                                    accentColor: gradientManager.currentAccentColor,
+                                    onTap: advance
+                                )
+                                .padding(.horizontal, 32)
+                            }
+                            .padding(.bottom, max(geometry.safeAreaInsets.bottom, 24) + 24)
+                        }
+                    }
+                    .transition(.opacity)
+                }
+
+                // Spiral de progreso
+                if isPressing && isIntroPhase {
+                    SpiralAnimationView(progress: pressProgress)
+                        .position(pressLocation)
                         .transition(.opacity)
-                    } else {
-                        OnboardingPreviewPhase(
-                            previewPages: previewPages,
-                            activeIndex: activePreviewIndex,
-                            accentColor: gradientManager.currentAccentColor,
-                            geometry: geometry,
-                            framePressed: framePressed
-                        )
-                        .transition(
-                            .scale(scale: 0.88)
-                                .combined(with: .opacity)
-                        )
-                    }
+                        .zIndex(100)
                 }
-
-                // ------ Bottom controls (always visible) ------
-                VStack {
-                    Spacer()
-
-                    VStack(spacing: 22) {
-                        OnboardingPageIndicator(
-                            count: pages.count,
-                            currentIndex: currentPage,
-                            accentColor: gradientManager.currentAccentColor
-                        )
-
-                        OnboardingPrimaryButton(
-                            title: isLastPage ? "Comenzar" : "Siguiente",
-                            accentColor: gradientManager.currentAccentColor,
-                            onTap: advance
-                        )
-                        .padding(.horizontal, 32)
+            }
+            .contentShape(Rectangle())
+            .gesture(
+                isIntroPhase && cinematicFinished && !isExiting
+                ? DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        if !isPressing {
+                            isPressing = true
+                            pressLocation = value.location
+                            startHoldPress()
+                        }
                     }
-                    .padding(.bottom, max(geometry.safeAreaInsets.bottom, 24) + 24)
-                }
+                    .onEnded { _ in cancelHoldPress() }
+                : nil
+            )
+            .onAppear {
+                if isIntroPhase { startCinematic() }
             }
         }
         .ignoresSafeArea()
     }
 
+    // MARK: - Cinematic
+
+    private func startCinematic() {
+        // Paso 0: Bienvenida centrada (ya visible al aparecer)
+        // Paso 1: El logo sube a header y los modelos forman el círculo (2.0s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.85)) { cinematicStep = 1 }
+            gradientVisible = true   // fundido suave (lo anima el modificador .animation del gradiente)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                withAnimation { modelsVisible = true }
+            }
+        }
+        // Paso 2: Restaurantes al frente (3.4s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.4) {
+            withAnimation(.easeInOut(duration: 0.45)) {
+                cinematicStep = 2
+                highlightedModelIndex = 0
+            }
+        }
+        // Paso 3: Tiendas (5.4s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.4) {
+            withAnimation(.easeInOut(duration: 0.45)) {
+                cinematicStep = 3
+                highlightedModelIndex = 1
+            }
+        }
+        // Paso 4: Dulcerías (7.4s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 7.4) {
+            withAnimation(.easeInOut(duration: 0.45)) {
+                cinematicStep = 4
+                highlightedModelIndex = 2
+            }
+        }
+        // Paso 5: Perfumerías (9.4s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 9.4) {
+            withAnimation(.easeInOut(duration: 0.45)) {
+                cinematicStep = 5
+                highlightedModelIndex = 3
+            }
+        }
+        // Paso 6: Todos giran suavemente + "mantén presionado" (11.4s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 11.4) {
+            withAnimation(.easeInOut(duration: 0.5)) {
+                cinematicStep = 6
+                highlightedModelIndex = nil
+                cinematicFinished = true
+            }
+        }
+    }
+
+    // MARK: - Long press (intro phase)
+
+    private func startHoldPress() {
+        pressProgress = 0
+        isHoldVibrating = true
+
+        // Vibración fuerte, sin sonido
+        let generator = UIImpactFeedbackGenerator(style: .heavy)
+        generator.prepare()
+
+        pressTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
+            DispatchQueue.main.async {
+                if self.pressProgress >= 1.0 {
+                    self.completeHoldPress()
+                    return
+                }
+                self.pressProgress += 0.05 / 0.9  // ~0.9s de duración
+                // Haptic fuerte y continuo: golpe en cada tick (~20 Hz) a intensidad máxima.
+                generator.impactOccurred(intensity: 1.0)
+                generator.prepare()
+            }
+        }
+    }
+
+    private func cancelHoldPress() {
+        pressTimer?.invalidate()
+        pressTimer = nil
+        pressProgress = 0
+        isPressing = false
+        isHoldVibrating = false
+    }
+
+    private func completeHoldPress() {
+        pressTimer?.invalidate()
+        pressTimer = nil
+        pressProgress = 1.0
+
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+
+        isExiting = true
+        triggerExitAnimation = true
+
+        // A los 0.26s (tras la vibración breve) el restaurante inicia su viaje a la pose del Home,
+        // sincronizado con el movimiento 3D. El overlay se retira en la COMPLETION exacta de esa
+        // animación → el resto del Home aparece justo al llegar, sin holgura: se siente como un
+        // cambio de estado, no como una navegación.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.26) {
+            withAnimation(.easeInOut(duration: 1.6)) {
+                self.forcedGradientIndex = 0   // gradiente → paleta del restaurante, para casar con el Home
+            }
+            withAnimation(.easeInOut(duration: 1.6)) {
+                self.exitToHome = true
+            } completion: {
+                // Justo al llegar: revela Home POR DETRÁS (fondo del overlay transparente), pero el
+                // restaurante del onboarding sigue encima, solapado exactamente sobre el del Home.
+                self.overlayBackgroundHidden = true
+                // Unos ms después, retira el overlay. Como Home (con su restaurante) ya está debajo,
+                // no hay ningún frame sin modelo → sin saltito en el relevo de un modelo a otro.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+                    self.completeOnboarding()
+                }
+            }
+        }
+    }
+
+    // MARK: - Handoff al Home (pose exacta del restaurante)
+    // Mantener en sync con HomeView + MultiModel3DCarouselView:
+    //  • frame del carrusel: 460×600
+    //  • offset(x: -153 + carouselFloat/2, y: -50 + carouselFloat); carouselFloat reposa ≈ -4 (oscila 0..-8)
+    //  • scaleEffect(scaleEffect * 1.05), con scaleEffect = 1.0 en reposo
+    //  • restaurante centrado en el frame (cámara cenital sobre el modelo en el origen)
+    // ⇒ centro del modelo en pantalla ≈ (75, safeTopReal + 246), proyectado en un viewport de 460 de ancho.
+    private enum HomeHandoff {
+        static let frameW: CGFloat = 460
+        static let frameH: CGFloat = 600
+        static let restOffsetX: CGFloat = -153 + (-4 / 2)   // ≈ -155
+        static let restOffsetY: CGFloat = -50 + (-4)        // ≈ -54
+        static let displayScale: CGFloat = 1.05
+        // El NavigationStack del Home muestra una nav bar visible (toolbar con items, sin fondo oculto),
+        // que insetea su contenido ~44pt bajo el safe-area top. deviceSafeTop NO lo incluye ⇒ hay que sumarlo.
+        static let navBar: CGFloat = 44
+        static var modelCenterX: CGFloat { frameW / 2 + restOffsetX }   // ≈ 75 (desde el borde izq.)
+        static var modelCenterY: CGFloat { frameH / 2 + restOffsetY }   // ≈ 246 (desde el top del contenido)
+    }
+
+    /// Safe-area top real del dispositivo (UIKit): fiable aunque el overlay ignore el safe area.
+    private static var deviceSafeTop: CGFloat {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .first(where: { $0.isKeyWindow })?.safeAreaInsets.top ?? 47
+    }
+
+    /// Factor (bakeado en la escala del modelo 3D) para que el restaurante, proyectado a pantalla
+    /// completa, iguale el tamaño en píxeles del Home (viewport de 600 de alto × scaleEffect 1.05).
+    /// El FOV de SceneKit es VERTICAL por defecto ⇒ la proyección ∝ ALTO del viewport.
+    /// (Si alguna vez sale mal el tamaño, la alternativa sería por ancho: frameW*displayScale/size.width.)
+    private func homeHandoffScale(in size: CGSize) -> CGFloat {
+        HomeHandoff.frameH * HomeHandoff.displayScale / size.height
+    }
+
+    /// Desplazamiento para llevar el restaurante (centrado en pantalla) al centro exacto del Home.
+    private func homeHandoffOffset(in size: CGSize) -> CGSize {
+        let targetX = HomeHandoff.modelCenterX
+        let targetY = Self.deviceSafeTop + HomeHandoff.navBar + HomeHandoff.modelCenterY
+        return CGSize(width: targetX - size.width / 2, height: targetY - size.height / 2)
+    }
+
     // MARK: - Navigation
     private func advance() {
+        if isIntroPhase {
+            // Ya no se usa — el avance desde intro se hace por long press
+            return
+        }
+
         if isLastPage {
             completeOnboarding()
             return
         }
 
         // Coordinated animation: button tap → device frame "press" → rail slide + text swap.
-        // All using the same withAnimation block so SwiftUI interpolates everything together.
         withAnimation(.spring(response: 0.18, dampingFraction: 0.7)) {
             framePressed = true
         }
@@ -167,8 +414,238 @@ struct OnboardingView: View {
     }
 
     private func completeOnboarding() {
-        withAnimation(.easeInOut(duration: 0.5)) {
-            isOnboardingCompleted = true
+        isOnboardingCompleted = true  // ContentView maneja el fade-out del overlay
+    }
+}
+
+// MARK: - Cinematic text overlay
+/// Orquesta el texto de la cinemática sobre la escena 3D:
+/// - Paso 0: bienvenida grande centrada.
+/// - Paso ≥1: el logo + título se transforman en un header arriba (matchedGeometryEffect).
+/// - Pasos 2–5: bloque de explicación abajo con una flecha decorativa apuntando al modelo.
+struct CinematicOverlay: View {
+    let step: Int
+    let size: CGSize
+    let safeTop: CGFloat
+    let safeBottom: CGFloat
+
+    @Namespace private var heroNS
+
+    private let inkColor = Color(red: 0.13, green: 0.14, blue: 0.17)
+    private let subInkColor = Color(red: 0.34, green: 0.36, blue: 0.42)
+
+    /// Categoría explicada en los pasos 2–5 (nil en el resto).
+    private var category: (title: String, subtitle: String)? {
+        switch step {
+        case 2: return ("Restaurantes", "Gourmet, fast food y bebidas")
+        case 3: return ("Tiendas", "Mercados, hogar y mucho más")
+        case 4: return ("Dulcerías", "Pasteles, dulces y repostería")
+        case 5: return ("Perfumerías", "Fragancias y cuidado personal")
+        default: return nil
+        }
+    }
+
+    var body: some View {
+        ZStack {
+            // ----- Bienvenida centrada (paso 0) → Header arriba (paso ≥1) -----
+            if step == 0 {
+                heroBlock
+                    .position(x: size.width / 2, y: size.height * 0.45)
+            } else {
+                // max(safeTop, 47): garantiza que el header nunca quede bajo la Dynamic Island
+                // aunque el safe area inset se reporte como 0 dentro del overlay a pantalla completa.
+                headerBlock
+                    .position(x: size.width / 2, y: max(safeTop, 47) + 44)
+            }
+
+            // ----- Explicación por modelo (pasos 2–5) -----
+            if let category {
+                explanationBlock(title: category.title, subtitle: category.subtitle)
+                    .position(x: size.width / 2, y: size.height * 0.80)
+                    .id(step)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .bottom).combined(with: .opacity),
+                        removal: .opacity
+                    ))
+            }
+        }
+        .frame(width: size.width, height: size.height)
+        .animation(.spring(response: 0.55, dampingFraction: 0.86), value: step)
+    }
+
+    // MARK: Hero (paso 0)
+
+    private var heroBlock: some View {
+        VStack(spacing: 16) {
+            Image("icon")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 96, height: 96)
+                .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 6)
+                .matchedGeometryEffect(id: "logo", in: heroNS)
+
+            Text("Llegó")
+                .font(.system(size: 52, weight: .bold, design: .rounded))
+                .foregroundColor(inkColor)
+                .matchedGeometryEffect(id: "title", in: heroNS)
+
+            Text("Bienvenido a tu delivery en Cuba")
+                .font(.system(size: 18, weight: .medium, design: .rounded))
+                .foregroundColor(subInkColor)
+                .multilineTextAlignment(.center)
+                .transition(.opacity)
+        }
+        .padding(.horizontal, 32)
+    }
+
+    // MARK: Header (paso ≥1)
+
+    private var headerBlock: some View {
+        HStack(spacing: 13) {
+            Image("icon")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 58, height: 58)
+                .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+                .shadow(color: .black.opacity(0.15), radius: 5, x: 0, y: 3)
+                .matchedGeometryEffect(id: "logo", in: heroNS)
+
+            Text("Llegó")
+                .font(.system(size: 42, weight: .bold, design: .rounded))
+                .foregroundColor(inkColor)
+                .matchedGeometryEffect(id: "title", in: heroNS)
+        }
+    }
+
+    // MARK: Explicación (flecha decorativa + texto)
+
+    private func explanationBlock(title: String, subtitle: String) -> some View {
+        VStack(spacing: 8) {
+            // Flecha decorativa: va entre el modelo (arriba) y el texto (abajo).
+            DecorativeArrow()
+                .stroke(style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+                .foregroundColor(inkColor.opacity(0.8))
+                .frame(width: 50, height: 44)
+
+            Text(title)
+                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .foregroundColor(inkColor)
+                .multilineTextAlignment(.center)
+
+            Text(subtitle)
+                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .foregroundColor(subInkColor)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 36)
+    }
+}
+
+// MARK: - Decorative hand-drawn arrow (apunta hacia arriba, al modelo)
+struct DecorativeArrow: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let w = rect.width
+        let h = rect.height
+
+        // Cola (abajo, ligeramente a la izquierda) → punta (arriba, centrada).
+        let tail = CGPoint(x: rect.midX - w * 0.22, y: rect.maxY)
+        let tip  = CGPoint(x: rect.midX,            y: rect.minY + h * 0.16)
+
+        path.move(to: tail)
+        path.addCurve(
+            to: tip,
+            control1: CGPoint(x: rect.midX - w * 0.34, y: rect.midY),
+            control2: CGPoint(x: rect.midX + w * 0.12, y: rect.midY * 0.72)
+        )
+
+        // Punta de flecha (caret simétrico apuntando hacia arriba).
+        path.move(to: CGPoint(x: tip.x - w * 0.16, y: tip.y + h * 0.17))
+        path.addLine(to: tip)
+        path.addLine(to: CGPoint(x: tip.x + w * 0.16, y: tip.y + h * 0.17))
+
+        return path
+    }
+}
+
+// MARK: - Home-style gradient background (intro 3D phase)
+/// Replica el estilo de HomeGradientBackground: blanco→claro→color de categoría,
+/// ciclando entre las 4 paletas de la app con transiciones suaves.
+struct OnboardingHomeStyleGradient: View {
+
+    /// Cuando se pasa un valor, el gradiente ignora el ciclo automático y muestra esa paleta.
+    var forcedIndex: Int? = nil
+
+    // Mismas paletas que HomeGradientBackground (fallback hardcodeado)
+    private let palettes: [(dark: Color, medium: Color, light: Color, veryLight: Color, overlay: Color)] = [
+        // Restaurantes — rojo-terracota
+        ( Color(red: 0.5, green: 0.15, blue: 0.1),
+          Color(red: 0.7, green: 0.25, blue: 0.15),
+          Color(red: 0.85, green: 0.45, blue: 0.3),
+          Color(red: 0.95, green: 0.88, blue: 0.85),
+          Color(red: 0.45, green: 0.12, blue: 0.08) ),
+        // Supermercado — verde
+        ( Color(red: 0.05, green: 0.3, blue: 0.25),
+          Color(red: 0.1, green: 0.45, blue: 0.38),
+          Color(red: 0.4, green: 0.65, blue: 0.55),
+          Color(red: 0.85, green: 0.92, blue: 0.88),
+          Color(red: 0.05, green: 0.25, blue: 0.2) ),
+        // Dulcería — marrón-dorado
+        ( Color(red: 0.737, green: 0.514, blue: 0.345),
+          Color(red: 0.910, green: 0.796, blue: 0.702),
+          Color(red: 0.85, green: 0.7, blue: 0.6),
+          Color(red: 0.96, green: 0.92, blue: 0.88),
+          Color(red: 0.65, green: 0.45, blue: 0.3) ),
+        // Perfumería — lavanda
+        ( Color(red: 0.30, green: 0.28, blue: 0.55),
+          Color(red: 0.48, green: 0.45, blue: 0.68),
+          Color(red: 0.65, green: 0.62, blue: 0.78),
+          Color(red: 0.90, green: 0.88, blue: 0.94),
+          Color(red: 0.25, green: 0.22, blue: 0.48) ),
+    ]
+
+    @State private var paletteIndex = 0
+    private let timer = Timer.publish(every: 1.8, on: .main, in: .common).autoconnect()
+
+    private var activeIndex: Int { forcedIndex ?? paletteIndex }
+
+    private var p: (dark: Color, medium: Color, light: Color, veryLight: Color, overlay: Color) {
+        palettes[activeIndex]
+    }
+
+    var body: some View {
+        ZStack {
+            // Gradiente radial igual al de HomeGradientBackground (arriba-derecha → blanco)
+            RadialGradient(
+                gradient: Gradient(stops: [
+                    .init(color: p.dark,      location: 0.0),
+                    .init(color: p.medium,    location: 0.2),
+                    .init(color: p.light,     location: 0.45),
+                    .init(color: p.veryLight, location: 0.7),
+                    .init(color: Color(red: 0.95, green: 0.98, blue: 0.96), location: 1.0),
+                ]),
+                center: UnitPoint(x: 0.85, y: 0.15),
+                startRadius: 10,
+                endRadius: 900
+            )
+            .animation(.easeInOut(duration: 1.4), value: activeIndex)
+
+            // Overlay secundario (igual que Home)
+            LinearGradient(
+                gradient: Gradient(stops: [
+                    .init(color: p.overlay.opacity(0.28), location: 0.0),
+                    .init(color: .clear, location: 0.5),
+                ]),
+                startPoint: .topTrailing,
+                endPoint: .bottomLeading
+            )
+            .animation(.easeInOut(duration: 1.4), value: activeIndex)
+        }
+        .onReceive(timer) { _ in
+            withAnimation(.easeInOut(duration: 1.4)) {
+                paletteIndex = (paletteIndex + 1) % palettes.count
+            }
         }
     }
 }
@@ -476,7 +953,7 @@ struct OnboardingIntroPage: View {
     }
 }
 
-// MARK: - Media Slot (renders image / video / lottie / placeholder)
+// MARK: - Media Slot (renders image / lottie / placeholder)
 struct OnboardingMediaSlot: View {
     let media: OnboardingMedia
     let accentColor: Color
@@ -485,14 +962,6 @@ struct OnboardingMediaSlot: View {
     var body: some View {
         Group {
             switch media {
-            case .video(let name, let ext):
-                OnboardingLoopingVideoView(
-                    resourceName: name,
-                    resourceExtension: ext,
-                    isPlaying: true,
-                    videoGravity: .resizeAspectFill
-                )
-
             case .image(let assetName):
                 Image(assetName)
                     .resizable()
@@ -626,156 +1095,6 @@ private struct OnboardingGlassProminentModifier: ViewModifier {
     }
 }
 
-// MARK: - Fullscreen Video Background (Intro)
-struct OnboardingIntroVideoBackground: View {
-    let media: OnboardingMedia
-    let isPlaying: Bool
-
-    var body: some View {
-        ZStack {
-            videoLayer
-                .scaleEffect(1.10)
-
-            Color.black.opacity(0.06)
-
-            LinearGradient(
-                stops: [
-                    .init(color: Color.black.opacity(0.74), location: 0.0),
-                    .init(color: Color.black.opacity(0.58), location: 0.22),
-                    .init(color: Color.black.opacity(0.22), location: 0.50),
-                    .init(color: Color.black.opacity(0.34), location: 0.78),
-                    .init(color: Color.black.opacity(0.56), location: 1.0),
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        }
-    }
-
-    @ViewBuilder
-    private var videoLayer: some View {
-        if case .video(let name, let ext) = media {
-            OnboardingLoopingVideoView(
-                resourceName: name,
-                resourceExtension: ext,
-                isPlaying: isPlaying
-            )
-        } else {
-            Color.black
-        }
-    }
-}
-
-// MARK: - Video Layer (No Controls)
-struct OnboardingLoopingVideoView: UIViewRepresentable {
-    let resourceName: String
-    let resourceExtension: String
-    let isPlaying: Bool
-    var videoGravity: AVLayerVideoGravity = .resizeAspectFill
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator()
-    }
-
-    func makeUIView(context: Context) -> OnboardingPlayerContainerView {
-        let view = OnboardingPlayerContainerView()
-        view.playerLayer.videoGravity = videoGravity
-
-        guard let videoURL = resolveVideoURL() else {
-            return view
-        }
-
-        let queuePlayer = AVQueuePlayer()
-        queuePlayer.isMuted = true
-        queuePlayer.preventsDisplaySleepDuringVideoPlayback = false
-
-        let item = AVPlayerItem(url: videoURL)
-        context.coordinator.looper = AVPlayerLooper(player: queuePlayer, templateItem: item)
-        context.coordinator.player = queuePlayer
-
-        view.player = queuePlayer
-
-        if isPlaying {
-            queuePlayer.play()
-        }
-
-        return view
-    }
-
-    func updateUIView(_ uiView: OnboardingPlayerContainerView, context: Context) {
-        uiView.playerLayer.videoGravity = videoGravity
-
-        guard let player = context.coordinator.player else { return }
-
-        if isPlaying {
-            player.play()
-        } else {
-            player.pause()
-        }
-    }
-
-    static func dismantleUIView(
-        _ uiView: OnboardingPlayerContainerView,
-        coordinator: Coordinator
-    ) {
-        coordinator.player?.pause()
-        uiView.player = nil
-        coordinator.looper = nil
-        coordinator.player = nil
-    }
-
-    private func resolveVideoURL() -> URL? {
-        // Bundle lookup is case-sensitive; intentamos varias variantes de la extensión
-        // por si el archivo fue añadido como .MOV vs .mov.
-        let extensionVariants = [
-            resourceExtension,
-            resourceExtension.lowercased(),
-            resourceExtension.uppercased(),
-        ]
-
-        for ext in extensionVariants {
-            if let url = Bundle.main.url(
-                forResource: resourceName,
-                withExtension: ext,
-                subdirectory: "resources/videos"
-            ) {
-                return url
-            }
-            if let url = Bundle.main.url(
-                forResource: resourceName,
-                withExtension: ext,
-                subdirectory: "videos"
-            ) {
-                return url
-            }
-            if let url = Bundle.main.url(forResource: resourceName, withExtension: ext) {
-                return url
-            }
-        }
-
-        return nil
-    }
-
-    final class Coordinator {
-        var player: AVQueuePlayer?
-        var looper: AVPlayerLooper?
-    }
-}
-
-final class OnboardingPlayerContainerView: UIView {
-    override static var layerClass: AnyClass {
-        AVPlayerLayer.self
-    }
-
-    var playerLayer: AVPlayerLayer {
-        layer as! AVPlayerLayer
-    }
-
-    var player: AVPlayer? {
-        get { playerLayer.player }
-        set { playerLayer.player = newValue }
-    }
-}
 
 // MARK: - Preview
 #Preview {

@@ -7,9 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		45832F9C2FC4A54C00031013 /* lugares.mov in Resources */ = {isa = PBXBuildFile; fileRef = 45832F9B2FC4A54C00031013 /* lugares.mov */; };
-		45832F9D2FC4A54C00031013 /* domicilio.MOV in Resources */ = {isa = PBXBuildFile; fileRef = 45832F9A2FC4A54C00031013 /* domicilio.MOV */; };
-		45832F9E2FC4A54C00031013 /* cartas.mov in Resources */ = {isa = PBXBuildFile; fileRef = 45832F992FC4A54C00031013 /* cartas.mov */; };
 		45832FA02FC4C01E00031013 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 45832F9F2FC4C01E00031013 /* PrivacyInfo.xcprivacy */; };
 		87348EA92EE9E4C20055BC0C /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 87348EA82EE9E4C20055BC0C /* GoogleSignIn */; };
 		87348EAB2EE9E4C20055BC0C /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 87348EAA2EE9E4C20055BC0C /* GoogleSignInSwift */; };
@@ -69,9 +66,6 @@
 
 /* Begin PBXFileReference section */
 		450FDCAC2FDC429B00288D8A /* LlegoIOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LlegoIOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		45832F992FC4A54C00031013 /* cartas.mov */ = {isa = PBXFileReference; lastKnownFileType = video.quicktime; path = cartas.mov; sourceTree = "<group>"; };
-		45832F9A2FC4A54C00031013 /* domicilio.MOV */ = {isa = PBXFileReference; lastKnownFileType = video.quicktime; path = domicilio.MOV; sourceTree = "<group>"; };
-		45832F9B2FC4A54C00031013 /* lugares.mov */ = {isa = PBXFileReference; lastKnownFileType = video.quicktime; path = lugares.mov; sourceTree = "<group>"; };
 		45832F9F2FC4C01E00031013 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		87B147A52E9346C400A515EF /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		87F968CD2E8F622A00EC1A7C /* LlegoiOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LlegoiOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -180,9 +174,6 @@
 				87F968CE2E8F622A00EC1A7C /* Products */,
 				095875A3AD4E80E59A68CD27 /* Pods */,
 				87B147A52E9346C400A515EF /* AppIcon.icon */,
-				45832F992FC4A54C00031013 /* cartas.mov */,
-				45832F9A2FC4A54C00031013 /* domicilio.MOV */,
-				45832F9B2FC4A54C00031013 /* lugares.mov */,
 				45832F9F2FC4C01E00031013 /* PrivacyInfo.xcprivacy */,
 			);
 			sourceTree = "<group>";
@@ -350,9 +341,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				87B147A62E9346C400A515EF /* AppIcon.icon in Resources */,
-				45832F9C2FC4A54C00031013 /* lugares.mov in Resources */,
-				45832F9D2FC4A54C00031013 /* domicilio.MOV in Resources */,
-				45832F9E2FC4A54C00031013 /* cartas.mov in Resources */,
 				45832FA02FC4C01E00031013 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -597,7 +585,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.4.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ruben.LlegoiOS;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -643,7 +631,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.4.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ruben.LlegoiOS;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -770,17 +758,6 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCRemoteSwiftPackageReference section (apollo-ios fork) */
-		87CB52942E90242F00618C59 /* XCRemoteSwiftPackageReference "apollo-ios" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/Ruben0304/apollo-ios";
-			requirement = {
-				kind = branch;
-				branch = main;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section (apollo-ios fork) */
-
 /* Begin XCRemoteSwiftPackageReference section */
 		87348EA72EE9E4C20055BC0C /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -796,6 +773,14 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 24.24.4;
+			};
+		};
+		87CB52942E90242F00618C59 /* XCRemoteSwiftPackageReference "apollo-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Ruben0304/apollo-ios";
+			requirement = {
+				branch = main;
+				kind = branch;
 			};
 		};
 		87D766AE2E91C0B5003D2461 /* XCRemoteSwiftPackageReference "lottie-ios" */ = {

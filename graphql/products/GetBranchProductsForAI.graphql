@@ -5,8 +5,7 @@ query GetBranchProductsForAI($productId: String!, $limit: Int! = 50, $jwt: Strin
     description
     price
     currency
-    image
-    imageUrl
+    imageUrlBaja
     availability
     branchId
   }

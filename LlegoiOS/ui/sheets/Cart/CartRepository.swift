@@ -563,7 +563,7 @@ class CartRepository {
                             shopLogoUrl: "",
                             weight: product.currency,
                             price: "\(product.currency) \(product.price)",
-                            imageUrl: product.image ?? ""
+                            imageUrl: product.imageUrlBaja ?? ""
                         )
                     }
 
@@ -833,7 +833,7 @@ class CartRepository {
                             shopLogoUrl: "",
                             weight: product.currency,
                             price: "\(product.currency) \(product.price)",
-                            imageUrl: product.image ?? ""
+                            imageUrl: product.imageUrlBaja ?? ""
                         )
                     }
 
@@ -912,7 +912,7 @@ class CartRepository {
                             description: node.description,
                             price: node.price,
                             currency: node.currency,
-                            imageUrl: node.imageUrl
+                            imageUrl: node.imageUrlBaja
                         )
                     }
 

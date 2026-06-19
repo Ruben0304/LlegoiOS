@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetBranchProductsForAI"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetBranchProductsForAI($productId: String!, $limit: Int! = 50, $jwt: String) { productsFromSameBranch(productId: $productId, limit: $limit, jwt: $jwt) { __typename id name description price currency image imageUrl availability branchId } }"#
+        #"query GetBranchProductsForAI($productId: String!, $limit: Int! = 50, $jwt: String) { productsFromSameBranch(productId: $productId, limit: $limit, jwt: $jwt) { __typename id name description price currency imageUrlBaja availability branchId } }"#
       ))
 
     public var productId: String
@@ -66,8 +66,7 @@ public extension LlegoAPI {
           .field("description", String.self),
           .field("price", Double.self),
           .field("currency", String.self),
-          .field("image", String.self),
-          .field("imageUrl", String.self),
+          .field("imageUrlBaja", String.self),
           .field("availability", Bool.self),
           .field("branchId", String.self),
         ] }
@@ -80,9 +79,8 @@ public extension LlegoAPI {
         public var description: String { __data["description"] }
         public var price: Double { __data["price"] }
         public var currency: String { __data["currency"] }
-        public var image: String { __data["image"] }
-        /// Presigned URL for the product image
-        public var imageUrl: String { __data["imageUrl"] }
+        /// Presigned URL for the low quality product image (720x540)
+        public var imageUrlBaja: String { __data["imageUrlBaja"] }
         public var availability: Bool { __data["availability"] }
         public var branchId: String { __data["branchId"] }
       }
