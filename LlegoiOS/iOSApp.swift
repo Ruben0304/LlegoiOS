@@ -50,6 +50,10 @@ struct iOSApp: App {
 
         _ = CartRecommendationsManager.shared
 
+        // Iniciar GPS silenciosamente desde el arranque.
+        // Si no llega antes de renderizar Home, se usa La Habana como fallback.
+        UserLocationManager.shared.startAutoLocation()
+
         // Limpiar caché de Apollo en cada inicio para evitar datos desactualizados
         ApolloClientManager.shared.clearDataCache()
 

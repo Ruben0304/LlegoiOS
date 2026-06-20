@@ -18,13 +18,19 @@ class UserLocationManager: NSObject, ObservableObject {
     @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
     @Published var isLocationSet: Bool = false
     @Published var isUpdatingLocation: Bool = false
-    
+
     // Radio de búsqueda seleccionado (nil = sin límite)
     @Published var searchRadiusKm: Double? = nil
-    
+
+    // true cuando la ubicación activa es el fallback de La Habana (puede ser sobreescrita por GPS)
+    private(set) var isAutoFallback: Bool = false
+
+    private static let havanaCoordinate = CLLocationCoordinate2D(latitude: 23.1136, longitude: -82.3666)
+    private static let havanaAddress = "La Habana, Cuba"
+
     private let locationKey = "user_location_v1"
     private let radiusKey = "user_search_radius_v1"
-    
+
     private override init() {
         super.init()
         clManager.delegate = self
@@ -34,39 +40,57 @@ class UserLocationManager: NSObject, ObservableObject {
     }
     
     // MARK: - Public Methods
-    
-    /// Verifica si el usuario tiene ubicación configurada
+
     var hasLocation: Bool {
         return userLocation != nil && isLocationSet
     }
-    
+
+    /// Arranca el GPS silenciosamente. Llamar al inicio de la app.
+    func startAutoLocation() {
+        guard !isLocationSet || isAutoFallback else { return }
+        switch clManager.authorizationStatus {
+        case .authorizedWhenInUse, .authorizedAlways:
+            clManager.requestLocation()
+        case .notDetermined:
+            clManager.requestWhenInUseAuthorization()
+        default:
+            break
+        }
+    }
+
+    /// Si todavía no hay ubicación al renderizar Home, usa La Habana como fallback.
+    func applyHavanaFallbackIfNeeded() {
+        guard !isLocationSet else { return }
+        userLocation = Self.havanaCoordinate
+        userAddress = Self.havanaAddress
+        isLocationSet = true
+        isAutoFallback = true
+        saveLocation(Self.havanaCoordinate, isAutoFallback: true)
+    }
+
     /// Solicita permisos de ubicación
     func requestPermission() {
         clManager.requestWhenInUseAuthorization()
     }
-    
+
     /// Obtiene la ubicación actual del dispositivo
     func getCurrentDeviceLocation() {
         clManager.requestLocation()
     }
-    
-    /// Actualiza la ubicación del usuario (desde el mapa)
+
+    /// Actualiza la ubicación del usuario (desde el mapa o GPS automático)
     func updateLocation(coordinate: CLLocationCoordinate2D) async {
         isUpdatingLocation = true
-        
-        // Actualizar estado local
+
         userLocation = coordinate
         isLocationSet = true
-        
-        // Guardar localmente
+        isAutoFallback = false
+
         saveLocation(coordinate)
-        
-        // Reverse geocode para obtener dirección
+
         await reverseGeocode(coordinate: coordinate)
-        
-        // Sincronizar con backend si hay sesión activa
         await syncLocationWithBackend(coordinate: coordinate)
-        
+
         isUpdatingLocation = false
     }
     
@@ -97,18 +121,20 @@ class UserLocationManager: NSObject, ObservableObject {
             userLocation = CLLocationCoordinate2D(latitude: saved.latitude, longitude: saved.longitude)
             userAddress = saved.address
             isLocationSet = true
+            isAutoFallback = saved.isAutoFallback
         }
-        
+
         if let radius = UserDefaults.standard.object(forKey: radiusKey) as? Double {
             searchRadiusKm = radius > 0 ? radius : nil
         }
     }
-    
-    private func saveLocation(_ coordinate: CLLocationCoordinate2D) {
+
+    private func saveLocation(_ coordinate: CLLocationCoordinate2D, isAutoFallback: Bool = false) {
         let saved = SavedLocation(
             latitude: coordinate.latitude,
             longitude: coordinate.longitude,
-            address: userAddress
+            address: userAddress,
+            isAutoFallback: isAutoFallback
         )
         if let data = try? JSONEncoder().encode(saved) {
             UserDefaults.standard.set(data, forKey: locationKey)
@@ -194,21 +220,26 @@ class UserLocationManager: NSObject, ObservableObject {
 // MARK: - CLLocationManagerDelegate
 extension UserLocationManager: CLLocationManagerDelegate {
     nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard let location = locations.first?.coordinate else { return }
+        guard let coordinate = locations.first?.coordinate else { return }
         Task { @MainActor in
-            self.userLocation = location
-            await self.reverseGeocode(coordinate: location)
+            // Aplicar GPS si aún no hay ubicación o si sólo tenemos el fallback de La Habana
+            guard !self.isLocationSet || self.isAutoFallback else { return }
+            await self.updateLocation(coordinate: coordinate)
         }
     }
-    
+
     nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         print("Location error: \(error.localizedDescription)")
     }
-    
+
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         let status = manager.authorizationStatus
         Task { @MainActor in
             self.authorizationStatus = status
+            if (status == .authorizedWhenInUse || status == .authorizedAlways) &&
+               (!self.isLocationSet || self.isAutoFallback) {
+                self.clManager.requestLocation()
+            }
         }
     }
 }
@@ -218,6 +249,7 @@ private struct SavedLocation: Codable {
     let latitude: Double
     let longitude: Double
     let address: String
+    var isAutoFallback: Bool = false
 }
 
 // MARK: - Location Sync Repository

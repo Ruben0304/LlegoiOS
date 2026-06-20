@@ -78,7 +78,6 @@ struct MainAppView: View {
     @Binding var selectedTab: Int
     @StateObject private var orderManager = OrderManager.shared
     @StateObject private var gradientManager = GradientStateManager.shared
-    @ObservedObject private var userLocationManager = UserLocationManager.shared
     @ObservedObject private var branchTypeManager = BranchTypeManager.shared
     @ObservedObject private var appUpdateViewModel = AppUpdateViewModel.shared
     @State private var searchText = ""
@@ -170,13 +169,6 @@ struct MainAppView: View {
                 }
             }
 
-            // Overlay de ubicación obligatoria
-            if !userLocationManager.hasLocation {
-                LocationRequiredOverlay()
-                    .transition(.opacity)
-                    .zIndex(100)
-            }
-
             // Overlay de actualización de app
             if appUpdateViewModel.showUpdateAlert {
                 AppUpdateModal(viewModel: appUpdateViewModel)
@@ -184,7 +176,6 @@ struct MainAppView: View {
                     .zIndex(200)  // Mayor que el overlay de ubicación
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: userLocationManager.hasLocation)
         .animation(.easeInOut(duration: 0.3), value: appUpdateViewModel.showUpdateAlert)
         .fullScreenCover(isPresented: Binding(
             get: { !selectedOrderId.isEmpty },
@@ -227,8 +218,9 @@ struct MainAppView: View {
             }
         }
         .onAppear {
-            // Iniciar verificación periódica de actualizaciones
             appUpdateViewModel.startPeriodicCheck()
+            // Si el GPS no llegó antes de renderizar Home, usar La Habana como fallback
+            UserLocationManager.shared.applyHavanaFallbackIfNeeded()
         }
         .onDisappear {
             // Detener verificación cuando la vista desaparece
