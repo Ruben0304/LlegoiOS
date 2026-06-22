@@ -16,13 +16,15 @@ struct ContentView: View {
     @State private var selectedTab = 0
     @State private var showOnboarding = OnboardingHelper.shouldShowOnboardingOnLaunch
     @State private var isOnboardingCompleted = false
+    // Capturado una sola vez al inicio: si hay onboarding en esta sesión, no mostrar el banner de actualización
+    private let sessionHadOnboarding = OnboardingHelper.shouldShowOnboardingOnLaunch
 
     var body: some View {
         ZStack {
             // Home siempre renderizado en el fondo. Su animación de entrada
             // se ejecuta mientras el onboarding lo cubre — cuando el overlay
             // se desvanece, el carousel ya está en posición final.
-            MainAppView(selectedTab: $selectedTab)
+            MainAppView(selectedTab: $selectedTab, suppressUpdateBanner: sessionHadOnboarding)
 
             // Onboarding como overlay: corte directo al Home (el restaurante ya queda sobre el del Home).
             if showOnboarding {
@@ -76,6 +78,7 @@ struct ContentView: View {
 
 struct MainAppView: View {
     @Binding var selectedTab: Int
+    var suppressUpdateBanner: Bool = false
     @StateObject private var orderManager = OrderManager.shared
     @StateObject private var gradientManager = GradientStateManager.shared
     @ObservedObject private var branchTypeManager = BranchTypeManager.shared
@@ -169,8 +172,8 @@ struct MainAppView: View {
                 }
             }
 
-            // Overlay de actualización de app
-            if appUpdateViewModel.showUpdateAlert {
+            // Overlay de actualización de app — no mostrar si el onboarding se mostró en esta sesión
+            if appUpdateViewModel.showUpdateAlert && !suppressUpdateBanner {
                 AppUpdateModal(viewModel: appUpdateViewModel)
                     .transition(.opacity)
                     .zIndex(200)  // Mayor que el overlay de ubicación
