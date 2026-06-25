@@ -95,15 +95,10 @@ final class RecommendationRouter {
             )
             
         } catch {
-            let nsError = error as NSError
-            if nsError.domain == NSURLErrorDomain && nsError.code == -1001 {
-                print("🔄 [RecommendationRouter] Cloud timeout, trying Apple fallback")
-                return await getRecommendationsFromAppleFallback(context: context, limit: limit)
-            } else if nsError.domain == NSURLErrorDomain {
-                print("🔄 [RecommendationRouter] Cloud network error, trying Apple fallback")
-                return await getRecommendationsFromAppleFallback(context: context, limit: limit)
-            }
-            throw error
+            // Forzado a nube: sin fallback a Apple Intelligence. Si la nube falla,
+            // devolvemos vacío para no romper la UI del carrito.
+            print("⚠️ [RecommendationRouter] Cloud falló: \(error.localizedDescription) — sin recomendaciones")
+            return RecommendationResult(products: [], source: .llegoCloud, usedFallback: false)
         }
     }
 

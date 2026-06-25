@@ -45,8 +45,14 @@ enum AIRecommendationEngine: String, CaseIterable {
 final class AIPreferenceManager: ObservableObject {
     static let shared = AIPreferenceManager()
 
-    @Published var selectedEngine: AIRecommendationEngine {
+    // Forzado a la nube: toda la IA de la app usa el modelo de Llego en la nube.
+    // Ignoramos cualquier preferencia guardada o intento de cambiar a Apple Intelligence.
+    @Published var selectedEngine: AIRecommendationEngine = .llegoCloud {
         didSet {
+            if selectedEngine != .llegoCloud {
+                selectedEngine = .llegoCloud  // snap back; el didSet interno ya ve .llegoCloud y se detiene
+                return
+            }
             savePreference()
         }
     }
@@ -54,14 +60,11 @@ final class AIPreferenceManager: ObservableObject {
     private let userDefaultsKey = "ai_recommendation_engine_preference"
 
     private init() {
-        // Cargar preferencia guardada o usar default (Llego Cloud)
-        if let savedValue = UserDefaults.standard.string(forKey: userDefaultsKey),
-           let engine = AIRecommendationEngine(rawValue: savedValue) {
-            self.selectedEngine = engine
-        } else {
-            // Default a Llego Cloud porque funciona en todos los dispositivos
-            self.selectedEngine = .llegoCloud
-        }
+        // Siempre nube, sin importar lo que hubiera guardado de antes.
+        self.selectedEngine = .llegoCloud
+        UserDefaults.standard.set(
+            AIRecommendationEngine.llegoCloud.rawValue, forKey: userDefaultsKey
+        )
     }
 
     private func savePreference() {
