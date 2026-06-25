@@ -23,6 +23,8 @@ class ConversationalSearchViewModel: ObservableObject {
     @Published var messages: [ConversationalChatMessage] = []
     @Published var isTyping: Bool = false
     @Published var errorMessage: String?
+    /// Id del mensaje del asistente que está hidratando sus productos (tras el streaming).
+    @Published var loadingProductsMessageId: UUID?
     let selectedProvider: ConversationalAIProvider = .llegoAI
 
     private let repository = ConversationalSearchRepository()
@@ -55,6 +57,7 @@ class ConversationalSearchViewModel: ObservableObject {
         // Enviar según proveedor seleccionado
         activeStreamingAssistantMessageId = nil
         streamedChunkCount = 0
+        loadingProductsMessageId = nil
 
         repository.sendMessage(
             message: text,
@@ -73,6 +76,11 @@ class ConversationalSearchViewModel: ObservableObject {
                     print("🟢 [STREAM] chunk #\(self.streamedChunkCount) (\(text.count) chars acumulados)")
                     self.isTyping = false
                     self.updateStreamingAssistantMessageText(text)
+                case .loadingProducts:
+                    // Terminó el streaming de texto; se están hidratando los productos.
+                    self.isTyping = false
+                    self.ensureStreamingAssistantMessage()
+                    self.loadingProductsMessageId = self.activeStreamingAssistantMessageId
                 }
             }
         ) { [weak self] result in
@@ -84,6 +92,7 @@ class ConversationalSearchViewModel: ObservableObject {
                 print("╚═══════════════════════════════════════════════════╝")
 
                 self.isTyping = false
+                self.loadingProductsMessageId = nil
 
                 switch result {
                 case .success(let chatData):

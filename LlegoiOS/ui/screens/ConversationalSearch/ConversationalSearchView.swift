@@ -70,7 +70,8 @@ struct ConversationalSearchView: View {
                                 ForEach(viewModel.messages) { message in
                                     MessageBubble(
                                         message: message,
-                                        selectedProductId: $selectedProductId
+                                        selectedProductId: $selectedProductId,
+                                        isLoadingProducts: viewModel.loadingProductsMessageId == message.id
                                     )
                                     .id(message.id)
                                 }
@@ -244,7 +245,12 @@ struct ConversationalSearchView: View {
 struct MessageBubble: View {
     let message: ConversationalChatMessage
     @Binding var selectedProductId: String?
+    var isLoadingProducts: Bool = false
     @State private var hasLoggedRender = false
+
+    private var maxAssistantWidth: CGFloat {
+        UIScreen.main.bounds.width * 0.84
+    }
 
     // MARK: - Debug Logging
     private static func logMessageRender(message: ConversationalChatMessage, responseType: String) {
@@ -284,80 +290,80 @@ struct MessageBubble: View {
     }
 
     var body: some View {
-        VStack(alignment: message.isFromUser ? .trailing : .leading, spacing: 8) {
-            // Mensaje con avatar
-            HStack(alignment: .bottom, spacing: 8) {
-                // Avatar del sistema (a la izquierda)
-                if !message.isFromUser {
-                    Image("icon")
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 32, height: 32)
-                        .clipShape(Circle())
+        Group {
+            if message.isFromUser {
+                userBody
+            } else {
+                assistantBody
+            }
+        }
+        .onAppear {
+            guard !hasLoggedRender else { return }
+            guard !message.isFromUser, let responseType = message.responseType else { return }
+            hasLoggedRender = true
+            Self.logMessageRender(message: message, responseType: responseType)
+        }
+    }
+
+    // MARK: - Mensaje del usuario
+    private var userBody: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            Spacer(minLength: 40)
+
+            StreamingMarkdownText(text: message.text, isFromUser: true)
+                .font(.system(size: 16))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background {
+                    RoundedRectangle(cornerRadius: 18).fill(.regularMaterial)
+                }
+                .foregroundColor(.primary)
+
+            AsyncImage(url: URL(string: "https://i.pravatar.cc/150?img=12")) { phase in
+                switch phase {
+                case .empty:
+                    Circle().fill(Color.gray.opacity(0.3)).frame(width: 32, height: 32)
+                case .success(let image):
+                    image.resizable().scaledToFill()
+                        .frame(width: 32, height: 32).clipShape(Circle())
                         .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
-                }
-
-                // Burbuja de texto
-                HStack {
-                    if message.isFromUser {
-                        Spacer()
-                    }
-
-                    StreamingMarkdownText(
-                        text: message.text,
-                        isFromUser: message.isFromUser
-                    )
-                    .font(.system(size: 16))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background {
-                        // Burbuja con backdrop blur para todos (usuario y sistema)
-                        RoundedRectangle(cornerRadius: 18)
-                            .fill(.regularMaterial)
-                    }
-                    .foregroundColor(.primary)
-
-                    if !message.isFromUser {
-                        Spacer()
-                    }
-                }
-
-                // Avatar del usuario (a la derecha)
-                if message.isFromUser {
-                    AsyncImage(url: URL(string: "https://i.pravatar.cc/150?img=12")) { phase in
-                        switch phase {
-                        case .empty:
-                            Circle()
-                                .fill(Color.gray.opacity(0.3))
-                                .frame(width: 32, height: 32)
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFill()
-                                .frame(width: 32, height: 32)
-                                .clipShape(Circle())
-                                .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
-                        case .failure:
-                            Circle()
-                                .fill(Color.gray.opacity(0.3))
-                                .frame(width: 32, height: 32)
-                        @unknown default:
-                            EmptyView()
-                        }
-                    }
+                case .failure:
+                    Circle().fill(Color.gray.opacity(0.3)).frame(width: 32, height: 32)
+                @unknown default:
+                    EmptyView()
                 }
             }
+        }
+    }
 
-            // Mostrar entidades según el tipo de respuesta
-            if !message.isFromUser, let responseType = message.responseType {
+    // MARK: - Mensaje del asistente
+    private var assistantBody: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // Respuesta de texto — mismo ancho máximo que los cards
+            StreamingMarkdownText(text: message.text, isFromUser: false)
+                .font(.system(size: 16))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background {
+                    RoundedRectangle(cornerRadius: 18).fill(.regularMaterial)
+                }
+                .foregroundColor(.primary)
+                .frame(maxWidth: maxAssistantWidth, alignment: .leading)
+
+            // Indicador mientras se cargan los productos (tras el streaming)
+            if isLoadingProducts {
+                ProductsLoadingIndicator()
+                    .frame(maxWidth: maxAssistantWidth, alignment: .leading)
+            }
+
+            // Entidades — mismo ancho que la respuesta
+            if let responseType = message.responseType {
                 let responseTypeLower = responseType.lowercased()
 
-                // PRODUCTOS
                 if responseTypeLower == "search_products",
                     let productEntities = message.productEntities,
                     !productEntities.isEmpty
                 {
-
                     VStack(spacing: 10) {
                         ForEach(productEntities) { product in
                             AIProductCard(product: product)
@@ -367,15 +373,11 @@ struct MessageBubble: View {
                                 }
                         }
                     }
-                    .padding(.top, 4)
-                }
-
-                // TIENDAS / SUCURSALES
-                else if responseTypeLower == "search_branches",
+                    .frame(maxWidth: maxAssistantWidth, alignment: .leading)
+                } else if responseTypeLower == "search_branches",
                     let branchEntities = message.branchEntities,
                     !branchEntities.isEmpty
                 {
-
                     VStack(spacing: 10) {
                         ForEach(branchEntities) { branch in
                             NavigationLink(destination: StoreDetailView(store: branch.toStore())) {
@@ -384,53 +386,86 @@ struct MessageBubble: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    .padding(.top, 4)
-                }
-
-                if let confidence = message.confidence {
-                    ConfidenceBadge(confidence: confidence)
-                        .padding(.top, 6)
+                    .frame(maxWidth: maxAssistantWidth, alignment: .leading)
                 }
             }
 
+            // Avatar de Llego al final de toda la respuesta
+            HStack(spacing: 6) {
+                Image("icon")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 22, height: 22)
+                    .clipShape(Circle())
+                    .shadow(color: .black.opacity(0.12), radius: 3, x: 0, y: 1)
+                Text("Llego AI")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.top, 2)
         }
-        .onAppear {
-            guard !hasLoggedRender else { return }
-            guard !message.isFromUser, let responseType = message.responseType else { return }
-            hasLoggedRender = true
-            Self.logMessageRender(message: message, responseType: responseType)
-        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
-struct ConfidenceBadge: View {
-    let confidence: Double
-
-    private var percentageText: String {
-        "\(Int(confidence * 100))%"
-    }
-
-    private var badgeColor: Color {
-        if confidence < 0.5 {
-            return .red
-        }
-        if confidence < 0.7 {
-            return .orange
-        }
-        return .green
-    }
+// MARK: - Products Loading Indicator
+struct ProductsLoadingIndicator: View {
+    @State private var shimmerOffset: CGFloat = -1.0
 
     var body: some View {
-        Text("Confianza (\(percentageText))")
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundColor(badgeColor)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                ProgressView()
+                    .scaleEffect(0.7)
+                    .tint(.secondary)
+                Text("Cargando productos…")
+                    .font(.system(size: 12.5, weight: .medium))
+                    .foregroundColor(.secondary)
+            }
+
+            // Skeleton de un card de producto con shimmer
+            HStack(spacing: 12) {
+                Circle()
+                    .fill(skeletonFill)
+                    .frame(width: 56, height: 56)
+                VStack(alignment: .leading, spacing: 8) {
+                    RoundedRectangle(cornerRadius: 6).fill(skeletonFill)
+                        .frame(height: 12).frame(maxWidth: 170, alignment: .leading)
+                    RoundedRectangle(cornerRadius: 6).fill(skeletonFill)
+                        .frame(height: 10).frame(maxWidth: 110, alignment: .leading)
+                    RoundedRectangle(cornerRadius: 6).fill(skeletonFill)
+                        .frame(width: 70, height: 12)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(12)
             .background(
-                Capsule()
-                    .fill(badgeColor.opacity(0.12))
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(.regularMaterial)
             )
+            .overlay(
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        Color.white.opacity(0.0),
+                        Color.white.opacity(0.55),
+                        Color.white.opacity(0.0),
+                    ]),
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .frame(width: 110)
+                .offset(x: shimmerOffset * 320)
+            )
+            .mask(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        }
+        .onAppear {
+            withAnimation(.linear(duration: 1.4).repeatForever(autoreverses: false)) {
+                shimmerOffset = 2.0
+            }
+        }
     }
+
+    private var skeletonFill: Color { Color.primary.opacity(0.08) }
 }
 
 struct TypingIndicator: View {

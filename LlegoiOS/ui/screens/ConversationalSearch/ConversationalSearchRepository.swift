@@ -56,6 +56,13 @@ final class ConversationalSearchRepository {
                             guard self.activeBackendRequestId == requestId else { return }
                             onStreamEvent?(.partialText(text))
                         }
+                    },
+                    onStreamFinished: { willLoadEntities in
+                        guard willLoadEntities else { return }
+                        await MainActor.run {
+                            guard self.activeBackendRequestId == requestId else { return }
+                            onStreamEvent?(.loadingProducts)
+                        }
                     }
                 )
 
@@ -175,7 +182,8 @@ private actor AIChatBackendClient {
         message: String,
         deviceId: String?,
         jwt: String?,
-        onChunk: @escaping @Sendable (String) async -> Void
+        onChunk: @escaping @Sendable (String) async -> Void,
+        onStreamFinished: @escaping @Sendable (Bool) async -> Void
     ) async throws -> AIChatData {
         let webSocket = URLSession.shared.webSocketTask(
             with: webSocketURL,
@@ -300,6 +308,12 @@ private actor AIChatBackendClient {
 
         let suggestedProductIds = finalChunk?.suggestedProductIds ?? []
         let suggestedBranchIds = finalChunk?.suggestedBranchIds ?? []
+
+        // Streaming text terminó. Avisamos a la UI para mostrar el indicador de
+        // "cargando productos" mientras hidratamos las entidades sugeridas.
+        let willLoadEntities = !suggestedProductIds.isEmpty || !suggestedBranchIds.isEmpty
+        await onStreamFinished(willLoadEntities)
+
         let products = try await hydrateProductsByIds(
             ids: suggestedProductIds,
             jwt: jwt
@@ -1036,6 +1050,7 @@ private enum JSONValue: Decodable {
 enum AIChatStreamEvent: Sendable {
     case started
     case partialText(String)
+    case loadingProducts
 }
 
 struct AIChatData: Sendable {
