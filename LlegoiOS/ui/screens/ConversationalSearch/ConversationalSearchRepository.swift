@@ -16,7 +16,7 @@ final class ConversationalSearchRepository {
     func sendMessage(
         message: String,
         provider: ConversationalAIProvider,
-        onStreamEvent: (@Sendable (AIChatStreamEvent) -> Void)? = nil,
+        onStreamEvent: (@MainActor @Sendable (AIChatStreamEvent) -> Void)? = nil,
         completion: @escaping @Sendable (Result<AIChatData, Error>) -> Void
     ) {
         sendMessageWithBackend(
@@ -28,7 +28,7 @@ final class ConversationalSearchRepository {
 
     private func sendMessageWithBackend(
         message: String,
-        onStreamEvent: (@Sendable (AIChatStreamEvent) -> Void)?,
+        onStreamEvent: (@MainActor @Sendable (AIChatStreamEvent) -> Void)?,
         completion: @escaping @Sendable (Result<AIChatData, Error>) -> Void
     ) {
         let jwt = AuthManager.shared.getAccessToken()
@@ -368,7 +368,7 @@ private actor AIChatBackendClient {
                 description: product.description,
                 price: product.price,
                 currency: product.currency,
-                imageUrl: product.imageUrl ?? product.image ?? "",
+                imageUrl: product.imageUrlBaja ?? product.imageUrl ?? product.image ?? "",
                 availability: product.availability,
                 branchName: suggestion.branchName,
                 branchAvatarUrl: suggestion.branchAvatarUrl,
@@ -464,7 +464,7 @@ private actor AIChatBackendClient {
                 description: "",
                 price: node.price,
                 currency: node.currency,
-                imageUrl: node.imageUrl,
+                imageUrl: node.imageUrlBaja ?? node.imageUrl,
                 availability: node.availability,
                 branchName: node.branch?.name,
                 branchAvatarUrl: node.branch?.avatarUrl,
@@ -600,6 +600,7 @@ private actor AIChatBackendClient {
               price
               currency
               imageUrl
+              imageUrlBaja
               image
               availability
             }
@@ -679,6 +680,7 @@ private actor AIChatBackendClient {
             currency
             availability
             imageUrl
+            imageUrlBaja
             branchId
             branch {
               id
@@ -752,6 +754,7 @@ private struct AIChatProductPayload: Decodable {
     let price: Double
     let currency: String
     let imageUrl: String?
+    let imageUrlBaja: String?
     let image: String?
     let availability: Bool
 }
@@ -905,6 +908,7 @@ private struct ProductsByIdsNode: Decodable {
     let currency: String
     let availability: Bool
     let imageUrl: String
+    let imageUrlBaja: String?
     let branch: ProductsByIdsBranch?
 }
 

@@ -28,6 +28,7 @@ class ConversationalSearchViewModel: ObservableObject {
     private let repository = ConversationalSearchRepository()
     private let locationManager = UserLocationManager.shared
     private var activeStreamingAssistantMessageId: UUID?
+    private var streamedChunkCount = 0
 
     func refreshAppleIntelligenceAvailability() {}
 
@@ -53,22 +54,25 @@ class ConversationalSearchViewModel: ObservableObject {
 
         // Enviar según proveedor seleccionado
         activeStreamingAssistantMessageId = nil
+        streamedChunkCount = 0
 
         repository.sendMessage(
             message: text,
             provider: selectedProvider,
             onStreamEvent: { [weak self] event in
-                Task { @MainActor in
-                    guard let self else { return }
+                // Ya estamos en el MainActor (el repo invoca dentro de MainActor.run).
+                // Sin Task por chunk: se aplican en orden estricto, sin race.
+                guard let self else { return }
 
-                    switch event {
-                    case .started:
-                        // Mantener typing visible hasta recibir el primer chunk real.
-                        break
-                    case .partialText(let text):
-                        self.isTyping = false
-                        self.updateStreamingAssistantMessageText(text)
-                    }
+                switch event {
+                case .started:
+                    // Mantener typing visible hasta recibir el primer chunk real.
+                    break
+                case .partialText(let text):
+                    self.streamedChunkCount += 1
+                    print("🟢 [STREAM] chunk #\(self.streamedChunkCount) (\(text.count) chars acumulados)")
+                    self.isTyping = false
+                    self.updateStreamingAssistantMessageText(text)
                 }
             }
         ) { [weak self] result in
@@ -83,6 +87,11 @@ class ConversationalSearchViewModel: ObservableObject {
 
                 switch result {
                 case .success(let chatData):
+                    if self.streamedChunkCount > 0 {
+                        print("🟢 [STREAM] Respuesta vino en STREAMING — \(self.streamedChunkCount) chunks por WebSocket")
+                    } else {
+                        print("🔴 [STREAM] Respuesta vino DE GOLPE — 0 chunks (fallback HTTP no-streaming, el WebSocket falló)")
+                    }
                     print("✅ [VIEWMODEL] SUCCESS - Procesando respuesta")
                     print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
                     print("📋 [VIEWMODEL] Datos recibidos:")

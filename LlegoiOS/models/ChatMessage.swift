@@ -36,8 +36,4 @@ struct ConversationalChatMessage: Identifiable, Equatable {
         self.branchEntities = branchEntities
         self.confidence = confidence
     }
-    
-    static func == (lhs: ConversationalChatMessage, rhs: ConversationalChatMessage) -> Bool {
-        lhs.id == rhs.id
-    }
 }
