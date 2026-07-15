@@ -1,0 +1,12 @@
+query GetOrderPaymentAttempts($orderId: String!, $jwt: String!) {
+  paymentAttemptsByOrder(orderId: $orderId, jwt: $jwt) {
+    id
+    status
+    totalAmount
+    currency
+    refundRequestedAt
+    refundReason
+    refundedAt
+    refundAmount
+  }
+}

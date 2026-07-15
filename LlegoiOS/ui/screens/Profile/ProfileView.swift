@@ -230,6 +230,16 @@ struct ProfileView: View {
             // (toolbar items eliminados al normalizar la navegación nativa)
             .tint(gradientManager.currentAccentColor)
             .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    viewModel.signOut()
+                } label: {
+                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                }
+                .tint(.red)
+            }
+        }
         .fullScreenCover(isPresented: $showingWallet) {
             WalletView()
         }

@@ -102,11 +102,11 @@ struct MainAppView: View {
                             HomeView()
                                 .ignoresSafeArea(.container, edges: .bottom)
                         }
-                        Tab("Para ti", systemImage: "flame") {
+                        Tab("Explorar", systemImage: "flame") {
                             ProductFeedView()
                                 .ignoresSafeArea(.container, edges: .bottom)
                         }
-                        Tab("Lugares", systemImage: "map") {
+                        Tab("Tiendas", systemImage: "map") {
                             StoreMapView()
                                 .ignoresSafeArea(.container, edges: .bottom)
                         }
@@ -144,7 +144,7 @@ struct MainAppView: View {
                             .ignoresSafeArea(.container, edges: .bottom)
                             .tabItem {
                                 Image(systemName: "flame")
-                                Text("Para ti")
+                                Text("Explorar")
                             }
                             .tag(1)
 
@@ -152,7 +152,7 @@ struct MainAppView: View {
                             .ignoresSafeArea(.container, edges: .bottom)
                             .tabItem {
                                 Image(systemName: "map")
-                                Text("Lugares")
+                                Text("Tiendas")
                             }
                             .tag(2)
 

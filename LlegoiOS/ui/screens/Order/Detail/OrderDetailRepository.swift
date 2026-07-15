@@ -344,6 +344,161 @@ final class OrderDetailRepository {
         }
     }
 
+    // MARK: - Refund
+
+    /// Obtiene el intento de pago relevante de la orden y deriva su estado de reembolso.
+    /// Devuelve `nil` si no hay ningún intento reembolsable (p. ej. la orden no fue pagada).
+    func fetchRefundInfo(orderId: String) async throws -> OrderRefundInfo? {
+        let client = apolloClient
+
+        return try await withCheckedThrowingContinuation { continuation in
+            Task { @MainActor in
+                guard let jwt = AuthManager.shared.getAccessToken() else {
+                    continuation.resume(throwing: NSError(
+                        domain: "OrderDetailRepository", code: 401,
+                        userInfo: [NSLocalizedDescriptionKey: "No hay sesión activa."]))
+                    return
+                }
+
+                let query = LlegoAPI.GetOrderPaymentAttemptsQuery(orderId: orderId, jwt: jwt)
+
+                client.fetchCompat(query: query, cachePolicy: .fetchIgnoringCacheData) { result in
+                    switch result {
+                    case .success(let graphQLResult):
+                        if let errors = graphQLResult.errors, !errors.isEmpty {
+                            continuation.resume(throwing: NSError(
+                                domain: "GraphQL", code: -1,
+                                userInfo: [NSLocalizedDescriptionKey: errors.first?.localizedDescription ?? "Error"]))
+                            return
+                        }
+                        let attempts = graphQLResult.data?.paymentAttemptsByOrder ?? []
+                        continuation.resume(returning: Self.deriveRefundInfo(from: attempts))
+                    case .failure(let error):
+                        continuation.resume(throwing: error)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Solicita el reembolso de un intento de pago. Devuelve el nuevo estado de reembolso.
+    func requestRefund(paymentAttemptId: String, reason: String) async throws -> OrderRefundState {
+        let client = apolloClient
+
+        return try await withCheckedThrowingContinuation { continuation in
+            Task { @MainActor in
+                guard let jwt = AuthManager.shared.getAccessToken() else {
+                    continuation.resume(throwing: NSError(
+                        domain: "OrderDetailRepository", code: 401,
+                        userInfo: [NSLocalizedDescriptionKey: "No hay sesión activa."]))
+                    return
+                }
+
+                let mutation = LlegoAPI.RequestRefundMutation(
+                    paymentAttemptId: paymentAttemptId,
+                    reason: reason,
+                    jwt: jwt
+                )
+
+                client.performCompat(mutation: mutation) { result in
+                    switch result {
+                    case .success(let graphQLResult):
+                        if let errors = graphQLResult.errors, !errors.isEmpty {
+                            continuation.resume(throwing: NSError(
+                                domain: "GraphQL", code: -1,
+                                userInfo: [NSLocalizedDescriptionKey: errors.first?.localizedDescription ?? "Error"]))
+                            return
+                        }
+                        guard let attempt = graphQLResult.data?.requestRefund else {
+                            continuation.resume(throwing: NSError(
+                                domain: "OrderDetailRepository", code: -1,
+                                userInfo: [NSLocalizedDescriptionKey: "Respuesta inválida del servidor."]))
+                            return
+                        }
+                        continuation.resume(returning: Self.mapRefundState(attempt.status) ?? .requested)
+                    case .failure(let error):
+                        continuation.resume(throwing: error)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Rate Order
+
+    func rateOrder(orderId: String, rating: Int, comment: String?) async throws {
+        let client = apolloClient
+
+        return try await withCheckedThrowingContinuation { continuation in
+            Task { @MainActor in
+                guard let jwt = AuthManager.shared.getAccessToken() else {
+                    continuation.resume(throwing: NSError(
+                        domain: "OrderDetailRepository", code: 401,
+                        userInfo: [NSLocalizedDescriptionKey: "No hay sesión activa."]))
+                    return
+                }
+
+                let trimmed = comment?.trimmingCharacters(in: .whitespacesAndNewlines)
+                let commentArg: GraphQLNullable<String> =
+                    (trimmed?.isEmpty == false) ? .some(trimmed!) : .none
+
+                let mutation = LlegoAPI.RateOrderMutation(
+                    orderId: orderId,
+                    rating: Int32(rating),
+                    comment: commentArg,
+                    jwt: jwt
+                )
+
+                client.performCompat(mutation: mutation) { result in
+                    switch result {
+                    case .success(let graphQLResult):
+                        if let errors = graphQLResult.errors, !errors.isEmpty {
+                            continuation.resume(throwing: NSError(
+                                domain: "GraphQL", code: -1,
+                                userInfo: [NSLocalizedDescriptionKey: errors.first?.localizedDescription ?? "Error"]))
+                            return
+                        }
+                        continuation.resume(returning: ())
+                    case .failure(let error):
+                        continuation.resume(throwing: error)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Selecciona el intento de pago más relevante para reembolso y lo mapea a `OrderRefundInfo`.
+    nonisolated private static func deriveRefundInfo(
+        from attempts: [LlegoAPI.GetOrderPaymentAttemptsQuery.Data.PaymentAttemptsByOrder]
+    ) -> OrderRefundInfo? {
+        // Prioridad: un reembolso ya en curso/completado manda sobre "elegible".
+        let priority: [OrderRefundState] = [.refunded, .processing, .requested, .eligible]
+        for state in priority {
+            if let attempt = attempts.first(where: { mapRefundState($0.status) == state }) {
+                return OrderRefundInfo(
+                    paymentAttemptId: attempt.id,
+                    state: state,
+                    refundAmount: attempt.refundAmount,
+                    currency: attempt.currency
+                )
+            }
+        }
+        return nil
+    }
+
+    nonisolated private static func mapRefundState(
+        _ status: GraphQLEnum<LlegoAPI.PaymentAttemptStatusEnum>
+    ) -> OrderRefundState? {
+        guard case .case(let value) = status else { return nil }
+        switch value {
+        case .completed: return .eligible
+        case .refundRequested: return .requested
+        case .refundProcessing: return .processing
+        case .refunded: return .refunded
+        default: return nil
+        }
+    }
+
     // MARK: - Mapping Helpers
 
     private func mapToOrderDetail(_ order: LlegoAPI.GetOrderDetailQuery.Data.Order) -> OrderDetail {
@@ -473,6 +628,8 @@ final class OrderDetailRepository {
             deliveryVerificationCode: order.deliveryVerificationCode,
             isEditable: order.isEditable,
             canCancel: order.canCancel,
+            rating: order.rating,
+            ratingComment: order.ratingComment,
             estimatedDeliveryTime: order.estimatedDeliveryTime.flatMap { parseDate($0) },
             estimatedMinutesRemaining: order.estimatedMinutesRemaining,
             estimatedMinutes: nil,

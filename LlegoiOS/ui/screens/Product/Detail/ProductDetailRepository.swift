@@ -106,6 +106,7 @@ final class ProductDetailRepository: @unchecked Sendable {
                         createdAt: product.createdAt,
                         businessName: product.branch?.name ?? product.business?.name ?? "Tienda",
                         businessLogoUrl: product.branch?.avatarUrl ?? product.business?.avatarUrl,
+                        shopRating: product.business?.globalRating,
                         variantListIds: variantListIds,
                         variantLists: variantLists
                     )
@@ -279,6 +280,7 @@ struct ProductDetailGraphQL: Identifiable, Sendable, Equatable {
     let createdAt: String
     let businessName: String
     let businessLogoUrl: String?
+    let shopRating: Double?
     let variantListIds: [String]?
     let variantLists: [VariantList]?
 }

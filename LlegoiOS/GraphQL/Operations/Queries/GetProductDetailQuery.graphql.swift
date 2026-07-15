@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetProductDetail"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetProductDetail($id: String!, $jwt: String) { product(id: $id, jwt: $jwt) { __typename id branchId name description weight price currency convertedPrice convertedCurrency exchangeRate imageUrlAlta availability categoryId variantListIds variantLists { __typename id name description options { __typename id name priceAdjustment } } createdAt branch { __typename id name avatarUrl } business { __typename id name avatarUrl } } }"#
+        #"query GetProductDetail($id: String!, $jwt: String) { product(id: $id, jwt: $jwt) { __typename id branchId name description weight price currency convertedPrice convertedCurrency exchangeRate imageUrlAlta availability categoryId variantListIds variantLists { __typename id name description options { __typename id name priceAdjustment } } createdAt branch { __typename id name avatarUrl } business { __typename id name avatarUrl globalRating } } }"#
       ))
 
     public var id: String
@@ -190,6 +190,7 @@ public extension LlegoAPI {
             .field("id", String.self),
             .field("name", String.self),
             .field("avatarUrl", String?.self),
+            .field("globalRating", Double.self),
           ] }
           @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
             GetProductDetailQuery.Data.Product.Business.self
@@ -199,6 +200,7 @@ public extension LlegoAPI {
           public var name: String { __data["name"] }
           /// Presigned URL for the business avatar
           public var avatarUrl: String? { __data["avatarUrl"] }
+          public var globalRating: Double { __data["globalRating"] }
         }
       }
     }

@@ -1,0 +1,10 @@
+mutation RequestRefund($paymentAttemptId: String!, $reason: String!, $jwt: String!) {
+  requestRefund(paymentAttemptId: $paymentAttemptId, reason: $reason, jwt: $jwt) {
+    id
+    status
+    refundRequestedAt
+    refundReason
+    refundedAt
+    refundAmount
+  }
+}

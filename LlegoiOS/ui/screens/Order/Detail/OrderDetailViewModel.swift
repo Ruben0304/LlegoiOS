@@ -27,6 +27,17 @@ final class OrderDetailViewModel: ObservableObject {
     @Published var isConfirmingTransfer = false
     @Published var transferPaymentConfirmed = false
 
+    // Reembolso
+    @Published var refundInfo: OrderRefundInfo?
+    @Published var isSubmittingRefund = false
+    @Published var showRefundSheet = false
+    @Published var refundReason = ""
+
+    // Calificación (rating) post-entrega
+    @Published var ratingDraft: Int = 0
+    @Published var ratingCommentDraft: String = ""
+    @Published var isSubmittingRating = false
+
     private let repository = OrderDetailRepository()
     private let paymentRepository = PaymentRepository()
     private let qvaPayRepository = QvaPayRepository()
@@ -62,6 +73,7 @@ final class OrderDetailViewModel: ObservableObject {
                         self.transferPaymentConfirmed = false
                     }
                     self.loadPaymentMethodIfNeeded(for: detail)
+                    self.loadRefundInfoIfNeeded(for: detail)
                 case .failure(let error):
                     self.errorMessage = error.localizedDescription
                 }
@@ -128,6 +140,87 @@ final class OrderDetailViewModel: ObservableObject {
         }
     }
 
+
+    // MARK: - Refund
+
+    /// Carga la info de reembolso solo cuando el pago está completado (evita llamadas innecesarias).
+    private func loadRefundInfoIfNeeded(for order: OrderDetail) {
+        guard order.paymentStatus == .completed else {
+            refundInfo = nil
+            return
+        }
+
+        Task { @MainActor in
+            do {
+                self.refundInfo = try await repository.fetchRefundInfo(orderId: orderId)
+            } catch {
+                // Silencioso: si no se puede resolver el intento de pago, simplemente no
+                // mostramos la sección de reembolso (no es un error accionable para el usuario).
+                print("ℹ️ No se pudo cargar info de reembolso: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    var canRequestRefund: Bool {
+        refundInfo?.state == .eligible
+    }
+
+    func submitRefund() {
+        guard let attemptId = refundInfo?.paymentAttemptId else { return }
+        let reason = refundReason.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !reason.isEmpty else {
+            showPaymentAlertMessage("Cuéntanos brevemente el motivo del reembolso.")
+            return
+        }
+        guard !isSubmittingRefund else { return }
+
+        isSubmittingRefund = true
+
+        Task { @MainActor in
+            defer { self.isSubmittingRefund = false }
+            do {
+                let newState = try await repository.requestRefund(
+                    paymentAttemptId: attemptId, reason: reason)
+                self.refundInfo?.state = newState
+                self.refundReason = ""
+                self.showRefundSheet = false
+                self.successMessage = "Solicitud de reembolso enviada. El negocio la revisará en breve."
+            } catch {
+                self.showPaymentAlertMessage(
+                    "No pudimos registrar tu solicitud de reembolso. \(error.localizedDescription)")
+            }
+        }
+    }
+
+    // MARK: - Rate Order
+
+    /// Se puede calificar cuando el pedido fue entregado y aún no tiene calificación.
+    var canRate: Bool {
+        guard let order else { return false }
+        return order.status == .delivered && order.rating == nil
+    }
+
+    func submitRating() {
+        guard let order else { return }
+        guard (1...5).contains(ratingDraft) else { return }
+        guard !isSubmittingRating else { return }
+
+        isSubmittingRating = true
+
+        Task { @MainActor in
+            defer { self.isSubmittingRating = false }
+            do {
+                try await repository.rateOrder(
+                    orderId: order.id, rating: ratingDraft, comment: ratingCommentDraft)
+                self.ratingCommentDraft = ""
+                self.ratingDraft = 0
+                self.successMessage = "¡Gracias por calificar tu pedido!"
+                self.load()  // Recargar para reflejar la calificación guardada
+            } catch {
+                self.errorMessage = error.localizedDescription
+            }
+        }
+    }
 
     // MARK: - Add Comment
 

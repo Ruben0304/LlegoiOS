@@ -37,7 +37,7 @@ struct StoreMapView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .navigationTitle("Lugares")
+            .navigationTitle("Tiendas")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {

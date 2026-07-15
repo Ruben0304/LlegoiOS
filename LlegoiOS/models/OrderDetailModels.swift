@@ -22,6 +22,8 @@ struct OrderDetail: Identifiable {
     let deliveryVerificationCode: String?
     let isEditable: Bool
     let canCancel: Bool
+    let rating: Int?
+    let ratingComment: String?
     let estimatedDeliveryTime: Date?
     let estimatedMinutesRemaining: Int?
     let estimatedMinutes: Int?
@@ -184,6 +186,29 @@ struct OrderTransferAccount: Identifiable {
 struct OrderTransferPhone: Identifiable {
     let id = UUID()
     let phone: String
+}
+
+// MARK: - Refund
+
+/// Estado de reembolso derivado del intento de pago de la orden.
+enum OrderRefundState {
+    case eligible    // pago completado: se puede solicitar reembolso
+    case requested   // reembolso solicitado, en revisión
+    case processing  // reembolso en proceso
+    case refunded    // reembolso completado
+}
+
+/// Información de reembolso asociada a un intento de pago de la orden.
+struct OrderRefundInfo {
+    let paymentAttemptId: String
+    var state: OrderRefundState
+    var refundAmount: Double?
+    let currency: String
+
+    var formattedRefundAmount: String? {
+        guard let refundAmount else { return nil }
+        return String(format: "$%.2f", refundAmount)
+    }
 }
 
 // MARK: - Legacy compatibility aliases

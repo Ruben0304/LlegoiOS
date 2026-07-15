@@ -20,6 +20,8 @@ query GetOrderDetail($id: String!, $jwt: String!) {
         lastStatusAt
         isEditable
         canCancel
+        rating
+        ratingComment
         estimatedDeliveryTime
         estimatedMinutesRemaining
         estimatedMinutes

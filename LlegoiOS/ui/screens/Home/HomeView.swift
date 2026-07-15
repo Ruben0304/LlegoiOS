@@ -333,7 +333,7 @@ struct HomeView: View {
 
                         Spacer()
 
-                        Text("Manten presionado\npara encontrar lo que buscas...")
+                        Text("Mantén presionado para que\nla IA te ayude a encontrar lo que buscas")
                             .font(.system(size: 20, weight: .light, design: .rounded))
                             .foregroundColor(Color(red: 0.32, green: 0.35, blue: 0.4))
                             .multilineTextAlignment(.center)

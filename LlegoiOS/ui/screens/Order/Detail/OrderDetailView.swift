@@ -45,6 +45,8 @@ struct OrderDetailView: View {
                         }
                         pricingSection(order)
                         paymentSection(order)
+                        refundSection(order)
+                        ratingSection(order)
                         if !order.timeline.isEmpty {
                             timelineSection(order)
                         }
@@ -139,6 +141,9 @@ struct OrderDetailView: View {
                     }
                 )
             }
+        }
+        .sheet(isPresented: $viewModel.showRefundSheet) {
+            refundReasonSheet
         }
         .sheet(isPresented: $viewModel.showTransferSheet) {
             if let order = viewModel.order {
@@ -779,6 +784,210 @@ struct OrderDetailView: View {
             Text(value)
                 .font(.system(size: isEmphasis ? 18 : 15, weight: isEmphasis ? .bold : .semibold))
                 .foregroundColor(valueColor ?? Color.adaptiveOnSurface(colorScheme))
+        }
+    }
+
+    // MARK: - Refund Section
+
+    @ViewBuilder
+    private func refundSection(_ order: OrderDetail) -> some View {
+        if let refund = viewModel.refundInfo {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Reembolso")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                    .padding(.horizontal, 2)
+
+                card {
+                    switch refund.state {
+                    case .eligible:
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "arrow.uturn.backward.circle.fill")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundColor(gradientManager.currentAccentColor)
+                                    .frame(width: 44, height: 44)
+                                    .background(gradientManager.currentAccentColor.opacity(0.12))
+                                    .clipShape(Circle())
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("¿Algún problema con tu pedido?")
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                                    Text("Puedes solicitar el reembolso de este pago.")
+                                        .font(.system(size: 13))
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer(minLength: 0)
+                            }
+                            Button {
+                                viewModel.refundReason = ""
+                                viewModel.showRefundSheet = true
+                            } label: {
+                                Text("Solicitar reembolso")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 46)
+                            }
+                            .modifier(GlassProminentButtonModifier())
+                            .tint(gradientManager.currentAccentColor)
+                            .disabled(viewModel.isSubmittingRefund)
+                        }
+                    case .requested:
+                        refundStatusRow(
+                            icon: "clock.fill", color: .orange,
+                            text: "Reembolso solicitado. El negocio lo está revisando.")
+                    case .processing:
+                        refundStatusRow(
+                            icon: "clock.arrow.circlepath", color: .orange,
+                            text: "Tu reembolso está en proceso.")
+                    case .refunded:
+                        refundStatusRow(
+                            icon: "checkmark.seal.fill", color: .green,
+                            text: refund.formattedRefundAmount.map { "Reembolsado: \($0)" }
+                                ?? "Tu pago fue reembolsado.")
+                    }
+                }
+            }
+        }
+    }
+
+    private func refundStatusRow(icon: String, color: Color, text: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(color)
+            Text(text)
+                .font(.system(size: 14))
+                .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    // MARK: - Rating Section
+
+    @ViewBuilder
+    private func ratingSection(_ order: OrderDetail) -> some View {
+        if order.status == .delivered {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Tu calificación")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                    .padding(.horizontal, 2)
+
+                card {
+                    if let rating = order.rating {
+                        VStack(alignment: .leading, spacing: 8) {
+                            starsRow(current: rating, interactive: false)
+                            if let comment = order.ratingComment, !comment.isEmpty {
+                                Text(comment)
+                                    .font(.system(size: 14))
+                                    .foregroundColor(.secondary)
+                            }
+                            Text("¡Gracias por tu calificación!")
+                                .font(.system(size: 13))
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("¿Cómo estuvo tu pedido?")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                            starsRow(current: viewModel.ratingDraft, interactive: true)
+                            TextField("Comentario (opcional)", text: $viewModel.ratingCommentDraft)
+                                .font(.system(size: 14))
+                                .textFieldStyle(.roundedBorder)
+                            Button {
+                                viewModel.submitRating()
+                            } label: {
+                                HStack {
+                                    if viewModel.isSubmittingRating {
+                                        ProgressView().tint(.white)
+                                    }
+                                    Text(viewModel.isSubmittingRating ? "Enviando..." : "Enviar calificación")
+                                        .font(.system(size: 15, weight: .semibold))
+                                }
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 46)
+                            }
+                            .modifier(GlassProminentButtonModifier())
+                            .tint(gradientManager.currentAccentColor)
+                            .disabled(viewModel.ratingDraft == 0 || viewModel.isSubmittingRating)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func starsRow(current: Int, interactive: Bool) -> some View {
+        HStack(spacing: 8) {
+            ForEach(1...5, id: \.self) { index in
+                Image(systemName: index <= current ? "star.fill" : "star")
+                    .font(.system(size: 26))
+                    .foregroundColor(index <= current ? .yellow : Color.gray.opacity(0.4))
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        if interactive { viewModel.ratingDraft = index }
+                    }
+            }
+        }
+    }
+
+    // MARK: - Refund Reason Sheet
+
+    private var refundReasonSheet: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Cuéntanos el motivo del reembolso")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+
+                ZStack(alignment: .topLeading) {
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                    if viewModel.refundReason.isEmpty {
+                        Text("Ej. El pedido llegó incompleto…")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 13)
+                            .padding(.vertical, 16)
+                    }
+                    TextEditor(text: $viewModel.refundReason)
+                        .font(.system(size: 14))
+                        .padding(8)
+                        .frame(height: 120)
+                }
+                .frame(height: 120)
+
+                Button {
+                    viewModel.submitRefund()
+                } label: {
+                    HStack {
+                        if viewModel.isSubmittingRefund { ProgressView().tint(.white) }
+                        Text(viewModel.isSubmittingRefund ? "Enviando..." : "Enviar solicitud")
+                            .font(.system(size: 15, weight: .semibold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 48)
+                }
+                .modifier(GlassProminentButtonModifier())
+                .tint(gradientManager.currentAccentColor)
+                .disabled(
+                    viewModel.refundReason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        || viewModel.isSubmittingRefund)
+
+                Spacer()
+            }
+            .padding(20)
+            .navigationTitle("Solicitar reembolso")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancelar") { viewModel.showRefundSheet = false }
+                }
+            }
         }
     }
 

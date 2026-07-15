@@ -331,13 +331,15 @@ struct ProductDetailView: View {
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.secondary)
 
-                Text("•")
-                    .font(.system(size: 14, weight: .regular))
-                    .foregroundColor(.secondary)
+                if let rating = viewModel.productDetail?.shopRating, rating > 0 {
+                    Text("•")
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundColor(.secondary)
 
-                Text("4.8 ★")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(.secondary)
+                    Text("\(String(format: "%.1f", rating)) ★")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
             }
 
             Spacer()

@@ -38,7 +38,7 @@ struct ProductFeedView: View {
                 // "Para ti" al lado izquierdo
                 if #available(iOS 26.0, *) {
                     ToolbarItem(placement: .navigationBarLeading) {
-                        Text("Para ti")
+                        Text("Explorar")
                             .font(.system(size: 22, weight: .semibold))
                             .foregroundColor(Color.adaptiveOnBackground(colorScheme))
                             .fixedSize()
@@ -46,7 +46,7 @@ struct ProductFeedView: View {
                     .sharedBackgroundVisibility(.hidden)
                 } else {
                     ToolbarItem(placement: .navigationBarLeading) {
-                        Text("Para ti")
+                        Text("Explorar")
                             .font(.system(size: 22, weight: .semibold))
                             .foregroundColor(Color.adaptiveOnBackground(colorScheme))
                             .fixedSize()

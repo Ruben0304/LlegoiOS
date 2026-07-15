@@ -34,6 +34,7 @@ query GetProductDetail($id: String!, $jwt: String) {
             id
             name
             avatarUrl
+            globalRating
         }
     }
 }
