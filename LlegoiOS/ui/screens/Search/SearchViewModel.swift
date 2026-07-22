@@ -10,7 +10,6 @@ import SwiftUI
 import MapKit
 import Combine
 import SwiftData
-import Network
 
 enum SearchState {
     case idle
@@ -41,9 +40,6 @@ class SearchViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var offlineSearchTask: Task<Void, Never>?
 
-    private let pathMonitor = NWPathMonitor()
-    private let pathMonitorQueue = DispatchQueue(label: "com.llego.search.pathMonitor")
-
     private let defaultLogoUrl = ""
     private let defaultBannerUrl = ""
 
@@ -51,10 +47,6 @@ class SearchViewModel: ObservableObject {
     init() {
         setupBranchTypeObserver()
         startConnectivityMonitoring()
-    }
-
-    deinit {
-        pathMonitor.cancel()
     }
 
     // MARK: - Configure offline repository
@@ -67,17 +59,15 @@ class SearchViewModel: ObservableObject {
     /// pantalla): si la red cae, cambia a modo offline y recarga con datos locales;
     /// si vuelve, cambia a modo online y recarga desde el backend.
     private func startConnectivityMonitoring() {
-        pathMonitor.pathUpdateHandler = { [weak self] path in
-            let hasConnection = path.status == .satisfied
-            Task { @MainActor in
+        NetworkMonitor.shared.$isConnected
+            .sink { [weak self] hasConnection in
                 guard let self = self else { return }
                 let newOfflineMode = !hasConnection
                 guard newOfflineMode != self.isOfflineMode else { return }
                 self.isOfflineMode = newOfflineMode
                 self.loadInitialData()
             }
-        }
-        pathMonitor.start(queue: pathMonitorQueue)
+            .store(in: &cancellables)
     }
 
     func setOfflineMode(_ offline: Bool) {

@@ -32,8 +32,6 @@ class ConversationalSearchViewModel: ObservableObject {
     private var activeStreamingAssistantMessageId: UUID?
     private var streamedChunkCount = 0
 
-    func refreshAppleIntelligenceAvailability() {}
-
     func sendMessage(_ text: String) {
         print("\n╔═══════════════════════════════════════════════════╗")
         print("║  [VIEWMODEL] sendMessage iniciado                 ║")
@@ -153,22 +151,15 @@ class ConversationalSearchViewModel: ObservableObject {
                         return
                     }
 
-                    if let localError = error as? LocalAIAssistantError {
-                        self.errorMessage = localError.localizedDescription
-                        self.state = .error(localError.localizedDescription)
-                        self.removeStreamingAssistantMessageIfNeeded()
-                        let assistantErrorMessage = self.makeAssistantErrorMessage(from: localError)
-                        self.messages.append(assistantErrorMessage)
-                        return
-                    }
-
                     self.errorMessage = error.localizedDescription
                     self.state = .error(error.localizedDescription)
                     self.removeStreamingAssistantMessageIfNeeded()
 
+                    let fallbackText = NetworkMonitor.shared.isConnected
+                        ? "Lo siento, hubo un error al procesar tu mensaje. Por favor intenta de nuevo."
+                        : "Necesitas conexión a internet para usar el asistente. Revisa tu conexión e inténtalo de nuevo."
                     let errorMessage = ConversationalChatMessage(
-                        text:
-                            "Lo siento, hubo un error al procesar tu mensaje. Por favor intenta de nuevo.",
+                        text: fallbackText,
                         isFromUser: false,
                         timestamp: Date()
                     )
@@ -367,64 +358,6 @@ class ConversationalSearchViewModel: ObservableObject {
         case .unknown:
             return ConversationalChatMessage(
                 text: backendError.fallbackMessage,
-                isFromUser: false,
-                timestamp: Date()
-            )
-        }
-    }
-
-    private func makeAssistantErrorMessage(from localError: LocalAIAssistantError)
-        -> ConversationalChatMessage
-    {
-        switch localError {
-        case .appleIntelligenceUnsupported:
-            return ConversationalChatMessage(
-                text:
-                    "Para usar Apple Intelligence local, tu dispositivo debe ser iPhone 15 Pro o superior.",
-                isFromUser: false,
-                timestamp: Date()
-            )
-        case .appleIntelligenceDisabled:
-            return ConversationalChatMessage(
-                text:
-                    "Apple Intelligence está desactivado. Actívalo en Configuración para usar el modo local.",
-                isFromUser: false,
-                timestamp: Date()
-            )
-        case .appleIntelligenceUnavailable(let reason):
-            return ConversationalChatMessage(
-                text: "Apple Intelligence no está disponible ahora mismo: \(reason)",
-                isFromUser: false,
-                timestamp: Date()
-            )
-        case .unauthenticated:
-            return ConversationalChatMessage(
-                text: "Inicia sesión para usar la búsqueda semántica local.",
-                isFromUser: false,
-                timestamp: Date()
-            )
-        case .invalidModelResponse:
-            return ConversationalChatMessage(
-                text: "No se pudo procesar la respuesta del modelo local. Inténtalo de nuevo.",
-                isFromUser: false,
-                timestamp: Date()
-            )
-        case .semanticSearchFailed(let message):
-            return ConversationalChatMessage(
-                text: "No se pudo ejecutar la búsqueda semántica: \(message)",
-                isFromUser: false,
-                timestamp: Date()
-            )
-        case .contextWindowExceeded:
-            return ConversationalChatMessage(
-                text:
-                    "La consulta tenía demasiado contexto para Apple Intelligence local. Intenta con una petición más corta.",
-                isFromUser: false,
-                timestamp: Date()
-            )
-        case .storageUnavailable(let message):
-            return ConversationalChatMessage(
-                text: "No se pudo acceder al almacenamiento local del chat: \(message)",
                 isFromUser: false,
                 timestamp: Date()
             )
