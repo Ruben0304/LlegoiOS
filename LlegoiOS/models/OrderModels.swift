@@ -1,5 +1,22 @@
 import SwiftUI
 
+// MARK: - Order Currency Formatting
+
+func orderCurrencySymbol(for currency: String) -> String {
+    switch currency.uppercased() {
+    case "USD":
+        return "$"
+    case "CUP":
+        return "CUP"
+    default:
+        return currency
+    }
+}
+
+func formatOrderAmount(_ amount: Double, currency: String) -> String {
+    String(format: "\(orderCurrencySymbol(for: currency)) %.2f", amount)
+}
+
 // MARK: - Order Status Enum (matches GraphQL OrderStatusEnum)
 enum OrderStatusEnum: String, CaseIterable, Codable {
     case awaitingDeliveryAcceptance = "AWAITING_DELIVERY_ACCEPTANCE"
@@ -122,7 +139,7 @@ struct RecentOrder: Identifiable {
     let fulfillmentMode: FulfillmentMode?
 
     var formattedTotal: String {
-        String(format: "$%.2f", total)
+        formatOrderAmount(total, currency: currency)
     }
 
     var formattedDate: String {

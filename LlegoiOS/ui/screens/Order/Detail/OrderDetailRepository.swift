@@ -514,7 +514,8 @@ final class OrderDetailRepository {
                 price: item.price,
                 quantity: item.quantity,
                 imageUrl: item.imageUrlMuyBaja ?? item.imageUrl,
-                wasModifiedByStore: item.wasModifiedByStore
+                wasModifiedByStore: item.wasModifiedByStore,
+                currency: order.currency
             )
         }
 
@@ -523,7 +524,8 @@ final class OrderDetailRepository {
                 id: discount.id,
                 title: discount.title,
                 amount: discount.amount,
-                type: mapDiscountType(discount.type)
+                type: mapDiscountType(discount.type),
+                currency: order.currency
             )
         }
 

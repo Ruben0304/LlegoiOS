@@ -467,7 +467,7 @@ struct OrderDetailView: View {
                     priceRow(title: "Subtotal", value: order.formattedSubtotal)
                     priceRow(
                         title: order.isPickup ? "Recogida" : "Envío",
-                        value: order.isPickup ? "$0.00" : order.formattedDeliveryFee
+                        value: order.isPickup ? order.formattedZeroAmount : order.formattedDeliveryFee
                     )
                     if order.serviceCharge > 0 {
                         priceRow(title: "Cargo de servicio", value: order.formattedServiceCharge)

@@ -497,10 +497,6 @@ final class OrderDetailViewModel: ObservableObject {
 
     // MARK: - Formatting Helpers
 
-    func formatCurrency(_ amount: Double) -> String {
-        return String(format: "$%.2f", amount)
-    }
-
     func formatTime(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"

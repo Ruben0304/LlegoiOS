@@ -39,7 +39,7 @@ struct OrderTrackingOrder: Identifiable {
         customerVisibleStatus == .unknown ? status : customerVisibleStatus
     }
 
-    var formattedTotal: String { String(format: "$%.2f", total) }
+    var formattedTotal: String { formatOrderAmount(total, currency: currency) }
 
     var formattedETA: String? {
         guard let minutes = estimatedMinutesRemaining else { return nil }

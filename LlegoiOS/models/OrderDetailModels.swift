@@ -53,10 +53,11 @@ struct OrderDetail: Identifiable {
     let businessName: String
     let businessImageUrl: String?
 
-    var formattedSubtotal: String { String(format: "$%.2f", subtotal) }
-    var formattedDeliveryFee: String { String(format: "$%.2f", deliveryFee) }
-    var formattedServiceCharge: String { String(format: "$%.2f", serviceCharge) }
-    var formattedTotal: String { String(format: "$%.2f", total) }
+    var formattedSubtotal: String { formatOrderAmount(subtotal, currency: currency) }
+    var formattedDeliveryFee: String { formatOrderAmount(deliveryFee, currency: currency) }
+    var formattedServiceCharge: String { formatOrderAmount(serviceCharge, currency: currency) }
+    var formattedTotal: String { formatOrderAmount(total, currency: currency) }
+    var formattedZeroAmount: String { formatOrderAmount(0, currency: currency) }
     var isPickup: Bool { deliveryMode == .pickup }
     var displayStatus: OrderStatusEnum {
         customerVisibleStatus == .unknown ? status : customerVisibleStatus
@@ -72,13 +73,14 @@ struct OrderDetailItem: Identifiable {
     var quantity: Int
     let imageUrl: String?
     let wasModifiedByStore: Bool
+    let currency: String
 
     var lineTotal: Double {
         Double(quantity) * price
     }
 
-    var formattedPrice: String { String(format: "$%.2f", price) }
-    var formattedLineTotal: String { String(format: "$%.2f", lineTotal) }
+    var formattedPrice: String { formatOrderAmount(price, currency: currency) }
+    var formattedLineTotal: String { formatOrderAmount(lineTotal, currency: currency) }
 }
 
 // MARK: - Order Discount
@@ -87,8 +89,9 @@ struct OrderDetailDiscount: Identifiable {
     let title: String
     let amount: Double
     let type: DiscountTypeEnum
+    let currency: String
 
-    var formattedAmount: String { String(format: "-$%.2f", amount) }
+    var formattedAmount: String { "-" + formatOrderAmount(amount, currency: currency) }
 }
 
 // MARK: - Delivery Address
@@ -207,7 +210,7 @@ struct OrderRefundInfo {
 
     var formattedRefundAmount: String? {
         guard let refundAmount else { return nil }
-        return String(format: "$%.2f", refundAmount)
+        return formatOrderAmount(refundAmount, currency: currency)
     }
 }
 
