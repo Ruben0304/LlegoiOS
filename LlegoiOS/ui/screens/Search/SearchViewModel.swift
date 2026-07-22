@@ -10,6 +10,7 @@ import SwiftUI
 import MapKit
 import Combine
 import SwiftData
+import Network
 
 enum SearchState {
     case idle
@@ -40,13 +41,20 @@ class SearchViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var offlineSearchTask: Task<Void, Never>?
 
+    private let pathMonitor = NWPathMonitor()
+    private let pathMonitorQueue = DispatchQueue(label: "com.llego.search.pathMonitor")
+
     private let defaultLogoUrl = ""
     private let defaultBannerUrl = ""
 
     // MARK: - Initialization
     init() {
         setupBranchTypeObserver()
-        checkConnectivity()
+        startConnectivityMonitoring()
+    }
+
+    deinit {
+        pathMonitor.cancel()
     }
 
     // MARK: - Configure offline repository
@@ -54,28 +62,22 @@ class SearchViewModel: ObservableObject {
         localSearchRepository = LocalSearchRepository(modelContext: modelContext)
     }
 
-    // MARK: - Connectivity Check
-    private func checkConnectivity() {
-        // Detectar si hay conexión intentando alcanzar el backend
-        // Para simplicidad usamos Network framework en background
-        Task {
-            let hasConnection = await checkInternetConnection()
-            isOfflineMode = !hasConnection
+    // MARK: - Connectivity Monitoring
+    /// Sigue la conectividad real del dispositivo en caliente (no solo al abrir la
+    /// pantalla): si la red cae, cambia a modo offline y recarga con datos locales;
+    /// si vuelve, cambia a modo online y recarga desde el backend.
+    private func startConnectivityMonitoring() {
+        pathMonitor.pathUpdateHandler = { [weak self] path in
+            let hasConnection = path.status == .satisfied
+            Task { @MainActor in
+                guard let self = self else { return }
+                let newOfflineMode = !hasConnection
+                guard newOfflineMode != self.isOfflineMode else { return }
+                self.isOfflineMode = newOfflineMode
+                self.loadInitialData()
+            }
         }
-    }
-
-    private func checkInternetConnection() async -> Bool {
-        guard let url = URL(string: "https://llegobackend-production.up.railway.app/graphql") else {
-            return false
-        }
-        var request = URLRequest(url: url, timeoutInterval: 5)
-        request.httpMethod = "HEAD"
-        do {
-            let (_, response) = try await URLSession.shared.data(for: request)
-            return (response as? HTTPURLResponse)?.statusCode != nil
-        } catch {
-            return false
-        }
+        pathMonitor.start(queue: pathMonitorQueue)
     }
 
     func setOfflineMode(_ offline: Bool) {

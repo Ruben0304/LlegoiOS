@@ -9,10 +9,16 @@ public extension LlegoAPI {
     public static let operationName: String = "SyncBusinessesWithBranches"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query SyncBusinessesWithBranches { syncBusinessesWithBranches { __typename id name globalRating avatar avatarUrl description tags isActive createdAt branches { __typename id businessId name address coordinates { __typename type coordinates } phone isActive status avatar avatarUrl coverImage coverUrl tipos deliveryRadius createdAt } } }"#
+        #"query SyncBusinessesWithBranches($since: DateTime) { syncBusinessesWithBranches(since: $since) { __typename id name globalRating avatar avatarUrl description tags isActive createdAt branches { __typename id businessId name address coordinates { __typename type coordinates } phone isActive status avatar avatarUrl coverImage coverUrl tipos deliveryRadius createdAt } } }"#
       ))
 
-    public init() {}
+    public var since: GraphQLNullable<DateTime>
+
+    public init(since: GraphQLNullable<DateTime>) {
+      self.since = since
+    }
+
+    @_spi(Unsafe) public var __variables: Variables? { ["since": since] }
 
     public struct Data: LlegoAPI.SelectionSet {
       @_spi(Unsafe) public let __data: DataDict
@@ -20,7 +26,7 @@ public extension LlegoAPI {
 
       @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.Query }
       @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
-        .field("syncBusinessesWithBranches", [SyncBusinessesWithBranch].self),
+        .field("syncBusinessesWithBranches", [SyncBusinessesWithBranch].self, arguments: ["since": .variable("since")]),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
         SyncBusinessesWithBranchesQuery.Data.self

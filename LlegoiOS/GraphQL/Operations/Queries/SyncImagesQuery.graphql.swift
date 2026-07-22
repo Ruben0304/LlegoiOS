@@ -9,27 +9,31 @@ public extension LlegoAPI {
     public static let operationName: String = "SyncImages"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query SyncImages($entityType: String, $entityIds: [String!], $qualities: [ImageQuality!]) { syncImages( entityType: $entityType entityIds: $entityIds qualities: $qualities ) { __typename entityId entityType imagePath urls { __typename baja original } } }"#
+        #"query SyncImages($entityType: String, $entityIds: [String!], $qualities: [ImageQuality!], $since: DateTime) { syncImages( entityType: $entityType entityIds: $entityIds qualities: $qualities since: $since ) { __typename entityId entityType imagePath urls { __typename baja original } } }"#
       ))
 
     public var entityType: GraphQLNullable<String>
     public var entityIds: GraphQLNullable<[String]>
     public var qualities: GraphQLNullable<[GraphQLEnum<ImageQuality>]>
+    public var since: GraphQLNullable<DateTime>
 
     public init(
       entityType: GraphQLNullable<String>,
       entityIds: GraphQLNullable<[String]>,
-      qualities: GraphQLNullable<[GraphQLEnum<ImageQuality>]>
+      qualities: GraphQLNullable<[GraphQLEnum<ImageQuality>]>,
+      since: GraphQLNullable<DateTime>
     ) {
       self.entityType = entityType
       self.entityIds = entityIds
       self.qualities = qualities
+      self.since = since
     }
 
     @_spi(Unsafe) public var __variables: Variables? { [
       "entityType": entityType,
       "entityIds": entityIds,
-      "qualities": qualities
+      "qualities": qualities,
+      "since": since
     ] }
 
     public struct Data: LlegoAPI.SelectionSet {
@@ -41,7 +45,8 @@ public extension LlegoAPI {
         .field("syncImages", [SyncImage].self, arguments: [
           "entityType": .variable("entityType"),
           "entityIds": .variable("entityIds"),
-          "qualities": .variable("qualities")
+          "qualities": .variable("qualities"),
+          "since": .variable("since")
         ]),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [

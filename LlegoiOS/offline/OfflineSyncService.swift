@@ -5,6 +5,11 @@
 //  Servicio singleton que maneja la sincronización de datos locales
 //  y descarga de imágenes desde el backend.
 //
+//  Sync incremental: cada tipo de entidad (negocios/sucursales, productos,
+//  imágenes) guarda su propio cursor `serverSince` (SyncMetadata.serverSince).
+//  Antes de cada sync se pide un `syncCheckpoint` con los IDs actualmente
+//  activos en el servidor; se usa para podar localmente lo que ya no existe.
+//
 
 import Foundation
 import SwiftData
@@ -34,6 +39,17 @@ enum OfflineImageQuality: String, CaseIterable {
     case original = "Original"
 
     var displayName: String { rawValue }
+}
+
+// MARK: - Sync Checkpoint
+
+/// IDs activos en el servidor + marca de tiempo, usados para sync incremental
+/// (como `since` en la próxima llamada) y para podar localmente lo eliminado.
+private struct SyncCheckpointSnapshot {
+    let businessIds: Set<String>
+    let branchIds: Set<String>
+    let productIds: Set<String>
+    let syncedAt: String
 }
 
 // MARK: - OfflineSyncService
@@ -92,22 +108,24 @@ final class OfflineSyncService: ObservableObject {
         guard syncStatus == .idle else { return }
 
         do {
+            let checkpoint = try await fetchCheckpoint()
+
             // 1. Sync negocios y branches
             syncStatus = .syncing(.businesses)
-            try await syncBusinesses()
+            try await syncBusinesses(checkpoint: checkpoint)
 
             // 2. Sync productos
             syncStatus = .syncing(.products)
-            try await syncProducts()
+            try await syncProducts(checkpoint: checkpoint)
 
-            // 3. Indexar embeddings
+            // 3. Indexar embeddings (solo lo nuevo/modificado)
             syncStatus = .syncing(.embeddings)
             await buildEmbeddings()
 
             // 4. Imágenes (opcional)
             if downloadImages {
                 syncStatus = .syncing(.images)
-                try await syncImages(quality: imageQuality)
+                try await syncImages(quality: imageQuality, checkpoint: checkpoint)
             }
 
             syncStatus = .done
@@ -127,11 +145,13 @@ final class OfflineSyncService: ObservableObject {
     func syncDataOnly() async {
         guard syncStatus == .idle else { return }
         do {
+            let checkpoint = try await fetchCheckpoint()
+
             syncStatus = .syncing(.businesses)
-            try await syncBusinesses()
+            try await syncBusinesses(checkpoint: checkpoint)
 
             syncStatus = .syncing(.products)
-            try await syncProducts()
+            try await syncProducts(checkpoint: checkpoint)
 
             syncStatus = .syncing(.embeddings)
             await buildEmbeddings()
@@ -150,8 +170,9 @@ final class OfflineSyncService: ObservableObject {
     func syncImagesOnly(quality: OfflineImageQuality) async {
         guard syncStatus == .idle else { return }
         do {
+            let checkpoint = try await fetchCheckpoint()
             syncStatus = .syncing(.images)
-            try await syncImages(quality: quality)
+            try await syncImages(quality: quality, checkpoint: checkpoint)
             syncStatus = .done
             refreshStats()
             try await Task.sleep(nanoseconds: 2_000_000_000)
@@ -161,19 +182,52 @@ final class OfflineSyncService: ObservableObject {
         }
     }
 
+    // MARK: - Private: Checkpoint
+
+    /// Pide al servidor los IDs actualmente activos + su marca de tiempo.
+    /// Se usa como `since` para el próximo sync incremental y para podar
+    /// localmente negocios/sucursales/productos que ya no existen.
+    private func fetchCheckpoint() async throws -> SyncCheckpointSnapshot {
+        try await withCheckedThrowingContinuation { continuation in
+            apolloClient.fetchCompat(
+                query: LlegoAPI.SyncCheckpointQuery(),
+                cachePolicy: .fetchIgnoringCacheData
+            ) { result in
+                switch result {
+                case .success(let graphQLResult):
+                    guard let data = graphQLResult.data else {
+                        continuation.resume(throwing: OfflineError.noData)
+                        return
+                    }
+                    let cp = data.syncCheckpoint
+                    continuation.resume(returning: SyncCheckpointSnapshot(
+                        businessIds: Set(cp.businessIds),
+                        branchIds: Set(cp.branchIds),
+                        productIds: Set(cp.productIds),
+                        syncedAt: cp.syncedAt
+                    ))
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
     // MARK: - Private: Sync Businesses
 
-    private func syncBusinesses() async throws {
+    private func syncBusinesses(checkpoint: SyncCheckpointSnapshot) async throws {
         print("🏪 syncBusinesses - Iniciando...")
-        guard modelContext != nil else {
+        guard let ctx = modelContext else {
             print("❌ syncBusinesses - modelContext es nil")
             throw OfflineError.noContext
         }
 
+        let since = loadCursor(key: SyncMetadata.businessesKey, ctx: ctx)
+
         return try await withCheckedThrowingContinuation { continuation in
-            print("🏪 syncBusinesses - Lanzando query Apollo...")
+            print("🏪 syncBusinesses - Lanzando query Apollo (since: \(since ?? "nil"))...")
             apolloClient.fetchCompat(
-                query: LlegoAPI.SyncBusinessesWithBranchesQuery(),
+                query: LlegoAPI.SyncBusinessesWithBranchesQuery(since: since.map { .some($0) } ?? .none),
                 cachePolicy: .fetchIgnoringCacheData
             ) { [weak self] result in
                 print("🏪 syncBusinesses - Callback Apollo recibido, self nil: \(self == nil)")
@@ -188,72 +242,25 @@ final class OfflineSyncService: ObservableObject {
                             return
                         }
 
-                        print("🏪 syncBusinesses - Respuesta recibida: \(data.syncBusinessesWithBranches.count) negocios")
+                        print("🏪 syncBusinesses - Respuesta recibida: \(data.syncBusinessesWithBranches.count) negocios (delta desde el último sync)")
 
                         do {
-                            // Borrar uno a uno para respetar relaciones inversas de SwiftData
-                            let oldBranches = try ctx.fetch(FetchDescriptor<LocalBranch>())
-                            oldBranches.forEach { ctx.delete($0) }
-                            let oldBusinesses = try ctx.fetch(FetchDescriptor<LocalBusiness>())
-                            oldBusinesses.forEach { ctx.delete($0) }
-                            try ctx.save()
-                            print("🗑️ syncBusinesses - Borrado previo OK (\(oldBusinesses.count) negocios, \(oldBranches.count) sucursales)")
-
-                            var totalBranches = 0
-
                             for biz in data.syncBusinessesWithBranches {
-                                let localBiz = LocalBusiness(
-                                    id: biz.id,
-                                    name: biz.name,
-                                    globalRating: biz.globalRating,
-                                    avatar: biz.avatar,
-                                    avatarUrl: biz.avatarUrl,
-                                    businessDescription: biz.description,
-                                    tags: biz.tags ?? [],
-                                    isActive: biz.isActive,
-                                    createdAt: "\(biz.createdAt)"
-                                )
-                                ctx.insert(localBiz)
-
+                                let localBiz = self.upsertBusiness(from: biz, ctx: ctx)
                                 for branch in biz.branches {
-                                    let lat = branch.coordinates.coordinates.count > 1
-                                        ? branch.coordinates.coordinates[1] : 0.0
-                                    let lon = branch.coordinates.coordinates.count > 0
-                                        ? branch.coordinates.coordinates[0] : 0.0
-
-                                    let localBranch = LocalBranch(
-                                        id: branch.id,
-                                        businessId: branch.businessId,
-                                        name: branch.name,
-                                        address: branch.address,
-                                        latitude: lat,
-                                        longitude: lon,
-                                        phone: branch.phone,
-                                        isActive: branch.isActive,
-                                        status: branch.status,
-                                        avatar: branch.avatar,
-                                        avatarUrl: branch.avatarUrl,
-                                        coverImage: branch.coverImage,
-                                        coverUrl: branch.coverUrl,
-                                        tipos: branch.tipos,
-                                        deliveryRadius: branch.deliveryRadius,
-                                        createdAt: "\(branch.createdAt)"
-                                    )
-                                    localBranch.business = localBiz
-                                    ctx.insert(localBranch)
-                                    totalBranches += 1
+                                    self.upsertBranch(from: branch, business: localBiz, ctx: ctx)
                                 }
                             }
-
                             try ctx.save()
-                            print("💾 syncBusinesses - Guardado OK: \(data.syncBusinessesWithBranches.count) negocios, \(totalBranches) sucursales")
 
-                            // Verificar lo que quedó en BD
-                            let savedBranches = (try? ctx.fetch(FetchDescriptor<LocalBranch>())) ?? []
-                            let savedBusinesses = (try? ctx.fetch(FetchDescriptor<LocalBusiness>())) ?? []
-                            print("🔍 syncBusinesses - En BD: \(savedBusinesses.count) negocios, \(savedBranches.count) sucursales")
+                            // Eliminar negocios/sucursales que ya no existen en el servidor
+                            self.pruneRemovedBusinessesAndBranches(checkpoint: checkpoint, ctx: ctx)
 
-                            self.updateMetadata(key: SyncMetadata.businessesKey, count: data.syncBusinessesWithBranches.count, ctx: ctx)
+                            let totalBusinesses = (try? ctx.fetch(FetchDescriptor<LocalBusiness>()))?.count ?? 0
+                            let totalBranches = (try? ctx.fetch(FetchDescriptor<LocalBranch>()))?.count ?? 0
+                            self.updateMetadata(key: SyncMetadata.businessesKey, count: totalBusinesses, serverSince: checkpoint.syncedAt, ctx: ctx)
+
+                            print("💾 syncBusinesses - Guardado OK. En BD: \(totalBusinesses) negocios, \(totalBranches) sucursales")
                             continuation.resume()
                         } catch {
                             print("❌ syncBusinesses - Error al guardar: \(error)")
@@ -268,14 +275,128 @@ final class OfflineSyncService: ObservableObject {
         }
     }
 
+    private func upsertBusiness(
+        from biz: LlegoAPI.SyncBusinessesWithBranchesQuery.Data.SyncBusinessesWithBranch,
+        ctx: ModelContext
+    ) -> LocalBusiness {
+        let bizId = biz.id
+        let descriptor = FetchDescriptor<LocalBusiness>(predicate: #Predicate { $0.id == bizId })
+
+        if let existing = (try? ctx.fetch(descriptor))?.first {
+            existing.name = biz.name
+            existing.globalRating = biz.globalRating
+            existing.avatar = biz.avatar
+            existing.avatarUrl = biz.avatarUrl
+            existing.businessDescription = biz.description
+            existing.tags = biz.tags ?? []
+            existing.isActive = biz.isActive
+            existing.createdAt = "\(biz.createdAt)"
+            return existing
+        }
+
+        let localBiz = LocalBusiness(
+            id: biz.id,
+            name: biz.name,
+            globalRating: biz.globalRating,
+            avatar: biz.avatar,
+            avatarUrl: biz.avatarUrl,
+            businessDescription: biz.description,
+            tags: biz.tags ?? [],
+            isActive: biz.isActive,
+            createdAt: "\(biz.createdAt)"
+        )
+        ctx.insert(localBiz)
+        return localBiz
+    }
+
+    private func upsertBranch(
+        from branch: LlegoAPI.SyncBusinessesWithBranchesQuery.Data.SyncBusinessesWithBranch.Branch,
+        business: LocalBusiness,
+        ctx: ModelContext
+    ) {
+        let branchId = branch.id
+        let lat = branch.coordinates.coordinates.count > 1 ? branch.coordinates.coordinates[1] : 0.0
+        let lon = branch.coordinates.coordinates.count > 0 ? branch.coordinates.coordinates[0] : 0.0
+        let descriptor = FetchDescriptor<LocalBranch>(predicate: #Predicate { $0.id == branchId })
+
+        if let existing = (try? ctx.fetch(descriptor))?.first {
+            // Solo se invalida el embedding si cambió algo que afecta al texto indexable
+            let searchableTextChanged = existing.name != branch.name
+                || existing.tipos != branch.tipos
+                || existing.address != branch.address
+
+            existing.businessId = branch.businessId
+            existing.name = branch.name
+            existing.address = branch.address
+            existing.latitude = lat
+            existing.longitude = lon
+            existing.phone = branch.phone
+            existing.isActive = branch.isActive
+            existing.status = branch.status
+            existing.avatar = branch.avatar
+            existing.avatarUrl = branch.avatarUrl
+            existing.coverImage = branch.coverImage
+            existing.coverUrl = branch.coverUrl
+            existing.tipos = branch.tipos
+            existing.deliveryRadius = branch.deliveryRadius
+            existing.createdAt = "\(branch.createdAt)"
+            existing.business = business
+
+            if searchableTextChanged {
+                existing.embeddingData = nil
+            }
+            return
+        }
+
+        let localBranch = LocalBranch(
+            id: branch.id,
+            businessId: branch.businessId,
+            name: branch.name,
+            address: branch.address,
+            latitude: lat,
+            longitude: lon,
+            phone: branch.phone,
+            isActive: branch.isActive,
+            status: branch.status,
+            avatar: branch.avatar,
+            avatarUrl: branch.avatarUrl,
+            coverImage: branch.coverImage,
+            coverUrl: branch.coverUrl,
+            tipos: branch.tipos,
+            deliveryRadius: branch.deliveryRadius,
+            createdAt: "\(branch.createdAt)"
+        )
+        localBranch.business = business
+        ctx.insert(localBranch)
+    }
+
+    private func pruneRemovedBusinessesAndBranches(checkpoint: SyncCheckpointSnapshot, ctx: ModelContext) {
+        let allBusinesses = (try? ctx.fetch(FetchDescriptor<LocalBusiness>())) ?? []
+        for biz in allBusinesses where !checkpoint.businessIds.contains(biz.id) {
+            ctx.delete(biz)  // cascada: borra también sus LocalBranch (deleteRule: .cascade)
+        }
+
+        let allBranches = (try? ctx.fetch(FetchDescriptor<LocalBranch>())) ?? []
+        for branch in allBranches where !checkpoint.branchIds.contains(branch.id) {
+            ctx.delete(branch)
+        }
+
+        try? ctx.save()
+    }
+
     // MARK: - Private: Sync Products
 
-    private func syncProducts() async throws {
-        guard modelContext != nil else { throw OfflineError.noContext }
+    private func syncProducts(checkpoint: SyncCheckpointSnapshot) async throws {
+        guard let ctx = modelContext else { throw OfflineError.noContext }
+
+        let since = loadCursor(key: SyncMetadata.productsKey, ctx: ctx)
 
         return try await withCheckedThrowingContinuation { continuation in
             apolloClient.fetchCompat(
-                query: LlegoAPI.SyncProductsQuery(availableOnly: .some(true)),
+                query: LlegoAPI.SyncProductsQuery(
+                    availableOnly: .some(true),
+                    since: since.map { .some($0) } ?? .none
+                ),
                 cachePolicy: .fetchIgnoringCacheData
             ) { [weak self] result in
                 Task { @MainActor in
@@ -287,37 +408,21 @@ final class OfflineSyncService: ObservableObject {
                             return
                         }
 
-                        print("📦 syncProducts - Respuesta recibida: \(data.syncProducts.count) productos")
+                        print("📦 syncProducts - Respuesta recibida: \(data.syncProducts.count) productos (delta desde el último sync)")
 
                         do {
-                            try ctx.delete(model: LocalProduct.self)
-                            try ctx.save()
-
                             for p in data.syncProducts {
-                                let localProduct = LocalProduct(
-                                    id: p.id,
-                                    branchId: p.branchId,
-                                    name: p.name,
-                                    productDescription: p.description,
-                                    weight: p.weight,
-                                    price: p.price,
-                                    currency: p.currency,
-                                    image: p.image,
-                                    imageUrl: p.imageUrl,
-                                    availability: p.availability,
-                                    categoryId: p.categoryId,
-                                    createdAt: "\(p.createdAt)"
-                                )
-                                ctx.insert(localProduct)
+                                self.upsertProduct(from: p, ctx: ctx)
                             }
-
                             try ctx.save()
-                            print("💾 syncProducts - Guardado OK: \(data.syncProducts.count) productos")
 
-                            let savedProducts = (try? ctx.fetch(FetchDescriptor<LocalProduct>())) ?? []
-                            print("🔍 syncProducts - En BD: \(savedProducts.count) productos")
+                            // Eliminar productos que ya no existen/dejaron de estar disponibles
+                            self.pruneRemovedProducts(checkpoint: checkpoint, ctx: ctx)
 
-                            self.updateMetadata(key: SyncMetadata.productsKey, count: data.syncProducts.count, ctx: ctx)
+                            let totalProducts = (try? ctx.fetch(FetchDescriptor<LocalProduct>()))?.count ?? 0
+                            self.updateMetadata(key: SyncMetadata.productsKey, count: totalProducts, serverSince: checkpoint.syncedAt, ctx: ctx)
+
+                            print("💾 syncProducts - Guardado OK. En BD: \(totalProducts) productos")
                             continuation.resume()
                         } catch {
                             print("❌ syncProducts - Error al guardar: \(error)")
@@ -332,14 +437,66 @@ final class OfflineSyncService: ObservableObject {
         }
     }
 
+    private func upsertProduct(from p: LlegoAPI.SyncProductsQuery.Data.SyncProduct, ctx: ModelContext) {
+        let productId = p.id
+        let descriptor = FetchDescriptor<LocalProduct>(predicate: #Predicate { $0.id == productId })
+
+        if let existing = (try? ctx.fetch(descriptor))?.first {
+            let searchableTextChanged = existing.name != p.name || existing.productDescription != p.description
+
+            existing.branchId = p.branchId
+            existing.name = p.name
+            existing.productDescription = p.description
+            existing.weight = p.weight
+            existing.price = p.price
+            existing.currency = p.currency
+            existing.image = p.image
+            existing.imageUrl = p.imageUrl
+            existing.availability = p.availability
+            existing.categoryId = p.categoryId
+            existing.createdAt = "\(p.createdAt)"
+
+            if searchableTextChanged {
+                existing.embeddingData = nil
+            }
+            return
+        }
+
+        let localProduct = LocalProduct(
+            id: p.id,
+            branchId: p.branchId,
+            name: p.name,
+            productDescription: p.description,
+            weight: p.weight,
+            price: p.price,
+            currency: p.currency,
+            image: p.image,
+            imageUrl: p.imageUrl,
+            availability: p.availability,
+            categoryId: p.categoryId,
+            createdAt: "\(p.createdAt)"
+        )
+        ctx.insert(localProduct)
+    }
+
+    private func pruneRemovedProducts(checkpoint: SyncCheckpointSnapshot, ctx: ModelContext) {
+        let allProducts = (try? ctx.fetch(FetchDescriptor<LocalProduct>())) ?? []
+        for product in allProducts where !checkpoint.productIds.contains(product.id) {
+            ctx.delete(product)
+        }
+        try? ctx.save()
+    }
+
     // MARK: - Private: Sync Images
 
-    private func syncImages(quality: OfflineImageQuality) async throws {
+    private func syncImages(quality: OfflineImageQuality, checkpoint: SyncCheckpointSnapshot) async throws {
         print("🖼️ syncImages - Iniciando (calidad: \(quality.rawValue))...")
-        guard modelContext != nil else {
+        guard let ctx = modelContext else {
             print("❌ syncImages - modelContext es nil")
             throw OfflineError.noContext
         }
+
+        let since = loadCursor(key: SyncMetadata.imagesKey, ctx: ctx)
 
         let qualities: GraphQLNullable<[GraphQLEnum<LlegoAPI.ImageQuality>]>
         switch quality {
@@ -350,12 +507,13 @@ final class OfflineSyncService: ObservableObject {
         }
 
         return try await withCheckedThrowingContinuation { continuation in
-            print("🖼️ syncImages - Lanzando query Apollo...")
+            print("🖼️ syncImages - Lanzando query Apollo (since: \(since ?? "nil"))...")
             apolloClient.fetchCompat(
                 query: LlegoAPI.SyncImagesQuery(
                     entityType: .none,
                     entityIds: .none,
-                    qualities: qualities
+                    qualities: qualities,
+                    since: since.map { .some($0) } ?? .none
                 ),
                 cachePolicy: .fetchIgnoringCacheData
             ) { [weak self] result in
@@ -370,7 +528,7 @@ final class OfflineSyncService: ObservableObject {
                             return
                         }
 
-                        print("🖼️ syncImages - \(data.syncImages.count) imágenes recibidas")
+                        print("🖼️ syncImages - \(data.syncImages.count) imágenes recibidas (delta desde el último sync)")
 
                         // Actualizar/insertar registros de imágenes con URLs
                         var inserted = 0, updated = 0
@@ -403,6 +561,9 @@ final class OfflineSyncService: ObservableObject {
                             print("❌ syncImages - Error al guardar URLs: \(error)")
                         }
 
+                        // Limpiar imágenes de negocios/sucursales/productos que ya no existen
+                        self.pruneOrphanedImages(checkpoint: checkpoint, ctx: ctx)
+
                         // Descargar los datos de imagen en background
                         let imagesCopy = data.syncImages.map { img in
                             (entityId: img.entityId, entityType: img.entityType,
@@ -413,7 +574,8 @@ final class OfflineSyncService: ObservableObject {
                             await self.downloadImageData(from: imagesCopy, quality: quality)
                         }
 
-                        self.updateMetadata(key: SyncMetadata.imagesKey, count: data.syncImages.count, ctx: ctx)
+                        let totalImages = (try? ctx.fetch(FetchDescriptor<LocalImage>()))?.count ?? 0
+                        self.updateMetadata(key: SyncMetadata.imagesKey, count: totalImages, serverSince: checkpoint.syncedAt, ctx: ctx)
                         continuation.resume()
 
                     case .failure(let error):
@@ -425,6 +587,23 @@ final class OfflineSyncService: ObservableObject {
         }
     }
 
+    private func pruneOrphanedImages(checkpoint: SyncCheckpointSnapshot, ctx: ModelContext) {
+        let allImages = (try? ctx.fetch(FetchDescriptor<LocalImage>())) ?? []
+        for img in allImages {
+            let stillExists: Bool
+            switch img.entityType {
+            case "business": stillExists = checkpoint.businessIds.contains(img.entityId)
+            case "branch": stillExists = checkpoint.branchIds.contains(img.entityId)
+            case "product": stillExists = checkpoint.productIds.contains(img.entityId)
+            default: stillExists = false
+            }
+            if !stillExists {
+                ctx.delete(img)
+            }
+        }
+        try? ctx.save()
+    }
+
     // MARK: - Private: Download Image Data
 
     private func downloadImageData(
@@ -432,7 +611,8 @@ final class OfflineSyncService: ObservableObject {
         quality: OfflineImageQuality
     ) async {
         guard let ctx = modelContext else { return }
-        var downloaded = 0, failed = 0
+        var downloaded = 0, skipped = 0, failed = 0
+
         for img in images {
             let urlString: String?
             switch quality {
@@ -445,25 +625,38 @@ final class OfflineSyncService: ObservableObject {
                 continue
             }
 
+            let imgId = "\(img.entityId)_\(img.entityType)"
+            let descriptor = FetchDescriptor<LocalImage>(
+                predicate: #Predicate { $0.id == imgId }
+            )
+            guard let localImg = try? ctx.fetch(descriptor).first else {
+                failed += 1
+                continue
+            }
+
+            let alreadyLocal: Bool
+            switch quality {
+            case .baja: alreadyLocal = localImg.hasBajaLocal
+            case .original: alreadyLocal = localImg.hasOriginalLocal
+            }
+            if alreadyLocal {
+                skipped += 1
+                continue
+            }
+
             do {
                 let (data, _) = try await URLSession.shared.data(from: url)
-                let imgId = "\(img.entityId)_\(img.entityType)"
-                let descriptor = FetchDescriptor<LocalImage>(
-                    predicate: #Predicate { $0.id == imgId }
-                )
-                if let localImg = try? ctx.fetch(descriptor).first {
-                    switch quality {
-                    case .baja: localImg.bajaData = data
-                    case .original: localImg.originalData = data
-                    }
-                    try? ctx.save()
-                    downloaded += 1
+                switch quality {
+                case .baja: localImg.bajaData = data
+                case .original: localImg.originalData = data
                 }
+                try? ctx.save()
+                downloaded += 1
             } catch {
                 failed += 1
             }
         }
-        print("🖼️ downloadImageData - Completado: \(downloaded) descargadas, \(failed) fallidas de \(images.count) totales")
+        print("🖼️ downloadImageData - Completado: \(downloaded) descargadas, \(skipped) omitidas (ya locales), \(failed) fallidas de \(images.count) totales")
     }
 
     // MARK: - Private: Build Embeddings
@@ -482,22 +675,32 @@ final class OfflineSyncService: ObservableObject {
             return
         }
 
+        // Cede el hilo principal periódicamente para no congelar la UI durante sync grandes.
+        let yieldEvery = 25
         var indexed = 0.0
 
-        for branch in branches {
+        for (i, branch) in branches.enumerated() {
             if branch.embeddingData == nil {
                 branch.embedding = embeddingService.embed(text: branch.searchableText)
             }
             indexed += 1
             embeddingProgress = indexed / total
+            if i % yieldEvery == 0 {
+                try? ctx.save()
+                await Task.yield()
+            }
         }
 
-        for product in products {
+        for (i, product) in products.enumerated() {
             if product.embeddingData == nil {
                 product.embedding = embeddingService.embed(text: product.searchableText)
             }
             indexed += 1
             embeddingProgress = indexed / total
+            if i % yieldEvery == 0 {
+                try? ctx.save()
+                await Task.yield()
+            }
         }
 
         try? ctx.save()
@@ -506,20 +709,31 @@ final class OfflineSyncService: ObservableObject {
 
     // MARK: - Private: Metadata
 
-    private func updateMetadata(key: String, count: Int, ctx: ModelContext) {
+    private func updateMetadata(key: String, count: Int, serverSince: String? = nil, ctx: ModelContext) {
         let descriptor = FetchDescriptor<SyncMetadata>(
             predicate: #Predicate { $0.key == key }
         )
         if let meta = try? ctx.fetch(descriptor).first {
             meta.lastSyncDate = Date()
             meta.recordCount = count
+            if let serverSince {
+                meta.serverSince = serverSince
+            }
         } else {
             let meta = SyncMetadata(key: key)
             meta.lastSyncDate = Date()
             meta.recordCount = count
+            meta.serverSince = serverSince
             ctx.insert(meta)
         }
         try? ctx.save()
+    }
+
+    private func loadCursor(key: String, ctx: ModelContext) -> String? {
+        let descriptor = FetchDescriptor<SyncMetadata>(
+            predicate: #Predicate { $0.key == key }
+        )
+        return (try? ctx.fetch(descriptor))?.first?.serverSince
     }
 
     // MARK: - Local Image Lookup
@@ -555,10 +769,12 @@ final class OfflineSyncService: ObservableObject {
 
 enum OfflineError: LocalizedError {
     case noContext
+    case noData
 
     var errorDescription: String? {
         switch self {
         case .noContext: return "Base de datos local no disponible"
+        case .noData: return "El servidor no devolvió datos de sincronización"
         }
     }
 }

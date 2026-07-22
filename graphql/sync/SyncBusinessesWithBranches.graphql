@@ -1,5 +1,5 @@
-query SyncBusinessesWithBranches {
-  syncBusinessesWithBranches {
+query SyncBusinessesWithBranches($since: DateTime) {
+  syncBusinessesWithBranches(since: $since) {
     id
     name
     globalRating

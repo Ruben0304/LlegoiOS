@@ -105,6 +105,7 @@ public extension LlegoAPI {
       case "ShowcaseItemType": return LlegoAPI.Objects.ShowcaseItemType
       case "ShowcaseType": return LlegoAPI.Objects.ShowcaseType
       case "Subscription": return LlegoAPI.Objects.Subscription
+      case "SyncCheckpoint": return LlegoAPI.Objects.SyncCheckpoint
       case "TemporaryStatusType": return LlegoAPI.Objects.TemporaryStatusType
       case "TimeRangeType": return LlegoAPI.Objects.TimeRangeType
       case "TransferAccountType": return LlegoAPI.Objects.TransferAccountType

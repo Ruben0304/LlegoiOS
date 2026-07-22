@@ -1,5 +1,5 @@
-query SyncProducts($availableOnly: Boolean) {
-  syncProducts(availableOnly: $availableOnly) {
+query SyncProducts($availableOnly: Boolean, $since: DateTime) {
+  syncProducts(availableOnly: $availableOnly, since: $since) {
     id
     branchId
     name

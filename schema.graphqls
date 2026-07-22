@@ -399,17 +399,22 @@ type Query {
   variantList(id: String!, jwt: String = null): VariantListType
 
   """
+  Checkpoint de sincronización: IDs actualmente activos (para que el cliente borre localmente lo que ya no está) y marca de tiempo del servidor a guardar como `since` para el próximo sync incremental.
+  """
+  syncCheckpoint(jwt: String = null): SyncCheckpoint!
+
+  """
   Sincronizar negocios con sus branches (excluye datos sensibles como managerIds y ownerId)
   """
-  syncBusinessesWithBranches(jwt: String = null): [BusinessSyncType!]!
+  syncBusinessesWithBranches(since: DateTime = null, jwt: String = null): [BusinessSyncType!]!
 
   """Sincronizar productos (todos los productos disponibles)"""
-  syncProducts(branchId: String = null, categoryId: String = null, availableOnly: Boolean! = false, jwt: String = null): [ProductSyncType!]!
+  syncProducts(branchId: String = null, categoryId: String = null, availableOnly: Boolean! = false, since: DateTime = null, jwt: String = null): [ProductSyncType!]!
 
   """
   Sincronizar imágenes con URLs para diferentes calidades (200x200, 720x540, 1080x1350, 1440x1800, original)
   """
-  syncImages(entityType: String = null, entityIds: [String!] = null, qualities: [ImageQuality!] = null, jwt: String = null): [ImageSyncType!]!
+  syncImages(entityType: String = null, entityIds: [String!] = null, qualities: [ImageQuality!] = null, since: DateTime = null, jwt: String = null): [ImageSyncType!]!
 
   """Saludo de ejemplo"""
   hello(jwt: String = null): String!
@@ -2594,6 +2599,16 @@ type ImageUrlType {
   media: String
   alta: String
   original: String
+}
+
+"""
+IDs de negocios activos y de sucursales activas cuyo negocio también está activo. Se usa para que sync_products/sync_images no expongan catálogo de negocios pendientes de aprobación o rechazados (mismo criterio que sync_businesses_with_branches).
+"""
+type SyncCheckpoint {
+  businessIds: [String!]!
+  branchIds: [String!]!
+  productIds: [String!]!
+  syncedAt: DateTime!
 }
 
 enum ImageQuality {

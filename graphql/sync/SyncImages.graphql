@@ -1,5 +1,5 @@
-query SyncImages($entityType: String, $entityIds: [String!], $qualities: [ImageQuality!]) {
-  syncImages(entityType: $entityType, entityIds: $entityIds, qualities: $qualities) {
+query SyncImages($entityType: String, $entityIds: [String!], $qualities: [ImageQuality!], $since: DateTime) {
+  syncImages(entityType: $entityType, entityIds: $entityIds, qualities: $qualities, since: $since) {
     entityId
     entityType
     imagePath

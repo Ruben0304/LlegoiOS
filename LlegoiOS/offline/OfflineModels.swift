@@ -247,10 +247,16 @@ final class SyncMetadata {
     var lastSyncDate: Date?
     var recordCount: Int
 
+    /// Cursor opaco devuelto por el servidor (syncCheckpoint.syncedAt) tras el
+    /// último sync incremental exitoso de este tipo de entidad. Se reenvía como
+    /// `since` en la siguiente llamada para traer solo lo nuevo/modificado.
+    var serverSince: String?
+
     init(key: String) {
         self.key = key
         self.lastSyncDate = nil
         self.recordCount = 0
+        self.serverSince = nil
     }
 
     static let businessesKey = "businesses"

@@ -9,16 +9,24 @@ public extension LlegoAPI {
     public static let operationName: String = "SyncProducts"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query SyncProducts($availableOnly: Boolean) { syncProducts(availableOnly: $availableOnly) { __typename id branchId name description weight price currency image imageUrl availability categoryId createdAt } }"#
+        #"query SyncProducts($availableOnly: Boolean, $since: DateTime) { syncProducts(availableOnly: $availableOnly, since: $since) { __typename id branchId name description weight price currency image imageUrl availability categoryId createdAt } }"#
       ))
 
     public var availableOnly: GraphQLNullable<Bool>
+    public var since: GraphQLNullable<DateTime>
 
-    public init(availableOnly: GraphQLNullable<Bool>) {
+    public init(
+      availableOnly: GraphQLNullable<Bool>,
+      since: GraphQLNullable<DateTime>
+    ) {
       self.availableOnly = availableOnly
+      self.since = since
     }
 
-    @_spi(Unsafe) public var __variables: Variables? { ["availableOnly": availableOnly] }
+    @_spi(Unsafe) public var __variables: Variables? { [
+      "availableOnly": availableOnly,
+      "since": since
+    ] }
 
     public struct Data: LlegoAPI.SelectionSet {
       @_spi(Unsafe) public let __data: DataDict
@@ -26,7 +34,10 @@ public extension LlegoAPI {
 
       @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.Query }
       @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
-        .field("syncProducts", [SyncProduct].self, arguments: ["availableOnly": .variable("availableOnly")]),
+        .field("syncProducts", [SyncProduct].self, arguments: [
+          "availableOnly": .variable("availableOnly"),
+          "since": .variable("since")
+        ]),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
         SyncProductsQuery.Data.self

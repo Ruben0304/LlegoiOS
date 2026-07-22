@@ -1,0 +1,8 @@
+query SyncCheckpoint {
+  syncCheckpoint {
+    businessIds
+    branchIds
+    productIds
+    syncedAt
+  }
+}
