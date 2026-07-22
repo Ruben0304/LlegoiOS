@@ -4,6 +4,11 @@
 //
 //  ViewModel para la pantalla de búsqueda
 //
+//  La búsqueda siempre intenta primero por internet. Si la respuesta tarda
+//  más de 15s o falla, y hay datos descargados localmente, se pasa
+//  automáticamente a búsqueda offline (mostrando un aviso). Si no hay datos
+//  locales, se muestra un estado de "sin conexión" con botón de reintentar.
+//
 
 import Foundation
 import SwiftUI
@@ -19,6 +24,29 @@ enum SearchState {
     case error(String)
 }
 
+private struct SearchTimeoutError: Error {}
+
+/// Corre `operation` con un límite de tiempo; si no responde a tiempo, lanza `SearchTimeoutError`.
+private func withTimeout<T: Sendable>(
+    seconds: TimeInterval,
+    operation: @escaping @Sendable () async throws -> T
+) async throws -> T {
+    try await withThrowingTaskGroup(of: T.self) { group in
+        group.addTask {
+            try await operation()
+        }
+        group.addTask {
+            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            throw SearchTimeoutError()
+        }
+        defer { group.cancelAll() }
+        guard let result = try await group.next() else {
+            throw SearchTimeoutError()
+        }
+        return result
+    }
+}
+
 @MainActor
 class SearchViewModel: ObservableObject {
     @Published var state: SearchState = .idle
@@ -27,8 +55,9 @@ class SearchViewModel: ObservableObject {
     @Published var storeProducts: [String: [ProductGraphQL]] = [:]
     @Published var selectedCategory: SearchCategory = .both
 
-    // MARK: - Offline mode
-    @Published var isOfflineMode: Bool = false
+    /// True cuando los resultados mostrados vienen de datos locales porque el
+    /// intento por internet falló o tardó demasiado (no es un toggle manual).
+    @Published var isShowingOfflineFallback: Bool = false
 
     private let searchRepository = SearchRepository()
     private let productRepository = ProductListRepository()
@@ -39,40 +68,23 @@ class SearchViewModel: ObservableObject {
     private var loadingProductsForStores: Set<String> = []
     private var cancellables = Set<AnyCancellable>()
     private var offlineSearchTask: Task<Void, Never>?
+    private var currentRequestTask: Task<Void, Never>?
 
-    private let defaultLogoUrl = ""
-    private let defaultBannerUrl = ""
+    /// Se incrementa en cada nuevo loadInitialData()/search(); usado para descartar
+    /// respuestas de intentos ya superados (p. ej. el usuario cambió de categoría
+    /// mientras un intento anterior seguía esperando el timeout).
+    private var requestGeneration = 0
+
+    private let onlineTimeoutSeconds: TimeInterval = 15
 
     // MARK: - Initialization
     init() {
         setupBranchTypeObserver()
-        startConnectivityMonitoring()
     }
 
     // MARK: - Configure offline repository
     func configure(modelContext: ModelContext) {
         localSearchRepository = LocalSearchRepository(modelContext: modelContext)
-    }
-
-    // MARK: - Connectivity Monitoring
-    /// Sigue la conectividad real del dispositivo en caliente (no solo al abrir la
-    /// pantalla): si la red cae, cambia a modo offline y recarga con datos locales;
-    /// si vuelve, cambia a modo online y recarga desde el backend.
-    private func startConnectivityMonitoring() {
-        NetworkMonitor.shared.$isConnected
-            .sink { [weak self] hasConnection in
-                guard let self = self else { return }
-                let newOfflineMode = !hasConnection
-                guard newOfflineMode != self.isOfflineMode else { return }
-                self.isOfflineMode = newOfflineMode
-                self.loadInitialData()
-            }
-            .store(in: &cancellables)
-    }
-
-    func setOfflineMode(_ offline: Bool) {
-        isOfflineMode = offline
-        loadInitialData()
     }
 
     // MARK: - Branch Type Observer
@@ -87,25 +99,54 @@ class SearchViewModel: ObservableObject {
     }
 
     // MARK: - Load Initial Data
+
     func loadInitialData() {
-        state = .idle
-
-        if isOfflineMode {
-            loadInitialDataOffline()
-            return
+        requestGeneration += 1
+        let generation = requestGeneration
+        currentRequestTask?.cancel()
+        currentRequestTask = Task { [weak self] in
+            await self?.performLoadInitialData(generation: generation)
         }
+    }
 
-        switch selectedCategory {
-        case .products:
-            loadInitialProducts()
-        case .stores:
-            loadInitialStores()
-        case .both:
-            state = .idle
+    private func performLoadInitialData(generation: Int) async {
+        state = .loading
+
+        do {
+            switch selectedCategory {
+            case .products:
+                let result = try await withTimeout(seconds: onlineTimeoutSeconds) {
+                    try await self.fetchInitialProductsOnline()
+                }
+                guard generation == requestGeneration else { return }
+                products = result
+                state = products.isEmpty ? .empty : .idle
+                isShowingOfflineFallback = false
+
+            case .stores:
+                let (storesResult, storeProdsResult) = try await withTimeout(seconds: onlineTimeoutSeconds) {
+                    try await self.fetchInitialStoresOnline()
+                }
+                guard generation == requestGeneration else { return }
+                stores = storesResult
+                storeProducts = storeProdsResult
+                state = stores.isEmpty ? .empty : .idle
+                isShowingOfflineFallback = false
+
+            case .both:
+                guard generation == requestGeneration else { return }
+                state = .idle
+                isShowingOfflineFallback = false
+            }
+        } catch {
+            guard generation == requestGeneration else { return }
+            print("❌ loadInitialData online falló/timeout: \(error)")
+            fallbackAfterOnlineFailure(offline: { [weak self] in self?.loadInitialDataOffline() })
         }
     }
 
     // MARK: - Offline initial data
+
     private func loadInitialDataOffline() {
         guard let localRepo = localSearchRepository else {
             state = .idle
@@ -135,14 +176,28 @@ class SearchViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Online initial data
-    private func loadInitialProducts() {
-        productRepository.fetchProducts(first: 20) { [weak self] result in
-            Task { @MainActor in
-                guard let self = self else { return }
+    // MARK: - Fallback helper
+
+    /// Decide qué mostrar cuando el intento online falla o hace timeout:
+    /// si hay datos locales, cae a offline (con aviso); si no, error de sin conexión.
+    private func fallbackAfterOnlineFailure(offline: @escaping () -> Void) {
+        if OfflineSyncService.shared.hasLocalData {
+            isShowingOfflineFallback = true
+            offline()
+        } else {
+            isShowingOfflineFallback = false
+            state = .error("No hay conexión a internet. Descarga los datos primero para buscar sin conexión.")
+        }
+    }
+
+    // MARK: - Online fetch wrappers (no tocan estado del ViewModel; solo devuelven datos)
+
+    private func fetchInitialProductsOnline() async throws -> [Product] {
+        try await withCheckedThrowingContinuation { continuation in
+            productRepository.fetchProducts(first: 20) { result in
                 switch result {
                 case .success(let (productsGraphQL, _)):
-                    self.products = productsGraphQL.map { graphQL in
+                    let mapped = productsGraphQL.map { graphQL in
                         Product(
                             id: graphQL.id,
                             name: graphQL.name,
@@ -153,28 +208,30 @@ class SearchViewModel: ObservableObject {
                             imageUrl: graphQL.imageUrl
                         )
                     }
-                    self.state = self.products.isEmpty ? .empty : .idle
+                    continuation.resume(returning: mapped)
                 case .failure(let error):
-                    print("❌ Error loading initial products: \(error)")
-                    self.state = .error(error.localizedDescription)
+                    continuation.resume(throwing: error)
                 }
             }
         }
     }
 
-    private func loadInitialStores() {
-        storeRepository.fetchBranches(first: 20) { [weak self] result in
-            Task { @MainActor in
-                guard let self = self else { return }
+    private func fetchInitialStoresOnline() async throws -> ([StoreWithCoordinates], [String: [ProductGraphQL]]) {
+        try await withCheckedThrowingContinuation { continuation in
+            storeRepository.fetchBranches(first: 20) { [weak self] result in
+                guard let self = self else {
+                    continuation.resume(returning: ([], [:]))
+                    return
+                }
                 switch result {
                 case .success(let (branchesGraphQL, _)):
-                    self.stores = branchesGraphQL.map { branch in
+                    let mappedStores = branchesGraphQL.map { branch in
                         StoreWithCoordinates(
                             id: branch.id,
                             name: branch.name,
                             etaMinutes: self.calculateETA(deliveryRadius: branch.deliveryRadius),
-                            logoUrl: branch.preferredAvatarSmallUrl ?? self.defaultLogoUrl,
-                            bannerUrl: branch.preferredCoverFastUrl ?? self.defaultBannerUrl,
+                            logoUrl: branch.preferredAvatarSmallUrl ?? "",
+                            bannerUrl: branch.preferredCoverFastUrl ?? "",
                             address: branch.address,
                             rating: nil,
                             description: branch.description,
@@ -184,6 +241,7 @@ class SearchViewModel: ObservableObject {
                             )
                         )
                     }
+                    var storeProds: [String: [ProductGraphQL]] = [:]
                     for branch in branchesGraphQL {
                         let mappedProducts = branch.products.prefix(4).map { product in
                             ProductGraphQL(
@@ -201,12 +259,11 @@ class SearchViewModel: ObservableObject {
                                 categoryName: nil
                             )
                         }
-                        self.storeProducts[branch.id] = mappedProducts
+                        storeProds[branch.id] = mappedProducts
                     }
-                    self.state = self.stores.isEmpty ? .empty : .idle
+                    continuation.resume(returning: (mappedStores, storeProds))
                 case .failure(let error):
-                    print("❌ Error loading initial stores: \(error)")
-                    self.state = .error(error.localizedDescription)
+                    continuation.resume(throwing: error)
                 }
             }
         }
@@ -214,7 +271,7 @@ class SearchViewModel: ObservableObject {
 
     // MARK: - Live search (offline only, llamado en onChange del texto)
     func searchLive(query: String) {
-        guard isOfflineMode else { return }
+        guard isShowingOfflineFallback else { return }
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             clearSearch()
@@ -230,7 +287,7 @@ class SearchViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Search (online: solo al pulsar buscar; offline: también en tiempo real)
+    // MARK: - Search (siempre intenta por internet primero)
     func search(query: String) {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
@@ -238,12 +295,53 @@ class SearchViewModel: ObservableObject {
             return
         }
 
+        requestGeneration += 1
+        let generation = requestGeneration
+        currentRequestTask?.cancel()
+        currentRequestTask = Task { [weak self] in
+            await self?.performSearch(query: trimmed, generation: generation)
+        }
+    }
+
+    private func performSearch(query: String, generation: Int) async {
         state = .loading
 
-        if isOfflineMode {
-            searchOffline(query: trimmed)
-        } else {
-            searchOnline(query: trimmed)
+        do {
+            switch selectedCategory {
+            case .products:
+                let result = try await withTimeout(seconds: onlineTimeoutSeconds) {
+                    try await self.fetchSearchProductsOnline(query: query)
+                }
+                guard generation == requestGeneration else { return }
+                products = result
+                state = products.isEmpty ? .empty : .success
+                isShowingOfflineFallback = false
+
+            case .stores:
+                let (storesResult, storeProdsResult) = try await withTimeout(seconds: onlineTimeoutSeconds) {
+                    try await self.fetchSearchStoresOnline(query: query)
+                }
+                guard generation == requestGeneration else { return }
+                stores = storesResult
+                storeProducts = storeProdsResult
+                state = stores.isEmpty ? .empty : .success
+                isShowingOfflineFallback = false
+
+            case .both:
+                let (productsResult, storesResult, storeProdsResult) = try await withTimeout(seconds: onlineTimeoutSeconds) {
+                    try await self.fetchSearchBothOnline(query: query)
+                }
+                guard generation == requestGeneration else { return }
+                products = productsResult
+                stores = storesResult
+                storeProducts = storeProdsResult
+                state = (products.isEmpty && stores.isEmpty) ? .empty : .success
+                isShowingOfflineFallback = false
+            }
+        } catch {
+            guard generation == requestGeneration else { return }
+            print("❌ search online falló/timeout: \(error)")
+            fallbackAfterOnlineFailure(offline: { [weak self] in self?.searchOffline(query: query) })
         }
     }
 
@@ -275,61 +373,42 @@ class SearchViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Online Search
-    private func searchOnline(query: String) {
-        switch selectedCategory {
-        case .products:
-            searchProducts(query: query)
-        case .stores:
-            searchStores(query: query)
-        case .both:
-            searchBoth(query: query)
-        }
-    }
+    // MARK: - Online search wrappers (no tocan estado del ViewModel; solo devuelven datos)
 
-    private func searchBoth(query: String) {
-        searchRepository.searchBoth(query: query) { [weak self] result in
-            Task { @MainActor in
-                guard let self = self else { return }
-                switch result {
-                case .success(let (products, stores, branchProducts)):
-                    self.products = products
-                    self.stores = stores
-                    self.storeProducts = branchProducts
-                    self.state = (products.isEmpty && stores.isEmpty) ? .empty : .success
-                case .failure(let error):
-                    self.state = .error(error.localizedDescription)
-                }
-            }
-        }
-    }
-
-    private func searchProducts(query: String) {
-        searchRepository.searchProducts(query: query) { [weak self] result in
-            Task { @MainActor in
-                guard let self = self else { return }
+    private func fetchSearchProductsOnline(query: String) async throws -> [Product] {
+        try await withCheckedThrowingContinuation { continuation in
+            searchRepository.searchProducts(query: query) { result in
                 switch result {
                 case .success(let products):
-                    self.products = products
-                    self.state = products.isEmpty ? .empty : .success
+                    continuation.resume(returning: products)
                 case .failure(let error):
-                    self.state = .error(error.localizedDescription)
+                    continuation.resume(throwing: error)
                 }
             }
         }
     }
 
-    private func searchStores(query: String) {
-        searchRepository.searchBranches(query: query, first: 20) { [weak self] result in
-            Task { @MainActor in
-                guard let self = self else { return }
+    private func fetchSearchStoresOnline(query: String) async throws -> ([StoreWithCoordinates], [String: [ProductGraphQL]]) {
+        try await withCheckedThrowingContinuation { continuation in
+            searchRepository.searchBranches(query: query, first: 20) { result in
                 switch result {
                 case .success(let (storesData, products)):
-                    self.stores = storesData
-                    self.storeProducts = products
-                    self.state = self.stores.isEmpty ? .empty : .success
+                    continuation.resume(returning: (storesData, products))
                 case .failure(let error):
-                    self.state = .error(error.localizedDescription)
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    private func fetchSearchBothOnline(query: String) async throws -> ([Product], [StoreWithCoordinates], [String: [ProductGraphQL]]) {
+        try await withCheckedThrowingContinuation { continuation in
+            searchRepository.searchBoth(query: query) { result in
+                switch result {
+                case .success(let (products, stores, branchProducts)):
+                    continuation.resume(returning: (products, stores, branchProducts))
+                case .failure(let error):
+                    continuation.resume(throwing: error)
                 }
             }
         }
@@ -364,7 +443,8 @@ class SearchViewModel: ObservableObject {
     }
 
     // MARK: - Helpers
-    private func calculateETA(deliveryRadius: Double?) -> Int {
+    /// No toca estado del actor — puede llamarse desde closures de red que no corren en el main actor.
+    nonisolated private func calculateETA(deliveryRadius: Double?) -> Int {
         guard let radius = deliveryRadius else { return 20 }
         return Int(radius * 5 + 10)
     }

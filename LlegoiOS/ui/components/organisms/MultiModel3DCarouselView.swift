@@ -49,6 +49,7 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
         sceneView.addGestureRecognizer(panGesture)
 
         let coordinator = context.coordinator
+        coordinator.sceneView = sceneView
         coordinator.scene = scene
         coordinator.cameraNode = cameraNode
         coordinator.models = models
@@ -63,13 +64,10 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
         // Modelo visible: PRIORIDAD ALTA para que aparezca cuanto antes (caché = instantáneo).
         coordinator.loadAndAddModel(at: currentIndex, isVisible: true, qos: .userInitiated)
 
-        // Resto: un instante después y en baja prioridad, para no competir con el modelo visible.
-        let visibleIndex = currentIndex
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak coordinator] in
-            guard let coordinator else { return }
-            for index in models.indices where index != visibleIndex {
-                coordinator.loadAndAddModel(at: index, isVisible: false, qos: .utility)
-            }
+        // Resto: en paralelo desde ya (background/utility), para que estén listos
+        // antes de que el usuario toque las flechas y no se note lag al navegar.
+        for index in models.indices where index != currentIndex {
+            coordinator.loadAndAddModel(at: index, isVisible: false, qos: .utility)
         }
 
         return sceneView
@@ -138,6 +136,7 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
 
     @MainActor
     class Coordinator: NSObject {
+        weak var sceneView: SCNView?
         var cameraNode: SCNNode?
         var modelNodes: [Int: SCNNode] = [:]
         var currentIndex: Int = 0
@@ -170,6 +169,9 @@ struct MultiModel3DCarouselView: UIViewRepresentable {
                 guard let loaded = box.scene, let self else { return }
                 MultiModel3DCarouselView.sceneCache[key] = loaded
                 self.addNode(from: loaded, at: index, model: model, requestedVisible: isVisible)
+                // Compila shaders y sube texturas a la GPU (API async de SceneKit, gestiona
+                // su propio hilo interno) para que el primer frame visible no tenga hitch.
+                self.sceneView?.prepare([loaded], completionHandler: nil)
             }
         }
 

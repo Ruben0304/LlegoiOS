@@ -37,8 +37,10 @@ struct SearchView: View {
                             syncProgressBanner(phase: phase)
                         }
 
-                        // Botones de modo y sincronización
-                        inlineActionButtons
+                        // Aviso de fallback automático a búsqueda offline
+                        if viewModel.isShowingOfflineFallback {
+                            offlineFallbackBanner
+                        }
 
                         // Contenido según estado
                         switch viewModel.state {
@@ -65,24 +67,30 @@ struct SearchView: View {
                 }
                 .searchable(
                     text: $searchText,
-                    prompt: viewModel.isOfflineMode ? "Buscar sin internet..." : "Buscar productos o negocios..."
+                    prompt: viewModel.isShowingOfflineFallback ? "Buscar sin internet..." : "Buscar productos o negocios..."
                 )
             }
             .navigationTitle("Buscar")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
+                    downloadMenu
+                }
+                if #available(iOS 26.0, *) {
+                    ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
                     categoryMenu
                 }
             }
-            // Online: busca solo al presionar "Buscar"
+            // Siempre intenta por internet primero al presionar "Buscar"
             .onSubmit(of: .search) {
                 viewModel.search(query: searchText)
             }
             .onChange(of: searchText) { _, newValue in
                 if newValue.isEmpty {
                     viewModel.clearSearch()
-                } else if viewModel.isOfflineMode {
-                    // Offline: búsqueda en tiempo real con debounce
+                } else if viewModel.isShowingOfflineFallback {
+                    // Ya estamos sirviendo datos locales: búsqueda en tiempo real con debounce
                     viewModel.searchLive(query: newValue)
                 }
             }
@@ -150,151 +158,76 @@ struct SearchView: View {
         }
     }
 
-    // MARK: - Inline Search Controls
+    // MARK: - Download Menu (toolbar)
 
-    private var inlineActionButtons: some View {
-        VStack(spacing: 12) {
-            // Picker de modo de búsqueda
-            Picker("Modo de búsqueda", selection: Binding(
-                get: { viewModel.isOfflineMode },
-                set: { newValue in
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                        viewModel.setOfflineMode(newValue)
-                    }
-                }
-            )) {
-                Label("Con internet", systemImage: "wifi").tag(false)
-                Label("Sin internet", systemImage: "wifi.slash").tag(true)
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, 20)
-
-            // Panel de descarga — visible en modo sin internet y sin búsqueda activa
-            if viewModel.isOfflineMode && searchText.isEmpty {
-                offlineSyncPanel
-                    .transition(.move(edge: .top).combined(with: .opacity))
-            }
-        }
-        .padding(.top, 12)
-        .padding(.bottom, 8)
-        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: viewModel.isOfflineMode)
-    }
-
-    private var offlineSyncPanel: some View {
-        VStack(spacing: 1) {
-            syncRow(
-                icon: "arrow.down.circle",
-                title: "Datos y fotos",
-                subtitle: "Descarga todo para búsqueda completa sin conexión",
-                isLoading: {
-                    if case .syncing = syncService.syncStatus { return true }
-                    return false
-                }()
-            ) {
+    private var downloadMenu: some View {
+        Menu {
+            Button {
                 Task {
                     await syncService.syncDataOnly()
                     await syncService.syncImagesOnly(quality: .baja)
                     viewModel.configure(modelContext: modelContext)
                     viewModel.loadInitialData()
                 }
+            } label: {
+                Label("Datos y fotos", systemImage: "arrow.down.circle")
             }
-            .clipShape(
-                .rect(topLeadingRadius: 14, bottomLeadingRadius: 0,
-                      bottomTrailingRadius: 0, topTrailingRadius: 14)
-            )
 
-            Divider()
-                .padding(.leading, 52)
-                .background(.regularMaterial)
-
-            syncRow(
-                icon: "square.and.arrow.down",
-                title: "Solo datos",
-                subtitle: "Productos y negocios · sin imágenes",
-                isLoading: {
-                    if case .syncing(let p) = syncService.syncStatus, p != .images { return true }
-                    return false
-                }()
-            ) {
+            Button {
                 Task {
                     await syncService.syncDataOnly()
                     viewModel.configure(modelContext: modelContext)
                     viewModel.loadInitialData()
                 }
+            } label: {
+                Label("Solo datos", systemImage: "square.and.arrow.down")
             }
-            .clipShape(.rect(cornerRadius: 0))
 
-            Divider()
-                .padding(.leading, 52)
-                .background(.regularMaterial)
-
-            syncRow(
-                icon: "photo.stack",
-                title: "Solo fotos",
-                subtitle: "Actualiza las imágenes ya descargadas",
-                isLoading: {
-                    if case .syncing(.images) = syncService.syncStatus { return true }
-                    return false
-                }()
-            ) {
+            Button {
                 showSyncSheet = true
+            } label: {
+                Label("Solo fotos", systemImage: "photo.stack")
             }
-            .clipShape(
-                .rect(topLeadingRadius: 0, bottomLeadingRadius: 14,
-                      bottomTrailingRadius: 14, topTrailingRadius: 0)
-            )
+        } label: {
+            if case .syncing = syncService.syncStatus {
+                Label("Descargando...", systemImage: "arrow.down.circle")
+            } else {
+                Label("Descargar datos", systemImage: "arrow.down.circle")
+            }
         }
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(gradientManager.currentAccentColor.opacity(0.12), lineWidth: 1)
-        )
-        .padding(.horizontal, 20)
+        .labelStyle(.titleAndIcon)
         .disabled(syncService.syncStatus != .idle)
-        .opacity(syncService.syncStatus != .idle ? 0.6 : 1)
     }
 
-    private func syncRow(
-        icon: String,
-        title: String,
-        subtitle: String,
-        isLoading: Bool,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 14) {
-                ZStack {
-                    if isLoading {
-                        ProgressView()
-                            .tint(gradientManager.currentAccentColor)
-                            .scaleEffect(0.8)
-                    } else {
-                        Image(systemName: icon)
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(gradientManager.currentAccentColor)
-                    }
+    // MARK: - Offline Fallback Banner
+
+    private var offlineFallbackBanner: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "wifi.slash")
+                .font(.system(size: 12, weight: .semibold))
+            Text("Buscando sin internet")
+                .font(.system(size: 13, weight: .medium))
+            Spacer()
+            Button {
+                if searchText.isEmpty {
+                    viewModel.loadInitialData()
+                } else {
+                    viewModel.search(query: searchText)
                 }
-                .frame(width: 22)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(isLoading ? "Descargando..." : title)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.primary)
-                    Text(subtitle)
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.tertiary)
+            } label: {
+                Text("Probar con internet")
+                    .font(.system(size: 12, weight: .semibold))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(.white.opacity(0.25), in: Capsule())
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 11)
         }
-        .buttonStyle(.plain)
+        .foregroundColor(.white)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(gradientManager.currentAccentColor.opacity(0.88))
+        .transition(.move(edge: .top).combined(with: .opacity))
+        .animation(.easeInOut(duration: 0.3), value: viewModel.isShowingOfflineFallback)
     }
 
     // MARK: - Category Menu
@@ -416,7 +349,7 @@ struct SearchView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 40, weight: .ultraLight))
                 .foregroundColor(.secondary.opacity(0.4))
-            Text(viewModel.isOfflineMode ? "Escribe para buscar en datos locales" : "Busca productos y negocios a la vez")
+            Text(viewModel.isShowingOfflineFallback ? "Escribe para buscar en datos locales" : "Busca productos y negocios a la vez")
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.secondary)
         }
@@ -576,7 +509,7 @@ struct SearchView: View {
                 .font(.system(size: 18, weight: .medium))
                 .foregroundColor(.secondary)
 
-            Text(viewModel.isOfflineMode
+            Text(viewModel.isShowingOfflineFallback
                  ? "Intenta con otra búsqueda o descarga más datos"
                  : "Intenta con otra búsqueda")
                 .font(.system(size: 14))

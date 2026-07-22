@@ -43,6 +43,9 @@ struct HomeView: View {
     @State private var currentIndex: Int = 0
     @State private var scaleEffect: CGFloat = 1.0
     @State private var carouselModelLoaded = false   // false → muestra ProgressView nativo
+    // @State para que sobreviva a los re-renders del struct; se mantiene "prepared"
+    // entre taps y así el Taptic Engine no añade latencia al tocar las flechas.
+    @State private var arrowImpactGenerator = UIImpactFeedbackGenerator(style: .heavy)
 
     // Long press states
     @State private var isPressing: Bool = false
@@ -493,6 +496,7 @@ struct HomeView: View {
                 startEntranceAnimations()
                 startFloatingAnimations()
                 preparePressSound()
+                arrowImpactGenerator.prepare()
                 // Initialize branch type based on current category
                 branchTypeManager.setTypeFromCategoryIndex(currentIndex)
                 // Load cart subtotal for toolbar
@@ -584,9 +588,9 @@ struct HomeView: View {
 
     // MARK: - Navigation Functions
     private func previousModel() {
-        // Feedback háptico
-        let impact = UIImpactFeedbackGenerator(style: .heavy)
-        impact.impactOccurred()
+        // Feedback háptico (generador ya "prepared" desde onAppear → sin latencia)
+        arrowImpactGenerator.impactOccurred()
+        arrowImpactGenerator.prepare()
 
         animateModelTransition(direction: .left) {
             // Loop circular: si está en el primero, va al último
@@ -601,9 +605,9 @@ struct HomeView: View {
     }
 
     private func nextModel() {
-        // Feedback háptico
-        let impact = UIImpactFeedbackGenerator(style: .heavy)
-        impact.impactOccurred()
+        // Feedback háptico (generador ya "prepared" desde onAppear → sin latencia)
+        arrowImpactGenerator.impactOccurred()
+        arrowImpactGenerator.prepare()
 
         animateModelTransition(direction: .right) {
             // Loop circular: si está en el último, va al primero

@@ -78,10 +78,11 @@ struct OnboardingScene3DView: UIViewRepresentable {
 
         sceneView.scene = scene
 
-        // Restaurante síncrono (héroe), resto en background sin bloquear la UI.
-        coord.loadModel(slot: carouselSlots[0], into: carousel)
+        // Todos en background (sin bloquear el hilo principal). El héroe con prioridad
+        // alta para que esté listo primero; el resto en prioridad utility.
+        coord.loadModelAsync(slot: carouselSlots[0], into: carousel, qos: .userInitiated)
         for slot in carouselSlots.dropFirst() {
-            coord.loadModelAsync(slot: slot, into: carousel)
+            coord.loadModelAsync(slot: slot, into: carousel, qos: .utility)
         }
         return sceneView
     }
@@ -164,18 +165,7 @@ struct OnboardingScene3DView: UIViewRepresentable {
 
         // MARK: Loading
 
-        fileprivate func loadModel(slot: CarouselSlot, into carousel: SCNNode) {
-            let key = slot.name
-            if let cached = MultiModel3DCarouselView.sceneCache[key] {
-                addNode(from: cached, slot: slot, into: carousel); return
-            }
-            guard let url = Bundle.main.url(forResource: key, withExtension: "usdz"),
-                  let loaded = try? SCNScene(url: url, options: nil) else { return }
-            MultiModel3DCarouselView.sceneCache[key] = loaded
-            addNode(from: loaded, slot: slot, into: carousel)
-        }
-
-        fileprivate func loadModelAsync(slot: CarouselSlot, into carousel: SCNNode) {
+        fileprivate func loadModelAsync(slot: CarouselSlot, into carousel: SCNNode, qos: DispatchQoS.QoSClass = .utility) {
             let key = slot.name
             if let cached = MultiModel3DCarouselView.sceneCache[key] {
                 addNode(from: cached, slot: slot, into: carousel); return
@@ -183,13 +173,16 @@ struct OnboardingScene3DView: UIViewRepresentable {
             guard let url = Bundle.main.url(forResource: key, withExtension: "usdz") else { return }
             Task { [weak self] in
                 let box = await withCheckedContinuation { (c: CheckedContinuation<SceneBox, Never>) in
-                    DispatchQueue.global(qos: .utility).async {
+                    DispatchQueue.global(qos: qos).async {
                         c.resume(returning: SceneBox(scene: try? SCNScene(url: url, options: nil)))
                     }
                 }
                 guard let loaded = box.scene, let self else { return }
                 MultiModel3DCarouselView.sceneCache[key] = loaded
                 self.addNode(from: loaded, slot: slot, into: carousel)
+                // Compila shaders y sube texturas a la GPU (API async de SceneKit, gestiona
+                // su propio hilo interno) para que el primer frame visible no tenga hitch.
+                self.sceneView?.prepare([loaded], completionHandler: nil)
             }
         }
 
