@@ -1944,6 +1944,16 @@ type PaymentAttemptType {
   """Current status"""
   status: PaymentAttemptStatusEnum!
 
+  """
+  Referencia opaca del proveedor (payment intent id, transaction uuid, wallet address, etc.)
+  """
+  providerReference: String
+
+  """
+  Payload específico del proveedor necesario para completar el pago en el cliente
+  """
+  providerPayload: JSON
+
   """Stripe Payment Intent ID"""
   stripePaymentIntentId: String
 

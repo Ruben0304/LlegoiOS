@@ -12,6 +12,8 @@ query GetPaymentAttempt($id: String!, $jwt: String!) {
     totalAmount
     currency
     status
+    providerReference
+    providerPayload
     stripePaymentIntentId
     stripeClientSecret
     sendsSmsNotification

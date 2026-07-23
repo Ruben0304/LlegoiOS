@@ -25,6 +25,8 @@ mutation InitiatePayment(
       totalAmount
       currency
       status
+      providerReference
+      providerPayload
       stripePaymentIntentId
       stripeClientSecret
       sendsSmsNotification

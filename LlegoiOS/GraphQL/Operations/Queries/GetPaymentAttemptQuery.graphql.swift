@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetPaymentAttempt"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetPaymentAttempt($id: String!, $jwt: String!) { paymentAttempt(id: $id, jwt: $jwt) { __typename id orderId paymentMethodId subtotal deliveryFee includesDeliveryFee taxAmount discountAmount commissionAmount totalAmount currency status stripePaymentIntentId stripeClientSecret sendsSmsNotification proofUrl customerConfirmedAt businessConfirmedAt disputeReason deliveryPersonConfirmedAt deliveryPersonId walletTransactionId businessWalletTransactionId commissionTransactionId } }"#
+        #"query GetPaymentAttempt($id: String!, $jwt: String!) { paymentAttempt(id: $id, jwt: $jwt) { __typename id orderId paymentMethodId subtotal deliveryFee includesDeliveryFee taxAmount discountAmount commissionAmount totalAmount currency status providerReference providerPayload stripePaymentIntentId stripeClientSecret sendsSmsNotification proofUrl customerConfirmedAt businessConfirmedAt disputeReason deliveryPersonConfirmedAt deliveryPersonId walletTransactionId businessWalletTransactionId commissionTransactionId } }"#
       ))
 
     public var id: String
@@ -68,6 +68,8 @@ public extension LlegoAPI {
           .field("totalAmount", Double.self),
           .field("currency", String.self),
           .field("status", GraphQLEnum<LlegoAPI.PaymentAttemptStatusEnum>.self),
+          .field("providerReference", String?.self),
+          .field("providerPayload", LlegoAPI.JSON?.self),
           .field("stripePaymentIntentId", String?.self),
           .field("stripeClientSecret", String?.self),
           .field("sendsSmsNotification", Bool.self),
@@ -109,6 +111,10 @@ public extension LlegoAPI {
         public var currency: String { __data["currency"] }
         /// Current status
         public var status: GraphQLEnum<LlegoAPI.PaymentAttemptStatusEnum> { __data["status"] }
+        /// Referencia opaca del proveedor (payment intent id, transaction uuid, wallet address, etc.)
+        public var providerReference: String? { __data["providerReference"] }
+        /// Payload específico del proveedor necesario para completar el pago en el cliente
+        public var providerPayload: LlegoAPI.JSON? { __data["providerPayload"] }
         /// Stripe Payment Intent ID
         public var stripePaymentIntentId: String? { __data["stripePaymentIntentId"] }
         /// Stripe client secret for UI

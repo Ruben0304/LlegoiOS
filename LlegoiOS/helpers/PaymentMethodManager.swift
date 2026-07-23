@@ -35,6 +35,8 @@ struct PaymentAttemptModel: Identifiable, Sendable {
     let totalAmount: Double
     let currency: String
     let status: String
+    let providerReference: String?
+    let providerPayloadJSON: String?
     let stripePaymentIntentId: String?
     let stripeClientSecret: String?
     let sendsSmsNotification: Bool

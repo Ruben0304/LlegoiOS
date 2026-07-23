@@ -40,13 +40,10 @@ final class OrderDetailViewModel: ObservableObject {
 
     private let repository = OrderDetailRepository()
     private let paymentRepository = PaymentRepository()
-    private let qvaPayRepository = QvaPayRepository()
-    private let tronDealerRepository = TronDealerRepository()
     private let paymentMethodManager = PaymentMethodManager.shared
     private let authManager = AuthManager.shared
     private let orderId: String
-    private var qvaPayPollingTask: Task<Void, Never>?
-    private var tronDealerPollingTask: Task<Void, Never>?
+    private let paymentPoller = PaymentAttemptPoller()
 
     init(orderId: String) {
         self.orderId = orderId
@@ -263,25 +260,17 @@ final class OrderDetailViewModel: ObservableObject {
     private func initiatePaymentWithMethod(_ method: PaymentMethodModel, order: OrderDetail) {
         let methodType = method.method.lowercased()
 
-        // QvaPay → abrir URL de pago
-        if methodType == "qvapay" || method.code.lowercased().contains("qvapay") {
-            initiateQvaPayPayment(order: order)
-            return
-        }
-
-        // TronDealer → mostrar dirección y QR
-        if methodType == "usdt" || method.code.lowercased().contains("trondealer") || method.code.lowercased().contains("usdt") {
-            initiateTronDealerPayment(order: order)
-            return
-        }
-
-        // Transferencia CUP → mostrar datos bancarios del negocio
+        // Grupo B: transferencia manual — flujo propio, sin cambios.
         if methodType == "transfer" || methodType == "transfermovil" {
             initiateTransferPayment(order: order, method: method)
             return
         }
 
-        guard ["wallet", "stripe"].contains(methodType) else {
+        // Grupo B: wallet (saldo interno) + Grupo A: proveedores de pago
+        // digital (stripe, qvapay, usdt, futuro tropipay) comparten el mismo
+        // initiate genérico; el registry decide después qué presentar.
+        let digitalProvider = DigitalPaymentProviderRegistry.providers[methodType]
+        guard methodType == "wallet" || digitalProvider != nil else {
             showPaymentAlertMessage("Este método de pago aún no está disponible.")
             return
         }
@@ -308,8 +297,8 @@ final class OrderDetailViewModel: ObservableObject {
 
                 if methodType == "wallet" {
                     handleWalletPaymentResult(result.paymentAttempt)
-                } else {
-                    try await presentStripePaymentSheet(using: result.paymentAttempt)
+                } else if let provider = digitalProvider {
+                    try await presentDigitalPayment(provider: provider, attempt: result.paymentAttempt, order: order)
                 }
             } catch {
                 await MainActor.run {
@@ -325,29 +314,55 @@ final class OrderDetailViewModel: ObservableObject {
             }
         }
     }
-    
+
     private func initiatePaymentWithOrderMethod(_ order: OrderDetail) {
         let methodType = order.paymentMethod.lowercased()
 
-        // QvaPay
-        if methodType.contains("qvapay") {
-            initiateQvaPayPayment(order: order)
-            return
-        }
-
-        // TronDealer / USDT
-        if methodType.contains("usdt") || methodType.contains("trondealer") {
-            initiateTronDealerPayment(order: order)
-            return
-        }
-
-        // Transferencia CUP
+        // Transferencia CUP — es el único método del fallback que no
+        // necesita un PaymentMethodModel resuelto (paymentMethodId) para
+        // arrancar.
         if methodType.contains("transfer") || methodType.contains("transfermovil") {
             initiateTransferPayment(order: order, method: nil)
             return
         }
 
-        showPaymentAlertMessage("Método de pago no disponible.")
+        // Wallet y los proveedores digitales (stripe/qvapay/usdt/futuro
+        // tropipay) necesitan el paymentMethodId del PaymentMethodModel
+        // resuelto — no hay forma segura de iniciarlos solo con el string
+        // de order.paymentMethod. Reintentar cargándolo es más seguro que
+        // adivinar.
+        showPaymentAlertMessage("No pudimos cargar el método de pago. Intenta de nuevo.")
+    }
+
+    /// Presenta el resultado de `provider.start(...)` y arranca el polling
+    /// compartido si el proveedor lo necesita (ver PaymentPollingConfig).
+    private func presentDigitalPayment(
+        provider: DigitalPaymentProvider,
+        attempt: PaymentAttemptModel,
+        order: OrderDetail
+    ) async throws {
+        let presentation = try await provider.start(attempt: attempt, order: order)
+
+        switch presentation {
+        case .stripeSheet(let sheet):
+            self.paymentSheet = sheet
+            self.showStripePaymentSheet = true
+
+        case .alreadyCompleted:
+            self.showPaymentAlertMessage("✅ Pago procesado exitosamente.")
+            refreshAfterPayment()
+
+        case .externalRedirect(let url):
+            await UIApplication.shared.open(url)
+
+        case .addressDisplay(let info):
+            self.tronDealerPaymentInfo = info
+            self.showTronDealerSheet = true
+        }
+
+        if let pollingConfig = provider.pollingConfig {
+            startDigitalPaymentPolling(config: pollingConfig, methodCode: provider.methodCode)
+        }
     }
 
     func handleStripePaymentResult(_ result: PaymentSheetResult) {
@@ -389,37 +404,6 @@ final class OrderDetailViewModel: ObservableObject {
             showPaymentAlertMessage("Pago en proceso. Te avisaremos cuando se confirme.")
             refreshAfterPayment()
         }
-    }
-
-    private func presentStripePaymentSheet(using attempt: PaymentAttemptModel) async throws {
-        // Demo mode: backend auto-completed the payment — no Stripe sheet needed.
-        // This also handles any case where the payment was already completed server-side.
-        if attempt.status.lowercased() == "completed" && attempt.stripeClientSecret == nil {
-            await MainActor.run {
-                self.showPaymentAlertMessage("✅ Pago procesado exitosamente.")
-            }
-            refreshAfterPayment()
-            return
-        }
-
-        guard let clientSecret = attempt.stripeClientSecret else {
-            throw NSError(
-                domain: "OrderDetailViewModel",
-                code: -6,
-                userInfo: [NSLocalizedDescriptionKey: "No se recibió el client secret de Stripe."]
-            )
-        }
-
-        var configuration = PaymentSheet.Configuration()
-        configuration.merchantDisplayName = "Llego"
-        configuration.allowsDelayedPaymentMethods = true
-        configuration.returnURL = StripeConfig.returnURL
-
-        self.paymentSheet = PaymentSheet(
-            paymentIntentClientSecret: clientSecret,
-            configuration: configuration
-        )
-        self.showStripePaymentSheet = true
     }
 
     private func refreshAfterPayment() {
@@ -531,200 +515,71 @@ final class OrderDetailViewModel: ObservableObject {
         !(order?.timeline.isEmpty ?? true)
     }
     
-    // MARK: - QvaPay Payment
-    
-    private func initiateQvaPayPayment(order: OrderDetail) {
-        isInitiatingPayment = true
-        
-        Task {
-            do {
-                let result = try await qvaPayRepository.initiateQvapayPayment(orderId: order.id)
-                
-                await MainActor.run {
-                    self.isInitiatingPayment = false
-                }
-                
-                // Abrir URL en Safari
-                if let url = URL(string: result.paymentUrl) {
-                    await UIApplication.shared.open(url)
-                }
-                
-                // Iniciar polling
-                startQvaPayPolling()
-                
-            } catch {
-                await MainActor.run {
-                    self.isInitiatingPayment = false
-                    let normalizedError = error.localizedDescription.lowercased()
-                    if normalizedError.contains("no permite pago") || normalizedError.contains("estado no permite") || normalizedError.contains("estado del pedido") || normalizedError.contains("invalid order status") || (normalizedError.contains("order status") && normalizedError.contains("payment")) {
-                        self.refresh()
-                        self.showPaymentAlertMessage("El estado del pedido cambió y ya no permite pagar ahora. Actualizamos la información.")
-                    } else {
-                        self.showPaymentAlertMessage("No se pudo generar el enlace de pago: \(error.localizedDescription)")
-                    }
-                }
-            }
+    // MARK: - Polling de proveedores digitales (Grupo A)
+    //
+    // Reemplaza los dos bucles que antes vivían acá (QvaPay/TronDealer) —
+    // misma mecánica, ahora en PaymentAttemptPoller, reutilizable por
+    // cualquier proveedor futuro (p. ej. Tropipay) que también se confirme
+    // por polling en vez de un callback de SDK.
+
+    private func startDigitalPaymentPolling(config: PaymentPollingConfig, methodCode: String) {
+        if methodCode == "qvapay" {
+            isPollingQvaPay = true
+        } else if methodCode == "usdt" {
+            isPollingTronDealer = true
         }
-    }
-    
-    private func startQvaPayPolling() {
-        isPollingQvaPay = true
-        
-        qvaPayPollingTask = Task {
-            let maxAttempts = 40 // 2 minutos (40 * 3s)
-            let pollingInterval: TimeInterval = 3.0
-            
-            for attempt in 1...maxAttempts {
-                if Task.isCancelled {
-                    return
+
+        paymentPoller.start(
+            config: config,
+            fetchOrder: { [weak self] in
+                guard let self else { throw CancellationError() }
+                return try await self.repository.fetchOrderAsync(id: self.orderId)
+            },
+            onUpdate: { [weak self] updatedOrder in
+                self?.order = updatedOrder
+            },
+            onCompleted: { [weak self] in
+                guard let self else { return }
+                if methodCode == "qvapay" {
+                    self.isPollingQvaPay = false
+                    self.showPaymentAlertMessage("¡Pago completado exitosamente!")
+                } else if methodCode == "usdt" {
+                    self.isPollingTronDealer = false
+                    self.showTronDealerSheet = false
+                    self.showPaymentAlertMessage("¡Pago USDT confirmado en la blockchain!")
                 }
-                
-                do {
-                    let updatedOrder = try await repository.fetchOrderAsync(id: orderId)
-                    
-                    await MainActor.run {
-                        self.order = updatedOrder
-                    }
-                    
-                    // Verificar si el pago se completó
-                    if updatedOrder.paymentStatus == .completed {
-                        await MainActor.run {
-                            self.isPollingQvaPay = false
-                            self.showPaymentAlertMessage("¡Pago completado exitosamente!")
-                        }
-                        return
-                    }
-                    
-                    // Verificar si el pago falló
-                    if updatedOrder.paymentStatus == .failed {
-                        await MainActor.run {
-                            self.isPollingQvaPay = false
-                            self.showPaymentAlertMessage("El pago fue rechazado o cancelado")
-                        }
-                        return
-                    }
-                    
-                } catch {
-                    print("⚠️ Error en polling QvaPay attempt \(attempt): \(error)")
+            },
+            onFailed: { [weak self] in
+                guard let self else { return }
+                if methodCode == "qvapay" {
+                    self.isPollingQvaPay = false
+                } else if methodCode == "usdt" {
+                    self.isPollingTronDealer = false
+                    self.showTronDealerSheet = false
                 }
-                
-                // Esperar antes del siguiente intento
-                if attempt < maxAttempts {
-                    try? await Task.sleep(nanoseconds: UInt64(pollingInterval * 1_000_000_000))
+                self.showPaymentAlertMessage("El pago fue rechazado o cancelado")
+            },
+            onTimeout: { [weak self] in
+                guard let self else { return }
+                if methodCode == "qvapay" {
+                    self.isPollingQvaPay = false
+                    self.showPaymentAlertMessage("No pudimos verificar tu pago automáticamente. Revisa el estado de tu orden.")
+                } else if methodCode == "usdt" {
+                    self.isPollingTronDealer = false
+                    self.showTronDealerSheet = false
+                    self.showPaymentAlertMessage("No se detectó el pago. Si ya enviaste USDT, contacta con soporte.")
                 }
             }
-            
-            // Timeout
-            await MainActor.run {
-                self.isPollingQvaPay = false
-                self.showPaymentAlertMessage("No pudimos verificar tu pago automáticamente. Revisa el estado de tu orden.")
-            }
-        }
+        )
     }
-    
+
     func stopQvaPayPolling() {
-        qvaPayPollingTask?.cancel()
-        qvaPayPollingTask = nil
+        paymentPoller.stop()
         isPollingQvaPay = false
     }
-    
-    // MARK: - TronDealer Payment
-    
-    private func initiateTronDealerPayment(order: OrderDetail) {
-        isInitiatingPayment = true
-        
-        Task {
-            do {
-                let result = try await tronDealerRepository.initiateTrondealerPayment(orderId: order.id)
-                
-                await MainActor.run {
-                    self.isInitiatingPayment = false
-                    self.tronDealerPaymentInfo = result
-                    self.showTronDealerSheet = true
-                }
-                
-                // Iniciar polling
-                startTronDealerPolling()
-                
-            } catch {
-                await MainActor.run {
-                    self.isInitiatingPayment = false
-                    let normalizedError = error.localizedDescription.lowercased()
-                    if normalizedError.contains("no permite pago") || normalizedError.contains("estado no permite") || normalizedError.contains("estado del pedido") || normalizedError.contains("invalid order status") || (normalizedError.contains("order status") && normalizedError.contains("payment")) {
-                        self.refresh()
-                        self.showPaymentAlertMessage("El estado del pedido cambió y ya no permite pagar ahora. Actualizamos la información.")
-                    } else {
-                        self.showPaymentAlertMessage("No se pudo generar la dirección de pago: \(error.localizedDescription)")
-                    }
-                }
-            }
-        }
-    }
-    
-    private func startTronDealerPolling() {
-        isPollingTronDealer = true
-        
-        tronDealerPollingTask = Task {
-            let maxAttempts = 360 // 30 minutos (360 * 5s)
-            let pollingInterval: TimeInterval = 5.0
-            
-            for attempt in 1...maxAttempts {
-                if Task.isCancelled {
-                    await MainActor.run {
-                        self.isPollingTronDealer = false
-                    }
-                    return
-                }
-                
-                do {
-                    let updatedOrder = try await repository.fetchOrderAsync(id: orderId)
-                    
-                    await MainActor.run {
-                        self.order = updatedOrder
-                    }
-                    
-                    // Verificar si el pago se completó
-                    if updatedOrder.paymentStatus == .completed {
-                        await MainActor.run {
-                            self.isPollingTronDealer = false
-                            self.showTronDealerSheet = false
-                            self.showPaymentAlertMessage("¡Pago USDT confirmado en la blockchain!")
-                        }
-                        return
-                    }
-                    
-                    // Verificar si el pago falló
-                    if updatedOrder.paymentStatus == .failed {
-                        await MainActor.run {
-                            self.isPollingTronDealer = false
-                            self.showTronDealerSheet = false
-                            self.showPaymentAlertMessage("El pago fue rechazado o cancelado")
-                        }
-                        return
-                    }
-                    
-                } catch {
-                    print("⚠️ Error en polling TronDealer attempt \(attempt): \(error)")
-                }
-                
-                // Esperar antes del siguiente intento
-                if attempt < maxAttempts {
-                    try? await Task.sleep(nanoseconds: UInt64(pollingInterval * 1_000_000_000))
-                }
-            }
-            
-            // Timeout
-            await MainActor.run {
-                self.isPollingTronDealer = false
-                self.showTronDealerSheet = false
-                self.showPaymentAlertMessage("No se detectó el pago. Si ya enviaste USDT, contacta con soporte.")
-            }
-        }
-    }
-    
+
     func stopTronDealerPolling() {
-        tronDealerPollingTask?.cancel()
-        tronDealerPollingTask = nil
+        paymentPoller.stop()
         isPollingTronDealer = false
     }
 
@@ -831,8 +686,4 @@ final class OrderDetailViewModel: ObservableObject {
         }
     }
 
-    deinit {
-        qvaPayPollingTask?.cancel()
-        tronDealerPollingTask?.cancel()
-    }
 }
