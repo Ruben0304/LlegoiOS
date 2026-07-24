@@ -21,6 +21,9 @@ class ProfileViewModel: ObservableObject {
     @Published var isUpdatingUsername: Bool = false
     @Published var showEditUsernameSheet: Bool = false
     @Published var editingUsername: String = ""
+    @Published var isUpdatingPhone: Bool = false
+    @Published var showEditPhoneSheet: Bool = false
+    @Published var editingPhone: String = ""
 
     // Account deletion
     @Published var showDeleteAccountConfirmation: Bool = false
@@ -528,5 +531,66 @@ class ProfileViewModel: ObservableObject {
         }
 
         isUpdatingUsername = false
+    }
+
+    // MARK: - Update Phone
+
+    /// Actualiza el teléfono del usuario. Cadena vacía se envía como nil para borrarlo.
+    /// Necesario para que la app de negocios pueda contactar al cliente por llamada/WhatsApp
+    /// desde el detalle del pedido.
+    func updatePhone(newPhone: String) async {
+        guard !isUpdatingPhone else { return }
+
+        isUpdatingPhone = true
+        errorMessage = nil
+
+        let trimmed = newPhone.trimmingCharacters(in: .whitespacesAndNewlines)
+        let phoneToSend: String? = trimmed.isEmpty ? nil : trimmed
+
+        do {
+            guard let jwt = authManager.getAccessToken() else {
+                errorMessage = "No hay sesión activa"
+                isUpdatingPhone = false
+                return
+            }
+
+            let updatedUser = try await repository.updateUser(
+                jwt: jwt,
+                name: nil,
+                username: nil,
+                phone: phoneToSend
+            )
+
+            if let user = currentUser {
+                let newUser = User(
+                    id: user.id,
+                    email: user.email,
+                    fullName: user.fullName,
+                    username: user.username,
+                    phone: updatedUser.phone,
+                    role: user.role,
+                    appleUserId: user.appleUserId,
+                    avatar: user.avatar,
+                    avatarUrl: user.avatarUrl,
+                    savedAddresses: user.savedAddresses,
+                    defaultAddressId: user.defaultAddressId
+                )
+
+                currentUser = newUser
+                authManager.applyCurrentUser(newUser)
+                updateCachedUserInfo(newUser)
+
+                print("✅ Teléfono actualizado a: \(updatedUser.phone ?? "(vacío)")")
+            }
+
+            showEditPhoneSheet = false
+            editingPhone = ""
+
+        } catch {
+            errorMessage = "Error al actualizar teléfono: \(error.localizedDescription)"
+            print("❌ Error updating phone: \(error)")
+        }
+
+        isUpdatingPhone = false
     }
 }

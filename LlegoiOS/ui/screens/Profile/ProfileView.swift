@@ -192,6 +192,8 @@ struct ProfileView: View {
 
                             savedAddressesSection
 
+                            contactPhoneSection
+
                             cashKycSection
 
                             // TODO: Reactivar en post-MVP (Cliente Oro / niveles)
@@ -266,6 +268,9 @@ struct ProfileView: View {
         }
         .sheet(isPresented: $viewModel.showEditUsernameSheet) {
             EditUsernameSheet(viewModel: viewModel)
+        }
+        .sheet(isPresented: $viewModel.showEditPhoneSheet) {
+            EditPhoneSheet(viewModel: viewModel)
         }
         .sheet(isPresented: $showAccountCashKycSheet) {
             AccountCashKycSheet { completionMessage in
@@ -652,6 +657,47 @@ struct ProfileView: View {
             }
             .offset(y: 12)
         }
+    }
+
+    // MARK: - Contact Phone Section
+    private var contactPhoneSection: some View {
+        Button(action: {
+            viewModel.editingPhone = viewModel.currentUser?.phone ?? ""
+            viewModel.showEditPhoneSheet = true
+        }) {
+            HStack(spacing: 12) {
+                Image(systemName: "phone.circle")
+                    .font(.system(size: 22, weight: .regular))
+                    .foregroundColor(.gray)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Teléfono de contacto")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+
+                    Text(
+                        (viewModel.currentUser?.phone?.isEmpty == false)
+                            ? (viewModel.currentUser?.phone ?? "")
+                            : "Añade un teléfono para que puedan llamarte"
+                    )
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.gray)
+                    .lineLimit(1)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.gray.opacity(0.6))
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.white)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 
     // MARK: - Compact Location Section
@@ -2110,6 +2156,130 @@ struct EditUsernameSheet: View {
             }
             .onAppear {
                 isUsernameFocused = true
+            }
+        }
+    }
+}
+
+// MARK: - Edit Phone Sheet
+struct EditPhoneSheet: View {
+    @ObservedObject var viewModel: ProfileViewModel
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var gradientManager = GradientStateManager.shared
+    @FocusState private var isPhoneFocused: Bool
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                VStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(gradientManager.currentAccentColor.opacity(0.15))
+                            .frame(width: 80, height: 80)
+
+                        Image(systemName: "phone.circle.fill")
+                            .font(.system(size: 40))
+                            .foregroundColor(gradientManager.currentAccentColor)
+                    }
+
+                    Text("Editar teléfono")
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.primary)
+
+                    Text(
+                        "Los negocios podrán contactarte por teléfono o WhatsApp cuando hagas un pedido. Puedes dejarlo vacío para eliminarlo."
+                    )
+                    .font(.system(size: 15))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+                }
+                .padding(.top, 20)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Teléfono")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(.secondary)
+
+                    HStack(spacing: 8) {
+                        Image(systemName: "phone.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.gray)
+
+                        TextField("+53...", text: $viewModel.editingPhone)
+                            .keyboardType(.phonePad)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled(true)
+                            .font(.system(size: 18, weight: .medium))
+                            .focused($isPhoneFocused)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(.systemGray6))
+                    )
+                }
+                .padding(.horizontal)
+
+                if let errorMessage = viewModel.errorMessage {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(.red)
+
+                        Text(errorMessage)
+                            .font(.system(size: 13))
+                            .foregroundColor(.red)
+                    }
+                    .padding(.horizontal)
+                }
+
+                Button(action: {
+                    Task {
+                        await viewModel.updatePhone(newPhone: viewModel.editingPhone)
+                    }
+                }) {
+                    ZStack {
+                        if viewModel.isUpdatingPhone {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        } else {
+                            HStack(spacing: 10) {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 16, weight: .semibold))
+                                Text("Guardar cambios")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .foregroundColor(.white)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(gradientManager.currentAccentColor)
+                    )
+                }
+                .padding(.horizontal)
+                .padding(.top, 8)
+                .disabled(viewModel.isUpdatingPhone)
+
+                Spacer()
+            }
+            .padding(.vertical)
+            .navigationTitle("Editar teléfono")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Cerrar") {
+                        dismiss()
+                    }
+                }
+            }
+            .onAppear {
+                isPhoneFocused = true
+                viewModel.editingPhone = viewModel.currentUser?.phone ?? ""
             }
         }
     }
