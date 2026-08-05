@@ -1180,6 +1180,8 @@ struct OrderDetailView: View {
             return "Pagado"
         case .failed:
             return "Pago fallido"
+        case .cancelled:
+            return "Pago cancelado"
         }
     }
 
@@ -1194,6 +1196,8 @@ struct OrderDetailView: View {
                 return ("Pagado", .green)
             case .failed:
                 return ("Fallido", .red)
+            case .cancelled:
+                return ("Cancelado", .gray)
             }
         }()
 

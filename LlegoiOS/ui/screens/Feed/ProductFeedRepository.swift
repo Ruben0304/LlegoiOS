@@ -138,6 +138,15 @@ struct FeedProduct: Identifiable, Hashable, Sendable {
 // MARK: - Feed Section Model
 
 /// Represents a section in the feed with its products
+/// Tappable banner carried by the `promo` section. When present, the section
+/// has no products — the client renders the banner instead.
+struct FeedPromoBanner: Hashable, Sendable {
+    let imageUrl: String
+    let title: String?
+    let subtitle: String?
+    let action: String
+}
+
 struct FeedSection: Identifiable, Hashable, Sendable {
     let id: String  // sectionId
     let sectionId: String
@@ -145,10 +154,16 @@ struct FeedSection: Identifiable, Hashable, Sendable {
     let description: String?
     let products: [FeedProduct]
     let totalCount: Int
+    /// Non-nil only for banner sections (`promo`), which carry no products.
+    let banner: FeedPromoBanner?
+    /// Position pinned from the admin panel, or nil when the feed algorithm
+    /// places this section. Pinned sections render above the whole feed —
+    /// ahead of the "Para Ti" carousel, stores, combos and "Pide de nuevo".
+    let orden: Int?
 
     init(
         sectionId: String, title: String, description: String?, products: [FeedProduct],
-        totalCount: Int
+        totalCount: Int, banner: FeedPromoBanner? = nil, orden: Int? = nil
     ) {
         self.id = sectionId
         self.sectionId = sectionId
@@ -156,6 +171,8 @@ struct FeedSection: Identifiable, Hashable, Sendable {
         self.description = description
         self.products = products
         self.totalCount = totalCount
+        self.banner = banner
+        self.orden = orden
     }
 }
 
@@ -377,12 +394,23 @@ class ProductFeedRepository {
                                 )
                             }
 
+                            let banner = section.banner.map { banner in
+                                FeedPromoBanner(
+                                    imageUrl: banner.imageUrl,
+                                    title: banner.title,
+                                    subtitle: banner.subtitle,
+                                    action: banner.action
+                                )
+                            }
+
                             return FeedSection(
                                 sectionId: section.sectionId,
                                 title: section.title,
                                 description: section.description,
                                 products: products,
-                                totalCount: section.totalCount
+                                totalCount: section.totalCount,
+                                banner: banner,
+                                orden: section.orden
                             )
                         }
 

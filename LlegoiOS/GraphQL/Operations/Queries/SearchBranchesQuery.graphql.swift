@@ -162,17 +162,17 @@ public extension LlegoAPI {
             public var coordinates: Coordinates { __data["coordinates"] }
             public var phone: String { __data["phone"] }
             public var status: String? { __data["status"] }
-            /// Presigned URL for the branch avatar (inherits from business if not set)
+            /// Public URL for the branch avatar
             public var avatarUrl: String? { __data["avatarUrl"] }
-            /// Presigned URL for low quality branch avatar (inherits business avatar and falls back to original)
+            /// Public URL for low quality branch avatar
             public var avatarUrlBaja: String? { __data["avatarUrlBaja"] }
-            /// Presigned URL for high quality branch avatar (inherits business avatar and falls back to original)
+            /// Public URL for high quality branch avatar
             public var avatarUrlAlta: String? { __data["avatarUrlAlta"] }
-            /// Presigned URL for the branch cover image
+            /// Public URL for the branch cover image
             public var coverUrl: String? { __data["coverUrl"] }
-            /// Presigned URL for low quality branch cover (with fallback to original)
+            /// Public URL for low quality branch cover
             public var coverUrlBaja: String? { __data["coverUrlBaja"] }
-            /// Presigned URL for high quality branch cover (with fallback to original)
+            /// Public URL for high quality branch cover
             public var coverUrlAlta: String? { __data["coverUrlAlta"] }
             public var deliveryRadius: Double? { __data["deliveryRadius"] }
             public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }

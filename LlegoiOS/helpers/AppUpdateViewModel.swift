@@ -129,6 +129,18 @@ class AppUpdateViewModel: ObservableObject {
         updateType = .none
     }
 
+    /// Dismisses a required update for the current session only — unlike
+    /// `dismissOptionalUpdate`, this does not persist to UserDefaults, so the
+    /// prompt reappears on the next check (app relaunch or periodic timer),
+    /// since the installed version still doesn't meet `minVersion`.
+    func dismissRequiredUpdate() {
+        guard updateType == .required else {
+            return
+        }
+
+        showUpdateAlert = false
+    }
+
     // MARK: - Version Comparison
     private func getCurrentAppVersion() -> String {
         return Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"

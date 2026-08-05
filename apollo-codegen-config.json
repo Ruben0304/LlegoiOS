@@ -16,7 +16,8 @@
   },
   "input": {
     "operationSearchPaths": [
-      "**/*.graphql"
+      "*.graphql",
+      "graphql/**/*.graphql"
     ],
     "schemaSearchPaths": [
       "schema.graphqls"

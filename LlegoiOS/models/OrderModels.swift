@@ -104,6 +104,7 @@ enum PaymentStatusEnum: String, Codable {
     case validated = "VALIDATED"
     case completed = "COMPLETED"
     case failed = "FAILED"
+    case cancelled = "CANCELLED"
 }
 
 // MARK: - Discount Type Enum

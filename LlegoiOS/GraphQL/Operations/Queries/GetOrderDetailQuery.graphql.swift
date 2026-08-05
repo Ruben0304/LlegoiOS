@@ -477,7 +477,7 @@ public extension LlegoAPI {
           public var name: String { __data["name"] }
           public var address: String? { __data["address"] }
           public var phone: String { __data["phone"] }
-          /// Presigned URL for the branch avatar (inherits from business if not set)
+          /// Public URL for the branch avatar
           public var avatarUrl: String? { __data["avatarUrl"] }
           public var accounts: [Account] { __data["accounts"] }
           public var coordinates: Coordinates { __data["coordinates"] }

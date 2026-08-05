@@ -17,6 +17,7 @@ class ProductFeedViewModel: ObservableObject {
     /// Controls the render order of all feed sections.
     /// Reorder this array to change how sections appear on screen.
     enum SectionSlot: CaseIterable, Hashable {
+        case pinned
         case paraTi
         case popularesCerca
         case dynamicFirst
@@ -32,7 +33,7 @@ class ProductFeedViewModel: ObservableObject {
     }
 
     let sectionOrder: [SectionSlot] = [
-        .paraTi, .destacados, .popularesCerca, .dynamicFirst, .pideDeNuevoInline, .stores, .combos, .ofertas, .dynamicRest, .featuredStore, .tutorials,
+        .pinned, .paraTi, .destacados, .popularesCerca, .dynamicFirst, .pideDeNuevoInline, .stores, .combos, .ofertas, .dynamicRest, .featuredStore, .tutorials,
     ]
 
     // MARK: - Published Properties
@@ -361,17 +362,38 @@ class ProductFeedViewModel: ObservableObject {
         return feedSections.first(where: { $0.sectionId == type.rawValue })
     }
 
-    /// Get all sections except "para_ti", "populares_cerca" and "explorar" (rendered at fixed slots)
+    /// Sections an admin pinned from the panel, in their pinned order.
+    ///
+    /// The feed lays itself out around fixed slots — "Para Ti", "Pide de
+    /// nuevo", stores, combos — so a pinned section left in the normal flow
+    /// still renders below all of that. Pulling them out here lets the screen
+    /// draw them at the very top, which is what pinning is for. The backend
+    /// already sorts `sections`, so their relative order just carries over.
+    var pinnedSections: [FeedSection] {
+        feedSections.filter { $0.orden != nil }
+    }
+
+    private var pinnedSectionIds: Set<String> {
+        Set(pinnedSections.map { $0.sectionId })
+    }
+
+    /// Get all sections except "para_ti", "populares_cerca", "explorar" and
+    /// any pinned section (all rendered separately, ahead of these).
     var horizontalSections: [FeedSection] {
+        let pinnedIds = pinnedSectionIds
         return feedSections.filter {
             $0.sectionId != FeedSectionType.paraTi.rawValue
                 && $0.sectionId != FeedSectionType.popularesCerca.rawValue
                 && $0.sectionId != "explorar"
+                && !pinnedIds.contains($0.sectionId)
         }
     }
 
-    /// Get "para_ti" section (featured products with large cards)
+    /// Get "para_ti" section (featured products with large cards), unless it
+    /// was itself pinned — then `.pinned` renders it instead, in its pinned
+    /// spot rather than always-first.
     var paraTiSection: FeedSection? {
+        guard !pinnedSectionIds.contains(FeedSectionType.paraTi.rawValue) else { return nil }
         return getSection(.paraTi)
     }
 

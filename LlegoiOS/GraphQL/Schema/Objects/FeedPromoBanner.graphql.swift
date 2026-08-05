@@ -4,8 +4,8 @@
 import ApolloAPI
 
 public extension LlegoAPI.Objects {
-  static let SyncCheckpoint = ApolloAPI.Object(
-    typename: "SyncCheckpoint",
+  static let FeedPromoBanner = ApolloAPI.Object(
+    typename: "FeedPromoBanner",
     implementedInterfaces: [],
     keyFields: nil
   )

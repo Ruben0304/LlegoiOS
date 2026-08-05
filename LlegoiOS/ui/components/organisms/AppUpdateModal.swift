@@ -107,10 +107,18 @@ struct AppUpdateModal: View {
                         }
                         .modifier(AppUpdatePrimaryButtonModifier(tint: gradientManager.currentAccentColor))
 
-                        // Cancel button (only for optional updates)
-                        if viewModel.canDismiss {
+                        // "Later" button: persists a real skip for optional
+                        // updates, but only a session-long dismissal for
+                        // required ones — the prompt returns on next check
+                        // since the installed version still doesn't meet
+                        // minVersion.
+                        if viewModel.canDismiss || viewModel.updateType == .required {
                             Button(action: {
-                                viewModel.dismissOptionalUpdate()
+                                if viewModel.updateType == .required {
+                                    viewModel.dismissRequiredUpdate()
+                                } else {
+                                    viewModel.dismissOptionalUpdate()
+                                }
                             }) {
                                 Text("Más Tarde")
                                     .font(.system(size: 17, weight: .medium))

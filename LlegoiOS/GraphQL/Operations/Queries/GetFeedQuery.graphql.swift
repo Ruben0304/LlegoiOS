@@ -159,9 +159,9 @@ public extension LlegoAPI {
             public var currency: String { __data["currency"] }
             public var availability: Bool { __data["availability"] }
             public var score: Double { __data["score"] }
-            /// Presigned URL for the low quality product image (720x540)
+            /// Public URL for the low quality product image (720x540)
             public var imageUrlBaja: String { __data["imageUrlBaja"] }
-            /// Presigned URL for the medium quality product image (1080x1350)
+            /// Public URL for the medium quality product image (1080x1350)
             public var imageUrlMedia: String { __data["imageUrlMedia"] }
             public var categoryId: String? { __data["categoryId"] }
             /// Product category name

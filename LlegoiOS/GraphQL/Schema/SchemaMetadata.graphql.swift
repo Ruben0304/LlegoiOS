@@ -64,6 +64,7 @@ public extension LlegoAPI {
       case "FeedCreativeSection": return LlegoAPI.Objects.FeedCreativeSection
       case "FeedCreativeType": return LlegoAPI.Objects.FeedCreativeType
       case "FeedProductType": return LlegoAPI.Objects.FeedProductType
+      case "FeedPromoBanner": return LlegoAPI.Objects.FeedPromoBanner
       case "FeedResponse": return LlegoAPI.Objects.FeedResponse
       case "FeedSection": return LlegoAPI.Objects.FeedSection
       case "FeedSectionDiagnostic": return LlegoAPI.Objects.FeedSectionDiagnostic

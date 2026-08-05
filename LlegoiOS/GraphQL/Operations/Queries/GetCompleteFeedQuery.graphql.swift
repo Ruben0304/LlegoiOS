@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetCompleteFeed"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetCompleteFeed($jwt: String, $first: Int, $page: Int, $sections: [String!], $branchTipo: String!, $branchTipoEnum: BranchTipo, $radiusKm: Float, $categoryId: String) { getFeed( jwt: $jwt first: $first page: $page sections: $sections branchTipo: $branchTipo productCategoryId: $categoryId ) { __typename sections { __typename sectionId title description totalCount products { __typename id name price currency imageUrlBaja imageUrlMedia branchId categoryId branch { __typename name address tipos } categoryName availability score description } } sectionDiagnostics { __typename sectionId title status reason totalBeforeDedup totalAfterDedup } timestamp hasMore explorarHasMore creativeSections { __typename sectionId title items { __typename campaignId branchId businessId placement imageUrl ctaDeeplink } } } productCategories(branchType: $branchTipo) { __typename id name iconIos } branches( first: 15 tipo: $branchTipoEnum radiusKm: $radiusKm productCategoryId: $categoryId ) { __typename edges { __typename node { __typename id businessId name avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta address distanceKm } } } activeTutorials { __typename id title description videoUrl videoUrlSigned duration appTarget thumbnailUrl thumbnailUrlSigned order tags } allCombos(availableOnly: true) { __typename id branchId name description imageUrl currency availability discountType discountValue finalPrice savings startingFinalPrice startingSavings representativeProducts { __typename id name imageUrl } slots { __typename id isFree } giftOptions { __typename productId } branch { __typename id name avatarUrl avatarUrlBaja avatarUrlAlta } } }"#
+        #"query GetCompleteFeed($jwt: String, $first: Int, $page: Int, $sections: [String!], $branchTipo: String!, $branchTipoEnum: BranchTipo, $radiusKm: Float, $categoryId: String) { getFeed( jwt: $jwt first: $first page: $page sections: $sections branchTipo: $branchTipo productCategoryId: $categoryId ) { __typename sections { __typename sectionId title description totalCount orden banner { __typename imageUrl title subtitle action } products { __typename id name price currency imageUrlBaja imageUrlMedia branchId categoryId branch { __typename name address tipos } categoryName availability score description } } sectionDiagnostics { __typename sectionId title status reason totalBeforeDedup totalAfterDedup } timestamp hasMore explorarHasMore creativeSections { __typename sectionId title items { __typename campaignId branchId businessId placement imageUrl ctaDeeplink } } } productCategories(branchType: $branchTipo) { __typename id name iconIos } branches( first: 15 tipo: $branchTipoEnum radiusKm: $radiusKm productCategoryId: $categoryId ) { __typename edges { __typename node { __typename id businessId name avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta address distanceKm } } } activeTutorials { __typename id title description videoUrl videoUrlSigned duration appTarget thumbnailUrl thumbnailUrlSigned order tags } allCombos(availableOnly: true) { __typename id branchId name description imageUrl currency availability discountType discountValue finalPrice savings startingFinalPrice startingSavings representativeProducts { __typename id name imageUrl } slots { __typename id isFree } giftOptions { __typename productId } branch { __typename id name avatarUrl avatarUrlBaja avatarUrlAlta } } }"#
       ))
 
     public var jwt: GraphQLNullable<String>
@@ -133,6 +133,8 @@ public extension LlegoAPI {
             .field("title", String.self),
             .field("description", String?.self),
             .field("totalCount", Int.self),
+            .field("orden", Int?.self),
+            .field("banner", Banner?.self),
             .field("products", [Product].self),
           ] }
           @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
@@ -143,7 +145,34 @@ public extension LlegoAPI {
           public var title: String { __data["title"] }
           public var description: String? { __data["description"] }
           public var totalCount: Int { __data["totalCount"] }
+          public var orden: Int? { __data["orden"] }
+          public var banner: Banner? { __data["banner"] }
           public var products: [Product] { __data["products"] }
+
+          /// GetFeed.Section.Banner
+          ///
+          /// Parent Type: `FeedPromoBanner`
+          public struct Banner: LlegoAPI.SelectionSet {
+            @_spi(Unsafe) public let __data: DataDict
+            @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+            @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.FeedPromoBanner }
+            @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+              .field("__typename", String.self),
+              .field("imageUrl", String.self),
+              .field("title", String?.self),
+              .field("subtitle", String?.self),
+              .field("action", String.self),
+            ] }
+            @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+              GetCompleteFeedQuery.Data.GetFeed.Section.Banner.self
+            ] }
+
+            public var imageUrl: String { __data["imageUrl"] }
+            public var title: String? { __data["title"] }
+            public var subtitle: String? { __data["subtitle"] }
+            public var action: String { __data["action"] }
+          }
 
           /// GetFeed.Section.Product
           ///
@@ -177,9 +206,9 @@ public extension LlegoAPI {
             public var name: String { __data["name"] }
             public var price: Double { __data["price"] }
             public var currency: String { __data["currency"] }
-            /// Presigned URL for the low quality product image (720x540)
+            /// Public URL for the low quality product image (720x540)
             public var imageUrlBaja: String { __data["imageUrlBaja"] }
-            /// Presigned URL for the medium quality product image (1080x1350)
+            /// Public URL for the medium quality product image (1080x1350)
             public var imageUrlMedia: String { __data["imageUrlMedia"] }
             public var branchId: String { __data["branchId"] }
             public var categoryId: String? { __data["categoryId"] }
@@ -386,17 +415,17 @@ public extension LlegoAPI {
             public var id: String { __data["id"] }
             public var businessId: String { __data["businessId"] }
             public var name: String { __data["name"] }
-            /// Presigned URL for the branch avatar (inherits from business if not set)
+            /// Public URL for the branch avatar
             public var avatarUrl: String? { __data["avatarUrl"] }
-            /// Presigned URL for low quality branch avatar (inherits business avatar and falls back to original)
+            /// Public URL for low quality branch avatar
             public var avatarUrlBaja: String? { __data["avatarUrlBaja"] }
-            /// Presigned URL for high quality branch avatar (inherits business avatar and falls back to original)
+            /// Public URL for high quality branch avatar
             public var avatarUrlAlta: String? { __data["avatarUrlAlta"] }
-            /// Presigned URL for the branch cover image
+            /// Public URL for the branch cover image
             public var coverUrl: String? { __data["coverUrl"] }
-            /// Presigned URL for low quality branch cover (with fallback to original)
+            /// Public URL for low quality branch cover
             public var coverUrlBaja: String? { __data["coverUrlBaja"] }
-            /// Presigned URL for high quality branch cover (with fallback to original)
+            /// Public URL for high quality branch cover
             public var coverUrlAlta: String? { __data["coverUrlAlta"] }
             public var address: String? { __data["address"] }
             /// Distance in kilometers from user
@@ -435,12 +464,12 @@ public extension LlegoAPI {
         public var title: String { __data["title"] }
         public var description: String { __data["description"] }
         public var videoUrl: String { __data["videoUrl"] }
-        /// Presigned URL for the tutorial video
+        /// Public URL for the tutorial video
         public var videoUrlSigned: String { __data["videoUrlSigned"] }
         public var duration: Int { __data["duration"] }
         public var appTarget: GraphQLEnum<LlegoAPI.AppTarget> { __data["appTarget"] }
         public var thumbnailUrl: String? { __data["thumbnailUrl"] }
-        /// Presigned URL for the tutorial thumbnail
+        /// Public URL for the tutorial thumbnail
         public var thumbnailUrlSigned: String? { __data["thumbnailUrlSigned"] }
         public var order: Int { __data["order"] }
         public var tags: [String] { __data["tags"] }
@@ -482,7 +511,7 @@ public extension LlegoAPI {
         public var branchId: String { __data["branchId"] }
         public var name: String { __data["name"] }
         public var description: String { __data["description"] }
-        /// Presigned URL for combo image (optional)
+        /// Public URL for combo image (optional)
         public var imageUrl: String? { __data["imageUrl"] }
         public var currency: String { __data["currency"] }
         public var availability: Bool { __data["availability"] }
@@ -589,11 +618,11 @@ public extension LlegoAPI {
 
           public var id: String { __data["id"] }
           public var name: String { __data["name"] }
-          /// Presigned URL for the branch avatar (inherits from business if not set)
+          /// Public URL for the branch avatar
           public var avatarUrl: String? { __data["avatarUrl"] }
-          /// Presigned URL for low quality branch avatar (inherits business avatar and falls back to original)
+          /// Public URL for low quality branch avatar
           public var avatarUrlBaja: String? { __data["avatarUrlBaja"] }
-          /// Presigned URL for high quality branch avatar (inherits business avatar and falls back to original)
+          /// Public URL for high quality branch avatar
           public var avatarUrlAlta: String? { __data["avatarUrlAlta"] }
         }
       }

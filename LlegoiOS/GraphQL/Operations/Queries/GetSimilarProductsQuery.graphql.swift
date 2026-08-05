@@ -48,7 +48,7 @@ public extension LlegoAPI {
         GetSimilarProductsQuery.Data.self
       ] }
 
-      /// Productos similares al dado usando Qdrant recommend
+      /// Productos similares al dado usando Qdrant recommend (vector del producto indexado)
       public var getSimilarProducts: [GetSimilarProduct] { __data["getSimilarProducts"] }
 
       /// GetSimilarProduct
