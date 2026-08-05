@@ -84,17 +84,17 @@ public extension LlegoAPI {
         public var coordinates: Coordinates { __data["coordinates"] }
         public var phone: String { __data["phone"] }
         public var status: String? { __data["status"] }
-        /// Presigned URL for the branch avatar (inherits from business if not set)
+        /// Public URL for the branch avatar
         public var avatarUrl: String? { __data["avatarUrl"] }
-        /// Presigned URL for low quality branch avatar (inherits business avatar and falls back to original)
+        /// Public URL for low quality branch avatar
         public var avatarUrlBaja: String? { __data["avatarUrlBaja"] }
-        /// Presigned URL for high quality branch avatar (inherits business avatar and falls back to original)
+        /// Public URL for high quality branch avatar
         public var avatarUrlAlta: String? { __data["avatarUrlAlta"] }
-        /// Presigned URL for the branch cover image
+        /// Public URL for the branch cover image
         public var coverUrl: String? { __data["coverUrl"] }
-        /// Presigned URL for low quality branch cover (with fallback to original)
+        /// Public URL for low quality branch cover
         public var coverUrlBaja: String? { __data["coverUrlBaja"] }
-        /// Presigned URL for high quality branch cover (with fallback to original)
+        /// Public URL for high quality branch cover
         public var coverUrlAlta: String? { __data["coverUrlAlta"] }
         public var deliveryRadius: Double? { __data["deliveryRadius"] }
         public var acceptedCurrency: GraphQLEnum<LlegoAPI.AcceptedCurrency>? { __data["acceptedCurrency"] }
@@ -103,6 +103,27 @@ public extension LlegoAPI {
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
         /// Showcases from this branch
         public var showcases: [Showcase] { __data["showcases"] }
+
+        /// Branch.Coordinates
+        ///
+        /// Parent Type: `CoordinatesType`
+        public struct Coordinates: LlegoAPI.SelectionSet {
+          @_spi(Unsafe) public let __data: DataDict
+          @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
+
+          @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.CoordinatesType }
+          @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
+            .field("__typename", String.self),
+            .field("type", String.self),
+            .field("coordinates", [Double].self),
+          ] }
+          @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
+            GetBranchDetailQuery.Data.Branch.Coordinates.self
+          ] }
+
+          public var type: String { __data["type"] }
+          public var coordinates: [Double] { __data["coordinates"] }
+        }
 
         /// Branch.Schedule
         ///
@@ -190,27 +211,6 @@ public extension LlegoAPI {
             public var temporallyOpen: Bool { __data["temporallyOpen"] }
             public var reason: String? { __data["reason"] }
           }
-        }
-
-        /// Branch.Coordinates
-        ///
-        /// Parent Type: `CoordinatesType`
-        public struct Coordinates: LlegoAPI.SelectionSet {
-          @_spi(Unsafe) public let __data: DataDict
-          @_spi(Unsafe) public init(_dataDict: DataDict) { __data = _dataDict }
-
-          @_spi(Execution) public static var __parentType: any ApolloAPI.ParentType { LlegoAPI.Objects.CoordinatesType }
-          @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
-            .field("__typename", String.self),
-            .field("type", String.self),
-            .field("coordinates", [Double].self),
-          ] }
-          @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
-            GetBranchDetailQuery.Data.Branch.Coordinates.self
-          ] }
-
-          public var type: String { __data["type"] }
-          public var coordinates: [Double] { __data["coordinates"] }
         }
 
         /// Branch.Showcase

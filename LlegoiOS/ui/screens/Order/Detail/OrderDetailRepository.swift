@@ -445,7 +445,7 @@ final class OrderDetailRepository {
                 OrderTransferAccount(
                     cardNumber: account.cardNumber,
                     confirmPhone: account.confirmPhone,
-                    cardHolderName: account.cardHolderName,
+                    cardHolderName: account.cardHolderName ?? "",
                     pagoQr: account.pagoQr
                 )
             }
@@ -553,6 +553,7 @@ final class OrderDetailRepository {
             case .validated: return .validated
             case .completed: return .completed
             case .failed: return .failed
+            case .cancelled: return .cancelled
             }
         case .unknown:
             return .pending

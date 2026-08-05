@@ -168,6 +168,18 @@ struct ProductFeedView: View {
     @ViewBuilder
     private func feedSlotView(_ slot: ProductFeedViewModel.SectionSlot) -> some View {
         switch slot {
+        case .pinned:
+            // Sections pinned from the admin panel come before everything
+            // else — "Para Ti", "Pide de nuevo", stores and combos included.
+            // Leaving them in the normal flow would bury them under that
+            // fixed furniture and make pinning look broken.
+            ForEach(viewModel.pinnedSections) { section in
+                if let banner = section.banner {
+                    PromoBannerView(banner: banner) { promoBannerTapped(banner) }
+                } else if !viewModel.filteredProducts(for: section).isEmpty {
+                    dynamicSection(section)
+                }
+            }
         case .paraTi:
             if let section = viewModel.paraTiSection, !section.products.isEmpty {
                 featuredProductsSection(section: section)
@@ -296,6 +308,59 @@ struct ProductFeedView: View {
             }
         }
         .padding(.vertical, 10)
+    }
+
+    // MARK: - Promo Banner Section
+
+    /// The `promo` section: a tappable full-bleed banner. Pinned like any
+    /// other section (see `SectionSlot.pinned`), so an admin decides whether
+    /// and where it shows.
+    private struct PromoBannerView: View {
+        let banner: FeedPromoBanner
+        let onTap: () -> Void
+
+        var body: some View {
+            Button(action: onTap) {
+                ZStack(alignment: .bottomLeading) {
+                    CachedAsyncImage(
+                        url: URL(string: banner.imageUrl),
+                        cacheKey: "promo_banner_\(banner.imageUrl)"
+                    ) { image in
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Color.gray.opacity(0.15)
+                    }
+                    .frame(height: 160)
+                    .frame(maxWidth: .infinity)
+                    .clipped()
+
+                    LinearGradient(
+                        colors: [.black.opacity(0.55), .clear],
+                        startPoint: .bottom,
+                        endPoint: .center
+                    )
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        if let title = banner.title, !title.isEmpty {
+                            Text(title)
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                        if let subtitle = banner.subtitle, !subtitle.isEmpty {
+                            Text(subtitle)
+                                .font(.system(size: 13))
+                                .foregroundColor(.white.opacity(0.9))
+                        }
+                    }
+                    .padding(16)
+                }
+                .frame(height: 160)
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+        }
     }
 
     // MARK: - Section Badge Helper
@@ -471,6 +536,13 @@ struct ProductFeedView: View {
         }
         .padding(.vertical, 10)
     }
+
+    // MARK: - Promo Banner
+
+    /// No-op for now: creating a promo requires admin/manager on the backend
+    /// (`createPromoRequest`), so there is nowhere for a customer tap to go
+    /// yet. Wire this once the banner's role in the customer app is decided.
+    private func promoBannerTapped(_ banner: FeedPromoBanner) {}
 
     // MARK: - Refresh
     private func refreshFeed() async {

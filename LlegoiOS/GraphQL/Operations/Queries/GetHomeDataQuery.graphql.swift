@@ -252,9 +252,9 @@ public extension LlegoAPI {
             public var coordinates: Coordinates { __data["coordinates"] }
             public var phone: String { __data["phone"] }
             public var status: String? { __data["status"] }
-            /// Presigned URL for the branch avatar (inherits from business if not set)
+            /// Public URL for the branch avatar
             public var avatarUrl: String? { __data["avatarUrl"] }
-            /// Presigned URL for the branch cover image
+            /// Public URL for the branch cover image
             public var coverUrl: String? { __data["coverUrl"] }
             public var deliveryRadius: Double? { __data["deliveryRadius"] }
             public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }

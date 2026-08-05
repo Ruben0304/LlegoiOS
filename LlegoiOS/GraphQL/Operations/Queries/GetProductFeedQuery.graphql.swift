@@ -166,9 +166,9 @@ public extension LlegoAPI {
             public var id: String { __data["id"] }
             public var businessId: String { __data["businessId"] }
             public var name: String { __data["name"] }
-            /// Presigned URL for the branch avatar (inherits from business if not set)
+            /// Public URL for the branch avatar
             public var avatarUrl: String? { __data["avatarUrl"] }
-            /// Presigned URL for the branch cover image
+            /// Public URL for the branch cover image
             public var coverUrl: String? { __data["coverUrl"] }
             public var address: String? { __data["address"] }
             /// Distance in kilometers from user
@@ -270,7 +270,7 @@ public extension LlegoAPI {
 
               public var id: String { __data["id"] }
               public var name: String { __data["name"] }
-              /// Presigned URL for the branch avatar (inherits from business if not set)
+              /// Public URL for the branch avatar
               public var avatarUrl: String? { __data["avatarUrl"] }
             }
 
@@ -390,7 +390,7 @@ public extension LlegoAPI {
 
               public var id: String { __data["id"] }
               public var name: String { __data["name"] }
-              /// Presigned URL for the branch avatar (inherits from business if not set)
+              /// Public URL for the branch avatar
               public var avatarUrl: String? { __data["avatarUrl"] }
             }
 
@@ -529,7 +529,7 @@ public extension LlegoAPI {
 
               public var id: String { __data["id"] }
               public var name: String { __data["name"] }
-              /// Presigned URL for the branch avatar (inherits from business if not set)
+              /// Public URL for the branch avatar
               public var avatarUrl: String? { __data["avatarUrl"] }
             }
 
@@ -585,12 +585,12 @@ public extension LlegoAPI {
         public var title: String { __data["title"] }
         public var description: String { __data["description"] }
         public var videoUrl: String { __data["videoUrl"] }
-        /// Presigned URL for the tutorial video
+        /// Public URL for the tutorial video
         public var videoUrlSigned: String { __data["videoUrlSigned"] }
         public var duration: Int { __data["duration"] }
         public var appTarget: GraphQLEnum<LlegoAPI.AppTarget> { __data["appTarget"] }
         public var thumbnailUrl: String? { __data["thumbnailUrl"] }
-        /// Presigned URL for the tutorial thumbnail
+        /// Public URL for the tutorial thumbnail
         public var thumbnailUrlSigned: String? { __data["thumbnailUrlSigned"] }
         public var order: Int { __data["order"] }
         public var tags: [String] { __data["tags"] }

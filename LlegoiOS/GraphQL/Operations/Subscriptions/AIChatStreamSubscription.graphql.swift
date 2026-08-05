@@ -208,7 +208,7 @@ public extension LlegoAPI {
             public var phone: String { __data["phone"] }
             public var status: String? { __data["status"] }
             public var tipos: [GraphQLEnum<LlegoAPI.BranchTipo>] { __data["tipos"] }
-            /// Presigned URL for the branch avatar (inherits from business if not set)
+            /// Public URL for the branch avatar
             public var avatarUrl: String? { __data["avatarUrl"] }
             public var coordinates: Coordinates { __data["coordinates"] }
 

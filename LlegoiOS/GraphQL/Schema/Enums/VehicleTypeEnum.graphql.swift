@@ -5,10 +5,8 @@
 
 public extension LlegoAPI {
   enum VehicleTypeEnum: String, EnumType {
-    case moto = "MOTO"
     case bicicleta = "BICICLETA"
-    case auto = "AUTO"
-    case aPie = "A_PIE"
+    case triciclo = "TRICICLO"
   }
 
 }

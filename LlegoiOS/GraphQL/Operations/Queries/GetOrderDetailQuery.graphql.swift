@@ -469,7 +469,7 @@ public extension LlegoAPI {
           public var name: String { __data["name"] }
           public var address: String? { __data["address"] }
           public var phone: String { __data["phone"] }
-          /// Presigned URL for the branch avatar (inherits from business if not set)
+          /// Public URL for the branch avatar
           public var avatarUrl: String? { __data["avatarUrl"] }
           public var accounts: [Account] { __data["accounts"] }
           public var coordinates: Coordinates { __data["coordinates"] }
@@ -486,7 +486,7 @@ public extension LlegoAPI {
               .field("__typename", String.self),
               .field("cardNumber", String.self),
               .field("confirmPhone", String.self),
-              .field("cardHolderName", String.self),
+              .field("cardHolderName", String?.self),
               .field("pagoQr", String?.self),
               .field("isActive", Bool.self),
             ] }
@@ -496,7 +496,7 @@ public extension LlegoAPI {
 
             public var cardNumber: String { __data["cardNumber"] }
             public var confirmPhone: String { __data["confirmPhone"] }
-            public var cardHolderName: String { __data["cardHolderName"] }
+            public var cardHolderName: String? { __data["cardHolderName"] }
             public var pagoQr: String? { __data["pagoQr"] }
             public var isActive: Bool { __data["isActive"] }
           }

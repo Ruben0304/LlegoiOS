@@ -9,6 +9,7 @@ public extension LlegoAPI {
     case validated = "VALIDATED"
     case completed = "COMPLETED"
     case failed = "FAILED"
+    case cancelled = "CANCELLED"
   }
 
 }

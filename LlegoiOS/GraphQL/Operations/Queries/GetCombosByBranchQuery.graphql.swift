@@ -83,7 +83,7 @@ public extension LlegoAPI {
         public var branchId: String { __data["branchId"] }
         public var name: String { __data["name"] }
         public var description: String { __data["description"] }
-        /// Presigned URL for combo image (optional)
+        /// Public URL for combo image (optional)
         public var imageUrl: String? { __data["imageUrl"] }
         public var currency: String { __data["currency"] }
         public var availability: Bool { __data["availability"] }
@@ -305,7 +305,7 @@ public extension LlegoAPI {
 
           public var id: String { __data["id"] }
           public var name: String { __data["name"] }
-          /// Presigned URL for the branch avatar (inherits from business if not set)
+          /// Public URL for the branch avatar
           public var avatarUrl: String? { __data["avatarUrl"] }
         }
       }

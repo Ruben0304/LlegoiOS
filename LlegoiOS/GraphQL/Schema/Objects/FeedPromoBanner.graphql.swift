@@ -4,8 +4,8 @@
 import ApolloAPI
 
 public extension LlegoAPI.Objects {
-  static let DayScheduleType = ApolloAPI.Object(
-    typename: "DayScheduleType",
+  static let FeedPromoBanner = ApolloAPI.Object(
+    typename: "FeedPromoBanner",
     implementedInterfaces: [],
     keyFields: nil
   )

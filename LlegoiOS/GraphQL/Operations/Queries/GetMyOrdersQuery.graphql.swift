@@ -190,7 +190,7 @@ public extension LlegoAPI {
 
             public var id: String { __data["id"] }
             public var name: String { __data["name"] }
-            /// Presigned URL for the branch avatar (inherits from business if not set)
+            /// Public URL for the branch avatar
             public var avatarUrl: String? { __data["avatarUrl"] }
           }
 
