@@ -15,6 +15,7 @@ import Foundation
 import SwiftData
 import Apollo
 import Combine
+import UIKit
 
 // MARK: - Sync State
 
@@ -651,12 +652,24 @@ final class OfflineSyncService: ObservableObject {
                 case .original: localImg.originalData = data
                 }
                 try? ctx.save()
+                // Volcar al caché de imágenes bajo su URL para que las pantallas
+                // (CachedAsyncImage) puedan mostrarla sin conexión.
+                primeImageCache(url: urlStr, data: data)
                 downloaded += 1
             } catch {
                 failed += 1
             }
         }
         print("🖼️ downloadImageData - Completado: \(downloaded) descargadas, \(skipped) omitidas (ya locales), \(failed) fallidas de \(images.count) totales")
+    }
+
+    /// Guarda los bytes ya descargados en el caché de imágenes usando la URL
+    /// como clave (la misma que usa `CachedAsyncImage`).
+    private nonisolated func primeImageCache(url: String, data: Data) {
+        DispatchQueue.global(qos: .utility).async {
+            guard let image = UIImage(data: data) else { return }
+            ImageCacheManager.shared.setImage(image, for: url)
+        }
     }
 
     // MARK: - Private: Build Embeddings

@@ -10,6 +10,7 @@ struct ProfileView: View {
     @StateObject private var gradientManager = GradientStateManager.shared
     @ObservedObject private var userLocationManager = UserLocationManager.shared
     @ObservedObject private var aiPreferenceManager = AIPreferenceManager.shared
+    @ObservedObject private var appModeManager = AppModeManager.shared
     @State private var showingLocationPicker = false
     @State private var showingEditName = false
     @State private var showingPaymentMethods = false
@@ -203,6 +204,9 @@ struct ProfileView: View {
                             // Preferencia de AI para recomendaciones (motor de recomendaciones) oculto temporalmente
                             // aiPreferenceSection
 
+                            // Modo de la app (elegante / simple)
+                            appModeSection
+
                             // Tutoriales
                             tutorialsSection
 
@@ -220,7 +224,9 @@ struct ProfileView: View {
                         .padding(.horizontal, 20)
                         .padding(.top, 24)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    // Fija el ancho al del contenedor: ningún hijo puede ensanchar
+                    // el contenido y volver la pantalla arrastrable en horizontal.
+                    .containerRelativeFrame(.horizontal)
                 }
                 .clipped()
                 .ignoresSafeArea(.container, edges: [.top, .bottom])
@@ -425,7 +431,9 @@ struct ProfileView: View {
         ZStack(alignment: .bottom) {
             // Mapa como portada de fondo (snapshot estático para evitar crash Metal MSAA en iOS 26)
             MapSnapshotView(region: region)
+                .frame(maxWidth: .infinity)
                 .frame(height: 380)
+                .clipped()
                 .opacity(0.6)  // Opacidad base del mapa
             .overlay(
                 // Gradient overlay para efecto de desvanecimiento progresivo
@@ -1465,6 +1473,67 @@ struct ProfileView: View {
                     .stroke(Color.black.opacity(0.06), lineWidth: 1)
             )
         }
+    }
+
+    // MARK: - App Mode Section
+    private var appModeSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                Image(systemName: "square.grid.2x2")
+                    .font(.system(size: 18, weight: .regular))
+                    .foregroundColor(.gray)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Modo de la app")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.primary)
+
+                    Text(appModeManager.mode.summary)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.gray)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            HStack(spacing: 8) {
+                ForEach(AppMode.allCases) { mode in
+                    let isSelected = appModeManager.mode == mode
+                    Button {
+                        guard !isSelected else { return }
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                            appModeManager.set(mode)
+                        }
+                    } label: {
+                        Text(mode.title)
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .foregroundColor(isSelected ? .white : .primary.opacity(0.7))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 40)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(
+                                        isSelected
+                                            ? gradientManager.currentAccentColor
+                                            : Color.black.opacity(0.05)
+                                    )
+                            )
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.black.opacity(0.06), lineWidth: 1)
+        )
     }
 
     // MARK: - Tutorials Section
@@ -2808,6 +2877,11 @@ private struct MapSnapshotView: View {
                 )
             }
         }
+        // El snapshot en modo .fill puede ser más ancho que la pantalla. Sin
+        // acotar y recortar, el contenido del ScrollView queda más ancho que el
+        // viewport y la pantalla se arrastra en horizontal/diagonal.
+        .frame(maxWidth: .infinity)
+        .clipped()
         .task(id: "\(region.center.latitude),\(region.center.longitude)") {
             await takeSnapshot()
         }

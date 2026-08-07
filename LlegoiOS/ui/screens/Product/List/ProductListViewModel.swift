@@ -255,7 +255,18 @@ class ProductListViewModel: ObservableObject {
         isRefreshing: Bool
     ) {
         switch result {
-        case .success(let (productsGraphQL, pageInfo)):
+        case .success(let (fetchedProducts, pageInfo)):
+            // Si la respuesta vino vacía por falta de red, usar lo descargado.
+            var productsGraphQL = fetchedProducts
+            if productsGraphQL.isEmpty, !NetworkMonitor.shared.isConnected {
+                productsGraphQL = OfflineDetailRepository.shared.products(
+                    branchId: branchId, categoryId: selectedCategoryId
+                )
+                if !productsGraphQL.isEmpty {
+                    print("📴 ProductListViewModel: \(productsGraphQL.count) productos servidos desde datos offline")
+                }
+            }
+
             products = productsGraphQL.map { productGraphQL in
                 Product(
                     id: productGraphQL.id,
@@ -273,7 +284,7 @@ class ProductListViewModel: ObservableObject {
 
             currentCursor = pageInfo.endCursor
             hasNextPage = pageInfo.hasNextPage
-            totalCount = pageInfo.totalCount
+            totalCount = max(pageInfo.totalCount, products.count)
 
             applyFiltersAndSort()
 
@@ -289,6 +300,26 @@ class ProductListViewModel: ObservableObject {
 
         case .failure(let error):
             isLoading = false
+
+            // Antes de dar error, intentar con los productos descargados.
+            let offlineProducts = OfflineDetailRepository.shared.products(
+                branchId: branchId, categoryId: selectedCategoryId
+            )
+            if !offlineProducts.isEmpty {
+                print("📴 ProductListViewModel: \(offlineProducts.count) productos servidos desde datos offline")
+                let offlinePageInfo = PageInfo(
+                    hasNextPage: false,
+                    hasPreviousPage: false,
+                    startCursor: nil,
+                    endCursor: nil,
+                    totalCount: offlineProducts.count
+                )
+                handleLoadProductsResult(
+                    .success((products: offlineProducts, pageInfo: offlinePageInfo)),
+                    isRefreshing: isRefreshing
+                )
+                return
+            }
 
             let nsError = error as NSError
             let isNetworkError =

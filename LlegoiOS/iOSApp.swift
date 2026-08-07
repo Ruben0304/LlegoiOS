@@ -20,8 +20,15 @@ struct iOSApp: App {
         ])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         do {
-            self.sharedModelContainer = try ModelContainer(for: schema, configurations: [config])
+            let container = try ModelContainer(for: schema, configurations: [config])
+            self.sharedModelContainer = container
             self.modelContainerErrorMessage = nil
+
+            // Los datos offline deben estar disponibles desde el arranque, no solo
+            // cuando se abre la pantalla de búsqueda: las pantallas de detalle
+            // (producto/tienda) también leen de aquí cuando no hay red.
+            OfflineSyncService.shared.configure(modelContext: container.mainContext)
+            OfflineDetailRepository.shared.configure(modelContext: container.mainContext)
         } catch {
             self.sharedModelContainer = nil
             self.modelContainerErrorMessage =

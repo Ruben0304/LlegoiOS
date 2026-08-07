@@ -26,6 +26,10 @@ class StoreDetailViewModel: ObservableObject {
     @Published var isLoadingProducts: Bool = false
     @Published var isLoadingCombos: Bool = false
 
+    /// True cuando la información mostrada viene de los datos descargados
+    /// (sin conexión), no del backend.
+    @Published var isOfflineData: Bool = false
+
     // MARK: - Computed Properties
     var isLoading: Bool {
         if case .loading = state {
@@ -61,6 +65,12 @@ class StoreDetailViewModel: ObservableObject {
     // MARK: - Public Methods
     func loadBranchDetail(id: String) {
         state = .loading
+        isOfflineData = false
+
+        // Sin red: servir directamente lo descargado en vez de esperar la query.
+        if !NetworkMonitor.shared.isConnected, loadOfflineBranchDetail(id: id) {
+            return
+        }
 
         repository.fetchBranchDetail(id: id) { [weak self] result in
             guard let self = self else { return }
@@ -83,6 +93,11 @@ class StoreDetailViewModel: ObservableObject {
                 case .failure(let error):
                     let message = "Error al cargar detalles: \(error.localizedDescription)"
                     print("❌ StoreDetailViewModel FAILURE: \(message)")
+                    // Antes de dar error, intentar con los datos descargados.
+                    if self.loadOfflineBranchDetail(id: id) {
+                        print("📴 StoreDetailViewModel: sucursal \(id) servida desde datos offline")
+                        return
+                    }
                     // Solo actualiza el estado de error si no tenemos datos previos
                     if self.branchDetail == nil {
                         self.state = .error(message)
@@ -90,6 +105,37 @@ class StoreDetailViewModel: ObservableObject {
                 }
             }
         }
+    }
+
+    // MARK: - Offline
+
+    /// Carga la sucursal y sus secciones desde los datos sincronizados.
+    /// Devuelve false si la sucursal no está descargada.
+    @discardableResult
+    private func loadOfflineBranchDetail(id: String) -> Bool {
+        let offlineRepo = OfflineDetailRepository.shared
+        guard let detail = offlineRepo.branchDetail(id: id) else { return false }
+
+        branchDetail = detail
+        branchShowcases = detail.showcases
+        state = .success(detail)
+        isOfflineData = true
+
+        businessDetail = offlineRepo.businessDetail(id: detail.businessId)
+
+        isLoadingSiblings = false
+        siblingBranches = offlineRepo.siblingBranches(businessId: detail.businessId, excluding: id)
+
+        isLoadingProducts = false
+        branchProducts = offlineRepo.branchProducts(branchId: id)
+
+        // Los combos no se sincronizan: offline no hay nada que mostrar.
+        isLoadingCombos = false
+        branchCombos = []
+
+        similarBranches = offlineRepo.similarBranches(branchId: id)
+
+        return true
     }
 
     func loadBusinessDetail(businessId: String) {
@@ -150,8 +196,10 @@ class StoreDetailViewModel: ObservableObject {
 
                 case .failure(let error):
                     print("⚠️ StoreDetailViewModel: Failed to load branch products: \(error.localizedDescription)")
-                    // Don't fail the whole view if products fail
-                    self.branchProducts = []
+                    // Don't fail the whole view if products fail: usar lo descargado
+                    self.branchProducts = OfflineDetailRepository.shared.branchProducts(
+                        branchId: branchId, limit: limit
+                    )
                 }
             }
         }

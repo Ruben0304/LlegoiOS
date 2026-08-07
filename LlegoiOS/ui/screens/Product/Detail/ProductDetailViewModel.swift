@@ -21,6 +21,10 @@ class ProductDetailViewModel: ObservableObject {
     @Published var isLoadingSimilarProducts: Bool = false
     @Published var selectedByListId: [String: VariantOption] = [:]
 
+    /// True cuando el detalle mostrado viene de los datos descargados
+    /// (sin conexión), no del backend.
+    @Published var isOfflineData: Bool = false
+
     // MARK: - Private Properties
     private var loadedProductId: String?
     private var loadedSimilarQuery: String?
@@ -54,7 +58,14 @@ class ProductDetailViewModel: ObservableObject {
         loadedSimilarQuery = nil
         similarProducts = []
         isLoadingSimilarProducts = false
+        isOfflineData = false
         state = .loading
+
+        // Sin red: no tiene sentido esperar el timeout de la query; si el producto
+        // está descargado se muestra directamente desde la base local.
+        if !NetworkMonitor.shared.isConnected, loadOfflineProductDetail(id: id) {
+            return
+        }
 
         repository.fetchProductDetail(id: id) { [weak self] result in
             guard let self = self else { return }
@@ -84,6 +95,11 @@ class ProductDetailViewModel: ObservableObject {
                     self.loadSimilarBranchesForProduct(productId: id)
 
                 case .failure(let error):
+                    // Antes de dar error, intentar con los datos descargados.
+                    if self.loadOfflineProductDetail(id: id) {
+                        print("📴 ProductDetailViewModel: detalle de \(id) servido desde datos offline")
+                        return
+                    }
                     let message = "Error al cargar detalles: \(error.localizedDescription)"
                     self.state = .error(message)
                     self.loadedProductId = nil
@@ -91,6 +107,30 @@ class ProductDetailViewModel: ObservableObject {
                 }
             }
         }
+    }
+
+    // MARK: - Offline
+
+    /// Carga el detalle desde los datos sincronizados. Devuelve false si el
+    /// producto no está descargado (el llamador decide mostrar el error).
+    @discardableResult
+    private func loadOfflineProductDetail(id: String) -> Bool {
+        let offlineRepo = OfflineDetailRepository.shared
+        guard let detail = offlineRepo.productDetail(id: id) else { return false }
+
+        loadedProductId = id
+        productDetail = detail
+        initializeDefaultVariantSelection(from: detail)
+        state = .success(detail)
+        isOfflineData = true
+
+        // Secciones relacionadas, también desde la base local
+        loadedSimilarQuery = id
+        isLoadingSimilarProducts = false
+        similarProducts = offlineRepo.similarProducts(productId: id)
+        similarBranches = offlineRepo.branchesForProduct(productId: id)
+
+        return true
     }
 
     func loadSimilarProducts(productId: String, forceRefresh: Bool = false) {

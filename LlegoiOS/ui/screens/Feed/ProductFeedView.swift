@@ -6,6 +6,7 @@ struct ProductFeedView: View {
     @StateObject private var favoritesManager = FavoritesManager.shared
     @ObservedObject private var cartManager = CartManager.shared
     @StateObject private var gradientManager = GradientStateManager.shared
+    @ObservedObject private var appModeManager = AppModeManager.shared
     @State private var showFavoritesSheet = false
     @State private var selectedTutorial: Tutorial? = nil
     @State private var selectedProductId: String?
@@ -38,7 +39,7 @@ struct ProductFeedView: View {
                 // "Para ti" al lado izquierdo
                 if #available(iOS 26.0, *) {
                     ToolbarItem(placement: .navigationBarLeading) {
-                        Text("Explorar")
+                        Text(appModeManager.isSimple ? "Inicio" : "Explorar")
                             .font(.system(size: 22, weight: .semibold))
                             .foregroundColor(Color.adaptiveOnBackground(colorScheme))
                             .fixedSize()
@@ -46,7 +47,7 @@ struct ProductFeedView: View {
                     .sharedBackgroundVisibility(.hidden)
                 } else {
                     ToolbarItem(placement: .navigationBarLeading) {
-                        Text("Explorar")
+                        Text(appModeManager.isSimple ? "Inicio" : "Explorar")
                             .font(.system(size: 22, weight: .semibold))
                             .foregroundColor(Color.adaptiveOnBackground(colorScheme))
                             .fixedSize()
@@ -151,6 +152,14 @@ struct ProductFeedView: View {
     private var feedContent: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
+                // Modo simple: aquí no hay Home 3D, así que el cambio de tipo de
+                // negocio vive en el feed y scrollea con el contenido, igual que
+                // la fila de categorías de abajo.
+                if appModeManager.isSimple {
+                    BranchTypeSwitcher()
+                        .padding(.top, 4)
+                }
+
                 categoriesSection.padding(.top, 8)
 
                 ForEach(viewModel.sectionOrder, id: \.self) { slot in

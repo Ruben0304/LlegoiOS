@@ -49,6 +49,12 @@ struct OnboardingView: View {
     // Índice de paleta forzado para el gradiente (nil = cicla automáticamente)
     @State private var forcedGradientIndex: Int? = nil
 
+    // Selección de modo (elegante / simple): primera pantalla del onboarding,
+    // antes de cargar nada en 3D.
+    // La selección resaltada vive en AppModeManager.draftMode, no aquí: este
+    // overlay se re-crea y el @State se perdía entre toques.
+    @State private var showModeSelection = true
+
     // Cinemática automática
     @State private var cinematicStep = 0       // 0=bienvenida, 1=modelos, 2-5=highlights, 6=listo
     @State private var modelsVisible = false
@@ -95,6 +101,22 @@ struct OnboardingView: View {
     private var isLastPage: Bool { currentPage == pages.count - 1 }
 
     var body: some View {
+        ZStack {
+            // Primero se elige el modo; la experiencia (y con ella la escena 3D)
+            // no se monta hasta que el usuario elige "elegante".
+            if showModeSelection {
+                AppModeSelectionView { mode in
+                    applyMode(mode)
+                }
+                .transition(.opacity)
+            } else {
+                onboardingExperience
+                    .transition(.opacity)
+            }
+        }
+    }
+
+    private var onboardingExperience: some View {
         GeometryReader { geometry in
             ZStack {
                 // ------ Background ------
@@ -224,10 +246,31 @@ struct OnboardingView: View {
                 : nil
             )
             .onAppear {
+                // Esta vista solo se monta tras elegir el modo elegante.
                 if isIntroPhase { startCinematic() }
             }
         }
         .ignoresSafeArea()
+    }
+
+    // MARK: - Modo de la app
+
+    /// Guarda el modo elegido y decide el resto del onboarding:
+    /// simple entra directo a la app; elegante lanza la cinemática 3D.
+    private func applyMode(_ mode: AppMode) {
+        AppModeManager.shared.set(mode)
+
+        switch mode {
+        case .simple:
+            // Sin cinemática ni modelos 3D: se entra directamente al catálogo.
+            completeOnboarding()
+
+        case .elegante:
+            // Al montarse, `onboardingExperience` arranca la cinemática en su onAppear.
+            withAnimation(.easeInOut(duration: 0.45)) {
+                showModeSelection = false
+            }
+        }
     }
 
     // MARK: - Cinematic

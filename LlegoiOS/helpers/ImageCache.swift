@@ -403,6 +403,14 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
         return urlKey
     }
 
+    /// Clave compartida (solo la URL). Sirve de respaldo cuando la vista usa un
+    /// `cacheKey` propio pero la imagen ya está guardada bajo su URL — es el caso
+    /// de las imágenes descargadas por la sincronización offline.
+    private var sharedURLKey: String? {
+        guard let urlKey = url?.absoluteString, !urlKey.isEmpty else { return nil }
+        return urlKey == effectiveCacheKey ? nil : urlKey
+    }
+
     /// Pixel size to decode at: max(width, height) * screen scale, capped at 1400px.
     var maxPixelSize: CGFloat {
         guard let size = displaySize else { return 1400 }
@@ -453,6 +461,7 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
         isNetworkError = false
 
         let cacheKey = effectiveCacheKey
+        let sharedKey = sharedURLKey
         let targetPixelSize = maxPixelSize
 
         // 1. Memory cache — fast, sync on main thread (no disk/decode cost)
@@ -462,6 +471,13 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
                !ImageCacheManager.shared.isExpiredBeyondGracePeriod(for: cacheKey) {
                 downloadImageInBackground(from: url)
             }
+            return
+        }
+
+        // 1b. Respaldo: imagen guardada bajo la URL (p. ej. sincronización offline)
+        if let sharedKey, let memImage = ImageCacheManager.shared.getMemoryImage(for: sharedKey) {
+            self.image = memImage
+            downloadImageInBackground(from: url)
             return
         }
 
@@ -481,6 +497,17 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
                     if needsRefresh {
                         self.downloadImageInBackground(from: capturedUrl)
                     }
+                }
+                return
+            }
+
+            // Respaldo en disco bajo la clave de URL compartida
+            if let sharedKey,
+               let diskImage = ImageCacheManager.shared.getImageFromDisk(for: sharedKey, maxPixelSize: targetPixelSize) {
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                    self.image = diskImage
+                    self.downloadImageInBackground(from: capturedUrl)
                 }
                 return
             }

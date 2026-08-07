@@ -27,9 +27,14 @@ struct ContentView: View {
             MainAppView(selectedTab: $selectedTab, suppressUpdateBanner: sessionHadOnboarding)
 
             // Onboarding como overlay: corte directo al Home (el restaurante ya queda sobre el del Home).
+            //
+            // Sin `preferredColorScheme` aquí: la raíz (iOSApp) ya fuerza `.light`, y un
+            // hijo del ZStack que escribe la preferencia contraria hace que SwiftUI
+            // rehaga el subárbol una y otra vez (el estado del onboarding se perdía y
+            // la pantalla dejaba de refrescarse). El onboarding usa colores explícitos
+            // y blurs `...Dark`, así que no depende del esquema de color.
             if showOnboarding {
                 OnboardingView(isOnboardingCompleted: $isOnboardingCompleted)
-                    .preferredColorScheme(.dark)
                     .zIndex(1000)
                     .onAppear { OnboardingHelper.markOnboardingShown() }
             }
@@ -83,6 +88,7 @@ struct MainAppView: View {
     @StateObject private var gradientManager = GradientStateManager.shared
     @ObservedObject private var branchTypeManager = BranchTypeManager.shared
     @ObservedObject private var appUpdateViewModel = AppUpdateViewModel.shared
+    @ObservedObject private var appModeManager = AppModeManager.shared
     @State private var searchText = ""
     @State private var selectedOrderId = ""
     @State private var showOrdersFromCheckout = false
@@ -98,17 +104,36 @@ struct MainAppView: View {
             Group {
                 if #available(iOS 26.0, *) {
                     TabView {
-                        Tab("Inicio", systemImage: "house") {
-                            HomeView()
+                        // Modo simple: el inicio es el catálogo directo (sin 3D) y
+                        // la pestaña "Explorar" desaparece porque sería la misma vista.
+                        if appModeManager.isSimple {
+                            Tab("Inicio", systemImage: "house") {
+                                ProductFeedView()
+                                    .ignoresSafeArea(.container, edges: .bottom)
+                            }
+                            Tab("Tiendas", systemImage: "map") {
+                                StoreMapView()
+                                    .ignoresSafeArea(.container, edges: .bottom)
+                            }
+                            Tab("Cuenta", systemImage: "person") {
+                                NavigationStack {
+                                    ProfileView()
+                                }
                                 .ignoresSafeArea(.container, edges: .bottom)
-                        }
-                        Tab("Explorar", systemImage: "flame") {
-                            ProductFeedView()
-                                .ignoresSafeArea(.container, edges: .bottom)
-                        }
-                        Tab("Tiendas", systemImage: "map") {
-                            StoreMapView()
-                                .ignoresSafeArea(.container, edges: .bottom)
+                            }
+                        } else {
+                            Tab("Inicio", systemImage: "house") {
+                                HomeView()
+                                    .ignoresSafeArea(.container, edges: .bottom)
+                            }
+                            Tab("Explorar", systemImage: "flame") {
+                                ProductFeedView()
+                                    .ignoresSafeArea(.container, edges: .bottom)
+                            }
+                            Tab("Tiendas", systemImage: "map") {
+                                StoreMapView()
+                                    .ignoresSafeArea(.container, edges: .bottom)
+                            }
                         }
 
                         // Tab de búsqueda con role: .search
@@ -132,21 +157,32 @@ struct MainAppView: View {
                     // .background(.clear)
                 } else {
                     TabView(selection: $selectedTab) {
-                        HomeView()
-                            .ignoresSafeArea(.container, edges: .bottom)
-                            .tabItem {
-                                Image(systemName: "house")
-                                Text("Inicio")
-                            }
-                            .tag(0)
+                        if appModeManager.isSimple {
+                            // Inicio = catálogo directo (el feed), sin modelos 3D.
+                            ProductFeedView()
+                                .ignoresSafeArea(.container, edges: .bottom)
+                                .tabItem {
+                                    Image(systemName: "house")
+                                    Text("Inicio")
+                                }
+                                .tag(0)
+                        } else {
+                            HomeView()
+                                .ignoresSafeArea(.container, edges: .bottom)
+                                .tabItem {
+                                    Image(systemName: "house")
+                                    Text("Inicio")
+                                }
+                                .tag(0)
 
-                        ProductFeedView()
-                            .ignoresSafeArea(.container, edges: .bottom)
-                            .tabItem {
-                                Image(systemName: "flame")
-                                Text("Explorar")
-                            }
-                            .tag(1)
+                            ProductFeedView()
+                                .ignoresSafeArea(.container, edges: .bottom)
+                                .tabItem {
+                                    Image(systemName: "flame")
+                                    Text("Explorar")
+                                }
+                                .tag(1)
+                        }
 
                         StoreMapView()
                             .ignoresSafeArea(.container, edges: .bottom)

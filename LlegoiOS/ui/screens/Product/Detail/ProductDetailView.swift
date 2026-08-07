@@ -132,15 +132,21 @@ struct ProductDetailView: View {
 
             }
             .safeAreaInset(edge: .bottom) {
-                if !catalogOnly, viewModel.productDetail != nil {
-                    HStack(spacing: 12) {
-                        quantityControlView
-                        Spacer(minLength: 0)
-                        addToCartButton
+                VStack(spacing: 8) {
+                    if viewModel.isOfflineData {
+                        offlineBanner
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 8)
+
+                    if !catalogOnly, viewModel.productDetail != nil {
+                        HStack(spacing: 12) {
+                            quantityControlView
+                            Spacer(minLength: 0)
+                            addToCartButton
+                        }
+                    }
                 }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 8)
             }
             .onAppear {
                 viewModel.loadProductDetail(id: productId)
@@ -180,6 +186,25 @@ struct ProductDetailView: View {
                 .foregroundColor(.gray)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Offline Banner
+
+    private var offlineBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "wifi.slash")
+                .font(.system(size: 13, weight: .semibold))
+            Text("Sin conexión · datos guardados")
+                .font(.system(size: 13, weight: .medium))
+            Spacer(minLength: 0)
+        }
+        .foregroundColor(.secondary)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.gray.opacity(0.12))
+        )
     }
 
     // MARK: - Error View

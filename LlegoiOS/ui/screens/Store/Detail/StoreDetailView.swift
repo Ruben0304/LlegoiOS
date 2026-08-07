@@ -378,9 +378,19 @@ struct StoreDetailView: View {
                             ZStack(alignment: .bottomLeading) {
                                 // Cover photo: full width, fixed height, always cropped to fill
                                 GeometryReader { bannerGeo in
-                                    AsyncImage(url: URL(string: store.bannerUrl)) { phase in
-                                        switch phase {
-                                        case .empty:
+                                    // CachedAsyncImage (y no AsyncImage) para que el banner
+                                    // se vea también sin conexión con la imagen ya descargada.
+                                    CachedAsyncImage(
+                                        url: URL(string: store.bannerUrl),
+                                        cacheKey: "store_detail_banner_\(storeId)",
+                                        content: { image in
+                                            image
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(width: bannerGeo.size.width, height: 260)
+                                                .clipped()
+                                        },
+                                        placeholder: {
                                             ZStack {
                                                 Color.gray.opacity(0.15)
                                                 ProgressView()
@@ -388,20 +398,12 @@ struct StoreDetailView: View {
                                                     .scaleEffect(1.5)
                                             }
                                             .frame(width: bannerGeo.size.width, height: 260)
-                                        case .success(let image):
-                                            image
-                                                .resizable()
-                                                .aspectRatio(contentMode: .fill)
-                                                .frame(width: bannerGeo.size.width, height: 260)
-                                                .clipped()
-                                        case .failure:
-                                            Color.gray.opacity(0.15)
-                                                .frame(width: bannerGeo.size.width, height: 260)
-                                        @unknown default:
+                                        },
+                                        failure: {
                                             Color.gray.opacity(0.15)
                                                 .frame(width: bannerGeo.size.width, height: 260)
                                         }
-                                    }
+                                    )
                                 }
                                 .frame(height: 260)
 
@@ -412,9 +414,22 @@ struct StoreDetailView: View {
                                 )
                                 .frame(height: 260)
 
-                                AsyncImage(url: URL(string: store.logoUrl)) { phase in
-                                    switch phase {
-                                    case .empty:
+                                CachedAsyncImage(
+                                    url: URL(string: store.logoUrl),
+                                    cacheKey: "store_detail_logo_\(storeId)",
+                                    content: { image in
+                                        image
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(width: 110, height: 110)
+                                            .clipShape(Circle())
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(Color.white, lineWidth: 5)
+                                            )
+                                            .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
+                                    },
+                                    placeholder: {
                                         ZStack {
                                             Circle()
                                                 .fill(Color.white)
@@ -426,31 +441,8 @@ struct StoreDetailView: View {
                                                 .stroke(Color.white, lineWidth: 5)
                                         )
                                         .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
-                                    case .success(let image):
-                                        image
-                                            .resizable()
-                                            .aspectRatio(contentMode: .fill)
-                                            .frame(width: 110, height: 110)
-                                            .clipShape(Circle())
-                                            .overlay(
-                                                Circle()
-                                                    .stroke(Color.white, lineWidth: 5)
-                                            )
-                                            .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
-                                    case .failure:
-                                        ZStack {
-                                            Circle().fill(Color.gray.opacity(0.15))
-                                            Image(systemName: "storefront")
-                                                .font(.system(size: 32))
-                                                .foregroundColor(.gray.opacity(0.5))
-                                        }
-                                        .frame(width: 110, height: 110)
-                                        .overlay(
-                                            Circle()
-                                                .stroke(Color.white, lineWidth: 5)
-                                        )
-                                        .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
-                                    @unknown default:
+                                    },
+                                    failure: {
                                         ZStack {
                                             Circle().fill(Color.gray.opacity(0.15))
                                             Image(systemName: "storefront")
@@ -464,7 +456,7 @@ struct StoreDetailView: View {
                                         )
                                         .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 3)
                                     }
-                                }
+                                )
                                 .padding(.leading, 20)
                                 .offset(y: 55)
                             }
@@ -902,6 +894,26 @@ struct StoreDetailView: View {
                             showShowcaseAddedToast = false
                         }
                     }
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                if viewModel.isOfflineData {
+                    HStack(spacing: 8) {
+                        Image(systemName: "wifi.slash")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("Sin conexión · datos guardados")
+                            .font(.system(size: 13, weight: .medium))
+                        Spacer(minLength: 0)
+                    }
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.gray.opacity(0.12))
+                    )
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 8)
                 }
             }
             .overlay(alignment: .bottom) {
