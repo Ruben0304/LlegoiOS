@@ -103,34 +103,37 @@ struct MainAppView: View {
         ZStack {
             Group {
                 if #available(iOS 26.0, *) {
-                    TabView {
+                    // La selección es explícita (mismos tags que el TabView de
+                    // iOS 17) para poder devolver al usuario a Inicio cuando el
+                    // juego de pestañas cambia al cambiar de modo.
+                    TabView(selection: $selectedTab) {
                         // Modo simple: el inicio es el catálogo directo (sin 3D) y
                         // la pestaña "Explorar" desaparece porque sería la misma vista.
                         if appModeManager.isSimple {
-                            Tab("Inicio", systemImage: "house") {
+                            Tab("Inicio", systemImage: "house", value: 0) {
                                 ProductFeedView()
                                     .ignoresSafeArea(.container, edges: .bottom)
                             }
-                            Tab("Tiendas", systemImage: "map") {
+                            Tab("Tiendas", systemImage: "map", value: 2) {
                                 StoreMapView()
                                     .ignoresSafeArea(.container, edges: .bottom)
                             }
-                            Tab("Cuenta", systemImage: "person") {
+                            Tab("Cuenta", systemImage: "person", value: 3) {
                                 NavigationStack {
                                     ProfileView()
                                 }
                                 .ignoresSafeArea(.container, edges: .bottom)
                             }
                         } else {
-                            Tab("Inicio", systemImage: "house") {
+                            Tab("Inicio", systemImage: "house", value: 0) {
                                 HomeView()
                                     .ignoresSafeArea(.container, edges: .bottom)
                             }
-                            Tab("Explorar", systemImage: "flame") {
+                            Tab("Explorar", systemImage: "flame", value: 1) {
                                 ProductFeedView()
                                     .ignoresSafeArea(.container, edges: .bottom)
                             }
-                            Tab("Tiendas", systemImage: "map") {
+                            Tab("Tiendas", systemImage: "map", value: 2) {
                                 StoreMapView()
                                     .ignoresSafeArea(.container, edges: .bottom)
                             }
@@ -138,7 +141,7 @@ struct MainAppView: View {
 
                         // Tab de búsqueda con role: .search
                         // Cuando se selecciona, el campo de búsqueda reemplaza la barra de pestañas
-                        Tab(role: .search) {
+                        Tab(value: 4, role: .search) {
                             SearchView(searchText: $searchText)
                         }
 
@@ -216,6 +219,14 @@ struct MainAppView: View {
             }
         }
         .animation(.easeInOut(duration: 0.3), value: appUpdateViewModel.showUpdateAlert)
+        .onChange(of: appModeManager.mode) { _, _ in
+            // Cada modo tiene su propio juego de pestañas ("Cuenta" solo existe
+            // en simple, "Explorar" solo en elegante). Sin esto el usuario se
+            // queda en la posición de una pestaña que ya no es la misma vista.
+            withAnimation(.easeInOut(duration: 0.25)) {
+                selectedTab = 0
+            }
+        }
         .fullScreenCover(isPresented: Binding(
             get: { !selectedOrderId.isEmpty },
             set: { if !$0 { selectedOrderId = "" } }

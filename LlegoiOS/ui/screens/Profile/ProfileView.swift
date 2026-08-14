@@ -18,6 +18,8 @@ struct ProfileView: View {
     // Suscripciones ocultas para revisión App Store (sin venta de planes por ahora)
     // @State private var navigateToPlansAndPricing = false
     @State private var showOnboardingResetConfirmation = false
+    /// Modo pendiente de confirmar: cambiarlo reordena las pestañas de la app.
+    @State private var pendingAppMode: AppMode?
     @State private var cachedProfile: ProfileLocalCache.Snapshot? = ProfileLocalCache.load()
     @State private var didTriggerRefresh = false
     @State private var showingImagePicker = false
@@ -1503,9 +1505,7 @@ struct ProfileView: View {
                     Button {
                         guard !isSelected else { return }
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                            appModeManager.set(mode)
-                        }
+                        pendingAppMode = mode
                     } label: {
                         Text(mode.title)
                             .font(.system(size: 14, weight: .semibold, design: .rounded))
@@ -1534,6 +1534,25 @@ struct ProfileView: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.black.opacity(0.06), lineWidth: 1)
         )
+        .confirmationDialog(
+            pendingAppMode.map { "Cambiar a modo \($0.title)" } ?? "Cambiar de modo",
+            isPresented: Binding(
+                get: { pendingAppMode != nil },
+                set: { if !$0 { pendingAppMode = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: pendingAppMode
+        ) { mode in
+            Button("Cambiar a \(mode.title)") {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    appModeManager.set(mode)
+                }
+                pendingAppMode = nil
+            }
+            Button("Cancelar", role: .cancel) { pendingAppMode = nil }
+        } message: { mode in
+            Text(mode.changeWarning)
+        }
     }
 
     // MARK: - Tutorials Section

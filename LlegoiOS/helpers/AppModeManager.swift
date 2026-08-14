@@ -43,6 +43,18 @@ enum AppMode: String, CaseIterable, Identifiable {
         }
     }
 
+    /// Qué le va a pasar al usuario al cambiarse a este modo. Se enseña antes
+    /// de aplicar el cambio: las pestañas no son las mismas en los dos modos,
+    /// así que la app se reordena bajo sus pies si no se avisa.
+    var changeWarning: String {
+        switch self {
+        case .elegante:
+            return "El inicio pasará a ser la vitrina en 3D y aparecerá la pestaña Explorar. Volverás a la pantalla de inicio."
+        case .simple:
+            return "El inicio pasará a ser el catálogo directo, con el selector de tipo de negocio arriba. Volverás a la pantalla de inicio."
+        }
+    }
+
     var isRecommended: Bool { self == .elegante }
 }
 

@@ -1,5 +1,6 @@
 import MapKit
 import SwiftUI
+import UIKit
 
 private enum StoreMapDisplayMode: String, CaseIterable {
     case map = "Mapa"
@@ -10,6 +11,8 @@ struct StoreMapView: View {
     @StateObject private var viewModel = StoreMapViewModel()
     @StateObject private var listViewModel = StoreListViewModel()
     @ObservedObject private var gradientManager = GradientStateManager.shared
+    @ObservedObject private var cartManager = CartManager.shared
+    @State private var showCart = false
     @State private var selectedStore: StoreWithCoordinates? = nil
     @State private var navigationDestination: StoreMapDestination? = nil
     @State private var pendingDestination: StoreMapDestination? = nil
@@ -58,6 +61,28 @@ struct StoreMapView: View {
                             .foregroundColor(gradientManager.currentAccentColor)
                     }
                 }
+
+                if #available(iOS 26.0, *) {
+                    ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
+                }
+
+                // Se añade al carrito desde las tiendas, así que el carrito tiene
+                // que estar aquí: si no, hay que volver a Inicio solo para verlo.
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        showCart = true
+                    } label: {
+                        Image(systemName: "cart")
+                            .font(.system(size: 16, weight: .semibold))
+                    }
+                    .badge(cartManager.cartItemCount)
+                    .id("storemap-cart-badge-\(cartManager.cartItemCount)")
+                    .accessibilityLabel("Carrito")
+                }
+            }
+            .fullScreenCover(isPresented: $showCart) {
+                CartView()
             }
             .navigationDestination(item: $navigationDestination) { destination in
                 switch destination {

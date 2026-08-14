@@ -436,6 +436,29 @@ class ProductFeedViewModel: ObservableObject {
         return stores
     }
 
+    /// Nombre visible de la categoría activa (para mensajes al usuario).
+    var selectedCategoryName: String? {
+        guard let id = selectedCategory else { return nil }
+        return categories.first { $0.id == id }?.name
+    }
+
+    /// True cuando hay una categoría activa y, después de filtrar, no queda
+    /// nada que enseñar: sin esto el feed se queda en blanco bajo las chips y
+    /// parece que la app se rompió en vez de que el filtro no tiene resultados.
+    var isCategoryResultEmpty: Bool {
+        guard selectedCategory != nil else { return false }
+
+        if !explorarProducts.isEmpty { return false }
+        if !combos.isEmpty { return false }
+        if topReorderItem != nil { return false }
+        if creativeSections.contains(where: { !$0.items.isEmpty }) { return false }
+        if pinnedSections.contains(where: { $0.banner != nil }) { return false }
+        if feedSections.contains(where: { !filteredProducts(for: $0).isEmpty }) { return false }
+        if moreSections.contains(where: { !filteredProducts(for: $0).isEmpty }) { return false }
+
+        return true
+    }
+
     /// Filter products in a section by selected category
     func filteredProducts(for section: FeedSection) -> [FeedProduct] {
         guard let category = selectedCategory else {

@@ -7,11 +7,18 @@ struct ProductFeedView: View {
     @ObservedObject private var cartManager = CartManager.shared
     @StateObject private var gradientManager = GradientStateManager.shared
     @ObservedObject private var appModeManager = AppModeManager.shared
+    @ObservedObject private var authManager = AuthManager.shared
     @State private var showFavoritesSheet = false
     @State private var selectedTutorial: Tutorial? = nil
     @State private var selectedProductId: String?
     @State private var selectedComboId: String?
     @State private var showCart = false
+    // Modo simple: aquí no hay HomeView, así que el acceso a pedidos vive en
+    // esta barra igual que en el modo elegante.
+    @State private var navigateToOrders = false
+    @State private var navigateToLogin = false
+    /// El selector fijado se encoge en cuanto el feed empieza a scrollear.
+    @State private var isSwitcherCompact = false
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
@@ -95,6 +102,33 @@ struct ProductFeedView: View {
                         .accessibilityLabel("Carrito")
                     }
                 }
+
+                // Modo simple: pedidos, separado de favoritos y carrito por un
+                // ToolbarSpacer para que no comparta el mismo grupo de cristal.
+                if appModeManager.isSimple {
+                    if #available(iOS 26.0, *) {
+                        ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
+                    }
+
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: openOrders) {
+                            Image(systemName: "bag")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .accessibilityLabel("Pedidos")
+                    }
+                }
+            }
+            .navigationDestination(isPresented: $navigateToOrders) {
+                OrderListView()
+            }
+            .navigationDestination(isPresented: $navigateToLogin) {
+                LoginView(viewModel: ProfileViewModel()) {
+                    navigateToLogin = false
+                    DispatchQueue.main.async {
+                        navigateToOrders = true
+                    }
+                }
             }
             .sheet(isPresented: $showFavoritesSheet) {
                 NavigationView { FavoritesView() }
@@ -152,15 +186,11 @@ struct ProductFeedView: View {
     private var feedContent: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                // Modo simple: aquí no hay Home 3D, así que el cambio de tipo de
-                // negocio vive en el feed y scrollea con el contenido, igual que
-                // la fila de categorías de abajo.
-                if appModeManager.isSimple {
-                    BranchTypeSwitcher()
-                        .padding(.top, 4)
-                }
-
                 categoriesSection.padding(.top, 8)
+
+                if viewModel.isCategoryResultEmpty {
+                    categoryEmptyState
+                }
 
                 ForEach(viewModel.sectionOrder, id: \.self) { slot in
                     feedSlotView(slot)
@@ -186,7 +216,62 @@ struct ProductFeedView: View {
                 }
             }
         }
+        // Modo simple: el tipo de negocio es la navegación principal, así que se
+        // queda fijado arriba. Va como safe area inset y no como cabecera fijada
+        // del LazyVStack: dentro del scroll, la fila pinchada dejaba de recibir
+        // toques (ni selección ni scroll horizontal) en cuanto se plegaba.
+        // Aquí queda fuera del área de gestos del scroll, sin fondo propio y con
+        // el contenido pasando por debajo del cristal.
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if appModeManager.isSimple {
+                BranchTypeSwitcher(isCompact: isSwitcherCompact)
+                    .padding(.top, 4)
+            }
+        }
+        .modifier(FeedScrollCollapseModifier(isCompact: $isSwitcherCompact))
         .refreshable { await refreshFeed() }
+    }
+
+    // MARK: - Sin resultados en la categoría
+
+    private var categoryEmptyState: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "line.3.horizontal.decrease.circle")
+                .font(.system(size: 42, weight: .light))
+                .foregroundStyle(gradientManager.currentAccentColor)
+
+            VStack(spacing: 6) {
+                Text(
+                    viewModel.selectedCategoryName.map { "No hay nada en \($0)" }
+                        ?? "No hay nada en esta categoría"
+                )
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                .multilineTextAlignment(.center)
+
+                Text("Prueba con otra categoría o mira todo lo disponible.")
+                    .font(.system(size: 14))
+                    .foregroundColor(Color.adaptiveOnSurface(colorScheme).opacity(0.65))
+                    .multilineTextAlignment(.center)
+            }
+
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                viewModel.selectCategory(nil)
+            } label: {
+                Text("Ver todo")
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+            }
+            .modifier(LoginPromptButtonModifier(accentColor: gradientManager.currentAccentColor))
+        }
+        .padding(.horizontal, 32)
+        .padding(.top, 48)
+        .padding(.bottom, 32)
+        .frame(maxWidth: .infinity)
+        .transition(.opacity)
     }
 
     @ViewBuilder
@@ -685,6 +770,22 @@ struct ProductFeedView: View {
     /// (`createPromoRequest`), so there is nowhere for a customer tap to go
     /// yet. Wire this once the banner's role in the customer app is decided.
     private func promoBannerTapped(_ banner: FeedPromoBanner) {}
+
+    // MARK: - Pedidos
+
+    /// Mismo flujo que el botón de pedidos del Home en modo elegante: sin sesión
+    /// manda al login y vuelve a pedidos al terminar.
+    private func openOrders() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+
+        guard authManager.getAccessToken() != nil else {
+            authManager.signOut()
+            navigateToLogin = true
+            return
+        }
+
+        navigateToOrders = true
+    }
 
     // MARK: - Refresh
     private func refreshFeed() async {
@@ -1378,6 +1479,32 @@ struct PromotionCard: View {
                 .shadow(
                     color: .black.opacity(colorScheme == .dark ? 0.25 : 0.08), radius: 7, x: 0, y: 4)
         )
+    }
+}
+
+/// Avisa cuando el feed deja de estar en la parte de arriba, para encoger el
+/// selector fijado. En iOS 17 no hay API de geometría de scroll, así que allí
+/// la cabecera se queda en su tamaño completo (sigue fijada, que es lo esencial).
+private struct FeedScrollCollapseModifier: ViewModifier {
+    @Binding var isCompact: Bool
+
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.onScrollGeometryChange(for: CGFloat.self) { geometry in
+                geometry.contentOffset.y + geometry.contentInsets.top
+            } action: { _, offset in
+                // Banda ancha entre plegar y desplegar: al encogerse, la cabecera
+                // devuelve ~30pt de inset y el propio offset da un salto: con
+                // umbrales juntos la fila entraría en bucle abriéndose y cerrándose.
+                let shouldCollapse = isCompact ? offset > 20 : offset > 80
+                guard isCompact != shouldCollapse else { return }
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) {
+                    isCompact = shouldCollapse
+                }
+            }
+        } else {
+            content
+        }
     }
 }
 

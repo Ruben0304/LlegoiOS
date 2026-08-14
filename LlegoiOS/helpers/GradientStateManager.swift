@@ -24,39 +24,44 @@ class GradientStateManager: ObservableObject {
 
     /// Update the accent color based on category
     private func updateAccentColor(for index: Int) {
-        // Check if using BusinessTypeConfigManager and index exists
+        currentAccentColor = accentColor(at: index)
+    }
+
+    /// Color de acento de una categoría cualquiera, sin cambiar el estado actual.
+    /// Lo usa el selector de tipo de negocio para pintar cada opción con su
+    /// propio color aunque no esté seleccionada.
+    func accentColor(at index: Int) -> Color {
         let configManager = BusinessTypeConfigManager.shared
 
         if !configManager.businessTypes.isEmpty && index < configManager.businessTypes.count {
-            currentAccentColor = configManager.getGlowColor(at: index)
-        } else {
-            // Fallback to hardcoded colors
-            switch index {
-            case 0: // Restaurantes - Rojo-naranja terracota
-                currentAccentColor = Color(red: 0.9, green: 0.3, blue: 0.2)
-            case 1: // Supermercado - Verde
-                currentAccentColor = Color(red: 0.2, green: 0.7, blue: 0.5)
-            case 2: // Dulcería - Marrón-Dorado
-                currentAccentColor = Color(red: 0.737, green: 0.514, blue: 0.345)
-            case 3: // Perfumería - Azul morado/Lavanda (estilo Sauvage)
-                currentAccentColor = Color(red: 0.50, green: 0.45, blue: 0.70)
-            default:
-                currentAccentColor = Color(red: 0.9, green: 0.3, blue: 0.2)
-            }
+            return configManager.getGlowColor(at: index)
+        }
+
+        // Fallback to hardcoded colors
+        switch index {
+        case 0: // Restaurantes - Rojo-naranja terracota
+            return Color(red: 0.9, green: 0.3, blue: 0.2)
+        case 1: // Supermercado - Verde
+            return Color(red: 0.2, green: 0.7, blue: 0.5)
+        case 2: // Dulcería - Marrón-Dorado
+            return Color(red: 0.737, green: 0.514, blue: 0.345)
+        case 3: // Perfumería - Azul morado/Lavanda (estilo Sauvage)
+            return Color(red: 0.50, green: 0.45, blue: 0.70)
+        default:
+            return Color(red: 0.9, green: 0.3, blue: 0.2)
         }
     }
 
-    /// Get the current gradient palette for the selected category
-    func getCurrentGradientPalette() -> (dark: Color, medium: Color, light: Color, veryLight: Color) {
+    /// Paleta de gradiente de una categoría cualquiera, sin cambiar el estado actual.
+    func gradientPalette(at index: Int) -> (dark: Color, medium: Color, light: Color, veryLight: Color) {
         let configManager = BusinessTypeConfigManager.shared
 
-        if !configManager.businessTypes.isEmpty && currentCategoryIndex < configManager.businessTypes.count {
-            let palette = configManager.getGradientPalette(at: currentCategoryIndex)
+        if !configManager.businessTypes.isEmpty && index < configManager.businessTypes.count {
+            let palette = configManager.getGradientPalette(at: index)
             return (dark: palette.dark, medium: palette.medium, light: palette.light, veryLight: palette.veryLight)
         }
 
-        // Fallback
-        switch currentCategoryIndex {
+        switch index {
         case 0: // Restaurantes - Rojo-naranja terracota
             return (
                 dark: Color(red: 0.5, green: 0.15, blue: 0.1),
@@ -93,5 +98,10 @@ class GradientStateManager: ObservableObject {
                 veryLight: Color(red: 0.95, green: 0.88, blue: 0.85)
             )
         }
+    }
+
+    /// Get the current gradient palette for the selected category
+    func getCurrentGradientPalette() -> (dark: Color, medium: Color, light: Color, veryLight: Color) {
+        gradientPalette(at: currentCategoryIndex)
     }
 }
