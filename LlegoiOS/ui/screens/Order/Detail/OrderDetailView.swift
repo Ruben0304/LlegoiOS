@@ -10,10 +10,10 @@ struct OrderDetailView: View {
     @State private var showReplaceCartAlert = false
     @State private var showCartEditor = false
     @State private var showTracking = false
-    @State private var now = ServerClock.shared.now
+    @State private var showAcceptChangesConfirmation = false
+    @State private var toastMessage: String?
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.dismiss) private var dismiss
-    private let deadlineTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    /// Avisa a quien presenta el detalle (p. ej. la lista) de que el pedido cambió.
     var onDismiss: (() -> Void)?
 
     init(orderId: String, onDismiss: (() -> Void)? = nil) {
@@ -29,24 +29,33 @@ struct OrderDetailView: View {
                 .animation(.easeInOut(duration: 0.8), value: gradientManager.currentCategoryIndex)
 
             ScrollView {
-                if viewModel.isLoading {
-                    ProgressView()
-                        .tint(gradientManager.currentAccentColor)
-                        .scaleEffect(1.2)
-                        .padding(.top, 100)
-                } else if let order = viewModel.order {
+                if let order = viewModel.order {
+                    // Primero lo que requiere atención (estado, código, pago pendiente),
+                    // después el detalle informativo.
                     VStack(spacing: 16) {
-                        headerSection(order)
-                        orderContractSection(order)
+                        statusHeroCard(order)
+                        if let deliveryCode = order.deliveryVerificationCode, !deliveryCode.isEmpty {
+                            deliveryCodeCard(deliveryCode)
+                        }
+                        if isPaymentPriority(order) {
+                            paymentSection(order)
+                        }
+                        if viewModel.canRate {
+                            ratingSection(order)
+                        }
                         itemsSection(order)
                         fulfillmentSection(order)
+                        pricingSection(order)
+                        if !isPaymentPriority(order) {
+                            paymentSection(order)
+                        }
+                        refundSection(order)
+                        if !viewModel.canRate {
+                            ratingSection(order)
+                        }
                         if !order.comments.isEmpty {
                             commentsSection(order)
                         }
-                        pricingSection(order)
-                        paymentSection(order)
-                        refundSection(order)
-                        ratingSection(order)
                         if !order.timeline.isEmpty {
                             timelineSection(order)
                         }
@@ -54,6 +63,11 @@ struct OrderDetailView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
                     .padding(.bottom, 16)
+                } else if viewModel.isLoading {
+                    ProgressView()
+                        .tint(gradientManager.currentAccentColor)
+                        .scaleEffect(1.2)
+                        .padding(.top, 100)
                 } else if let errorMessage = viewModel.errorMessage {
                     VStack(spacing: 16) {
                         Image(systemName: "exclamationmark.triangle")
@@ -81,6 +95,20 @@ struct OrderDetailView: View {
                 orderDetailToolbarItems(order)
             }
         }
+        .overlay(alignment: .top) {
+            if let toastMessage {
+                successToast(toastMessage)
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .onChange(of: viewModel.successMessage) { _, message in
+            guard let message else { return }
+            viewModel.successMessage = nil
+            showToast(message)
+        }
+        .onAppear { viewModel.startLiveUpdates() }
+        .onDisappear { viewModel.stopLiveUpdates() }
         .navigationDestination(isPresented: $showTracking) {
             if let order = viewModel.order {
                 OrderTrackingView(orderId: order.id)
@@ -97,12 +125,27 @@ struct OrderDetailView: View {
             Button("Solo cancelar", role: .destructive) {
                 viewModel.cancelOrder {
                     onDismiss?()
-                    dismiss()
                 }
             }
             Button("No cancelar", role: .cancel) {}
         } message: {
             Text("¿Quieres ir al carrito con los productos de este pedido? Útil si quieres agregarle algo o hacer un pequeño cambio manteniendo los demás productos.")
+        }
+        .confirmationDialog(
+            "Aceptar cambios",
+            isPresented: $showAcceptChangesConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Aceptar y reenviar a la tienda") {
+                viewModel.acceptModifications {
+                    onDismiss?()
+                }
+            }
+            Button("Revisar de nuevo", role: .cancel) {}
+        } message: {
+            if let order = viewModel.order {
+                Text("Tu pedido volverá a la tienda con los cambios. Nuevo total: \(order.formattedTotal).")
+            }
         }
         .alert("Reemplazar carrito", isPresented: $showReplaceCartAlert) {
             Button("Cancelar", role: .cancel) {}
@@ -112,21 +155,10 @@ struct OrderDetailView: View {
         } message: {
             Text("Los productos del carrito actual se reemplazarán por los de este pedido.")
         }
-        .alert("Pago", isPresented: $viewModel.showPaymentAlert) {
+        .alert(viewModel.alertTitle, isPresented: $viewModel.showPaymentAlert) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(viewModel.paymentAlertMessage ?? "Error al procesar el pago.")
-        }
-        .alert(
-            "Listo",
-            isPresented: Binding(
-                get: { viewModel.successMessage != nil },
-                set: { if !$0 { viewModel.successMessage = nil } }
-            )
-        ) {
-            Button("OK", role: .cancel) { viewModel.successMessage = nil }
-        } message: {
-            Text(viewModel.successMessage ?? "")
         }
         .sheet(isPresented: $viewModel.showTronDealerSheet) {
             if let paymentInfo = viewModel.tronDealerPaymentInfo {
@@ -172,7 +204,6 @@ struct OrderDetailView: View {
                 onCompletion: viewModel.handleStripePaymentResult
             )
         )
-        .onReceive(deadlineTimer) { _ in now = ServerClock.shared.now }
     }
 
     // MARK: - Order Gradient Background
@@ -198,126 +229,216 @@ struct OrderDetailView: View {
         }
     }
 
-    // MARK: - Header Section
+    // MARK: - Status Hero
 
-    private func headerSection(_ order: OrderDetail) -> some View {
-        card {
+    /// Tarjeta principal: qué pasa con el pedido, qué viene después y, si le toca
+    /// al cliente, qué tiene que hacer.
+    private func statusHeroCard(_ order: OrderDetail) -> some View {
+        let status = order.displayStatus
+        let modifiedCount = order.items.filter(\.wasModifiedByStore).count
+
+        return card {
             VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .top, spacing: 12) {
-                    // Store image
-                    CachedAsyncImage(
-                        url: ImageURLResolver.resolve(order.branchImageUrl),
-                        cacheKey: order.branchId + "_branch"
-                    ) { image in
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        ZStack {
-                            gradientManager.currentAccentColor.opacity(0.1)
-                            Image(systemName: "storefront")
-                                .font(.system(size: 20, weight: .medium))
-                                .foregroundColor(gradientManager.currentAccentColor)
-                        }
-                    } failure: {
-                        ZStack {
-                            gradientManager.currentAccentColor.opacity(0.1)
-                            Image(systemName: "storefront")
-                                .font(.system(size: 20, weight: .medium))
-                                .foregroundColor(gradientManager.currentAccentColor)
-                        }
-                    }
-                    .frame(width: 56, height: 56)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                HStack(alignment: .center, spacing: 12) {
+                    storeImage(order)
+                        .frame(width: 48, height: 48)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
 
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 3) {
                         Text(order.branchName)
-                            .font(.system(size: 17, weight: .semibold))
+                            .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(Color.adaptiveOnSurface(colorScheme))
-                        Text(order.orderNumber)
+                            .lineLimit(1)
+                        Text("#\(order.orderNumber.suffix(6)) · \(order.formattedTotal)")
                             .font(.system(size: 13))
                             .foregroundColor(.secondary)
                     }
 
-                    Spacer()
-                    statusBadge(order.displayStatus)
+                    Spacer(minLength: 8)
+                    OrderStatusBadge(status: status)
                 }
 
                 Divider()
 
-                if let scheduledFor = order.scheduledFor {
-                    scheduledBadge(scheduledFor)
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: status.icon)
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(status.color)
+                        .frame(width: 44, height: 44)
+                        .background(status.color.opacity(0.12))
+                        .clipShape(Circle())
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(status.headline(isPickup: order.isPickup))
+                            .font(.system(size: 19, weight: .bold))
+                            .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                        Text(status.nextStep(isPickup: order.isPickup))
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .accessibilityElement(children: .combine)
+
+                if status == .modifiedByStore, modifiedCount > 0 {
+                    heroNote(
+                        icon: "square.and.pencil",
+                        text: "La tienda modificó \(modifiedCount) producto\(modifiedCount == 1 ? "" : "s"). Los verás marcados abajo en naranja.",
+                        color: .orange)
                 }
 
-                HStack(spacing: 16) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Total")
+                if let reason = order.statusReason {
+                    heroNote(icon: "text.quote", text: reason, color: status.color)
+                }
+
+                if let scheduledFor = order.scheduledFor, status.isActive {
+                    heroNote(
+                        icon: "calendar.clock",
+                        text: "Programado para \(OrderTimeFormatting.scheduled(scheduledFor))",
+                        color: gradientManager.currentAccentColor)
+                }
+
+                if status.stepIndex(isPickup: order.isPickup) != nil {
+                    OrderStatusStepper(status: status, isPickup: order.isPickup)
+                        .padding(.top, 2)
+                }
+
+                if let etaText = etaText(order) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "clock.fill")
                             .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-                        Text(order.formattedTotal)
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                        Text(etaText)
+                            .font(.system(size: 14, weight: .semibold))
                     }
+                    .foregroundColor(gradientManager.currentAccentColor)
+                }
 
-                    Spacer()
+                if OrderPermissionPolicy.shouldShowDeadline(status: order.status),
+                    let deadlineAt = order.deadlineAt
+                {
+                    OrderDeadlineNotice(status: status, deadline: deadlineAt)
+                }
 
-                    if let minutes = order.estimatedMinutes,
-                       [.accepted, .preparing].contains(order.displayStatus) {
-                        VStack(alignment: .trailing, spacing: 4) {
-                            Text("Tiempo de preparación")
-                                .font(.system(size: 13))
-                                .foregroundColor(.secondary)
-                            HStack(spacing: 4) {
-                                Image(systemName: "clock.fill")
-                                    .font(.system(size: 14))
-                                Text("\(minutes) min")
-                                    .font(.system(size: 16, weight: .semibold))
-                            }
-                            .foregroundColor(gradientManager.currentAccentColor)
-                        }
-                    } else if let eta = order.estimatedMinutesRemaining {
-                        VStack(alignment: .trailing, spacing: 4) {
-                            Text("Tiempo estimado")
-                                .font(.system(size: 13))
-                                .foregroundColor(.secondary)
-                            HStack(spacing: 4) {
-                                Image(systemName: "clock.fill")
-                                    .font(.system(size: 14))
-                                Text("\(eta) min")
-                                    .font(.system(size: 16, weight: .semibold))
-                            }
-                            .foregroundColor(gradientManager.currentAccentColor)
-                        }
+                // Cuando el cliente tiene que decidir, cancelar es una salida legítima
+                // y debe estar a mano (en el resto de casos vive en el menú ···).
+                if status.requiresCustomerAction && order.canCancel {
+                    Button(role: .destructive) {
+                        showCancelOptions = true
+                    } label: {
+                        Text("Cancelar pedido")
+                            .font(.system(size: 14, weight: .semibold))
+                            .frame(maxWidth: .infinity)
                     }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.red)
+                    .padding(.top, 2)
                 }
             }
         }
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(
+                    status.requiresCustomerAction ? status.color.opacity(0.5) : Color.clear,
+                    lineWidth: 1.5)
+        )
     }
 
-    // MARK: - Scheduled Badge
-
-    private func scheduledBadge(_ date: Date) -> some View {
-        let havana = TimeZone(identifier: "America/Havana") ?? .current
-        let cal = Calendar.current
-        let dayLabel = cal.isDateInToday(date) ? "Hoy" : "Mañana"
-        let formatter = DateFormatter()
-        formatter.timeZone = havana
-        formatter.dateFormat = "h:mm a"
-        formatter.locale = Locale(identifier: "es_CU")
-        let timeStr = formatter.string(from: date)
-
-        return HStack(spacing: 8) {
-            Image(systemName: "calendar.clock")
-                .font(.system(size: 14, weight: .semibold))
-            Text("Programado para \(dayLabel) a las \(timeStr)")
-                .font(.system(size: 14, weight: .medium))
+    private func heroNote(icon: String, text: String, color: Color) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(color)
+                .padding(.top, 1)
+            Text(text)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(Color.adaptiveOnSurface(colorScheme).opacity(0.85))
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
         }
-        .foregroundColor(gradientManager.currentAccentColor)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(gradientManager.currentAccentColor.opacity(0.1))
-        .cornerRadius(10)
+        .padding(12)
+        .background(color.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func etaText(_ order: OrderDetail) -> String? {
+        switch order.displayStatus {
+        case .accepted, .preparing:
+            if order.isPickup, let ready = order.estimatedReadyAt {
+                return "Listo aprox. a las \(OrderTimeFormatting.time(ready))"
+            }
+            return order.estimatedMinutes.map { "Tiempo de preparación: ~\($0) min" }
+        case .onTheWay:
+            return order.estimatedMinutesRemaining.map { "Llega en ~\($0) min" }
+        default:
+            return nil
+        }
+    }
+
+    private func storeImage(_ order: OrderDetail) -> some View {
+        CachedAsyncImage(
+            url: ImageURLResolver.resolve(order.branchImageUrl),
+            cacheKey: order.branchId + "_branch"
+        ) { image in
+            image
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+        } placeholder: {
+            storeImagePlaceholder
+        } failure: {
+            storeImagePlaceholder
+        }
+    }
+
+    private var storeImagePlaceholder: some View {
+        ZStack {
+            gradientManager.currentAccentColor.opacity(0.1)
+            Image(systemName: "storefront")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundColor(gradientManager.currentAccentColor)
+        }
+    }
+
+    private func isPaymentPriority(_ order: OrderDetail) -> Bool {
+        order.displayStatus == .pendingPayment || order.displayStatus == .paymentInProgress
+    }
+
+    // MARK: - Toast
+
+    private func successToast(_ message: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.green)
+            Text(message)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            Capsule()
+                .fill(Color.cardBackground(colorScheme))
+                .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 4)
+        )
+        .padding(.horizontal, 24)
+        .onTapGesture { withAnimation { toastMessage = nil } }
+        .accessibilityAddTraits(.isStaticText)
+    }
+
+    private func showToast(_ message: String) {
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        UIAccessibility.post(notification: .announcement, argument: message)
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            toastMessage = message
+        }
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            if toastMessage == message {
+                withAnimation { toastMessage = nil }
+            }
+        }
     }
 
     // MARK: - Items Section
@@ -325,18 +446,13 @@ struct OrderDetailView: View {
     private func itemsSection(_ order: OrderDetail) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
-                Text("Items")
+                Text("Productos")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
-                if order.isEditable {
-                    Text("• Editable")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(gradientManager.currentAccentColor)
-                }
                 Spacer()
                 if order.isEditable {
                     Button("Modificar productos") {
-                        handleEditProductsTap()
+                        handleOpenInCartTap()
                     }
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(gradientManager.currentAccentColor)
@@ -358,8 +474,7 @@ struct OrderDetailView: View {
         }
     }
 
-    private func handleEditProductsTap() {
-        guard viewModel.order?.isEditable == true else { return }
+    private func handleOpenInCartTap() {
         let hasExistingCart = !cartManager.localItems.isEmpty || !cartManager.localShowcaseItems.isEmpty
         if hasExistingCart {
             showReplaceCartAlert = true
@@ -370,21 +485,24 @@ struct OrderDetailView: View {
 
     private func handleCancelAndGoToCart() {
         guard let order = viewModel.order else { return }
-        let cartItems = order.items.map { item in
-            CartItemLocal(
-                productId: item.productId,
-                quantity: item.quantity,
-                basePrice: item.price,
-                finalUnitPrice: item.price
-            )
+        loadCart(with: order)
+        viewModel.cancelOrder {
+            onDismiss?()
         }
-        cartManager.replaceCart(items: cartItems)
-        viewModel.cancelOrder()
         showCartEditor = true
     }
 
+    /// Editar (pedido modificado/rechazado) o volver a pedir (pedido terminado):
+    /// ambos llevan los productos del pedido al carrito.
     private func openCartEditor() {
-        guard let order = viewModel.order, order.isEditable else { return }
+        guard let order = viewModel.order, order.isEditable || order.displayStatus.isFinal else {
+            return
+        }
+        loadCart(with: order)
+        showCartEditor = true
+    }
+
+    private func loadCart(with order: OrderDetail) {
         let cartItems = order.items.map { item in
             CartItemLocal(
                 productId: item.productId,
@@ -394,7 +512,6 @@ struct OrderDetailView: View {
             )
         }
         cartManager.replaceCart(items: cartItems)
-        showCartEditor = true
     }
 
     private func itemRow(_ item: OrderDetailItem) -> some View {
@@ -434,8 +551,8 @@ struct OrderDetailView: View {
                             .font(.system(size: 10, weight: .semibold))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 3)
-                            .background(gradientManager.currentAccentColor.opacity(0.15))
-                            .foregroundColor(gradientManager.currentAccentColor)
+                            .background(Color.orange.opacity(0.15))
+                            .foregroundColor(.orange)
                             .clipShape(Capsule())
                     }
                 }
@@ -451,6 +568,12 @@ struct OrderDetailView: View {
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
         }
         .padding(.vertical, 12)
+        .padding(.horizontal, item.wasModifiedByStore ? 8 : 0)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(item.wasModifiedByStore ? Color.orange.opacity(0.08) : Color.clear)
+        )
+        .accessibilityElement(children: .combine)
     }
 
     // MARK: - Pricing Section
@@ -523,30 +646,12 @@ struct OrderDetailView: View {
                     }
 
                     if order.isPickup {
-                        if let estimatedReady = order.estimatedReadyAt {
-                            HStack(spacing: 8) {
-                                Image(systemName: "clock.fill")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(gradientManager.currentAccentColor)
-                                Text("Listo aprox. \(formatTime(estimatedReady))")
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundColor(.secondary)
-                                Spacer()
-                            }
-                            .padding(12)
-                            .background(gradientManager.currentAccentColor.opacity(0.08))
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                        }
-
                         Divider()
 
                         HStack(spacing: 12) {
-                            if order.branchCoordinates != nil {
+                            if let coordinate = order.branchCoordinates {
                                 Button {
-                                    openInMaps(
-                                        coordinate: order.branchCoordinates!,
-                                        name: order.branchName
-                                    )
+                                    openInMaps(coordinate: coordinate, name: order.branchName)
                                 } label: {
                                     HStack(spacing: 6) {
                                         Image(systemName: "map.fill")
@@ -627,60 +732,6 @@ struct OrderDetailView: View {
         }
     }
 
-    private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: date)
-    }
-
-    private func orderContractSection(_ order: OrderDetail) -> some View {
-        VStack(spacing: 10) {
-            if OrderPermissionPolicy.shouldShowDeadline(status: order.status),
-                let deadlineAt = order.deadlineAt
-            {
-                card {
-                    HStack(spacing: 10) {
-                        Image(systemName: deadlineAt < now ? "clock.badge.xmark" : "hourglass")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(deadlineAt < now ? .red : .orange)
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Tiempo límite")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Color.adaptiveOnSurface(colorScheme))
-                            Text(formatDeadline(deadlineAt))
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                        }
-
-                        Spacer()
-                    }
-                }
-            }
-
-            if OrderPermissionPolicy.isTimedOutCancellation(
-                status: order.status,
-                deadlineAt: order.deadlineAt
-            ) {
-                card {
-                    HStack(spacing: 10) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.red)
-                        Text("Pedido cancelado automáticamente por vencimiento del tiempo límite.")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.red)
-                        Spacer()
-                    }
-                }
-            }
-
-            if let deliveryCode = order.deliveryVerificationCode, !deliveryCode.isEmpty {
-                deliveryCodeCard(deliveryCode)
-            }
-        }
-    }
-
     // MARK: - Payment Section
 
     private func paymentSection(_ order: OrderDetail) -> some View {
@@ -730,45 +781,55 @@ struct OrderDetailView: View {
                         ProgressView()
                             .tint(gradientManager.currentAccentColor)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                    } else if viewModel.paymentMethod == nil {
-                        Text("Método de pago no disponible.")
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else if viewModel.paymentMethod == nil,
+                        OrderPermissionPolicy.isAwaitingCustomerPayment(
+                            status: order.status, paymentStatus: order.paymentStatus),
+                        !viewModel.canInitiatePayment(for: order)
+                    {
+                        // Solo importa si falta pagar: sin método no se puede mostrar el botón.
+                        paymentNote(
+                            icon: "exclamationmark.triangle.fill",
+                            text: "No pudimos cargar el método de pago. Desliza hacia abajo para reintentar.",
+                            color: .orange)
                     }
 
-                    if !viewModel.transferPaymentConfirmed && viewModel.canInitiatePayment(for: order) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "info.circle.fill")
-                                .font(.system(size: 14))
-                                .foregroundColor(gradientManager.currentAccentColor)
-                            Text(
-                                "Debes completar el pago para que el negocio continúe con tu pedido."
-                            )
-                            .font(.system(size: 13))
-                            .foregroundColor(.secondary)
-                        }
-                        .padding(12)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(gradientManager.currentAccentColor.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                    } else if viewModel.transferPaymentConfirmed || order.paymentStatus == .validated {
-                        HStack(spacing: 8) {
-                            Image(systemName: "clock.fill")
-                                .font(.system(size: 14))
-                                .foregroundColor(.orange)
-                            Text("Tu transferencia fue enviada. Esperando confirmación del negocio.")
-                                .font(.system(size: 13))
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(12)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.orange.opacity(0.08))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    if viewModel.transferPaymentConfirmed {
+                        paymentNote(
+                            icon: "clock.badge.checkmark",
+                            text: "Tu pago fue enviado. La tienda lo está verificando; no tienes que pagar de nuevo.",
+                            color: .blue)
+                    } else if order.paymentStatus == .validated {
+                        paymentNote(
+                            icon: "checkmark.circle.fill",
+                            text: "Pago validado. La tienda confirmará tu pedido en breve.",
+                            color: .green)
+                    } else if order.paymentStatus == .failed,
+                        viewModel.canInitiatePayment(for: order)
+                    {
+                        paymentNote(
+                            icon: "xmark.octagon.fill",
+                            text: "El último intento de pago falló. Puedes intentarlo de nuevo.",
+                            color: .red)
                     }
                 }
             }
         }
+    }
+
+    private func paymentNote(icon: String, text: String, color: Color) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundColor(color)
+            Text(text)
+                .font(.system(size: 13))
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(color.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     private func priceRow(
@@ -921,17 +982,38 @@ struct OrderDetailView: View {
         }
     }
 
+    @ViewBuilder
     private func starsRow(current: Int, interactive: Bool) -> some View {
-        HStack(spacing: 8) {
+        let stars = HStack(spacing: 8) {
             ForEach(1...5, id: \.self) { index in
-                Image(systemName: index <= current ? "star.fill" : "star")
+                let star = Image(systemName: index <= current ? "star.fill" : "star")
                     .font(.system(size: 26))
                     .foregroundColor(index <= current ? .yellow : Color.gray.opacity(0.4))
+                    .frame(width: 36, height: 36)
                     .contentShape(Rectangle())
-                    .onTapGesture {
-                        if interactive { viewModel.ratingDraft = index }
+
+                if interactive {
+                    Button {
+                        UISelectionFeedbackGenerator().selectionChanged()
+                        viewModel.ratingDraft = index
+                    } label: {
+                        star
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(index) estrella\(index == 1 ? "" : "s")")
+                    .accessibilityAddTraits(index == current ? .isSelected : [])
+                } else {
+                    star
+                }
             }
+        }
+
+        if interactive {
+            stars
+        } else {
+            stars
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Calificación: \(current) de 5 estrellas")
         }
     }
 
@@ -991,11 +1073,11 @@ struct OrderDetailView: View {
         }
     }
 
-    // MARK: - Timeline Section
+    // MARK: - History Section
 
     private func timelineSection(_ order: OrderDetail) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Timeline")
+            Text("Historial")
                 .font(.system(size: 18, weight: .bold))
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 .padding(.horizontal, 2)
@@ -1079,86 +1161,107 @@ struct OrderDetailView: View {
         }
     }
 
-    // MARK: - Bottom Toolbar
+    // MARK: - Toolbar
+
+    /// Una sola acción principal según el estado; lo secundario (cancelar, llamar)
+    /// vive en el menú ··· para no competir con ella.
+    private enum PrimaryAction {
+        case pay, acceptChanges, editAndResend, track, reorder
+    }
+
+    private func primaryAction(for order: OrderDetail) -> PrimaryAction? {
+        if viewModel.canInitiatePayment(for: order) { return .pay }
+        if OrderPermissionPolicy.canAcceptModifications(status: order.status) { return .acceptChanges }
+        if order.displayStatus == .rejectedByStore && order.isEditable { return .editAndResend }
+        if OrderPermissionPolicy.canShowTracking(status: order.status) && !order.isPickup { return .track }
+        if order.displayStatus.isFinal && !order.items.isEmpty { return .reorder }
+        return nil
+    }
 
     @ToolbarContentBuilder
     private func orderDetailToolbarItems(_ order: OrderDetail) -> some ToolbarContent {
-        if order.canCancel {
-            ToolbarItem(placement: .bottomBar) {
-                Button {
-                    showCancelOptions = true
-                } label: {
-                    Text("Cancelar")
-                        .font(.system(size: 16, weight: .semibold))
-                        .frame(minWidth: 120)
-                        .frame(height: 52)
-                }
-                .modifier(GlassProminentButtonModifier())
-                .tint(.red)
-            }
-        }
-
-        if OrderPermissionPolicy.canAcceptModifications(status: order.status) {
-            ToolbarItem(placement: .bottomBar) {
-                Button {
-                    viewModel.acceptModifications {
-                        onDismiss?()
-                        dismiss()
-                    }
-                } label: {
-                    Text("Aceptar cambios")
-                        .font(.system(size: 16, weight: .semibold))
-                        .frame(minWidth: 140)
-                        .frame(height: 52)
-                }
-                .modifier(GlassProminentButtonModifier())
-                .tint(.green)
-            }
-        }
-
-
-        if !viewModel.transferPaymentConfirmed && viewModel.canInitiatePayment(for: order) {
-            ToolbarItem(placement: .bottomBar) {
-                Button {
-                    viewModel.initiatePayment()
-                } label: {
-                    HStack(spacing: 10) {
-                        if viewModel.isInitiatingPayment {
-                            ProgressView().tint(.white)
-                        } else {
-                            Image(
-                                systemName: paymentIconName(
-                                    for: viewModel.paymentMethod, fallback: order.paymentMethod)
-                            )
-                            .font(.system(size: 16, weight: .semibold))
+        let hasPhone = !(order.branchPhone ?? "").isEmpty
+        if order.canCancel || hasPhone {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    if let phone = order.branchPhone, hasPhone {
+                        Button {
+                            callPhone(phone)
+                        } label: {
+                            Label("Llamar a la tienda", systemImage: "phone")
                         }
-                        Text("Pagar \(order.formattedTotal)")
+                    }
+                    if order.canCancel {
+                        Button(role: .destructive) {
+                            showCancelOptions = true
+                        } label: {
+                            Label("Cancelar pedido", systemImage: "xmark.circle")
+                        }
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .accessibilityLabel("Más opciones")
+            }
+        }
+
+        if primaryAction(for: order) != nil {
+            ToolbarItem(placement: .bottomBar) {
+                primaryActionButton(order)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func primaryActionButton(_ order: OrderDetail) -> some View {
+        if let action = primaryAction(for: order) {
+            let isBusy = action == .pay ? viewModel.isInitiatingPayment : viewModel.isProcessing
+
+            Button {
+                switch action {
+                case .pay: viewModel.initiatePayment()
+                case .acceptChanges: showAcceptChangesConfirmation = true
+                case .editAndResend, .reorder: handleOpenInCartTap()
+                case .track: showTracking = true
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    if isBusy {
+                        ProgressView().tint(.white)
+                    } else {
+                        Image(systemName: primaryActionIcon(action, order: order))
                             .font(.system(size: 16, weight: .semibold))
                     }
-                    .frame(minWidth: 150)
-                    .frame(height: 52)
-                }
-                .modifier(GlassProminentButtonModifier())
-                .tint(.blue)
-                .disabled(viewModel.isInitiatingPayment || viewModel.isProcessing)
-            }
-        }
-
-        if OrderPermissionPolicy.canShowTracking(status: order.status), !order.isPickup {
-            ToolbarItem(placement: .bottomBar) {
-                Button {
-                    showTracking = true
-                } label: {
-                    Text("Ver tracking")
+                    Text(primaryActionTitle(action, order: order))
                         .font(.system(size: 16, weight: .semibold))
-                        .frame(minWidth: 140)
-                        .frame(height: 52)
                 }
-                .modifier(GlassProminentButtonModifier())
-                .tint(.teal)
+                .frame(minWidth: 220)
+                .frame(height: 52)
             }
+            .modifier(GlassProminentButtonModifier())
+            .tint(gradientManager.currentAccentColor)
+            .disabled(viewModel.isInitiatingPayment || viewModel.isProcessing)
         }
+    }
 
+    private func primaryActionTitle(_ action: PrimaryAction, order: OrderDetail) -> String {
+        switch action {
+        case .pay: return "Pagar \(order.formattedTotal)"
+        case .acceptChanges: return "Aceptar cambios"
+        case .editAndResend: return "Editar y reenviar"
+        case .track: return "Seguir pedido"
+        case .reorder: return "Volver a pedir"
+        }
+    }
+
+    private func primaryActionIcon(_ action: PrimaryAction, order: OrderDetail) -> String {
+        switch action {
+        case .pay: return paymentIconName(for: viewModel.paymentMethod, fallback: order.paymentMethod)
+        case .acceptChanges: return "checkmark.circle.fill"
+        case .editAndResend: return "square.and.pencil"
+        case .track: return "location.fill"
+        case .reorder: return "arrow.clockwise"
+        }
     }
 
     // MARK: - Helpers
@@ -1256,35 +1359,6 @@ struct OrderDetailView: View {
         }
 
         return "creditcard.fill"
-    }
-
-    private func statusBadge(_ status: OrderStatusEnum) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: status.icon)
-                .font(.system(size: 11, weight: .bold))
-            Text(status.displayName)
-                .font(.system(size: 12, weight: .bold))
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(status.color.opacity(0.15))
-        .foregroundColor(status.color)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
-
-    private func formatDeadline(_ deadline: Date) -> String {
-        let timeFormatter = DateFormatter()
-        timeFormatter.dateFormat = "dd MMM, HH:mm"
-        timeFormatter.locale = Locale(identifier: "es")
-
-        let absolute = timeFormatter.string(from: deadline)
-        let remaining = Int(deadline.timeIntervalSince(now))
-        if remaining <= 0 {
-            return "Vencido (\(absolute))"
-        }
-        let minutes = remaining / 60
-        let seconds = remaining % 60
-        return String(format: "\(absolute) • Vence en %02d:%02d", minutes, seconds)
     }
 
     // MARK: - Delivery Verification Code Card

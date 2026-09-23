@@ -36,7 +36,7 @@ struct OrderTrackingOrder: Identifiable {
 
     var isPickup: Bool { deliveryMode == .pickup }
     var displayStatus: OrderStatusEnum {
-        customerVisibleStatus == .unknown ? status : customerVisibleStatus
+        .customerFacing(status: status, visible: customerVisibleStatus, isPickup: isPickup)
     }
 
     var formattedTotal: String { formatOrderAmount(total, currency: currency) }
@@ -62,7 +62,9 @@ struct OrderTrackingItem: Identifiable {
     let price: Double
     let imageUrl: String?
 
-    var formattedPrice: String { String(format: "$%.2f", price) }
+    let currency: String
+
+    var formattedPrice: String { formatOrderAmount(price, currency: currency) }
 }
 
 // MARK: - Delivery Location Update (for real-time tracking)

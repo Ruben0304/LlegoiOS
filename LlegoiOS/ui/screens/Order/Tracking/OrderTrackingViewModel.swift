@@ -148,23 +148,4 @@ final class OrderTrackingViewModel: ObservableObject {
             return String(format: "%.1f km", km)
         }
     }
-
-    var statusProgress: Double {
-        guard let status = tracking?.order.displayStatus else { return 0 }
-        switch status {
-        case .pendingAcceptance: return 0.1
-        case .awaitingDeliveryAcceptance: return 0.18
-        case .pendingPayment: return 0.22
-        case .paymentInProgress: return 0.3
-        case .modifiedByStore: return 0.15
-        case .rejectedByStore: return 0.12
-        case .accepted: return 0.25
-        case .preparing: return 0.4
-        case .readyForPickup: return 0.6
-        case .onTheWay: return 0.8
-        case .delivered: return 1.0
-        case .cancelled: return 0
-        case .unknown: return 0.05
-        }
-    }
 }

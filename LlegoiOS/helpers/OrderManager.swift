@@ -102,6 +102,11 @@ class OrderManager: ObservableObject {
     @Published var estimatedMinutesRemaining: Int = 0
     @Published var orderStatus: DeliveryStatus = .idle
     @Published var remainingDistanceMeters: Double = 0
+    /// Estado real del backend. `orderStatus` agrupa todo lo previo a la aceptación en
+    /// `.pending`, pero la UI necesita distinguir "te toca pagar" de "esperando a la tienda".
+    /// Nil hasta el primer snapshot/evento del backend.
+    @Published var backendStatus: OrderStatusEnum?
+    private var activeOrderIsPickup = false
 
     // Live Activity
     private var currentActivity: Activity<DeliveryActivityAttributes>?
@@ -245,6 +250,8 @@ class OrderManager: ObservableObject {
 
         currentOrder = order
         orderStatus = .pending
+        backendStatus = nil
+        activeOrderIsPickup = false
         estimatedMinutesRemaining = order.estimatedDeliveryMinutes
         remainingDistanceMeters = 0
         driverLocation = nil
@@ -263,6 +270,7 @@ class OrderManager: ObservableObject {
         currentOrder = nil
         driverLocation = nil
         orderStatus = .idle
+        backendStatus = nil
         estimatedMinutesRemaining = 0
         remainingDistanceMeters = 0
         print("⏹️ OrderManager: Pedido detenido")
@@ -374,6 +382,8 @@ class OrderManager: ObservableObject {
         }
         estimatedMinutesRemaining = tracking.estimatedMinutes ?? estimatedMinutesRemaining
         let visibleOrderStatus = tracking.order.displayStatus
+        activeOrderIsPickup = tracking.order.isPickup
+        backendStatus = visibleOrderStatus
         let progress = progressValue(for: visibleOrderStatus, distanceKm: tracking.distanceKm)
 
         let mappedStatus = mapGraphQLStatusToDeliveryStatus(
@@ -420,6 +430,13 @@ class OrderManager: ObservableObject {
 
         let mappedStatus = mapRawStatusToDeliveryStatus(statusRaw, distanceKm: event.distanceKm)
         let mappedOrderStatus = mapRawStatusToOrderStatus(statusRaw)
+        if let mappedOrderStatus {
+            // El evento trae el estado técnico; se replica la regla de customerVisibleStatus
+            // del backend (READY_FOR_PICKUP se muestra como ON_THE_WAY en envíos).
+            let visible: OrderStatusEnum = mappedOrderStatus == .readyForPickup ? .onTheWay : .unknown
+            backendStatus = .customerFacing(
+                status: mappedOrderStatus, visible: visible, isPickup: activeOrderIsPickup)
+        }
         let progress = progressValue(
             for: mappedOrderStatus ?? .unknown,
             distanceKm: event.distanceKm
@@ -466,38 +483,11 @@ class OrderManager: ObservableObject {
     }
 
     private func progressValue(for status: OrderStatusEnum, distanceKm: Double?) -> Double {
-        switch status.normalizedForContract {
-        case .pendingAcceptance:
-            return 0.08
-        case .modifiedByStore:
-            return 0.12
-        case .rejectedByStore:
-            return 0.06
-        case .awaitingDeliveryAcceptance:
-            return 0.18
-        case .pendingPayment:
-            return 0.24
-        case .accepted:
-            return 0.34
-        case .preparing:
-            return 0.48
-        case .readyForPickup:
-            return 0.62
-        case .onTheWay:
-            if let distanceKm, distanceKm <= 0.35 {
-                return 0.9
-            }
-            return 0.78
-        case .delivered:
-            return 1.0
-        case .cancelled:
-            return 0.0
-        case .unknown:
-            return 0.05
-        case .paymentInProgress:
-            // No llega por normalización, pero mantenemos fallback explícito.
-            return 0.3
+        // Misma escala que el stepper del detalle; cerca del destino se adelanta un poco.
+        if status == .onTheWay, let distanceKm, distanceKm <= 0.35 {
+            return 0.9
         }
+        return status.progress(isPickup: activeOrderIsPickup)
     }
 
     private func mapGraphQLStatusToDeliveryStatus(_ status: OrderStatusEnum, distanceKm: Double?)

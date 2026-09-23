@@ -53,6 +53,18 @@ struct OrderDetail: Identifiable {
     let businessName: String
     let businessImageUrl: String?
 
+    /// Motivo que dio el backend al entrar en el estado actual (rechazo o cancelación),
+    /// sacado del último evento del historial. P. ej. "Pedido rechazado: sin stock".
+    var statusReason: String? {
+        guard displayStatus == .rejectedByStore || displayStatus == .cancelled else { return nil }
+        return timeline
+            .filter { $0.status == displayStatus }
+            .max(by: { $0.timestamp < $1.timestamp })?
+            .message
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .nilIfEmpty
+    }
+
     var formattedSubtotal: String { formatOrderAmount(subtotal, currency: currency) }
     var formattedDeliveryFee: String { formatOrderAmount(deliveryFee, currency: currency) }
     var formattedServiceCharge: String { formatOrderAmount(serviceCharge, currency: currency) }
@@ -60,7 +72,7 @@ struct OrderDetail: Identifiable {
     var formattedZeroAmount: String { formatOrderAmount(0, currency: currency) }
     var isPickup: Bool { deliveryMode == .pickup }
     var displayStatus: OrderStatusEnum {
-        customerVisibleStatus == .unknown ? status : customerVisibleStatus
+        .customerFacing(status: status, visible: customerVisibleStatus, isPickup: isPickup)
     }
 }
 
@@ -212,6 +224,10 @@ struct OrderRefundInfo {
         guard let refundAmount else { return nil }
         return formatOrderAmount(refundAmount, currency: currency)
     }
+}
+
+private extension String {
+    var nilIfEmpty: String? { isEmpty ? nil : self }
 }
 
 // MARK: - Legacy compatibility aliases

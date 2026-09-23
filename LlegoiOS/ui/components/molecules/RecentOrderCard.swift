@@ -1,13 +1,9 @@
-import Combine
 import SwiftUI
 
 struct RecentOrderCard: View {
     let order: RecentOrder
     @StateObject private var gradientManager = GradientStateManager.shared
     @Environment(\.colorScheme) private var colorScheme
-    @State private var showingTransferPayment = false
-    @State private var now = ServerClock.shared.now
-    private let deadlineTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -31,7 +27,13 @@ struct RecentOrderCard: View {
                     color: Color.black.opacity(colorScheme == .dark ? 0.3 : 0.1), radius: 10, x: 0,
                     y: 5)
         )
-        .onReceive(deadlineTimer) { _ in now = ServerClock.shared.now }
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(
+                    order.displayStatus.requiresCustomerAction
+                        ? order.displayStatus.color.opacity(0.45) : Color.clear,
+                    lineWidth: 1.5)
+        )
     }
 
     // MARK: - Header Section
@@ -93,25 +95,7 @@ struct RecentOrderCard: View {
     // MARK: - Status Badge
 
     private var statusBadge: some View {
-        let status = order.displayStatus
-        return HStack(spacing: 5) {
-            Image(systemName: status.icon)
-                .font(.system(size: 11, weight: .bold))
-
-            Text(status.displayName)
-                .font(.system(size: 12, weight: .bold, design: .rounded))
-        }
-        .foregroundColor(status.color)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(status.color.opacity(0.12))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(status.color.opacity(0.25), lineWidth: 1)
-        )
+        OrderStatusBadge(status: order.displayStatus)
     }
 
     // MARK: - Content Section
@@ -193,101 +177,45 @@ struct RecentOrderCard: View {
 
     private var footerSection: some View {
         VStack(spacing: 12) {
-            HStack {
-                // Currency Badge
-                HStack(spacing: 6) {
-                    Image(systemName: "dollarsign.circle.fill")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(gradientManager.currentAccentColor)
-
-                    Text(order.currency)
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundColor(Color.adaptiveOnSurface(colorScheme))
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(gradientManager.currentAccentColor.opacity(0.12))
-                )
+            HStack(alignment: .firstTextBaseline) {
+                Text(order.displayStatus.headline(isPickup: order.isPickup))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
 
                 Spacer()
 
-                // Total Price
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("Total")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.secondary)
-
-                    Text(order.formattedTotal)
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundColor(gradientManager.currentAccentColor)
-                }
+                Text(order.formattedTotal)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundColor(gradientManager.currentAccentColor)
             }
 
             if let deadlineAt = order.deadlineAt,
                 OrderPermissionPolicy.shouldShowDeadline(status: order.status)
             {
-                HStack(spacing: 8) {
-                    Image(systemName: deadlineAt <= now ? "clock.badge.xmark" : "hourglass")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(deadlineAt <= now ? .red : .orange)
-                    Text(deadlineBadgeText(deadlineAt))
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
-                    Spacer()
-                }
+                OrderDeadlineNotice(status: order.displayStatus, deadline: deadlineAt, compact: true)
             }
 
-            if OrderPermissionPolicy.isTimedOutCancellation(
-                status: order.status,
-                deadlineAt: order.deadlineAt
-            ) {
+            // La tarjeta entera abre el detalle; esta fila solo deja claro qué hay que hacer.
+            // El pago se hace desde el detalle, que tiene las cuentas reales del negocio.
+            if let callToAction {
                 HStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(.red)
-                    Text("Cancelado automáticamente por tiempo vencido")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.red)
-                    Spacer()
+                    Image(systemName: order.displayStatus.icon)
+                        .font(.system(size: 14, weight: .semibold))
+                    Text(callToAction)
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .lineLimit(2)
+                    Spacer(minLength: 4)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .bold))
                 }
-            }
-
-            // Botón de pagar por transferencia (solo si el pedido está pendiente de pago)
-            if shouldShowTransferButton {
-                Button {
-                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                    showingTransferPayment = true
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "arrow.left.arrow.right")
-                            .font(.system(size: 14, weight: .semibold))
-
-                        Text("Pagar por transferencia")
-                            .font(.system(size: 15, weight: .bold, design: .rounded))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 44)
-                    .foregroundColor(.white)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        gradientManager.currentAccentColor,
-                                        gradientManager.currentAccentColor.opacity(0.8),
-                                    ],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            )
-                    )
-                    .shadow(
-                        color: gradientManager.currentAccentColor.opacity(0.3), radius: 8, x: 0,
-                        y: 4)
-                }
-                .buttonStyle(.plain)
+                .foregroundColor(.white)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 44)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(order.displayStatus.color)
+                )
             }
         }
         .padding(16)
@@ -295,28 +223,23 @@ struct RecentOrderCard: View {
             RoundedRectangle(cornerRadius: 20)
                 .fill(gradientManager.currentAccentColor.opacity(0.05))
         )
-        .sheet(isPresented: $showingTransferPayment) {
-            TransferPaymentView(order: order)
-        }
     }
 
     // MARK: - Helper Properties
 
-    /// Determina si se debe mostrar el botón de pagar por transferencia
-    private var shouldShowTransferButton: Bool {
-        OrderPermissionPolicy.canShowTransferPaymentShortcut(
-            status: order.status,
-            paymentStatus: order.paymentStatus
-        )
-    }
-
-    private func deadlineBadgeText(_ deadlineAt: Date) -> String {
-        let remaining = Int(deadlineAt.timeIntervalSince(now))
-        if remaining <= 0 {
-            return "Tiempo vencido"
+    private var callToAction: String? {
+        switch order.displayStatus {
+        case .pendingPayment:
+            guard OrderPermissionPolicy.isAwaitingCustomerPayment(
+                status: order.status, paymentStatus: order.paymentStatus)
+            else { return nil }
+            return "Pagar \(order.formattedTotal)"
+        case .modifiedByStore:
+            return "Revisar cambios de la tienda"
+        case .rejectedByStore:
+            return "Editar y reenviar pedido"
+        default:
+            return nil
         }
-        let minutes = remaining / 60
-        let seconds = remaining % 60
-        return String(format: "Vence en %02d:%02d", minutes, seconds)
     }
 }

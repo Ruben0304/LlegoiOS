@@ -87,7 +87,8 @@ final class OrderTrackingRepository {
                 name: item.name,
                 quantity: item.quantity,
                 price: item.price,
-                imageUrl: item.imageUrlMuyBaja ?? item.imageUrl
+                imageUrl: item.imageUrlMuyBaja ?? item.imageUrl,
+                currency: order.currency
             )
         }
 

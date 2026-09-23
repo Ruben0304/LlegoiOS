@@ -18,7 +18,20 @@ struct OrderPendingAccessoryCard: View {
         orderManager.currentOrder?.restaurantLocation ?? "Tienda"
     }
 
+    /// Si el backend ya informó el estado exacto se usa ese: así "Pendiente de pago"
+    /// no se confunde con "Por confirmar" (ambos son `.pending` en OrderManager).
+    private var statusText: String {
+        orderManager.backendStatus?.displayName ?? orderManager.orderStatus.displayText
+    }
+
+    private var needsCustomerAction: Bool {
+        orderManager.backendStatus?.requiresCustomerAction == true
+    }
+
     private var statusColor: Color {
+        if let backendStatus = orderManager.backendStatus {
+            return backendStatus.color
+        }
         switch orderManager.orderStatus {
         case .pending:
             return .orange
@@ -50,13 +63,13 @@ struct OrderPendingAccessoryCard: View {
                 )
 
             if placement == .inline {
-                Text("Pedido")
+                Text(needsCustomerAction ? "Acción requerida" : "Pedido")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.primary)
                     .lineLimit(1)
             } else {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Pedido")
+                    Text(needsCustomerAction ? "Acción requerida" : "Pedido")
                         .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundColor(.primary)
                     Text(storeName)
@@ -68,15 +81,15 @@ struct OrderPendingAccessoryCard: View {
 
             Spacer(minLength: 8)
 
-            Text(orderManager.orderStatus.displayText)
+            Text(statusText)
                 .font(.system(size: 11, weight: .bold))
-                .foregroundColor(statusColor)
+                .foregroundColor(needsCustomerAction ? .white : statusColor)
                 .lineLimit(1)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
                 .background(
                     Capsule()
-                        .fill(statusColor.opacity(0.14))
+                        .fill(needsCustomerAction ? statusColor : statusColor.opacity(0.14))
                 )
 
             Image(systemName: "chevron.right")
@@ -89,6 +102,9 @@ struct OrderPendingAccessoryCard: View {
         .onTapGesture {
             onTap()
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Pedido en \(storeName): \(statusText)")
+        .accessibilityAddTraits(.isButton)
     }
 
     private var storeImage: some View {

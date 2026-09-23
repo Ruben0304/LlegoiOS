@@ -7,11 +7,14 @@ import StripePaymentSheet
 final class OrderDetailViewModel: ObservableObject {
     @Published var order: OrderDetail?
     @Published var isLoading = false
+    /// Recarga en segundo plano (pull-to-refresh, polling): no reemplaza el contenido por un spinner.
+    @Published var isRefreshing = false
     @Published var isProcessing = false
     @Published var isInitiatingPayment = false
     @Published var errorMessage: String?
     @Published var successMessage: String?
     @Published var paymentAlertMessage: String?
+    @Published var alertTitle = "Pago"
     @Published var showPaymentAlert = false
     @Published var newComment: String = ""
     @Published var paymentMethod: PaymentMethodModel?
@@ -47,6 +50,8 @@ final class OrderDetailViewModel: ObservableObject {
     private let orderId: String
     private var qvaPayPollingTask: Task<Void, Never>?
     private var tronDealerPollingTask: Task<Void, Never>?
+    private var liveUpdatesTask: Task<Void, Never>?
+    private static let liveUpdateInterval: UInt64 = 10_000_000_000
 
     init(orderId: String) {
         self.orderId = orderId
@@ -56,35 +61,81 @@ final class OrderDetailViewModel: ObservableObject {
     // MARK: - Load Order
 
     func load() {
-        isLoading = true
+        fetch(silent: false)
+    }
+
+    // MARK: - Refresh
+
+    /// Recarga sin tapar la pantalla si ya hay un pedido cargado.
+    func refresh() {
+        fetch(silent: order != nil)
+    }
+
+    private func fetch(silent: Bool) {
+        if silent {
+            guard !isRefreshing else { return }
+            isRefreshing = true
+        } else {
+            isLoading = true
+        }
         errorMessage = nil
 
         repository.fetchOrder(id: orderId) { [weak self] result in
             Task { @MainActor in
                 guard let self = self else { return }
                 self.isLoading = false
+                self.isRefreshing = false
 
                 switch result {
                 case .success(let detail):
-                    print("📊 Order refreshed: status=\(detail.status.rawValue), customerVisibleStatus=\(detail.customerVisibleStatus.rawValue), paymentStatus=\(detail.paymentStatus.rawValue), deliveryVerificationCode=\(detail.deliveryVerificationCode ?? "nil")")
+                    let paymentStatusChanged = self.order?.paymentStatus != detail.paymentStatus
                     self.order = detail
-                    // Reset flag local si el backend ya refleja que el pago avanzó
-                    if detail.paymentStatus != .pending || detail.status != .pendingPayment {
+                    // El backend pasa el pedido a PAYMENT_IN_PROGRESS cuando el cliente
+                    // confirma que envió la transferencia. La fuente de verdad es el
+                    // servidor: si no, al reabrir el pedido volvía a salir "Pagar" y el
+                    // cliente podía transferir dos veces.
+                    if detail.status == .paymentInProgress {
+                        self.transferPaymentConfirmed = true
+                    } else if detail.paymentStatus != .pending || detail.status != .pendingPayment {
                         self.transferPaymentConfirmed = false
                     }
                     self.loadPaymentMethodIfNeeded(for: detail)
-                    self.loadRefundInfoIfNeeded(for: detail)
+                    if !silent || paymentStatusChanged {
+                        self.loadRefundInfoIfNeeded(for: detail)
+                    }
+                    if detail.displayStatus.isFinal {
+                        self.stopLiveUpdates()
+                    }
                 case .failure(let error):
-                    self.errorMessage = error.localizedDescription
+                    // En una recarga silenciosa se conserva lo que ya se ve en pantalla.
+                    if !silent || self.order == nil {
+                        self.errorMessage = error.localizedDescription
+                    }
                 }
             }
         }
     }
 
-    // MARK: - Refresh
+    // MARK: - Live Updates
 
-    func refresh() {
-        load()
+    /// Mientras el detalle está en pantalla y el pedido sigue en curso, se recarga
+    /// periódicamente para que el cliente vea al momento si la tienda acepta, cambia algo
+    /// o el mensajero sale, sin tener que tirar para refrescar.
+    func startLiveUpdates() {
+        guard liveUpdatesTask == nil else { return }
+        liveUpdatesTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: Self.liveUpdateInterval)
+                guard !Task.isCancelled, let self else { return }
+                if let status = self.order?.displayStatus, status.isFinal { return }
+                self.refresh()
+            }
+        }
+    }
+
+    func stopLiveUpdates() {
+        liveUpdatesTask?.cancel()
+        liveUpdatesTask = nil
     }
 
     // MARK: - Accept Modifications
@@ -106,10 +157,10 @@ final class OrderDetailViewModel: ObservableObject {
                 switch result {
                 case .success(let updatedOrder):
                     self.order = updatedOrder
-                    self.successMessage = "Modificaciones aceptadas"
+                    self.successMessage = "Cambios aceptados. Tu pedido volvió a la tienda."
                     onSuccess()
                 case .failure(let error):
-                    self.errorMessage = error.localizedDescription
+                    self.showAlert(title: "Aceptar cambios", message: error.localizedDescription)
                 }
             }
         }
@@ -134,7 +185,7 @@ final class OrderDetailViewModel: ObservableObject {
                     self.successMessage = "Pedido cancelado"
                     onSuccess()
                 case .failure(let error):
-                    self.errorMessage = error.localizedDescription
+                    self.showAlert(title: "Cancelar pedido", message: error.localizedDescription)
                 }
             }
         }
@@ -215,9 +266,9 @@ final class OrderDetailViewModel: ObservableObject {
                 self.ratingCommentDraft = ""
                 self.ratingDraft = 0
                 self.successMessage = "¡Gracias por calificar tu pedido!"
-                self.load()  // Recargar para reflejar la calificación guardada
+                self.refresh()  // Recargar para reflejar la calificación guardada
             } catch {
-                self.errorMessage = error.localizedDescription
+                self.showAlert(title: "Calificación", message: error.localizedDescription)
             }
         }
     }
@@ -238,9 +289,9 @@ final class OrderDetailViewModel: ObservableObject {
                 switch result {
                 case .success:
                     self.newComment = ""
-                    self.load()  // Reload to get updated comments
+                    self.refresh()  // Reload to get updated comments
                 case .failure(let error):
-                    self.errorMessage = error.localizedDescription
+                    self.showAlert(title: "Comentario", message: error.localizedDescription)
                 }
             }
         }
@@ -430,7 +481,12 @@ final class OrderDetailViewModel: ObservableObject {
     }
 
     private func showPaymentAlertMessage(_ message: String) {
+        showAlert(title: "Pago", message: message)
+    }
+
+    private func showAlert(title: String, message: String) {
         Task { @MainActor in
+            self.alertTitle = title
             self.paymentAlertMessage = message
             self.showPaymentAlert = true
         }
@@ -795,16 +851,16 @@ final class OrderDetailViewModel: ObservableObject {
 
         Task {
             do {
+                // Con o sin comprobante va por ConfirmPaymentSent: el negocio verifica
+                // la transferencia en su banco. Antes, sin foto se usaba
+                // ConfirmTransferByShortcut, que exige un flag que nunca se envía y
+                // fallaba siempre, aunque la UI dice que la foto no es obligatoria.
+                var proofUrl = ""  // El backend trata "" como "sin comprobante"
                 if let proofData = proofImageData {
-                    // Con comprobante: ConfirmPaymentSent
-                    let base64 = proofData.base64EncodedString()
-                    let proofUrl = "data:image/jpeg;base64,\(base64)"
-                    try await repository.confirmPaymentSent(
-                        paymentAttemptId: attemptId, proofUrl: proofUrl)
-                } else {
-                    // Sin comprobante: ConfirmTransferByShortcut
-                    try await repository.confirmTransferByShortcut(paymentAttemptId: attemptId)
+                    proofUrl = "data:image/jpeg;base64,\(proofData.base64EncodedString())"
                 }
+                try await repository.confirmPaymentSent(
+                    paymentAttemptId: attemptId, proofUrl: proofUrl)
 
                 print("✅ confirmTransfer success, transferPaymentConfirmed = true")
                 await MainActor.run {
@@ -824,8 +880,11 @@ final class OrderDetailViewModel: ObservableObject {
                 print("⚠️ confirmTransfer error: \(error.localizedDescription)")
                 await MainActor.run {
                     self.isConfirmingTransfer = false
-                    // Sheet permanece abierto para que el usuario pueda reintentar
-                    self.showPaymentAlertMessage("No pudimos registrar tu pago. Verifica tu conexión e intenta de nuevo.")
+                    // Sheet permanece abierto para que el usuario pueda reintentar.
+                    // Se muestra el motivo real (p. ej. "el pedido ya no está esperando
+                    // el pago"): antes todo se reportaba como problema de conexión.
+                    self.showPaymentAlertMessage("No pudimos registrar tu pago: \(error.localizedDescription)")
+                    self.refresh()
                 }
             }
         }
@@ -834,5 +893,6 @@ final class OrderDetailViewModel: ObservableObject {
     deinit {
         qvaPayPollingTask?.cancel()
         tronDealerPollingTask?.cancel()
+        liveUpdatesTask?.cancel()
     }
 }

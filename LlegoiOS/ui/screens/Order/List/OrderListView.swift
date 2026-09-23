@@ -4,6 +4,7 @@ struct OrderListView: View {
     @StateObject private var viewModel = OrderListViewModel()
     @StateObject private var gradientManager = GradientStateManager.shared
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dismiss) private var dismiss
     @State private var selectedOrderId: String = ""
 
     var body: some View {
@@ -13,11 +14,13 @@ struct OrderListView: View {
                 .ignoresSafeArea()
                 .animation(.easeInOut(duration: 0.8), value: gradientManager.currentCategoryIndex)
 
-            if viewModel.isLoading && viewModel.orders.isEmpty {
+            // Con un filtro activo la carga y el vacío se muestran bajo los chips,
+            // para que el cliente pueda cambiar de filtro sin quedarse atascado.
+            if viewModel.isLoading && viewModel.orders.isEmpty && viewModel.selectedFilter == .all {
                 loadingView
             } else if let error = viewModel.errorMessage, viewModel.orders.isEmpty {
                 errorView(message: error)
-            } else if viewModel.orders.isEmpty {
+            } else if viewModel.orders.isEmpty && viewModel.selectedFilter == .all {
                 emptyStateView
             } else {
                 orderListContent
@@ -157,13 +160,15 @@ struct OrderListView: View {
                     .padding(.horizontal, 40)
             }
 
+            // La lista se abre desde varias pantallas (home, feed, carrito, perfil):
+            // volver atrás deja al cliente donde estaba comprando.
             Button {
-                // Navigate to store list or home
+                dismiss()
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "storefront")
                         .font(.system(size: 14, weight: .semibold))
-                    Text("Explorar tiendas")
+                    Text("Empezar a comprar")
                         .font(.system(size: 15, weight: .bold, design: .rounded))
                 }
                 .frame(height: 48)
@@ -180,23 +185,30 @@ struct OrderListView: View {
     private var orderListContent: some View {
         ScrollView {
             LazyVStack(spacing: 20) {
-                // Status filter chips
-                OrderStatusFilterView(selectedStatus: $viewModel.selectedStatus) { status in
-                    viewModel.filterByStatus(status)
+                OrderStatusFilterView(selectedFilter: viewModel.selectedFilter) { filter in
+                    viewModel.select(filter)
                 }
+                .padding(.horizontal, -20)
                 .padding(.top, 8)
 
-                // Orders list
-                VStack(spacing: 14) {
-                    ForEach(viewModel.orders) { order in
-                        Button {
-                            selectedOrderId = order.id
-                        } label: {
-                            RecentOrderCard(order: order)
-                        }
-                        .buttonStyle(.plain)
-                        .onAppear {
-                            viewModel.loadMoreIfNeeded(currentItem: order)
+                if viewModel.isLoading && viewModel.orders.isEmpty {
+                    ProgressView()
+                        .tint(gradientManager.currentAccentColor)
+                        .padding(.top, 40)
+                } else if viewModel.orders.isEmpty {
+                    filteredEmptyView
+                } else {
+                    VStack(spacing: 14) {
+                        ForEach(viewModel.orders) { order in
+                            Button {
+                                selectedOrderId = order.id
+                            } label: {
+                                RecentOrderCard(order: order)
+                            }
+                            .buttonStyle(.plain)
+                            .onAppear {
+                                viewModel.loadMoreIfNeeded(currentItem: order)
+                            }
                         }
                     }
                 }
@@ -222,31 +234,44 @@ struct OrderListView: View {
             viewModel.refresh()
         }
     }
+
+    private var filteredEmptyView: some View {
+        VStack(spacing: 10) {
+            Image(systemName: viewModel.selectedFilter.icon)
+                .font(.system(size: 34, weight: .medium))
+                .foregroundColor(gradientManager.currentAccentColor.opacity(0.7))
+            Text(filteredEmptyMessage)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.top, 48)
+        .padding(.horizontal, 24)
+    }
+
+    private var filteredEmptyMessage: String {
+        switch viewModel.selectedFilter {
+        case .actionRequired: return "Nada pendiente por tu parte. ¡Todo en orden!"
+        case .active: return "No tienes pedidos en curso."
+        case .delivered: return "Aún no tienes pedidos entregados."
+        case .cancelled: return "No tienes pedidos cancelados."
+        case .all: return "Sin pedidos aún."
+        }
+    }
 }
 
 // MARK: - Status Filter View
 
 struct OrderStatusFilterView: View {
-    @Binding var selectedStatus: OrderStatusEnum?
-    let onSelect: (OrderStatusEnum?) -> Void
+    let selectedFilter: OrderListFilter
+    let onSelect: (OrderListFilter) -> Void
     @StateObject private var gradientManager = GradientStateManager.shared
-    @Environment(\.colorScheme) private var colorScheme
-
-    private let statuses: [(OrderStatusEnum?, String, String)] = [
-        (nil, "Todos", "square.grid.2x2"),
-        (.pendingAcceptance, "Pendientes", "clock.fill"),
-        (.modifiedByStore, "Modificados", "square.and.pencil"),
-        (.rejectedByStore, "Rechazados", "xmark.shield.fill"),
-        (.onTheWay, "En camino", "car.fill"),
-        (.delivered, "Entregados", "checkmark.circle.fill"),
-        (.cancelled, "Cancelados", "xmark.circle.fill")
-    ]
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
-                ForEach(statuses, id: \.1) { status, label, icon in
-                    filterChip(status: status, label: label, icon: icon)
+                ForEach(OrderListFilter.allCases) { filter in
+                    filterChip(filter)
                 }
             }
             .padding(.horizontal, 20)
@@ -254,18 +279,19 @@ struct OrderStatusFilterView: View {
         }
     }
 
-    private func filterChip(status: OrderStatusEnum?, label: String, icon: String) -> some View {
-        Button {
+    private func filterChip(_ filter: OrderListFilter) -> some View {
+        let isSelected = selectedFilter == filter
+        return Button {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                onSelect(status)
+                onSelect(filter)
             }
         } label: {
             HStack(spacing: 8) {
-                Image(systemName: selectedStatus == status ? "checkmark" : icon)
+                Image(systemName: isSelected ? "checkmark" : filter.icon)
                     .fontWeight(.semibold)
                     .font(.system(size: 14))
-                Text(label)
+                Text(filter.title)
                     .fontWeight(.semibold)
                     .font(.system(size: 14))
             }
@@ -276,13 +302,14 @@ struct OrderStatusFilterView: View {
         .buttonBorderShape(.capsule)
         .clipShape(Capsule())
         .compositingGroup()
-        .tint(selectedStatus == status ? gradientManager.currentAccentColor : Color.gray)
+        .tint(isSelected ? gradientManager.currentAccentColor : Color.gray)
         .overlay {
-            if selectedStatus == status {
+            if isSelected {
                 Capsule()
                     .stroke(Color.white.opacity(0.3), lineWidth: 1.2)
             }
         }
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 
