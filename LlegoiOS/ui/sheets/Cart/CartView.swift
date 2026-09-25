@@ -155,6 +155,10 @@ struct CartView: View {
                             NotificationCenter.default.post(name: .openOrdersFromCheckout, object: nil)
                         }
                     )
+                    .onAppear {
+                        // Momento con contexto para pedir permiso: avisar cambios de este pedido
+                        PushNotificationManager.shared.requestPermissionAndRegister()
+                    }
                 }
                 .fullScreenCover(isPresented: $showOrdersFromCart, content: ordersFromCartCover)
         }

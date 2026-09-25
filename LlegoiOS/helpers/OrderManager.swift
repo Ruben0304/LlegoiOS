@@ -128,22 +128,7 @@ class OrderManager: ObservableObject {
     private let realtimeClient = OrderTrackingRealtimeClient(baseURL: ApolloClientManager.baseURL)
 
     private init() {
-        requestNotificationPermission()
         restorePersistedActiveOrderIfNeeded()
-    }
-
-    private func requestNotificationPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) {
-            granted, error in
-            if granted {
-                print("✅ Permisos de notificación otorgados")
-            } else {
-                print("⚠️ Permisos de notificación NO otorgados")
-                if let error = error {
-                    print("❌ Error solicitando permisos: \(error.localizedDescription)")
-                }
-            }
-        }
     }
 
     // MARK: - Public Methods

@@ -258,9 +258,15 @@ struct MainAppView: View {
         .onReceive(NotificationCenter.default.publisher(for: .openOrdersFromCheckout)) { _ in
             showOrdersFromCheckout = true
         }
-        .onReceive(NotificationCenter.default.publisher(for: .openOrderFromPush)) { notification in
-            guard let orderId = notification.object as? String, !orderId.isEmpty else { return }
-            selectedOrderId = orderId
+        // $pendingRoute emite el valor actual al suscribirse, así se atiende también
+        // la push que abrió la app en frío antes de que esta vista existiera
+        .onReceive(PushNotificationManager.shared.$pendingRoute) { route in
+            guard let route else { return }
+            switch route {
+            case .order(let id):
+                selectedOrderId = id
+            }
+            PushNotificationManager.shared.consumePendingRoute()
         }
         .onChange(of: hasActiveOrder) { _, isActive in
             if !isActive {

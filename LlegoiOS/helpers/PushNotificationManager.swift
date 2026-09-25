@@ -4,6 +4,11 @@ import UserNotifications
 import Combine
 import Apollo
 
+/// Destino de navegación pendiente originado al tocar una push
+enum PushRoute: Equatable {
+    case order(id: String)
+}
+
 /// Manager para push notifications
 /// Maneja registro de device token y procesamiento de notificaciones
 @MainActor
@@ -13,20 +18,48 @@ final class PushNotificationManager: NSObject, ObservableObject {
     @Published private(set) var deviceToken: String?
     @Published private(set) var isRegistered = false
     @Published private(set) var permissionStatus: UNAuthorizationStatus = .notDetermined
+    /// Se mantiene hasta que la UI lo consume, así no se pierde si la push
+    /// se tocó con la app cerrada y la vista raíz aún no estaba montada
+    @Published private(set) var pendingRoute: PushRoute?
     
     private let apolloClient = ApolloClientManager.shared.apollo
     private let tokenStorageKey = "deviceToken"
     private var cancellables = Set<AnyCancellable>()
+    private var wasAuthenticated = false
+
+    /// Envío del token al backend. Reemplazable en tests para no tocar la red.
+    lazy var sendToken: (_ token: String, _ jwt: String?) -> Void = { [unowned self] token, jwt in
+        self.sendTokenToBackend(token, jwt: jwt)
+    }
     
     private override init() {
         super.init()
         observeAuthChanges()
+        observeAppActivation()
         loadStoredToken()
     }
     
     // MARK: - Public Methods
     
-    /// Solicita permisos y registra para push notifications
+    /// Al arrancar: si el permiso ya fue concedido, registra en APNs para refrescar el token.
+    /// No muestra el diálogo del sistema; eso se hace en un momento con contexto (primer pedido).
+    func registerIfAlreadyAuthorized() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            let status = settings.authorizationStatus
+            Task { @MainActor [weak self] in
+                self?.permissionStatus = status
+                switch status {
+                case .authorized, .provisional, .ephemeral:
+                    self?.registerForRemoteNotifications()
+                default:
+                    break
+                }
+            }
+        }
+    }
+
+    /// Solicita permisos y registra para push notifications.
+    /// Si el usuario ya respondió antes, el sistema no vuelve a mostrar el diálogo.
     func requestPermissionAndRegister() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { [weak self] granted, error in
             Task { @MainActor [weak self] in
@@ -54,35 +87,50 @@ final class PushNotificationManager: NSObject, ObservableObject {
         self.deviceToken = token
         UserDefaults.standard.set(token, forKey: tokenStorageKey)
         
-        print("📱 Device Token: \(token)")
-        
         // Registrar con el backend
-        sendTokenToBackend(token)
+        sendToken(token, AuthManager.shared.getAccessToken())
     }
     
-    /// Procesa una notificación recibida
-    func handleNotification(userInfo: [AnyHashable: Any]) {
+    /// Notificación recibida con la app en foreground: solo efectos secundarios, sin navegar
+    func handleForegroundNotification(userInfo: [AnyHashable: Any]) {
         let payload = parseNotificationPayload(from: userInfo)
-        guard let type = payload.type else {
-            return
-        }
-        
+        guard let type = payload.type else { return }
+        performSideEffects(for: type)
+    }
+
+    /// El usuario tocó la notificación: efectos secundarios + navegación
+    func handleNotificationTap(userInfo: [AnyHashable: Any]) {
+        let payload = parseNotificationPayload(from: userInfo)
+        guard let type = payload.type else { return }
+        performSideEffects(for: type)
+
+        // Tipos que el backend envía al cliente (LlegoBackend: orders_service,
+        // payments_service, business_types/mutations). "new_order" y
+        // "order_status_update_business" son para negocios y no se manejan aquí.
         switch type {
-        case "order_status_update":
-            guard let orderId = payload.orderId else { return }
-            NotificationCenter.default.post(name: .openOrderFromPush, object: orderId)
+        case "order_status_update", "payment_confirmed_by_business":
+            guard let orderId = payload.orderId, !orderId.isEmpty else { return }
+            pendingRoute = .order(id: orderId)
 
-        case "new_order":
-            NotificationCenter.default.post(name: .openOrdersFromCheckout, object: nil)
+        case "NEW_BUSINESS_TYPE", "UPDATED_BUSINESS_TYPE":
+            break
 
-        case "NEW_BUSINESS_TYPE":
+        default:
+            print("📬 Notificación no manejada: \(type)")
+        }
+    }
+
+    /// La UI llama esto después de navegar al destino pendiente
+    func consumePendingRoute() {
+        pendingRoute = nil
+    }
+
+    private func performSideEffects(for type: String) {
+        if type == "NEW_BUSINESS_TYPE" || type == "UPDATED_BUSINESS_TYPE" {
             // Nuevo tipo de negocio disponible - sincronizar
             Task {
                 await BusinessTypeConfigManager.shared.syncWithBackend()
             }
-            
-        default:
-            print("📬 Notificación no manejada: \(type)")
         }
     }
     
@@ -92,12 +140,29 @@ final class PushNotificationManager: NSObject, ObservableObject {
         UIApplication.shared.registerForRemoteNotifications()
     }
 
+    private func observeAppActivation() {
+        NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)
+            .sink { _ in
+                UNUserNotificationCenter.current().setBadgeCount(0)
+            }
+            .store(in: &cancellables)
+    }
+
     private func observeAuthChanges() {
         AuthManager.shared.$isAuthenticated
             .removeDuplicates()
             .sink { [weak self] isAuthenticated in
-                guard isAuthenticated else { return }
-                self?.registerStoredTokenIfNeeded()
+                guard let self else { return }
+                defer { self.wasAuthenticated = isAuthenticated }
+
+                if isAuthenticated {
+                    self.registerStoredToken(jwt: AuthManager.shared.getAccessToken())
+                } else if self.wasAuthenticated {
+                    // Logout: re-registrar sin JWT desvincula el token del usuario en el backend
+                    // (userId = null) pero lo mantiene activo para pushes generales.
+                    // No usar getAccessToken() aquí: durante signOut() el Keychain aún tiene el JWT.
+                    self.registerStoredToken(jwt: nil)
+                }
             }
             .store(in: &cancellables)
     }
@@ -108,9 +173,9 @@ final class PushNotificationManager: NSObject, ObservableObject {
         }
     }
 
-    private func registerStoredTokenIfNeeded() {
+    private func registerStoredToken(jwt: String?) {
         guard let token = deviceToken, !token.isEmpty else { return }
-        sendTokenToBackend(token)
+        sendToken(token, jwt)
     }
 
     private func parseNotificationPayload(from userInfo: [AnyHashable: Any]) -> (type: String?, orderId: String?) {
@@ -123,8 +188,7 @@ final class PushNotificationManager: NSObject, ObservableObject {
         return (type, orderId)
     }
     
-    private func sendTokenToBackend(_ token: String) {
-        let jwt = AuthManager.shared.getAccessToken()
+    private func sendTokenToBackend(_ token: String, jwt: String?) {
         let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
         let osVersion = UIDevice.current.systemVersion
         
@@ -165,9 +229,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = self
 
-        // Solicitar permisos de push
+        // Solo re-registrar si ya hay permiso; el diálogo se pide al confirmar el primer pedido
         Task { @MainActor in
-            PushNotificationManager.shared.requestPermissionAndRegister()
+            PushNotificationManager.shared.registerIfAlreadyAuthorized()
         }
 
         return true
@@ -190,7 +254,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         let userInfo = notification.request.content.userInfo
         
         Task { @MainActor in
-            PushNotificationManager.shared.handleNotification(userInfo: userInfo)
+            PushNotificationManager.shared.handleForegroundNotification(userInfo: userInfo)
         }
         
         // Mostrar banner incluso en foreground
@@ -202,7 +266,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         let userInfo = response.notification.request.content.userInfo
         
         Task { @MainActor in
-            PushNotificationManager.shared.handleNotification(userInfo: userInfo)
+            PushNotificationManager.shared.handleNotificationTap(userInfo: userInfo)
         }
         
         completionHandler()
