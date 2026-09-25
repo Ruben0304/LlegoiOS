@@ -19,6 +19,7 @@ class ProductFeedViewModel: ObservableObject {
     enum SectionSlot: CaseIterable, Hashable {
         case pinned
         case paraTi
+        case promoBanners
         case popularesCerca
         case dynamicFirst
         case pideDeNuevoInline
@@ -33,7 +34,7 @@ class ProductFeedViewModel: ObservableObject {
     }
 
     let sectionOrder: [SectionSlot] = [
-        .pinned, .paraTi, .destacados, .popularesCerca, .dynamicFirst, .pideDeNuevoInline, .stores, .combos, .ofertas, .dynamicRest, .featuredStore, .tutorials,
+        .pinned, .paraTi, .promoBanners, .destacados, .popularesCerca, .dynamicFirst, .pideDeNuevoInline, .stores, .combos, .ofertas, .dynamicRest, .featuredStore, .tutorials,
     ]
 
     // MARK: - Published Properties
@@ -86,6 +87,9 @@ class ProductFeedViewModel: ObservableObject {
     // Paid creative sections (Destacados / Ofertas)
     @Published var creativeSections: [FeedCreativeSection] = []
 
+    // Promo banners 16:9 created by Llego admins (global, not per-category)
+    @Published var platformBanners: [FeedPlatformBanner] = []
+
     // MARK: - Private Properties
     private var hasLoaded: Bool = false
     private let repository = ProductFeedRepository()
@@ -129,6 +133,12 @@ class ProductFeedViewModel: ObservableObject {
         if !isRefreshing {
             isLoading = true
             state = .loading
+        }
+
+        // Promo banners load on their own so they never delay (or break) the
+        // main feed. They are global, so they only matter on the unfiltered feed.
+        if selectedCategory == nil {
+            loadPlatformBanners()
         }
 
         Task {
@@ -199,6 +209,15 @@ class ProductFeedViewModel: ObservableObject {
                     : "Error al cargar el feed: \(error.localizedDescription)"
                 self.state = .error(errorMessage)
             }
+        }
+    }
+
+    private func loadPlatformBanners() {
+        Task {
+            let banners = await repository.fetchPlatformBanners()
+            // A category may have been picked while the request was in flight.
+            guard self.selectedCategory == nil else { return }
+            self.platformBanners = banners
         }
     }
 
@@ -351,6 +370,12 @@ class ProductFeedViewModel: ObservableObject {
 
     /// Top reorder item for the inline "pide de nuevo" card
     var topReorderItem: ReorderItem? { reorderItems.first }
+
+    /// Promo banners to render. Hidden while a category filter is active: they
+    /// are platform-wide and would read as results of the filter.
+    var visiblePlatformBanners: [FeedPlatformBanner] {
+        selectedCategory == nil ? platformBanners : []
+    }
 
     /// Store to highlight in the featured store card (best-scored or first available)
     var featuredStore: FeedStore? { stores.first }

@@ -1,0 +1,13 @@
+# Banners promocionales 16:9 creados por Llego desde el panel admin.
+# Se muestran en el carrusel del feed principal (slot `.promoBanners`).
+query GetPlatformBanners {
+  platformBanners(appTarget: "customer") {
+    id
+    imagePath
+    imageUrl
+    title
+    actionUrl
+    branchId
+    order
+  }
+}

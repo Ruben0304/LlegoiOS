@@ -89,6 +89,7 @@ public extension LlegoAPI {
       case "PaymentAttemptType": return LlegoAPI.Objects.PaymentAttemptType
       case "PaymentMethodType": return LlegoAPI.Objects.PaymentMethodType
       case "PickupAddressType": return LlegoAPI.Objects.PickupAddressType
+      case "PlatformBannerType": return LlegoAPI.Objects.PlatformBannerType
       case "ProductCategoryType": return LlegoAPI.Objects.ProductCategoryType
       case "ProductConnection": return LlegoAPI.Objects.ProductConnection
       case "ProductEdge": return LlegoAPI.Objects.ProductEdge

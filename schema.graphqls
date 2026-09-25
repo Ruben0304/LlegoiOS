@@ -303,6 +303,30 @@ type Query {
   hello(jwt: String = null): String!
   """Saluda por nombre"""
   greet(name: String! = "mundo", jwt: String = null): String!
+  """Banners promocionales activos para el feed (público)"""
+  platformBanners(appTarget: String! = "customer"): [PlatformBannerType!]!
+}
+
+"""Banner promocional de la plataforma (imagen 16:9) creado por Llego"""
+type PlatformBannerType {
+  id: String!
+  imagePath: String!
+  title: String
+  link: String
+  whatsapp: String
+  branchId: String
+  appTarget: String!
+  order: Int!
+  isActive: Boolean!
+  startAt: DateTime
+  endAt: DateTime
+  createdAt: DateTime!
+  """URL pública (firmada, expira ~1h) de la imagen"""
+  imageUrl: String!
+  """
+  URL a abrir al tocar: https://wa.me/<numero> si hay whatsapp, si no el link. Null si no hay acción externa.
+  """
+  actionUrl: String
 }
 
 type UserType {

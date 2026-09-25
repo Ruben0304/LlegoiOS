@@ -147,6 +147,21 @@ struct FeedPromoBanner: Hashable, Sendable {
     let action: String
 }
 
+/// Banner promocional 16:9 creado por Llego desde el panel admin
+/// (`platformBanners`). Global: no depende de la categoría ni del tipo de negocio.
+struct FeedPlatformBanner: Identifiable, Hashable, Sendable {
+    let id: String
+    /// Ruta estable del objeto en storage. La `imageUrl` es firmada y cambia en
+    /// cada fetch, así que la ruta es lo que identifica de verdad la imagen.
+    let imagePath: String
+    let imageUrl: String
+    let title: String?
+    /// URL externa al tocar (wa.me o link). Nil si no hay acción externa.
+    let actionUrl: String?
+    /// Tienda a abrir al tocar; tiene prioridad sobre `actionUrl`.
+    let branchId: String?
+}
+
 struct FeedSection: Identifiable, Hashable, Sendable {
     let id: String  // sectionId
     let sectionId: String
@@ -742,6 +757,41 @@ class ProductFeedRepository {
                 }
 
                 continuation.resume(returning: Array(items.prefix(10)))
+            }
+        }
+    }
+
+    // MARK: - Platform Banners
+
+    /// Banners promocionales activos para el carrusel del feed.
+    /// Nunca falla: ante cualquier error devuelve `[]` para no romper el feed.
+    func fetchPlatformBanners() async -> [FeedPlatformBanner] {
+        return await withCheckedContinuation { continuation in
+            ApolloClientManager.shared.apollo.fetchCompat(
+                query: LlegoAPI.GetPlatformBannersQuery(),
+                cachePolicy: .fetchIgnoringCacheCompletely
+            ) { result in
+                guard case .success(let graphQLResult) = result,
+                      let banners = graphQLResult.data?.platformBanners
+                else {
+                    continuation.resume(returning: [])
+                    return
+                }
+
+                let items = banners
+                    .sorted { $0.order < $1.order }
+                    .compactMap { banner -> FeedPlatformBanner? in
+                        guard !banner.imageUrl.isEmpty else { return nil }
+                        return FeedPlatformBanner(
+                            id: banner.id,
+                            imagePath: banner.imagePath,
+                            imageUrl: banner.imageUrl,
+                            title: banner.title.flatMap { $0.isEmpty ? nil : $0 },
+                            actionUrl: banner.actionUrl.flatMap { $0.isEmpty ? nil : $0 },
+                            branchId: banner.branchId.flatMap { $0.isEmpty ? nil : $0 }
+                        )
+                    }
+                continuation.resume(returning: items)
             }
         }
     }

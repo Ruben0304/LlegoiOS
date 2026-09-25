@@ -293,6 +293,12 @@ struct ProductFeedView: View {
             if let section = viewModel.paraTiSection, !section.products.isEmpty {
                 featuredProductsSection(section: section)
             }
+        case .promoBanners:
+            // Llego's own 16:9 banners (admin panel). Renders nothing when empty.
+            PromoBannerCarousel(
+                banners: viewModel.visiblePlatformBanners,
+                accentColor: gradientManager.currentAccentColor
+            )
         case .popularesCerca:
             if let section = viewModel.getSection(.popularesCerca),
                !viewModel.filteredProducts(for: section).isEmpty {
