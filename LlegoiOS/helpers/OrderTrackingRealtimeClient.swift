@@ -1,6 +1,48 @@
 import Foundation
 
-struct OrderTrackingRealtimeEvent {
+enum OrderTrackingSocketMessage: Sendable {
+    case text(String)
+    case data(Data)
+}
+
+protocol OrderTrackingWebSocket: AnyObject, Sendable {
+    func resume()
+    func send(_ message: OrderTrackingSocketMessage) async throws
+    func receive() async throws -> OrderTrackingSocketMessage
+    func cancel()
+}
+
+protocol OrderTrackingWebSocketFactory: Sendable {
+    func makeSocket(url: URL, protocols: [String]) -> OrderTrackingWebSocket
+}
+
+private struct URLSessionOrderTrackingWebSocketFactory: OrderTrackingWebSocketFactory {
+    func makeSocket(url: URL, protocols: [String]) -> OrderTrackingWebSocket {
+        URLSessionOrderTrackingWebSocket(URLSession.shared.webSocketTask(with: url, protocols: protocols))
+    }
+}
+
+private final class URLSessionOrderTrackingWebSocket: OrderTrackingWebSocket, @unchecked Sendable {
+    private let task: URLSessionWebSocketTask
+    init(_ task: URLSessionWebSocketTask) { self.task = task }
+    func resume() { task.resume() }
+    func cancel() { task.cancel(with: .goingAway, reason: nil) }
+    func send(_ message: OrderTrackingSocketMessage) async throws {
+        switch message {
+        case .text(let text): try await task.send(.string(text))
+        case .data(let data): try await task.send(.data(data))
+        }
+    }
+    func receive() async throws -> OrderTrackingSocketMessage {
+        switch try await task.receive() {
+        case .string(let text): return .text(text)
+        case .data(let data): return .data(data)
+        @unknown default: return .text("")
+        }
+    }
+}
+
+struct OrderTrackingRealtimeEvent: Sendable {
     let orderId: String
     let statusRaw: String?
     let estimatedMinutes: Int?
@@ -8,12 +50,30 @@ struct OrderTrackingRealtimeEvent {
     let deliveryPersonCoordinates: [Double]?
 }
 
+enum OrderTrackingRealtimeError: LocalizedError, Equatable {
+    case serverRejectedConnection
+    case serverReportedError
+
+    var errorDescription: String? {
+        switch self {
+        case .serverRejectedConnection: return "El servidor rechazó la conexión GraphQL WS."
+        case .serverReportedError: return "El servidor reportó un error en la suscripción GraphQL WS."
+        }
+    }
+}
+
 actor OrderTrackingRealtimeClient {
     private let webSocketURL: URL
     private let jsonDecoder = JSONDecoder()
     private let jsonEncoder = JSONEncoder()
+    private let socketFactory: OrderTrackingWebSocketFactory
 
     init(baseURL: String) {
+        self.init(baseURL: baseURL, socketFactory: URLSessionOrderTrackingWebSocketFactory())
+    }
+
+    init(baseURL: String, socketFactory: OrderTrackingWebSocketFactory) {
+        self.socketFactory = socketFactory
         let httpURL = URL(string: "\(baseURL)/graphql")
             ?? URL(string: "https://llegobackend-production.up.railway.app/graphql")!
 
@@ -30,14 +90,11 @@ actor OrderTrackingRealtimeClient {
         jwt: String,
         onEvent: @escaping @Sendable (OrderTrackingRealtimeEvent) async -> Void
     ) async throws {
-        let webSocket = URLSession.shared.webSocketTask(
-            with: webSocketURL,
-            protocols: ["graphql-transport-ws"]
-        )
+        let webSocket = socketFactory.makeSocket(url: webSocketURL, protocols: ["graphql-transport-ws"])
         webSocket.resume()
 
         defer {
-            webSocket.cancel(with: .goingAway, reason: nil)
+            webSocket.cancel()
         }
 
         let initMessage = GraphQLWSMessage(
@@ -52,7 +109,11 @@ actor OrderTrackingRealtimeClient {
             )
         )
         try await send(initMessage, over: webSocket)
-        _ = try await receiveGraphQLWSMessage(over: webSocket)
+        let acknowledgement = try await receiveGraphQLWSMessage(over: webSocket)
+        if acknowledgement.type == "error" { throw OrderTrackingRealtimeError.serverRejectedConnection }
+        guard acknowledgement.type == "connection_ack" else {
+            throw OrderTrackingRealtimeError.serverRejectedConnection
+        }
 
         let operation = GraphQLWSSubscribeOperation(
             query: Self.orderTrackingSubscription,
@@ -72,6 +133,7 @@ actor OrderTrackingRealtimeClient {
             if incoming.type == "complete" {
                 break
             }
+            if incoming.type == "error" { throw OrderTrackingRealtimeError.serverReportedError }
             guard incoming.type == "next", let payload = incoming.payload else { continue }
 
             guard let decoded = payload.decoded(OrderTrackingPayload.self, using: jsonDecoder),
@@ -91,28 +153,26 @@ actor OrderTrackingRealtimeClient {
         }
     }
 
-    private func send(_ message: GraphQLWSMessage, over socket: URLSessionWebSocketTask) async throws {
+    private func send(_ message: GraphQLWSMessage, over socket: OrderTrackingWebSocket) async throws {
         let data = try jsonEncoder.encode(message)
         guard let text = String(data: data, encoding: .utf8) else {
             throw NSError(domain: "OrderTrackingRealtimeClient", code: -1, userInfo: [
                 NSLocalizedDescriptionKey: "No se pudo serializar mensaje WS."
             ])
         }
-        try await socket.send(.string(text))
+        try await socket.send(.text(text))
     }
 
-    private func receiveGraphQLWSMessage(over socket: URLSessionWebSocketTask) async throws
+    private func receiveGraphQLWSMessage(over socket: OrderTrackingWebSocket) async throws
         -> GraphQLWSMessage
     {
         let incoming = try await socket.receive()
         let text: String
         switch incoming {
-        case .string(let value):
+        case .text(let value):
             text = value
         case .data(let data):
             text = String(data: data, encoding: .utf8) ?? ""
-        @unknown default:
-            text = ""
         }
 
         guard let data = text.data(using: .utf8) else {

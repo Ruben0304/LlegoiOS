@@ -5,6 +5,126 @@ import Foundation
 import UIKit
 import UserNotifications
 
+@MainActor
+protocol DeliveryNotificationSending {
+    func sendDeliveryNotification()
+}
+
+@MainActor
+struct LocalDeliveryNotificationSender: DeliveryNotificationSending {
+    let notificationCenter: UserNotificationCenterClient
+
+    init(notificationCenter: UserNotificationCenterClient? = nil) {
+        self.notificationCenter = notificationCenter ?? UNUserNotificationCenter.current()
+    }
+
+    func sendDeliveryNotification() {
+        let content = UNMutableNotificationContent()
+        content.title = "¡Tu pedido ha llegado! 🎉"
+        content.body = "El mensajero está en tu puerta. ¡Disfruta tu pedido!"
+        content.sound = .default
+        content.badge = 1
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
+        notificationCenter.add(request) { error in
+            if let error { print("❌ Error enviando notificación: \(error.localizedDescription)") }
+            else { print("✅ Notificación de entrega enviada correctamente") }
+        }
+    }
+}
+
+@MainActor
+protocol DeliveryLiveActivityManaging: AnyObject {
+    var areActivitiesEnabled: Bool { get }
+    func request(attributes: DeliveryActivityAttributes, state: DeliveryActivityAttributes.ContentState) -> Bool
+    func update(_ state: DeliveryActivityAttributes.ContentState) async
+    func end(_ state: DeliveryActivityAttributes.ContentState, delivered: Bool) async
+}
+
+@MainActor
+final class ActivityKitDeliveryLiveActivityManager: DeliveryLiveActivityManaging {
+    private var activity: Activity<DeliveryActivityAttributes>?
+    var areActivitiesEnabled: Bool { ActivityAuthorizationInfo().areActivitiesEnabled }
+
+    func request(attributes: DeliveryActivityAttributes, state: DeliveryActivityAttributes.ContentState) -> Bool {
+        do {
+            activity = try Activity<DeliveryActivityAttributes>.request(
+                attributes: attributes, content: .init(state: state, staleDate: nil), pushType: nil
+            )
+            return true
+        } catch {
+            print("⚠️ Live Activity request falló: \(error.localizedDescription)")
+            return false
+        }
+    }
+
+    func update(_ state: DeliveryActivityAttributes.ContentState) async {
+        guard let activity else { return }
+        await activity.update(.init(state: state, staleDate: nil))
+    }
+
+    func end(_ state: DeliveryActivityAttributes.ContentState, delivered: Bool) async {
+        guard let activity else { return }
+        await activity.end(.init(state: state, staleDate: nil), dismissalPolicy: .after(.now + 60))
+        self.activity = nil
+    }
+}
+
+enum DeliveryLiveActivityContentFactory {
+    static func state(status: DeliveryStatus, progress: Double, remainingDistance: String, estimatedMinutes: Int) -> DeliveryActivityAttributes.ContentState {
+        DeliveryActivityAttributes.ContentState(
+            status: status.rawValue,
+            statusDisplayText: status.displayText,
+            statusIcon: status.icon,
+            progressValue: progress,
+            remainingDistance: remainingDistance,
+            estimatedMinutes: estimatedMinutes
+        )
+    }
+
+    static func finalState(delivered: Bool) -> DeliveryActivityAttributes.ContentState {
+        DeliveryActivityAttributes.ContentState(
+            status: delivered ? DeliveryStatus.delivered.rawValue : DeliveryStatus.cancelled.rawValue,
+            statusDisplayText: delivered ? "¡Entregado!" : "Cancelado",
+            statusIcon: delivered ? "checkmark.seal.fill" : "xmark.circle",
+            progressValue: delivered ? 1 : 0,
+            remainingDistance: delivered ? "Llegó" : "--",
+            estimatedMinutes: 0
+        )
+    }
+}
+
+enum LiveActivityFallback {
+    static func firstSuccessfulAttempt<Value>(_ candidates: [Value], attempt: (Value) -> Bool) -> Int? {
+        for (index, candidate) in candidates.enumerated() where attempt(candidate) { return index }
+        return nil
+    }
+}
+
+enum LiveActivityImageProcessor {
+    static func compressedThumbnail(from image: UIImage, maxSide: CGFloat, maxBytes: Int) -> Data? {
+        let size = image.size
+        let resized: UIImage
+        if size.width > 0, size.height > 0 {
+            let scale = min(maxSide / size.width, maxSide / size.height, 1)
+            let target = CGSize(width: size.width * scale, height: size.height * scale)
+            let format = UIGraphicsImageRendererFormat()
+            // `maxSide` es el límite de píxeles del payload ActivityKit, no de puntos de pantalla.
+            format.scale = 1
+            let renderer = UIGraphicsImageRenderer(size: target, format: format)
+            resized = renderer.image { _ in image.draw(in: CGRect(origin: .zero, size: target)) }
+        } else {
+            resized = image
+        }
+        guard var compressed = resized.jpegData(compressionQuality: 0.45) else { return nil }
+        if compressed.count > maxBytes {
+            guard let smaller = resized.jpegData(compressionQuality: 0.25) else { return nil }
+            compressed = smaller
+        }
+        return compressed.count <= maxBytes ? compressed : nil
+    }
+}
+
 // MARK: - Delivery Status Enum
 enum DeliveryStatus: String, Codable {
     case idle = "idle"
@@ -109,7 +229,8 @@ class OrderManager: ObservableObject {
     private var activeOrderIsPickup = false
 
     // Live Activity
-    private var currentActivity: Activity<DeliveryActivityAttributes>?
+    private let liveActivityManager: DeliveryLiveActivityManaging = ActivityKitDeliveryLiveActivityManager()
+    private let deliveryNotificationSender: DeliveryNotificationSending = LocalDeliveryNotificationSender()
 
     // Private properties
     private var timer: Timer?
@@ -691,24 +812,7 @@ class OrderManager: ObservableObject {
 
     private func sendDeliveryNotification() {
         print("🔔 Intentando enviar notificación de entrega...")
-
-        let content = UNMutableNotificationContent()
-        content.title = "¡Tu pedido ha llegado! 🎉"
-        content.body = "El mensajero está en tu puerta. ¡Disfruta tu pedido!"
-        content.sound = .default
-        content.badge = 1
-
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-        let request = UNNotificationRequest(
-            identifier: UUID().uuidString, content: content, trigger: trigger)
-
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("❌ Error enviando notificación: \(error.localizedDescription)")
-            } else {
-                print("✅ Notificación de entrega enviada correctamente")
-            }
-        }
+        deliveryNotificationSender.sendDeliveryNotification()
     }
 
     // MARK: - Live Activity Management
@@ -720,16 +824,14 @@ class OrderManager: ObservableObject {
     }
 
     private func startLiveActivityAsync(for order: ActiveOrder) async {
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+        guard liveActivityManager.areActivitiesEnabled else {
             print("⚠️ Live Activities no están habilitadas")
             return
         }
 
-        let initialState = DeliveryActivityAttributes.ContentState(
-            status: orderStatus.rawValue,
-            statusDisplayText: orderStatus.displayText,
-            statusIcon: orderStatus.icon,
-            progressValue: 0.0,
+        let initialState = DeliveryLiveActivityContentFactory.state(
+            status: orderStatus,
+            progress: 0,
             remainingDistance: formattedRemainingDistance,
             estimatedMinutes: estimatedMinutesRemaining
         )
@@ -745,8 +847,9 @@ class OrderManager: ObservableObject {
             "🖼️ LiveActivity payload images storeLarge=\(storeImageDataLarge?.count ?? 0)B storeSmall=\(storeImageDataSmall?.count ?? 0)B userSmall=\(userAvatarDataSmall?.count ?? 0)B"
         )
 
-        // Intento 1: logo tienda (prioridad) + avatar usuario.
-        var attributes = DeliveryActivityAttributes(
+        // Se prueban payloads en orden de riqueza para conservar el fallback por tamaño.
+        let candidates = [
+            DeliveryActivityAttributes(
             orderID: order.id,
             storeName: trimmedForActivity(order.restaurantLocation, max: 56),
             storeIcon: "storefront.fill",
@@ -756,16 +859,8 @@ class OrderManager: ObservableObject {
             userAvatarData: userAvatarDataSmall,
             totalAmount: "\(order.currency) \(String(format: "%.2f", order.totalAmount))",
             deliveryAddress: trimmedForActivity(order.deliveryLocation, max: 72)
-        )
-
-        if let activity = tryRequestLiveActivity(attributes: attributes, state: initialState) {
-            currentActivity = activity
-            print("🟢 Live Activity iniciada (logo + avatar): \(activity.id)")
-            return
-        }
-
-        // Intento 2: solo logo de tienda en tamaño pequeño.
-        attributes = DeliveryActivityAttributes(
+            ),
+            DeliveryActivityAttributes(
             orderID: order.id,
             storeName: trimmedForActivity(order.restaurantLocation, max: 48),
             storeIcon: "storefront.fill",
@@ -775,15 +870,8 @@ class OrderManager: ObservableObject {
             userAvatarData: nil,
             totalAmount: "\(order.currency) \(String(format: "%.2f", order.totalAmount))",
             deliveryAddress: trimmedForActivity(order.deliveryLocation, max: 60)
-        )
-        if let activity = tryRequestLiveActivity(attributes: attributes, state: initialState) {
-            currentActivity = activity
-            print("🟢 Live Activity iniciada (solo logo tienda): \(activity.id)")
-            return
-        }
-
-        // Intento 3: payload mínimo sin imágenes.
-        attributes = DeliveryActivityAttributes(
+            ),
+            DeliveryActivityAttributes(
             orderID: order.id,
             storeName: trimmedForActivity(order.restaurantLocation, max: 36),
             storeIcon: "storefront.fill",
@@ -793,31 +881,19 @@ class OrderManager: ObservableObject {
             userAvatarData: nil,
             totalAmount: "\(order.currency) \(String(format: "%.2f", order.totalAmount))",
             deliveryAddress: trimmedForActivity(order.deliveryLocation, max: 48)
-        )
-        if let activity = tryRequestLiveActivity(attributes: attributes, state: initialState) {
-            currentActivity = activity
-            print("🟢 Live Activity iniciada (sin imágenes fallback): \(activity.id)")
+            )
+        ]
+        let successfulIndex = LiveActivityFallback.firstSuccessfulAttempt(candidates) {
+            liveActivityManager.request(attributes: $0, state: initialState)
+        }
+        if let successfulIndex {
+            let label = ["logo + avatar", "solo logo tienda", "sin imágenes fallback"][successfulIndex]
+            print("🟢 Live Activity iniciada (\(label))")
             return
         }
 
         print(
             "❌ Error iniciando Live Activity: todos los intentos fallaron por tamaño u otro error")
-    }
-
-    private func tryRequestLiveActivity(
-        attributes: DeliveryActivityAttributes,
-        state: DeliveryActivityAttributes.ContentState
-    ) -> Activity<DeliveryActivityAttributes>? {
-        do {
-            return try Activity<DeliveryActivityAttributes>.request(
-                attributes: attributes,
-                content: .init(state: state, staleDate: nil),
-                pushType: nil
-            )
-        } catch {
-            print("⚠️ Live Activity request falló: \(error.localizedDescription)")
-            return nil
-        }
     }
 
     private func fetchThumbnailData(from urlString: String?, maxSide: CGFloat, maxBytes: Int) async
@@ -845,30 +921,11 @@ class OrderManager: ObservableObject {
                 return nil
             }
 
-            let resized = resizeImage(image, maxSide: maxSide)
-            guard var compressed = resized.jpegData(compressionQuality: 0.45) else {
-                return nil
-            }
-            if compressed.count > maxBytes {
-                guard let smaller = resized.jpegData(compressionQuality: 0.25) else {
-                    return nil
-                }
-                compressed = smaller
-            }
-            return compressed.count <= maxBytes ? compressed : nil
+            return LiveActivityImageProcessor.compressedThumbnail(
+                from: image, maxSide: maxSide, maxBytes: maxBytes
+            )
         } catch {
             return nil
-        }
-    }
-
-    private func resizeImage(_ image: UIImage, maxSide: CGFloat) -> UIImage {
-        let size = image.size
-        guard size.width > 0, size.height > 0 else { return image }
-        let scale = min(maxSide / size.width, maxSide / size.height, 1.0)
-        let target = CGSize(width: size.width * scale, height: size.height * scale)
-        let renderer = UIGraphicsImageRenderer(size: target)
-        return renderer.image { _ in
-            image.draw(in: CGRect(origin: .zero, size: target))
         }
     }
 
@@ -879,11 +936,9 @@ class OrderManager: ObservableObject {
     }
 
     private func updateLiveActivity(progress: Double) {
-        let updatedState = DeliveryActivityAttributes.ContentState(
-            status: orderStatus.rawValue,
-            statusDisplayText: orderStatus.displayText,
-            statusIcon: orderStatus.icon,
-            progressValue: progress,
+        let updatedState = DeliveryLiveActivityContentFactory.state(
+            status: orderStatus,
+            progress: progress,
             remainingDistance: formattedRemainingDistance,
             estimatedMinutes: estimatedMinutesRemaining
         )
@@ -896,8 +951,7 @@ class OrderManager: ObservableObject {
     private func applyLiveActivityUpdate(
         _ updatedState: DeliveryActivityAttributes.ContentState
     ) async {
-        guard let currentActivity else { return }
-        await currentActivity.update(.init(state: updatedState, staleDate: nil))
+        await liveActivityManager.update(updatedState)
     }
 
     private func persistActiveOrderState() {
@@ -975,34 +1029,12 @@ class OrderManager: ObservableObject {
     }
 
     private func endLiveActivity(delivered: Bool = false) {
-        guard currentActivity != nil else { return }
-
-        let finalState = DeliveryActivityAttributes.ContentState(
-            status: delivered
-                ? DeliveryStatus.delivered.rawValue : DeliveryStatus.cancelled.rawValue,
-            statusDisplayText: delivered ? "¡Entregado!" : "Cancelado",
-            statusIcon: delivered ? "checkmark.seal.fill" : "xmark.circle",
-            progressValue: delivered ? 1.0 : 0.0,
-            remainingDistance: delivered ? "Llegó" : "--",
-            estimatedMinutes: 0
-        )
+        let finalState = DeliveryLiveActivityContentFactory.finalState(delivered: delivered)
 
         Task { @MainActor in
-            await finishLiveActivity(finalState, delivered: delivered)
+            await liveActivityManager.end(finalState, delivered: delivered)
             print("🔴 Live Activity finalizada (delivered: \(delivered))")
         }
-    }
-
-    private func finishLiveActivity(
-        _ finalState: DeliveryActivityAttributes.ContentState,
-        delivered: Bool
-    ) async {
-        guard let currentActivity else { return }
-        await currentActivity.end(
-            .init(state: finalState, staleDate: nil),
-            dismissalPolicy: .after(.now + 60)
-        )
-        self.currentActivity = nil
     }
 
     /// Distancia restante formateada para la Live Activity

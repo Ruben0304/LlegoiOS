@@ -9,6 +9,74 @@ enum PushRoute: Equatable {
     case order(id: String)
 }
 
+@MainActor
+protocol UserNotificationCenterClient {
+    func getAuthorizationStatus(_ completion: @escaping @Sendable (UNAuthorizationStatus) -> Void)
+    func requestAuthorization(completion: @escaping @Sendable (Bool, Error?) -> Void)
+    func setBadgeCount(_ count: Int)
+    func add(_ request: UNNotificationRequest, completion: (@Sendable (Error?) -> Void)?)
+}
+
+@MainActor
+extension UNUserNotificationCenter: UserNotificationCenterClient {
+    func getAuthorizationStatus(_ completion: @escaping @Sendable (UNAuthorizationStatus) -> Void) {
+        getNotificationSettings { completion($0.authorizationStatus) }
+    }
+
+    func requestAuthorization(completion: @escaping @Sendable (Bool, Error?) -> Void) {
+        requestAuthorization(options: [.alert, .badge, .sound], completionHandler: completion)
+    }
+
+    func setBadgeCount(_ count: Int) {
+        setBadgeCount(count, withCompletionHandler: nil)
+    }
+
+    func add(_ request: UNNotificationRequest, completion: (@Sendable (Error?) -> Void)?) {
+        add(request, withCompletionHandler: completion)
+    }
+}
+
+@MainActor
+protocol DeviceTokenRegistering {
+    func register(token: String, jwt: String?, completion: @escaping @Sendable (Result<Bool, Error>) -> Void)
+}
+
+@MainActor
+struct ApolloDeviceTokenRegistrar: DeviceTokenRegistering {
+    let client: ApolloClient
+
+    static func makeMutation(token: String, jwt: String?) -> LlegoAPI.RegisterDeviceTokenMutation {
+        let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+        let input = LlegoAPI.RegisterDeviceTokenInput(
+            token: token,
+            platform: .case(.ios),
+            appVersion: appVersion.map { .some($0) } ?? .null,
+            osVersion: .some(UIDevice.current.systemVersion)
+        )
+        return LlegoAPI.RegisterDeviceTokenMutation(
+            input: input,
+            jwt: jwt.map { .some($0) } ?? .null
+        )
+    }
+
+    func register(token: String, jwt: String?, completion: @escaping @Sendable (Result<Bool, Error>) -> Void) {
+        let mutation = Self.makeMutation(token: token, jwt: jwt)
+        client.performCompat(mutation: mutation) { result in
+            switch result {
+            case .success(let graphQLResult):
+                if graphQLResult.data?.registerDeviceToken != nil {
+                    completion(.success(true))
+                } else if let error = graphQLResult.errors?.first {
+                    completion(.failure(error))
+                } else {
+                    completion(.success(false))
+                }
+            case .failure(let error): completion(.failure(error))
+            }
+        }
+    }
+}
+
 /// Manager para push notifications
 /// Maneja registro de device token y procesamiento de notificaciones
 @MainActor
@@ -22,7 +90,9 @@ final class PushNotificationManager: NSObject, ObservableObject {
     /// se tocó con la app cerrada y la vista raíz aún no estaba montada
     @Published private(set) var pendingRoute: PushRoute?
     
-    private let apolloClient = ApolloClientManager.shared.apollo
+    private let notificationCenter: UserNotificationCenterClient
+    private let tokenRegistrar: DeviceTokenRegistering
+    private let registerRemoteNotifications: () -> Void
     private let tokenStorageKey = "deviceToken"
     private var cancellables = Set<AnyCancellable>()
     private var wasAuthenticated = false
@@ -32,11 +102,30 @@ final class PushNotificationManager: NSObject, ObservableObject {
         self.sendTokenToBackend(token, jwt: jwt)
     }
     
-    private override init() {
+    private override convenience init() {
+        self.init(
+            notificationCenter: UNUserNotificationCenter.current(),
+            tokenRegistrar: ApolloDeviceTokenRegistrar(client: ApolloClientManager.shared.apollo),
+            registerRemoteNotifications: { UIApplication.shared.registerForRemoteNotifications() },
+            observeSystemChanges: true
+        )
+    }
+
+    init(
+        notificationCenter: UserNotificationCenterClient,
+        tokenRegistrar: DeviceTokenRegistering,
+        registerRemoteNotifications: @escaping () -> Void,
+        observeSystemChanges: Bool = false
+    ) {
+        self.notificationCenter = notificationCenter
+        self.tokenRegistrar = tokenRegistrar
+        self.registerRemoteNotifications = registerRemoteNotifications
         super.init()
-        observeAuthChanges()
-        observeAppActivation()
-        loadStoredToken()
+        if observeSystemChanges {
+            observeAuthChanges()
+            observeAppActivation()
+            loadStoredToken()
+        }
     }
     
     // MARK: - Public Methods
@@ -44,8 +133,7 @@ final class PushNotificationManager: NSObject, ObservableObject {
     /// Al arrancar: si el permiso ya fue concedido, registra en APNs para refrescar el token.
     /// No muestra el diálogo del sistema; eso se hace en un momento con contexto (primer pedido).
     func registerIfAlreadyAuthorized() {
-        UNUserNotificationCenter.current().getNotificationSettings { settings in
-            let status = settings.authorizationStatus
+        notificationCenter.getAuthorizationStatus { status in
             Task { @MainActor [weak self] in
                 self?.permissionStatus = status
                 switch status {
@@ -61,7 +149,7 @@ final class PushNotificationManager: NSObject, ObservableObject {
     /// Solicita permisos y registra para push notifications.
     /// Si el usuario ya respondió antes, el sistema no vuelve a mostrar el diálogo.
     func requestPermissionAndRegister() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { [weak self] granted, error in
+        notificationCenter.requestAuthorization { [weak self] granted, _ in
             Task { @MainActor [weak self] in
                 if granted {
                     self?.registerForRemoteNotifications()
@@ -73,8 +161,7 @@ final class PushNotificationManager: NSObject, ObservableObject {
     
     /// Actualiza el estado de permisos
     func updatePermissionStatus() {
-        UNUserNotificationCenter.current().getNotificationSettings { settings in
-            let status = settings.authorizationStatus
+        notificationCenter.getAuthorizationStatus { status in
             Task { @MainActor [weak self] in
                 self?.permissionStatus = status
             }
@@ -137,13 +224,15 @@ final class PushNotificationManager: NSObject, ObservableObject {
     // MARK: - Private Methods
     
     private func registerForRemoteNotifications() {
-        UIApplication.shared.registerForRemoteNotifications()
+        registerRemoteNotifications()
     }
 
     private func observeAppActivation() {
         NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)
-            .sink { _ in
-                UNUserNotificationCenter.current().setBadgeCount(0)
+            .sink { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.notificationCenter.setBadgeCount(0)
+                }
             }
             .store(in: &cancellables)
     }
@@ -189,32 +278,14 @@ final class PushNotificationManager: NSObject, ObservableObject {
     }
     
     private func sendTokenToBackend(_ token: String, jwt: String?) {
-        let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
-        let osVersion = UIDevice.current.systemVersion
-        
-        let input = LlegoAPI.RegisterDeviceTokenInput(
-            token: token,
-            platform: .case(.ios),
-            appVersion: appVersion.map { .some($0) } ?? .null,
-            osVersion: .some(osVersion)
-        )
-        
-        let mutation = LlegoAPI.RegisterDeviceTokenMutation(
-            input: input,
-            jwt: jwt.map { .some($0) } ?? .null
-        )
-        
-        apolloClient.performCompat(mutation: mutation) { [weak self] result in
+        tokenRegistrar.register(token: token, jwt: jwt) { [weak self] result in
             Task { @MainActor [weak self] in
                 switch result {
-                case .success(let graphQLResult):
-                    if graphQLResult.data?.registerDeviceToken != nil {
+                case .success(let registered):
+                    if registered {
                         self?.isRegistered = true
                         print("✅ Device token registrado en backend")
-                    } else if let errors = graphQLResult.errors {
-                        print("❌ Error registrando token: \(errors)")
                     }
-                    
                 case .failure(let error):
                     print("❌ Error de red registrando token: \(error)")
                 }
