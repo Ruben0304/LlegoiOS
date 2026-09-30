@@ -535,17 +535,37 @@ class ProfileViewModel: ObservableObject {
 
     // MARK: - Update Phone
 
-    /// Actualiza el teléfono del usuario. Cadena vacía se envía como nil para borrarlo.
+    /// Actualiza el teléfono del usuario. Cadena vacía lo borra: se envía "" explícito porque
+    /// el backend trata `phone: null` como "no cambiar" y respondería "No hay campos para actualizar".
     /// Necesario para que la app de negocios pueda contactar al cliente por llamada/WhatsApp
     /// desde el detalle del pedido.
     func updatePhone(newPhone: String) async {
         guard !isUpdatingPhone else { return }
 
+        let trimmed = newPhone.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if !trimmed.isEmpty {
+            let allowedSymbols: Set<Character> = ["+", " ", "-", "(", ")"]
+            let digitCount = trimmed.filter { $0.isASCII && $0.isNumber }.count
+            let hasOnlyPhoneChars = trimmed.allSatisfy {
+                ($0.isASCII && $0.isNumber) || allowedSymbols.contains($0)
+            }
+            guard hasOnlyPhoneChars, (8...15).contains(digitCount) else {
+                errorMessage = "Introduce un teléfono válido (entre 8 y 15 dígitos)"
+                return
+            }
+        }
+
+        // Sin cambios: no llamar al backend (y evita el error "No hay campos para actualizar")
+        if trimmed == (currentUser?.phone ?? "") {
+            errorMessage = nil
+            showEditPhoneSheet = false
+            editingPhone = ""
+            return
+        }
+
         isUpdatingPhone = true
         errorMessage = nil
-
-        let trimmed = newPhone.trimmingCharacters(in: .whitespacesAndNewlines)
-        let phoneToSend: String? = trimmed.isEmpty ? nil : trimmed
 
         do {
             guard let jwt = authManager.getAccessToken() else {
@@ -558,7 +578,7 @@ class ProfileViewModel: ObservableObject {
                 jwt: jwt,
                 name: nil,
                 username: nil,
-                phone: phoneToSend
+                phone: trimmed
             )
 
             if let user = currentUser {

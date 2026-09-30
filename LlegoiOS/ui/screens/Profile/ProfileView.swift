@@ -662,6 +662,7 @@ struct ProfileView: View {
     // MARK: - Contact Phone Section
     private var contactPhoneSection: some View {
         Button(action: {
+            viewModel.errorMessage = nil
             viewModel.editingPhone = viewModel.currentUser?.phone ?? ""
             viewModel.showEditPhoneSheet = true
         }) {
@@ -695,6 +696,10 @@ struct ProfileView: View {
             .background(
                 RoundedRectangle(cornerRadius: 16)
                     .fill(Color.white)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
             )
         }
         .buttonStyle(PlainButtonStyle())
