@@ -118,13 +118,16 @@ class ProfileViewModel: ObservableObject {
         state = .loading
         errorMessage = nil
 
+        // Opcional en el registro: se normaliza (+53) si se puede, sin bloquear si no
+        let phone = PhoneNumberNormalizer.normalizedOrOriginal(registerPhone)
+
         do {
             // Llamar al repository
             let session = try await repository.register(
                 name: registerName,
                 email: registerEmail,
                 password: registerPassword,
-                phone: registerPhone.isEmpty ? nil : registerPhone
+                phone: phone.isEmpty ? nil : phone
             )
 
             // Guardar sesión en AuthManager
@@ -535,29 +538,25 @@ class ProfileViewModel: ObservableObject {
 
     // MARK: - Update Phone
 
-    /// Actualiza el teléfono del usuario. Cadena vacía lo borra: se envía "" explícito porque
-    /// el backend trata `phone: null` como "no cambiar" y respondería "No hay campos para actualizar".
-    /// Necesario para que la app de negocios pueda contactar al cliente por llamada/WhatsApp
-    /// desde el detalle del pedido.
+    /// Actualiza el teléfono del usuario. Se guarda normalizado con código de país (+53 si no lo trae)
+    /// para que la app de negocios pueda llamar/abrir WhatsApp desde el detalle del pedido.
+    /// Cadena vacía lo borra: se envía "" explícito porque el backend trata `phone: null` como
+    /// "no cambiar" y respondería "No hay campos para actualizar".
     func updatePhone(newPhone: String) async {
         guard !isUpdatingPhone else { return }
 
-        let trimmed = newPhone.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        if !trimmed.isEmpty {
-            let allowedSymbols: Set<Character> = ["+", " ", "-", "(", ")"]
-            let digitCount = trimmed.filter { $0.isASCII && $0.isNumber }.count
-            let hasOnlyPhoneChars = trimmed.allSatisfy {
-                ($0.isASCII && $0.isNumber) || allowedSymbols.contains($0)
-            }
-            guard hasOnlyPhoneChars, (8...15).contains(digitCount) else {
-                errorMessage = "Introduce un teléfono válido (entre 8 y 15 dígitos)"
-                return
-            }
+        let normalizedPhone: String
+        switch PhoneNumberNormalizer.normalize(newPhone) {
+        case .success(let phone):
+            normalizedPhone = phone
+        case .failure(let validationError):
+            errorMessage = validationError.localizedDescription
+            return
         }
 
-        // Sin cambios: no llamar al backend (y evita el error "No hay campos para actualizar")
-        if trimmed == (currentUser?.phone ?? "") {
+        // Sin cambios: no llamar al backend (y evita el error "No hay campos para actualizar").
+        // Un teléfono antiguo sin +53 sí cambia al normalizarlo, así que se guarda corregido.
+        if normalizedPhone == (currentUser?.phone ?? "") {
             errorMessage = nil
             showEditPhoneSheet = false
             editingPhone = ""
@@ -578,7 +577,7 @@ class ProfileViewModel: ObservableObject {
                 jwt: jwt,
                 name: nil,
                 username: nil,
-                phone: trimmed
+                phone: normalizedPhone
             )
 
             if let user = currentUser {

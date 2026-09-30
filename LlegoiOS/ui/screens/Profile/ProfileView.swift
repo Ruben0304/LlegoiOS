@@ -2211,7 +2211,7 @@ struct EditPhoneSheet: View {
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.gray)
 
-                        TextField("+53...", text: $viewModel.editingPhone)
+                        TextField("5XXX XXXX", text: $viewModel.editingPhone)
                             .keyboardType(.phonePad)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled(true)
@@ -2224,6 +2224,10 @@ struct EditPhoneSheet: View {
                         RoundedRectangle(cornerRadius: 12)
                             .fill(Color(.systemGray6))
                     )
+
+                    Text("Si es de Cuba basta con los 8 dígitos: añadimos el +53 automáticamente. Si es de otro país, escríbelo con + y el código de país.")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
                 }
                 .padding(.horizontal)
 
