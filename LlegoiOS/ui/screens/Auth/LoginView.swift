@@ -316,7 +316,7 @@ struct LoginView: View {
                     .buttonStyle(.plain)
 
                     // Terms and Conditions Footer
-                    Text("Al iniciar sesión, aceptas nuestros [Términos y Condiciones](https://llego.app/terms) y nuestra [Política de Privacidad](https://llego.app/privacy).")
+                    Text("Al iniciar sesión, aceptas nuestros [Términos y Condiciones](\(LegalLinks.termsURL)) y nuestra [Política de Privacidad](\(LegalLinks.privacyURL)).")
                         .font(.system(size: 13, weight: .regular))
                         .foregroundColor(Color.black.opacity(0.5))
                         .multilineTextAlignment(.center)
