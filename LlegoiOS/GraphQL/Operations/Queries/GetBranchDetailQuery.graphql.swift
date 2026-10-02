@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetBranchDetail"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetBranchDetail($id: String!) { branch(id: $id) { __typename id businessId name acceptsQvapay acceptsZelle qvapayUsername zelleEmail address coordinates { __typename type coordinates } phone status avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta deliveryRadius acceptedCurrency exchangeRate schedule { __typename days { __typename day isOpen hours { __typename open close } } temporaryStatus { __typename temporallyClosed temporallyOpen reason } } catalogOnly acceptingOrders createdAt showcases(activeOnly: true) { __typename id title description imageUrl isActive createdAt items { __typename id name description price availability } } } }"#
+        #"query GetBranchDetail($id: String!) { branch(id: $id) { __typename id businessId name acceptsQvapay acceptsZelle qvapayUsername zelleEmail address coordinates { __typename type coordinates } phone status avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta deliveryRadius acceptedCurrency exchangeRate schedule { __typename days { __typename day isOpen hours { __typename open close } } temporaryStatus { __typename temporallyClosed temporallyOpen reason date openTime closeTime } } catalogOnly acceptingOrders createdAt showcases(activeOnly: true) { __typename id title description imageUrl isActive createdAt items { __typename id name description price availability } } } }"#
       ))
 
     public var id: String
@@ -206,6 +206,9 @@ public extension LlegoAPI {
               .field("temporallyClosed", Bool.self),
               .field("temporallyOpen", Bool.self),
               .field("reason", String?.self),
+              .field("date", String?.self),
+              .field("openTime", String?.self),
+              .field("closeTime", String?.self),
             ] }
             @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
               GetBranchDetailQuery.Data.Branch.Schedule.TemporaryStatus.self
@@ -214,6 +217,9 @@ public extension LlegoAPI {
             public var temporallyClosed: Bool { __data["temporallyClosed"] }
             public var temporallyOpen: Bool { __data["temporallyOpen"] }
             public var reason: String? { __data["reason"] }
+            public var date: String? { __data["date"] }
+            public var openTime: String? { __data["openTime"] }
+            public var closeTime: String? { __data["closeTime"] }
           }
         }
 

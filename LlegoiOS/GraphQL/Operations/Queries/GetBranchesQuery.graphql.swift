@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetBranches"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetBranches($first: Int! = 20, $after: String, $businessId: String, $tipo: BranchTipo, $radiusKm: Float, $productCategoryId: String, $jwt: String, $productsLimit: Int = 2) { branches( first: $first after: $after businessId: $businessId tipo: $tipo radiusKm: $radiusKm productCategoryId: $productCategoryId jwt: $jwt ) { __typename edges { __typename node { __typename id businessId name acceptsQvapay acceptsZelle qvapayUsername zelleEmail address coordinates { __typename type coordinates } phone status avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta deliveryRadius schedule { __typename days { __typename day isOpen hours { __typename open close } } temporaryStatus { __typename temporallyClosed temporallyOpen reason } } catalogOnly acceptingOrders createdAt score distanceKm products(limit: $productsLimit, availableOnly: false) { __typename id name price currency imageUrlBaja } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
+        #"query GetBranches($first: Int! = 20, $after: String, $businessId: String, $tipo: BranchTipo, $radiusKm: Float, $productCategoryId: String, $jwt: String, $productsLimit: Int = 2) { branches( first: $first after: $after businessId: $businessId tipo: $tipo radiusKm: $radiusKm productCategoryId: $productCategoryId jwt: $jwt ) { __typename edges { __typename node { __typename id businessId name acceptsQvapay acceptsZelle qvapayUsername zelleEmail address coordinates { __typename type coordinates } phone status avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta deliveryRadius schedule { __typename days { __typename day isOpen hours { __typename open close } } temporaryStatus { __typename temporallyClosed temporallyOpen reason date openTime closeTime } } catalogOnly acceptingOrders createdAt score distanceKm products(limit: $productsLimit, availableOnly: false) { __typename id name price currency imageUrlBaja } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
       ))
 
     public var first: Int32
@@ -290,6 +290,9 @@ public extension LlegoAPI {
                   .field("temporallyClosed", Bool.self),
                   .field("temporallyOpen", Bool.self),
                   .field("reason", String?.self),
+                  .field("date", String?.self),
+                  .field("openTime", String?.self),
+                  .field("closeTime", String?.self),
                 ] }
                 @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
                   GetBranchesQuery.Data.Branches.Edge.Node.Schedule.TemporaryStatus.self
@@ -298,6 +301,9 @@ public extension LlegoAPI {
                 public var temporallyClosed: Bool { __data["temporallyClosed"] }
                 public var temporallyOpen: Bool { __data["temporallyOpen"] }
                 public var reason: String? { __data["reason"] }
+                public var date: String? { __data["date"] }
+                public var openTime: String? { __data["openTime"] }
+                public var closeTime: String? { __data["closeTime"] }
               }
             }
 

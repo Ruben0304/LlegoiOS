@@ -180,7 +180,10 @@ class CartRepository {
                         BranchTemporaryStatus(
                             temporallyClosed: ts.temporallyClosed,
                             temporallyOpen: ts.temporallyOpen,
-                            reason: ts.reason
+                            reason: ts.reason,
+                            date: ts.date,
+                            openTime: ts.openTime,
+                            closeTime: ts.closeTime
                         )
                     }
                 )

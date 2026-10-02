@@ -1910,7 +1910,7 @@ struct CartView: View {
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(.red)
                 Spacer()
-                Text("Puedes hacer el pedido igualmente")
+                Text("Programa tu pedido para cuando abra")
                     .font(.system(size: 11, weight: .regular))
                     .foregroundColor(.secondary)
             }

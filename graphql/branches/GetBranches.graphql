@@ -36,6 +36,9 @@ query GetBranches($first: Int! = 20, $after: String, $businessId: String, $tipo:
                 temporallyClosed
                 temporallyOpen
                 reason
+                date
+                openTime
+                closeTime
             }
         }
         catalogOnly

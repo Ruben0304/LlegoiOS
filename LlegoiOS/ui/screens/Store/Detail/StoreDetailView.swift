@@ -41,6 +41,13 @@ struct StoreDetailView: View {
         viewModel.branchDetail?.schedule?.currentStatus()
     }
 
+    private func specialHoursText(_ hoursLabel: String, reason: String?) -> String {
+        if let reason, !reason.isEmpty {
+            return "Horario especial hoy: \(hoursLabel) · \(reason)"
+        }
+        return "Horario especial hoy: \(hoursLabel)"
+    }
+
     /// Aviso cuando la sucursal pausó la recepción de pedidos (acceptingOrders = false).
     /// En "solo catálogo" no se muestra: ahí nunca se piden pedidos.
     @ViewBuilder
@@ -100,7 +107,9 @@ struct StoreDetailView: View {
                     }
                 }
 
-                if let ts = schedule.temporaryStatus {
+                // Solo el override que aplica hoy (hora de Cuba): uno de otra fecha se
+                // ignora y manda el horario semanal.
+                if let ts = schedule.applicableTemporaryStatus() {
                     if ts.temporallyClosed {
                         HStack(spacing: 8) {
                             Image(systemName: "moon.zzz.fill")
@@ -118,12 +127,14 @@ struct StoreDetailView: View {
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
                                 .fill(Color.orange.opacity(0.1))
                         )
-                    } else if ts.temporallyOpen {
+                    } else if let hoursLabel = ts.specialHoursLabel {
+                        // Horario especial de hoy. `temporallyOpen` sin horas no cambia
+                        // nada (manda el horario normal), así que no se muestra aviso.
                         HStack(spacing: 8) {
                             Image(systemName: "sun.max.fill")
                                 .font(.system(size: 12))
                                 .foregroundColor(.green)
-                            Text(ts.reason ?? "Abierto excepcionalmente")
+                            Text(specialHoursText(hoursLabel, reason: ts.reason))
                                 .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(.green)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -138,7 +149,8 @@ struct StoreDetailView: View {
                     }
                 }
 
-                let todayIndex = Calendar.current.component(.weekday, from: Date()) - 1
+                // Día de la semana en hora de Cuba (0 = domingo), como el resto del horario.
+                let todayIndex = BranchHours.localDay(of: Date()).weekday
                 let sortedDays = schedule.days.sorted { $0.day < $1.day }
                 VStack(spacing: 0) {
                     ForEach(Array(sortedDays.enumerated()), id: \.element.day) { index, day in

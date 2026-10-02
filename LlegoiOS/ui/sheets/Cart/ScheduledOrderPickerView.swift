@@ -118,23 +118,11 @@ struct ScheduledOrderPickerView: View {
 
     // MARK: - Validation
 
+    /// Misma regla que el backend para pedidos programados (`_is_branch_open_at`): el
+    /// override diario solo cuenta si su fecha es la del día elegido ("cerrado hoy" bloquea
+    /// un pedido para hoy, no uno para mañana) y los turnos nocturnos cruzan la medianoche.
     private func isWithinBranchHours(_ date: Date) -> Bool {
-        if let temp = schedule.temporaryStatus, temp.temporallyClosed { return false }
-        let cal = makeCal()
-        let weekday = cal.component(.weekday, from: date) - 1
-        guard let day = schedule.days.first(where: { $0.day == weekday }), day.isOpen else { return false }
-        let mins = cal.component(.hour, from: date) * 60 + cal.component(.minute, from: date)
-        for range in day.hours {
-            guard let open = parseMinutes(range.open), let close = parseMinutes(range.close) else { continue }
-            if mins >= open && mins < close { return true }
-        }
-        return false
-    }
-
-    private func parseMinutes(_ s: String) -> Int? {
-        let parts = s.split(separator: ":").compactMap { Int($0) }
-        guard parts.count == 2 else { return nil }
-        return parts[0] * 60 + parts[1]
+        schedule.isOpenForScheduledOrder(at: date)
     }
 
     private func makeCal() -> Calendar {

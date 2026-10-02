@@ -36,6 +36,9 @@ query GetBranchDetail($id: String!) {
                 temporallyClosed
                 temporallyOpen
                 reason
+                date
+                openTime
+                closeTime
             }
         }
         catalogOnly
