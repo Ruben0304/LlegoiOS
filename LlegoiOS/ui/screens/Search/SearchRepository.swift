@@ -198,7 +198,8 @@ class SearchRepository {
                         coordinate: CLLocationCoordinate2D(
                             latitude: node.coordinates.coordinates.count > 1 ? node.coordinates.coordinates[1] : 0,
                             longitude: node.coordinates.coordinates.count > 0 ? node.coordinates.coordinates[0] : 0
-                        )
+                        ),
+                        acceptingOrders: node.acceptingOrders
                     )
                 }
 
@@ -321,7 +322,8 @@ class SearchRepository {
                         coordinate: CLLocationCoordinate2D(
                             latitude: node.coordinates.coordinates.count > 1 ? node.coordinates.coordinates[1] : 0,
                             longitude: node.coordinates.coordinates.count > 0 ? node.coordinates.coordinates[0] : 0
-                        )
+                        ),
+                        acceptingOrders: node.acceptingOrders
                     )
                 }
 

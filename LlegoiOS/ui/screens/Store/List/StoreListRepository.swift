@@ -526,7 +526,8 @@ class StoreListRepository {
                                             facilities: nil,
                                             createdAt: edge.node.createdAt,
                                             products: mappedProducts,
-                                            catalogOnly: false
+                                            catalogOnly: false,
+                                            acceptingOrders: edge.node.acceptingOrders
                                         )
                                     }
 
@@ -596,7 +597,8 @@ class StoreListRepository {
                             facilities: nil,
                             createdAt: edge.node.createdAt,
                             products: mappedProducts,
-                            catalogOnly: false
+                            catalogOnly: false,
+                            acceptingOrders: edge.node.acceptingOrders
                         )
                     }
 

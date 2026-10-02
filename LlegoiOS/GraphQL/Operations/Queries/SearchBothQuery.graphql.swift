@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "SearchBoth"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query SearchBoth($query: String!, $firstProducts: Int! = 10, $firstBranches: Int! = 8, $useVectorSearch: Boolean, $jwt: String) { searchProducts( query: $query first: $firstProducts useVectorSearch: $useVectorSearch jwt: $jwt ) { __typename edges { __typename node { __typename id name price currency imageUrlBaja business { __typename id name avatarUrl avatarUrlBaja avatarUrlAlta } } } } searchBranches( query: $query first: $firstBranches useVectorSearch: $useVectorSearch jwt: $jwt ) { __typename edges { __typename node { __typename id name avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta address coordinates { __typename type coordinates } deliveryRadius products(limit: 4, availableOnly: false) { __typename id name price currency imageUrlBaja availability } } } } }"#
+        #"query SearchBoth($query: String!, $firstProducts: Int! = 10, $firstBranches: Int! = 8, $useVectorSearch: Boolean, $jwt: String) { searchProducts( query: $query first: $firstProducts useVectorSearch: $useVectorSearch jwt: $jwt ) { __typename edges { __typename node { __typename id name price currency imageUrlBaja business { __typename id name avatarUrl avatarUrlBaja avatarUrlAlta } } } } searchBranches( query: $query first: $firstBranches useVectorSearch: $useVectorSearch jwt: $jwt ) { __typename edges { __typename node { __typename id name avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta address coordinates { __typename type coordinates } deliveryRadius acceptingOrders products(limit: 4, availableOnly: false) { __typename id name price currency imageUrlBaja availability } } } } }"#
       ))
 
     public var query: String
@@ -224,6 +224,7 @@ public extension LlegoAPI {
               .field("address", String?.self),
               .field("coordinates", Coordinates.self),
               .field("deliveryRadius", Double?.self),
+              .field("acceptingOrders", Bool.self),
               .field("products", [Product].self, arguments: [
                 "limit": 4,
                 "availableOnly": false
@@ -250,6 +251,7 @@ public extension LlegoAPI {
             public var address: String? { __data["address"] }
             public var coordinates: Coordinates { __data["coordinates"] }
             public var deliveryRadius: Double? { __data["deliveryRadius"] }
+            public var acceptingOrders: Bool { __data["acceptingOrders"] }
             /// Products from this branch
             public var products: [Product] { __data["products"] }
 

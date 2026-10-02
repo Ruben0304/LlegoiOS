@@ -23,6 +23,7 @@ query SearchBranches($query: String!, $first: Int! = 20, $after: String, $useVec
         coverUrlBaja
         coverUrlAlta
         deliveryRadius
+        acceptingOrders
         createdAt
         score
         distanceKm

@@ -238,7 +238,9 @@ class SearchViewModel: ObservableObject {
                             coordinate: CLLocationCoordinate2D(
                                 latitude: branch.coordinates.latitude,
                                 longitude: branch.coordinates.longitude
-                            )
+                            ),
+                            schedule: branch.schedule,
+                            acceptingOrders: branch.acceptingOrders
                         )
                     }
                     var storeProds: [String: [ProductGraphQL]] = [:]

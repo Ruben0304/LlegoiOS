@@ -384,6 +384,21 @@ private struct StoreMapOptionsModal: View {
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
 
+                // La tienda pausó los pedidos desde su app: se puede ver el catálogo
+                // pero el backend rechaza el pedido (BRANCH_NOT_ACCEPTING_ORDERS).
+                if !store.acceptingOrders {
+                    HStack(spacing: 6) {
+                        Image(systemName: "pause.circle.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text(BranchOrderingMessages.notAcceptingOrdersShort)
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    .foregroundColor(.orange)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 7)
+                    .background(Capsule().fill(Color.orange.opacity(0.12)))
+                }
+
                 if let address = store.address {
                     HStack(spacing: 6) {
                         Image(systemName: "location.fill")
@@ -419,12 +434,16 @@ private struct StoreMapOptionsModal: View {
                     label: "min"
                 )
 
-                InfoPill(
-                    icon: "checkmark.circle.fill",
-                    iconColor: .green,
-                    value: "Abierto",
-                    label: "Ahora"
-                )
+                // Estado real según el horario (incluido el horario temporal del día):
+                // si la sucursal no trae horario no se afirma nada.
+                if let isOpen = store.isOpenNow {
+                    InfoPill(
+                        icon: isOpen ? "checkmark.circle.fill" : "xmark.circle.fill",
+                        iconColor: isOpen ? .green : .red,
+                        value: isOpen ? "Abierto" : "Cerrado",
+                        label: "Ahora"
+                    )
+                }
             }
             .padding(.horizontal, 24)
             .opacity(isAnimated ? 1 : 0)

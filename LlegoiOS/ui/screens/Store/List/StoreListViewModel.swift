@@ -262,7 +262,8 @@ class StoreListViewModel: ObservableObject {
                             coordinate: CLLocationCoordinate2D(
                                 latitude: branchGraphQL.coordinates.latitude,
                                 longitude: branchGraphQL.coordinates.longitude
-                            )
+                            ),
+                            acceptingOrders: branchGraphQL.acceptingOrders
                         )
                     }
 

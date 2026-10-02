@@ -50,6 +50,7 @@ query SearchBoth(
           coordinates
         }
         deliveryRadius
+        acceptingOrders
         products(limit: 4, availableOnly: false) {
           id
           name
