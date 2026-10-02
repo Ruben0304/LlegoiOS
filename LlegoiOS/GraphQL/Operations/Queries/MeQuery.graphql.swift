@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "Me"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query Me($jwt: String!) { me(jwt: $jwt) { __typename id name email username phone role createdAt providerUserId avatar avatarUrl savedAddresses { __typename id label street city reference addressType buildingName floor apartment deliveryInstructions latitude longitude } defaultAddressId } }"#
+        #"query Me($jwt: String!) { me(jwt: $jwt) { __typename id name email username phone role createdAt providerUserId avatar avatarUrl savedAddresses { __typename id label street city reference addressType buildingName floor apartment deliveryInstructions latitude longitude } defaultAddressId scheduledDeletionAt } }"#
       ))
 
     public var jwt: String
@@ -57,6 +57,7 @@ public extension LlegoAPI {
           .field("avatarUrl", String?.self),
           .field("savedAddresses", [SavedAddress].self),
           .field("defaultAddressId", String?.self),
+          .field("scheduledDeletionAt", LlegoAPI.DateTime?.self),
         ] }
         @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
           MeQuery.Data.Me.self
@@ -75,6 +76,7 @@ public extension LlegoAPI {
         public var avatarUrl: String? { __data["avatarUrl"] }
         public var savedAddresses: [SavedAddress] { __data["savedAddresses"] }
         public var defaultAddressId: String? { __data["defaultAddressId"] }
+        public var scheduledDeletionAt: LlegoAPI.DateTime? { __data["scheduledDeletionAt"] }
 
         /// Me.SavedAddress
         ///

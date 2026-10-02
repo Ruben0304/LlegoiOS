@@ -142,7 +142,8 @@ class SavedAddressRepository {
                 avatar: user.avatar,
                 avatarUrl: user.avatarUrl,
                 savedAddresses: savedAddresses,
-                defaultAddressId: defaultAddressId
+                defaultAddressId: defaultAddressId,
+                scheduledDeletionAt: user.scheduledDeletionAt
             )
             AuthManager.shared.applyCurrentUser(updatedUser)
         }

@@ -187,6 +187,11 @@ struct ProfileView: View {
                                 profileLoadingIndicator
                             }
 
+                            // Aviso de eliminación de cuenta programada (con opción de cancelar)
+                            if let scheduledAt = viewModel.scheduledDeletionAt {
+                                accountDeletionNoticeCard(scheduledAt: scheduledAt)
+                            }
+
                             // Información de ubicación compacta
                             compactLocationSection
 
@@ -220,8 +225,11 @@ struct ProfileView: View {
                             // Botón de cerrar sesión
                             signOutButton
 
-                            // Botón de eliminar cuenta
-                            deleteAccountButton
+                            // Botón de eliminar cuenta (si ya hay una eliminación programada,
+                            // el aviso de arriba permite cancelarla)
+                            if viewModel.scheduledDeletionAt == nil {
+                                deleteAccountButton
+                            }
 
                             Spacer(minLength: 40)
                         }
@@ -291,17 +299,24 @@ struct ProfileView: View {
         } message: {
             Text(cashKycAlertMessage)
         }
-        .alert("Eliminar cuenta", isPresented: $viewModel.showDeleteAccountConfirmation) {
+        .alert("¿Eliminar tu cuenta?", isPresented: $viewModel.showDeleteAccountConfirmation) {
             Button("Cancelar", role: .cancel) {}
-            Button("Eliminar", role: .destructive) {
+            Button("Eliminar cuenta", role: .destructive) {
                 Task {
-                    await viewModel.deleteAccount()
+                    await viewModel.requestAccountDeletion()
                 }
             }
         } message: {
-            Text("Esta acción es permanente. Se eliminará tu cuenta y todos tus datos asociados (pedidos, direcciones y métodos de pago guardados). No podrás recuperarlos. ¿Deseas continuar?")
+            Text("Tu cuenta se eliminará definitivamente en 30 días. Podrás cancelarlo en cualquier momento antes de esa fecha iniciando sesión de nuevo.\n\nAl eliminarse perderás de forma permanente tu historial de pedidos, direcciones y métodos de pago guardados.")
         }
-        .alert("No se pudo eliminar la cuenta", isPresented: Binding(
+        .alert("Eliminación programada", isPresented: $viewModel.showAccountDeletionScheduledAlert) {
+            Button("Entendido") {
+                viewModel.finishAccountDeletionRequest()
+            }
+        } message: {
+            Text(viewModel.accountDeletionScheduledMessage)
+        }
+        .alert("No se pudo completar la solicitud", isPresented: Binding(
             get: { viewModel.deleteAccountError != nil },
             set: { if !$0 { viewModel.deleteAccountError = nil } }
         )) {
@@ -398,6 +413,64 @@ struct ProfileView: View {
         .buttonStyle(PlainButtonStyle())
     }
 
+    // MARK: - Aviso de eliminación programada
+    private func accountDeletionNoticeCard(scheduledAt: Date) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.orange)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Tu cuenta se eliminará el \(scheduledAt.longDateInHavana)")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("Puedes cancelar la eliminación antes de esa fecha y tu cuenta seguirá como siempre.")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            Button(action: {
+                Task { await viewModel.cancelAccountDeletion() }
+            }) {
+                HStack(spacing: 8) {
+                    if viewModel.isCancellingAccountDeletion {
+                        ProgressView()
+                            .tint(.white)
+                    } else {
+                        Text("Cancelar eliminación")
+                            .font(.system(size: 14, weight: .semibold))
+                    }
+                }
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.orange)
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+            .disabled(viewModel.isCancellingAccountDeletion)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.orange.opacity(0.1))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.orange.opacity(0.35), lineWidth: 1)
+        )
+    }
+
     // MARK: - Eliminar Cuenta
     private var deleteAccountButton: some View {
         Button(action: {
@@ -413,7 +486,7 @@ struct ProfileView: View {
                         .foregroundColor(.red)
                 }
 
-                Text(viewModel.isDeletingAccount ? "Eliminando cuenta..." : "Eliminar cuenta")
+                Text(viewModel.isDeletingAccount ? "Programando eliminación..." : "Eliminar cuenta")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.red)
 

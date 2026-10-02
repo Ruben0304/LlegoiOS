@@ -25,10 +25,19 @@ class ProfileViewModel: ObservableObject {
     @Published var showEditPhoneSheet: Bool = false
     @Published var editingPhone: String = ""
 
-    // Account deletion
+    // Eliminación de cuenta: programada con 30 días de gracia, igual que en el resto de apps
     @Published var showDeleteAccountConfirmation: Bool = false
+    /// Solicitando la eliminación programada.
     @Published var isDeletingAccount: Bool = false
+    /// Cancelando una eliminación programada.
+    @Published var isCancellingAccountDeletion: Bool = false
     @Published var deleteAccountError: String?
+    /// Se muestra tras programar la eliminación, antes de cerrar la sesión.
+    @Published var showAccountDeletionScheduledAlert: Bool = false
+    @Published var accountDeletionScheduledMessage: String = ""
+
+    /// Fecha en que se eliminará la cuenta, si hay una eliminación programada.
+    var scheduledDeletionAt: Date? { currentUser?.scheduledDeletionAt }
 
     // Recent orders
     @Published var recentOrders: [RecentOrder] = []
@@ -262,7 +271,9 @@ class ProfileViewModel: ObservableObject {
         print("✅ Sesión cerrada")
     }
 
-    func deleteAccount() async {
+    /// Programa la eliminación de la cuenta (30 días de gracia; se puede cancelar).
+    /// No borra nada al instante: avisa de la fecha y, al cerrar el aviso, cierra la sesión.
+    func requestAccountDeletion() async {
         guard !isDeletingAccount else { return }
         guard let token = authManager.getAccessToken() else {
             signOut()
@@ -274,12 +285,57 @@ class ProfileViewModel: ObservableObject {
         defer { isDeletingAccount = false }
 
         do {
-            try await repository.deleteUser(jwt: token)
-            // Limpiar toda la sesión local tras eliminar la cuenta en el backend
-            signOut()
+            let scheduledAt = try await repository.requestAccountDeletion(jwt: token)
+            if let user = currentUser {
+                let updated = user.withScheduledDeletion(scheduledAt)
+                currentUser = updated
+                authManager.applyCurrentUser(updated)
+            }
+
+            if let scheduledAt {
+                accountDeletionScheduledMessage =
+                    "Tu cuenta se eliminará definitivamente el \(scheduledAt.longDateInHavana). "
+                    + "Si inicias sesión antes de esa fecha podrás cancelar la eliminación."
+            } else {
+                accountDeletionScheduledMessage =
+                    "Tu cuenta se eliminará definitivamente en 30 días. "
+                    + "Si inicias sesión antes de ese plazo podrás cancelar la eliminación."
+            }
+            showAccountDeletionScheduledAlert = true
         } catch {
             deleteAccountError = error.localizedDescription
-            print("❌ Error al eliminar cuenta: \(error.localizedDescription)")
+            print("❌ Error al programar la eliminación de la cuenta: \(error.localizedDescription)")
+        }
+    }
+
+    /// Cierra la sesión local una vez que el usuario vio la fecha de eliminación.
+    func finishAccountDeletionRequest() {
+        showAccountDeletionScheduledAlert = false
+        signOut()
+    }
+
+    /// Cancela la eliminación programada: la cuenta sigue como siempre.
+    func cancelAccountDeletion() async {
+        guard !isCancellingAccountDeletion else { return }
+        guard let token = authManager.getAccessToken() else {
+            signOut()
+            return
+        }
+
+        isCancellingAccountDeletion = true
+        deleteAccountError = nil
+        defer { isCancellingAccountDeletion = false }
+
+        do {
+            let scheduledAt = try await repository.cancelAccountDeletion(jwt: token)
+            if let user = currentUser {
+                let updated = user.withScheduledDeletion(scheduledAt)
+                currentUser = updated
+                authManager.applyCurrentUser(updated)
+            }
+        } catch {
+            deleteAccountError = error.localizedDescription
+            print("❌ Error al cancelar la eliminación de la cuenta: \(error.localizedDescription)")
         }
     }
 
@@ -454,7 +510,8 @@ class ProfileViewModel: ObservableObject {
                     avatar: response.avatar,
                     avatarUrl: response.avatarUrl,
                     savedAddresses: user.savedAddresses,
-                    defaultAddressId: user.defaultAddressId
+                    defaultAddressId: user.defaultAddressId,
+                    scheduledDeletionAt: user.scheduledDeletionAt
                 )
 
                 currentUser = updatedUser
@@ -515,7 +572,8 @@ class ProfileViewModel: ObservableObject {
                     avatar: user.avatar,
                     avatarUrl: user.avatarUrl,
                     savedAddresses: user.savedAddresses,
-                    defaultAddressId: user.defaultAddressId
+                    defaultAddressId: user.defaultAddressId,
+                    scheduledDeletionAt: user.scheduledDeletionAt
                 )
 
                 currentUser = newUser
@@ -592,7 +650,8 @@ class ProfileViewModel: ObservableObject {
                     avatar: user.avatar,
                     avatarUrl: user.avatarUrl,
                     savedAddresses: user.savedAddresses,
-                    defaultAddressId: user.defaultAddressId
+                    defaultAddressId: user.defaultAddressId,
+                    scheduledDeletionAt: user.scheduledDeletionAt
                 )
 
                 currentUser = newUser

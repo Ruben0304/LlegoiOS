@@ -25,5 +25,6 @@ query Me($jwt: String!) {
       longitude
     }
     defaultAddressId
+    scheduledDeletionAt
   }
 }

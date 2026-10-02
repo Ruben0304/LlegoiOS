@@ -18,10 +18,20 @@ struct User: Codable, Sendable {
     // Contador preferido cuando backend lo exponga y sea mapeado en iOS.
     // `var` permite que Decodable lo asigne si viene en payload persistido.
     var completedOrdersCount: Int? = nil
+    /// Fecha en que el backend borrará la cuenta (eliminación programada con 30 días de
+    /// gracia). nil si no hay eliminación pendiente. Viene de `me`.
+    var scheduledDeletionAt: Date? = nil
 
     enum CodingKeys: String, CodingKey {
         case id, email, fullName, username, phone, role, appleUserId, avatar, avatarUrl,
-            savedAddresses, defaultAddressId, completedOrdersCount
+            savedAddresses, defaultAddressId, completedOrdersCount, scheduledDeletionAt
+    }
+
+    /// Copia del usuario con otra fecha de eliminación programada (nil = cancelada).
+    func withScheduledDeletion(_ date: Date?) -> User {
+        var copy = self
+        copy.scheduledDeletionAt = date
+        return copy
     }
 }
 

@@ -1,0 +1,8 @@
+# Programa el borrado de la cuenta con 30 días de gracia (Apple 5.1.1(v)).
+# Misma mutación que usan las apps de Android, mensajeros y negocios.
+mutation RequestAccountDeletion($jwt: String!) {
+  requestAccountDeletion(jwt: $jwt) {
+    id
+    scheduledDeletionAt
+  }
+}

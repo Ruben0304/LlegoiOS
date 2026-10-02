@@ -1,0 +1,7 @@
+# Cancela el borrado programado de la cuenta mientras dure el plazo de gracia.
+mutation CancelAccountDeletion($jwt: String!) {
+  cancelAccountDeletion(jwt: $jwt) {
+    id
+    scheduledDeletionAt
+  }
+}

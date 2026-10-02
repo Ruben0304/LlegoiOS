@@ -315,7 +315,8 @@ class ProfileRepository {
                                 longitude: addr.longitude
                             )
                         },
-                        defaultAddressId: data.defaultAddressId
+                        defaultAddressId: data.defaultAddressId,
+                        scheduledDeletionAt: BackendDateParser.parse(data.scheduledDeletionAt)
                     )
                     continuation.resume(returning: user)
 
@@ -387,39 +388,83 @@ class ProfileRepository {
         }
     }
     
-    // MARK: - Delete User (Eliminar cuenta)
-    func deleteUser(jwt: String) async throws {
+    // MARK: - Eliminación de cuenta (programada, 30 días de gracia)
+
+    /// Programa el borrado de la cuenta. Es la misma mutación que usan Android, mensajeros
+    /// y negocios: el backend marca `scheduledDeletionAt` a 30 días y un worker hace el
+    /// borrado definitivo; mientras tanto el usuario puede cancelarlo. Devuelve la fecha.
+    func requestAccountDeletion(jwt: String) async throws -> Date? {
         return try await withCheckedThrowingContinuation { continuation in
-            let mutation = LlegoAPI.DeleteUserMutation(jwt: jwt)
+            let mutation = LlegoAPI.RequestAccountDeletionMutation(jwt: jwt)
 
             apolloClient.performCompat(mutation: mutation) { result in
                 switch result {
                 case .success(let graphQLResult):
                     if let errors = graphQLResult.errors {
-                        print("❌ GraphQL Errors (delete user):")
+                        print("❌ GraphQL Errors (request account deletion):")
                         errors.forEach { print("  - \($0.localizedDescription)") }
                         continuation.resume(throwing: NSError(
                             domain: "GraphQL",
                             code: -1,
-                            userInfo: [NSLocalizedDescriptionKey: errors.first?.localizedDescription ?? "Error al eliminar la cuenta"]
+                            userInfo: [NSLocalizedDescriptionKey: errors.first?.localizedDescription ?? "Error al solicitar la eliminación de la cuenta"]
                         ))
                         return
                     }
 
-                    guard graphQLResult.data?.deleteUser == true else {
+                    guard let data = graphQLResult.data?.requestAccountDeletion else {
                         continuation.resume(throwing: NSError(
                             domain: "GraphQL",
                             code: -2,
-                            userInfo: [NSLocalizedDescriptionKey: "No se pudo eliminar la cuenta. Inténtalo de nuevo."]
+                            userInfo: [NSLocalizedDescriptionKey: "No se pudo programar la eliminación de la cuenta. Inténtalo de nuevo."]
                         ))
                         return
                     }
 
-                    print("✅ Cuenta eliminada")
-                    continuation.resume(returning: ())
+                    let scheduledAt = BackendDateParser.parse(data.scheduledDeletionAt)
+                    print("✅ Eliminación de cuenta programada: \(data.scheduledDeletionAt ?? "sin fecha")")
+                    continuation.resume(returning: scheduledAt)
 
                 case .failure(let error):
-                    print("❌ Error en delete user: \(error.localizedDescription)")
+                    print("❌ Error en request account deletion: \(error.localizedDescription)")
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    /// Cancela una eliminación programada. Devuelve la fecha que queda (nil = cancelada).
+    func cancelAccountDeletion(jwt: String) async throws -> Date? {
+        return try await withCheckedThrowingContinuation { continuation in
+            let mutation = LlegoAPI.CancelAccountDeletionMutation(jwt: jwt)
+
+            apolloClient.performCompat(mutation: mutation) { result in
+                switch result {
+                case .success(let graphQLResult):
+                    if let errors = graphQLResult.errors {
+                        print("❌ GraphQL Errors (cancel account deletion):")
+                        errors.forEach { print("  - \($0.localizedDescription)") }
+                        continuation.resume(throwing: NSError(
+                            domain: "GraphQL",
+                            code: -1,
+                            userInfo: [NSLocalizedDescriptionKey: errors.first?.localizedDescription ?? "Error al cancelar la eliminación de la cuenta"]
+                        ))
+                        return
+                    }
+
+                    guard let data = graphQLResult.data?.cancelAccountDeletion else {
+                        continuation.resume(throwing: NSError(
+                            domain: "GraphQL",
+                            code: -2,
+                            userInfo: [NSLocalizedDescriptionKey: "No se pudo cancelar la eliminación de la cuenta. Inténtalo de nuevo."]
+                        ))
+                        return
+                    }
+
+                    print("✅ Eliminación de cuenta cancelada")
+                    continuation.resume(returning: BackendDateParser.parse(data.scheduledDeletionAt))
+
+                case .failure(let error):
+                    print("❌ Error en cancel account deletion: \(error.localizedDescription)")
                     continuation.resume(throwing: error)
                 }
             }
