@@ -1,5 +1,12 @@
 # Configuración de Deep Links y Universal Links
 
+> **Estado: universal links pospuestos (fase 2).** El dominio `llego.app` todavía no
+> existe, así que se retiró el entitlement `com.apple.developer.associated-domains`
+> (`applinks:llego.app` y `applinks:www.llego.app`) de `LlegoiOS.entitlements`: apuntaba
+> a un dominio que no resuelve y no aporta nada. Siguen funcionando el esquema
+> `llego://` y `onOpenURL`. Para reactivarlos: publicar el AASA en el dominio
+> real y volver a añadir la capacidad Associated Domains con ese dominio.
+
 ## 📱 Implementación Completada en iOS
 
 ### URL Schemes Configurados

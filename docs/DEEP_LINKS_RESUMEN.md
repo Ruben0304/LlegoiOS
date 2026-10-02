@@ -8,8 +8,9 @@
 - ✅ Soporta productos, tiendas, pedidos, búsqueda y categorías
 
 ### 2. Configuración de Universal Links
-- ✅ Dominio configurado: `llego.app` y `www.llego.app`
-- ✅ Configurado en `LlegoiOS.entitlements`
+- ⏸️ Pospuesto (fase 2): el dominio `llego.app` todavía no existe, así que el
+  entitlement `applinks:llego.app` / `applinks:www.llego.app` se retiró de
+  `LlegoiOS.entitlements`. Ver `docs/DEEP_LINKS_SETUP.md` para reactivarlo.
 - ✅ Soporte para rich previews en iMessage
 
 ### 3. Manejador de Deep Links
