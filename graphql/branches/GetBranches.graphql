@@ -39,6 +39,7 @@ query GetBranches($first: Int! = 20, $after: String, $businessId: String, $tipo:
             }
         }
         catalogOnly
+        acceptingOrders
         createdAt
         score
         distanceKm

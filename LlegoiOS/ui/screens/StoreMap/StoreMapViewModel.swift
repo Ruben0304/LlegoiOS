@@ -54,7 +54,8 @@ class StoreMapViewModel: ObservableObject {
                                 latitude: branchGraphQL.coordinates.latitude,
                                 longitude: branchGraphQL.coordinates.longitude
                             ),
-                            schedule: branchGraphQL.schedule
+                            schedule: branchGraphQL.schedule,
+                            acceptingOrders: branchGraphQL.acceptingOrders
                         )
                     }
                     self.hasLoaded = true

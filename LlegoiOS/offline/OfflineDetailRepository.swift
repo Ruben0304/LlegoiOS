@@ -198,7 +198,9 @@ final class OfflineDetailRepository {
             exchangeRate: nil,
             schedule: nil,
             showcases: [],
-            catalogOnly: false
+            catalogOnly: false,
+            // Sin conexión no se sabe si pausó los pedidos: el backend decide al pedir.
+            acceptingOrders: true
         )
     }
 

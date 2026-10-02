@@ -581,6 +581,14 @@ struct CartView: View {
             return
         }
 
+        // La tienda pausó los pedidos: el backend los rechazaría con
+        // BRANCH_NOT_ACCEPTING_ORDERS, así que se avisa antes de pedir biometría.
+        if !viewModel.branchAcceptingOrders {
+            paymentAlertMessage = BranchOrderingMessages.notAcceptingOrdersAlert
+            showPaymentAlert = true
+            return
+        }
+
         guard let paymentMethod = selectedPaymentMethod else {
             paymentAlertMessage = "Por favor selecciona un método de pago."
             showPaymentAlert = true
@@ -993,8 +1001,8 @@ struct CartView: View {
                         createdOrder: order
                     )
                 case .failure(let error):
-                    self.paymentAlertMessage =
-                        "No se pudo iniciar el flujo KYC: \(error.localizedDescription)"
+                    self.paymentAlertMessage = orderCreationFailureMessage(
+                        error, prefix: "No se pudo iniciar el flujo KYC")
                     self.showPaymentAlert = true
                 }
             }
@@ -1026,6 +1034,15 @@ struct CartView: View {
     }
 
     // MARK: - Create Order
+    /// Texto de la alerta cuando falla la creación del pedido. Si la tienda pausó los
+    /// pedidos se muestra ese aviso tal cual, en vez de un error genérico con prefijo.
+    private func orderCreationFailureMessage(_ error: Error, prefix: String) -> String {
+        if let orderError = error as? CreateOrderError, orderError.isBranchNotAcceptingOrders {
+            return orderError.localizedDescription
+        }
+        return "\(prefix): \(error.localizedDescription)"
+    }
+
     private func createOrderWithPaymentMethod(
         _ paymentMethodId: String, paymentIntentId: String? = nil
     ) {
@@ -1051,8 +1068,8 @@ struct CartView: View {
 
                 case .failure(let error):
                     print("❌ Error creando pedido: \(error.localizedDescription)")
-                    self.paymentAlertMessage =
-                        "Error al crear el pedido: \(error.localizedDescription)"
+                    self.paymentAlertMessage = orderCreationFailureMessage(
+                        error, prefix: "Error al crear el pedido")
                     self.showPaymentAlert = true
                 }
             }
@@ -1861,7 +1878,30 @@ struct CartView: View {
 
     @ViewBuilder
     private var storeClosedBanner: some View {
-        if let status = viewModel.branchOpenStatus, !status.isOpen {
+        if !viewModel.branchAcceptingOrders {
+            // Pedidos pausados por la tienda: el checkout está bloqueado.
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "pause.circle.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.orange)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(BranchOrderingMessages.notAcceptingOrdersShort)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(.primary)
+                    Text(BranchOrderingMessages.notAcceptingOrdersDetail)
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.orange.opacity(0.12))
+            )
+        } else if let status = viewModel.branchOpenStatus, !status.isOpen {
             HStack(spacing: 8) {
                 Circle()
                     .fill(Color.red)
@@ -1960,8 +2000,13 @@ struct CartView: View {
         }
         .modifier(GlassProminentButtonModifier())
         .tint(gradientManager.currentAccentColor)
-        .disabled(viewModel.hasMultipleBranches)
-        .opacity(viewModel.hasMultipleBranches ? 0.45 : 1.0)
+        .disabled(isPlaceOrderBlocked)
+        .opacity(isPlaceOrderBlocked ? 0.45 : 1.0)
+    }
+
+    /// El pedido no se puede hacer: hay productos de varias tiendas o la tienda pausó los pedidos.
+    private var isPlaceOrderBlocked: Bool {
+        viewModel.hasMultipleBranches || !viewModel.branchAcceptingOrders
     }
 
     private var deliveryAddressAlertMessage: String {

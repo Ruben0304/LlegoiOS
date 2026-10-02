@@ -115,6 +115,21 @@ struct StoreOptionsModal: View {
                     )
                 }
 
+                // La tienda pausó los pedidos desde su app: se puede ver el catálogo
+                // pero el backend rechaza el pedido.
+                if !store.acceptingOrders {
+                    HStack(spacing: 6) {
+                        Image(systemName: "pause.circle.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text(BranchOrderingMessages.notAcceptingOrdersShort)
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    .foregroundColor(.orange)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 7)
+                    .background(Capsule().fill(Color.orange.opacity(0.12)))
+                }
+
                 if let address = store.address {
                     HStack(spacing: 6) {
                         Image(systemName: "location.fill")

@@ -72,6 +72,13 @@ class CartViewModel: ObservableObject {
     @Published private(set) var cashKycBranchId: String?
     @Published private(set) var branchOpenStatus: BranchOpenStatus?
     @Published private(set) var branchSchedule: BranchSchedule?
+    /// false cuando la sucursal del carrito pausó los pedidos (`acceptingOrders`).
+    /// Bloquea el botón de pedir; el backend lo rechaza igualmente con
+    /// BRANCH_NOT_ACCEPTING_ORDERS.
+    @Published private(set) var branchAcceptingOrders: Bool = true
+    /// Sucursal a la que corresponde `branchAcceptingOrders`/`branchSchedule`; evita
+    /// arrastrar el estado de otra tienda mientras llega la respuesta.
+    private var orderingInfoBranchId: String?
 
     // Scheduled order
     @Published var scheduledFor: Date?
@@ -788,17 +795,35 @@ class CartViewModel: ObservableObject {
     }
 
     private func fetchBranchScheduleStatus(branchId: String) {
-        repository.fetchBranchSchedule(branchId: branchId) { [weak self] result in
+        if orderingInfoBranchId != branchId {
+            // Otra tienda: no arrastrar su horario ni su estado de pedidos pausados.
+            orderingInfoBranchId = branchId
+            branchSchedule = nil
+            branchOpenStatus = nil
+            branchAcceptingOrders = true
+        }
+        repository.fetchBranchOrderingInfo(branchId: branchId) { [weak self] result in
             guard let self = self else { return }
             Task { @MainActor in
                 switch result {
-                case .success(let schedule):
-                    self.branchSchedule = schedule
-                    self.branchOpenStatus = schedule?.currentStatus()
+                case .success(let info):
+                    // Ignorar respuestas de una tienda que ya no es la del carrito.
+                    guard self.orderingInfoBranchId == branchId else { return }
+                    self.branchSchedule = info?.schedule
+                    self.branchOpenStatus = info?.schedule?.currentStatus()
+                    self.branchAcceptingOrders = info?.acceptingOrders ?? true
                 case .failure(let error):
                     print("⚠️ Error loading branch schedule: \(error.localizedDescription)")
                 }
             }
+        }
+    }
+
+    /// Si el backend rechazó el pedido porque la tienda pausó los pedidos, se refleja
+    /// en el carrito (aviso + botón bloqueado) sin esperar a recargarlo.
+    private func registerOrderCreationFailure(_ error: Error) {
+        if let orderError = error as? CreateOrderError, orderError.isBranchNotAcceptingOrders {
+            branchAcceptingOrders = false
         }
     }
 
@@ -941,6 +966,7 @@ class CartViewModel: ObservableObject {
                     await MainActor.run {
                         self.isCreatingOrder = false
                         self.orderError = error.localizedDescription
+                        self.registerOrderCreationFailure(error)
                         completion(.failure(error))
                     }
                 }
@@ -1217,6 +1243,7 @@ class CartViewModel: ObservableObject {
                 case .failure(let error):
                     print("❌ Error creating order: \(error.localizedDescription)")
                     self.orderError = error.localizedDescription
+                    self.registerOrderCreationFailure(error)
                     completion(.failure(error))
                 }
             }

@@ -142,11 +142,13 @@ final class CreateOrderRepository {
                             print("❌ GraphQL Errors creating order: \(errors)")
                             let errorMessage =
                                 errors.first?.localizedDescription ?? "Error al crear el pedido"
+                            // Se conserva el código estable (extensions.code) para poder
+                            // distinguir, p. ej., BRANCH_NOT_ACCEPTING_ORDERS.
                             completion(
                                 .failure(
-                                    NSError(
-                                        domain: "GraphQL", code: -1,
-                                        userInfo: [NSLocalizedDescriptionKey: errorMessage])))
+                                    CreateOrderError(
+                                        code: errors.first?.extensions?["code"] as? String,
+                                        message: errorMessage)))
                             return
                         }
 
@@ -352,10 +354,9 @@ final class CreateOrderRepository {
 
                     let decoded = try jsonDecoder.decode(MixedCreateOrderResponse.self, from: data)
                     if let firstError = decoded.errors?.first {
-                        throw NSError(
-                            domain: "GraphQL",
-                            code: -1,
-                            userInfo: [NSLocalizedDescriptionKey: firstError.message]
+                        throw CreateOrderError(
+                            code: firstError.extensions?.code,
+                            message: firstError.message
                         )
                     }
 
@@ -737,5 +738,10 @@ private struct MixedCreateOrderResponse: Decodable {
 
     struct GraphQLErrorPayload: Decodable {
         let message: String
+        let extensions: Extensions?
+
+        struct Extensions: Decodable {
+            let code: String?
+        }
     }
 }

@@ -151,22 +151,24 @@ class CartRepository {
         }
     }
 
-    /// Obtener el schedule de una sucursal para validar si está abierta.
-    /// Reutiliza GetBranchDetailQuery (con caché de Apollo).
-    func fetchBranchSchedule(
+    /// Obtener el schedule y si la sucursal acepta pedidos, para validar el checkout.
+    /// Reutiliza GetBranchDetailQuery. Va siempre a red (no a caché): la tienda puede
+    /// haber pausado los pedidos desde que el usuario vio su ficha.
+    func fetchBranchOrderingInfo(
         branchId: String,
-        completion: @escaping @Sendable (Result<BranchSchedule?, Error>) -> Void
+        completion: @escaping @Sendable (Result<BranchOrderingInfo?, Error>) -> Void
     ) {
         apolloClient.fetchCompat(
             query: LlegoAPI.GetBranchDetailQuery(id: branchId),
-            cachePolicy: .returnCacheDataElseFetch
+            cachePolicy: .fetchIgnoringCacheData
         ) { result in
             switch result {
             case .success(let graphQLResult):
-                guard let gqlSchedule = graphQLResult.data?.branch?.schedule else {
+                guard let gqlBranch = graphQLResult.data?.branch else {
                     completion(.success(nil))
                     return
                 }
+                let gqlSchedule = gqlBranch.schedule
                 let schedule = BranchSchedule(
                     days: gqlSchedule.days.map { d in
                         DaySchedule(
@@ -182,7 +184,12 @@ class CartRepository {
                         )
                     }
                 )
-                completion(.success(schedule))
+                completion(
+                    .success(
+                        BranchOrderingInfo(
+                            schedule: schedule,
+                            acceptingOrders: gqlBranch.acceptingOrders
+                        )))
             case .failure(let error):
                 completion(.failure(error))
             }

@@ -105,6 +105,10 @@ struct BranchGraphQL: Identifiable, Sendable {
     let schedule: BranchSchedule?
     let products: [BranchProductGraphQL]  // Productos anidados (opcional, puede estar vacío)
     let catalogOnly: Bool
+    /// La sucursal pausó la recepción de pedidos desde la app de negocios
+    /// (`acceptingOrders` del backend). Por defecto true: si el dato no viene
+    /// (caché antigua, modo offline) no se bloquea nada; el backend decide.
+    let acceptingOrders: Bool
 
     init(
         id: String, businessId: String, name: String, description: String? = nil, address: String,
@@ -114,7 +118,8 @@ struct BranchGraphQL: Identifiable, Sendable {
         facilities: [String]?, createdAt: String,
         schedule: BranchSchedule? = nil,
         products: [BranchProductGraphQL] = [],
-        catalogOnly: Bool = false
+        catalogOnly: Bool = false,
+        acceptingOrders: Bool = true
     ) {
         self.id = id
         self.businessId = businessId
@@ -136,6 +141,7 @@ struct BranchGraphQL: Identifiable, Sendable {
         self.schedule = schedule
         self.products = products
         self.catalogOnly = catalogOnly
+        self.acceptingOrders = acceptingOrders
     }
 
     var preferredAvatarSmallUrl: String? {

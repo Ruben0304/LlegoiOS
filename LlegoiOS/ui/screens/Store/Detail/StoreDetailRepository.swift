@@ -96,7 +96,8 @@ class StoreDetailRepository {
                             }
                         )
                     },
-                    catalogOnly: branch.catalogOnly
+                    catalogOnly: branch.catalogOnly,
+                    acceptingOrders: branch.acceptingOrders
                 )
 
                 print(
@@ -504,6 +505,9 @@ struct BranchDetailGraphQL: Identifiable, Sendable {
     let schedule: BranchSchedule?
     let showcases: [ShowcaseGraphQL]
     let catalogOnly: Bool
+    /// false cuando la sucursal pausó los pedidos (el backend los rechaza con
+    /// BRANCH_NOT_ACCEPTING_ORDERS).
+    let acceptingOrders: Bool
 
     var preferredAvatarLargeUrl: String? {
         avatarLargeURL(low: avatarUrlBaja, original: avatarUrl, high: avatarUrlAlta)

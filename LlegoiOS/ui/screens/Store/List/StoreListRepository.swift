@@ -109,7 +109,8 @@ class StoreListRepository {
                             createdAt: edge.node.createdAt,
                             schedule: mappedSchedule,
                             products: mappedProducts,
-                            catalogOnly: edge.node.catalogOnly
+                            catalogOnly: edge.node.catalogOnly,
+                            acceptingOrders: edge.node.acceptingOrders
                         )
                     }
 
@@ -198,7 +199,8 @@ class StoreListRepository {
                                             createdAt: edge.node.createdAt,
                                             schedule: mappedSchedule,
                                             products: mappedProducts,
-                                            catalogOnly: false
+                                            catalogOnly: false,
+                                            acceptingOrders: edge.node.acceptingOrders
                                         )
                                     }
 

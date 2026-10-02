@@ -41,6 +41,36 @@ struct StoreDetailView: View {
         viewModel.branchDetail?.schedule?.currentStatus()
     }
 
+    /// Aviso cuando la sucursal pausó la recepción de pedidos (acceptingOrders = false).
+    /// En "solo catálogo" no se muestra: ahí nunca se piden pedidos.
+    @ViewBuilder
+    private var notAcceptingOrdersBanner: some View {
+        if let detail = viewModel.branchDetail, !detail.acceptingOrders, !detail.catalogOnly {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "pause.circle.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.orange)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(BranchOrderingMessages.notAcceptingOrdersShort)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.primary)
+                    Text(BranchOrderingMessages.notAcceptingOrdersDetail)
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color.orange.opacity(0.12))
+            )
+        }
+    }
+
     @ViewBuilder
     private var scheduleSection: some View {
         if let schedule = viewModel.branchDetail?.schedule {
@@ -570,6 +600,8 @@ struct StoreDetailView: View {
                                             .background(Capsule().fill(Color.llegoPrimary))
                                         }
                                     }
+
+                                    notAcceptingOrdersBanner
                                 }
                                 .padding(.horizontal, 20)
 

@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetBranches"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetBranches($first: Int! = 20, $after: String, $businessId: String, $tipo: BranchTipo, $radiusKm: Float, $productCategoryId: String, $jwt: String, $productsLimit: Int = 2) { branches( first: $first after: $after businessId: $businessId tipo: $tipo radiusKm: $radiusKm productCategoryId: $productCategoryId jwt: $jwt ) { __typename edges { __typename node { __typename id businessId name acceptsQvapay acceptsZelle qvapayUsername zelleEmail address coordinates { __typename type coordinates } phone status avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta deliveryRadius schedule { __typename days { __typename day isOpen hours { __typename open close } } temporaryStatus { __typename temporallyClosed temporallyOpen reason } } catalogOnly createdAt score distanceKm products(limit: $productsLimit, availableOnly: false) { __typename id name price currency imageUrlBaja } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
+        #"query GetBranches($first: Int! = 20, $after: String, $businessId: String, $tipo: BranchTipo, $radiusKm: Float, $productCategoryId: String, $jwt: String, $productsLimit: Int = 2) { branches( first: $first after: $after businessId: $businessId tipo: $tipo radiusKm: $radiusKm productCategoryId: $productCategoryId jwt: $jwt ) { __typename edges { __typename node { __typename id businessId name acceptsQvapay acceptsZelle qvapayUsername zelleEmail address coordinates { __typename type coordinates } phone status avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta deliveryRadius schedule { __typename days { __typename day isOpen hours { __typename open close } } temporaryStatus { __typename temporallyClosed temporallyOpen reason } } catalogOnly acceptingOrders createdAt score distanceKm products(limit: $productsLimit, availableOnly: false) { __typename id name price currency imageUrlBaja } } cursor } pageInfo { __typename hasNextPage hasPreviousPage startCursor endCursor totalCount } } }"#
       ))
 
     public var first: Int32
@@ -145,6 +145,7 @@ public extension LlegoAPI {
               .field("deliveryRadius", Double?.self),
               .field("schedule", Schedule.self),
               .field("catalogOnly", Bool.self),
+              .field("acceptingOrders", Bool.self),
               .field("createdAt", LlegoAPI.DateTime.self),
               .field("score", Double.self),
               .field("distanceKm", Double?.self),
@@ -183,6 +184,7 @@ public extension LlegoAPI {
             public var deliveryRadius: Double? { __data["deliveryRadius"] }
             public var schedule: Schedule { __data["schedule"] }
             public var catalogOnly: Bool { __data["catalogOnly"] }
+            public var acceptingOrders: Bool { __data["acceptingOrders"] }
             public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
             public var score: Double { __data["score"] }
             /// Distance in kilometers from user

@@ -39,6 +39,7 @@ query GetBranchDetail($id: String!) {
             }
         }
         catalogOnly
+        acceptingOrders
         createdAt
         showcases(activeOnly: true) {
             id

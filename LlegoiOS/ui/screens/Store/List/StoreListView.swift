@@ -415,11 +415,14 @@ struct StoreWithCoordinates: Identifiable {
     let description: String?
     let coordinate: CLLocationCoordinate2D
     let schedule: BranchSchedule?
+    /// false si la sucursal pausó los pedidos (se avisa en la ficha de la tienda).
+    let acceptingOrders: Bool
 
     init(
         id: String, name: String, etaMinutes: Int, logoUrl: String, bannerUrl: String,
         address: String?, rating: Double?, description: String? = nil,
-        coordinate: CLLocationCoordinate2D, schedule: BranchSchedule? = nil
+        coordinate: CLLocationCoordinate2D, schedule: BranchSchedule? = nil,
+        acceptingOrders: Bool = true
     ) {
         self.id = id
         self.name = name
@@ -431,6 +434,7 @@ struct StoreWithCoordinates: Identifiable {
         self.description = description
         self.coordinate = coordinate
         self.schedule = schedule
+        self.acceptingOrders = acceptingOrders
     }
 
     var isOpenNow: Bool? {

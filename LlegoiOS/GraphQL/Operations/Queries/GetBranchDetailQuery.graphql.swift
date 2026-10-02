@@ -9,7 +9,7 @@ public extension LlegoAPI {
     public static let operationName: String = "GetBranchDetail"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query GetBranchDetail($id: String!) { branch(id: $id) { __typename id businessId name acceptsQvapay acceptsZelle qvapayUsername zelleEmail address coordinates { __typename type coordinates } phone status avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta deliveryRadius acceptedCurrency exchangeRate schedule { __typename days { __typename day isOpen hours { __typename open close } } temporaryStatus { __typename temporallyClosed temporallyOpen reason } } catalogOnly createdAt showcases(activeOnly: true) { __typename id title description imageUrl isActive createdAt items { __typename id name description price availability } } } }"#
+        #"query GetBranchDetail($id: String!) { branch(id: $id) { __typename id businessId name acceptsQvapay acceptsZelle qvapayUsername zelleEmail address coordinates { __typename type coordinates } phone status avatarUrl avatarUrlBaja avatarUrlAlta coverUrl coverUrlBaja coverUrlAlta deliveryRadius acceptedCurrency exchangeRate schedule { __typename days { __typename day isOpen hours { __typename open close } } temporaryStatus { __typename temporallyClosed temporallyOpen reason } } catalogOnly acceptingOrders createdAt showcases(activeOnly: true) { __typename id title description imageUrl isActive createdAt items { __typename id name description price availability } } } }"#
       ))
 
     public var id: String
@@ -67,6 +67,7 @@ public extension LlegoAPI {
           .field("exchangeRate", Int?.self),
           .field("schedule", Schedule.self),
           .field("catalogOnly", Bool.self),
+          .field("acceptingOrders", Bool.self),
           .field("createdAt", LlegoAPI.DateTime.self),
           .field("showcases", [Showcase].self, arguments: ["activeOnly": true]),
         ] }
@@ -102,6 +103,7 @@ public extension LlegoAPI {
         public var exchangeRate: Int? { __data["exchangeRate"] }
         public var schedule: Schedule { __data["schedule"] }
         public var catalogOnly: Bool { __data["catalogOnly"] }
+        public var acceptingOrders: Bool { __data["acceptingOrders"] }
         public var createdAt: LlegoAPI.DateTime { __data["createdAt"] }
         /// Showcases from this branch
         public var showcases: [Showcase] { __data["showcases"] }
