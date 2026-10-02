@@ -53,7 +53,8 @@ class AppUpdateViewModel: ObservableObject {
 
                 // Verificar si es necesario actualizar
                 if compareVersions(currentVersion, minVersion) == .orderedAscending {
-                    // Versión instalada < versión mínima = ACTUALIZACIÓN OBLIGATORIA
+                    // Versión instalada < versión mínima = ACTUALIZACIÓN OBLIGATORIA.
+                    // La pantalla es bloqueante y no se puede descartar (ver `canDismiss`).
                     updateType = .required
                     showUpdateAlert = true
                     print("⚠️ Actualización OBLIGATORIA requerida")
@@ -64,9 +65,11 @@ class AppUpdateViewModel: ObservableObject {
                         updateType = .optional
                         showUpdateAlert = true
                         print("ℹ️ Actualización opcional disponible")
+                    } else {
+                        clearAlert()
                     }
                 } else {
-                    updateType = .none
+                    clearAlert()
                     print("✅ App está actualizada")
                 }
             } catch {
@@ -129,15 +132,11 @@ class AppUpdateViewModel: ObservableObject {
         updateType = .none
     }
 
-    /// Dismisses a required update for the current session only — unlike
-    /// `dismissOptionalUpdate`, this does not persist to UserDefaults, so the
-    /// prompt reappears on the next check (app relaunch or periodic timer),
-    /// since the installed version still doesn't meet `minVersion`.
-    func dismissRequiredUpdate() {
-        guard updateType == .required else {
-            return
-        }
-
+    /// Quita la pantalla cuando ya no hay nada que mostrar (el backend bajó `minVersion`,
+    /// terminó el mantenimiento...). Una actualización obligatoria no se puede descartar
+    /// a mano: solo desaparece cuando la versión instalada ya cumple `minVersion`.
+    private func clearAlert() {
+        updateType = .none
         showUpdateAlert = false
     }
 

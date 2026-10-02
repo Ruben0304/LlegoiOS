@@ -211,8 +211,11 @@ struct MainAppView: View {
                 }
             }
 
-            // Overlay de actualización de app — no mostrar si el onboarding se mostró en esta sesión
-            if appUpdateViewModel.showUpdateAlert && !suppressUpdateBanner {
+            // Overlay de actualización de app — no mostrar si el onboarding se mostró en esta
+            // sesión, salvo que la actualización sea obligatoria: esa es bloqueante siempre.
+            if appUpdateViewModel.showUpdateAlert
+                && (!suppressUpdateBanner || appUpdateViewModel.updateType == .required)
+            {
                 AppUpdateModal(viewModel: appUpdateViewModel)
                     .transition(.opacity)
                     .zIndex(200)  // Mayor que el overlay de ubicación
