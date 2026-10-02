@@ -88,6 +88,7 @@ struct MainAppView: View {
     @StateObject private var gradientManager = GradientStateManager.shared
     @ObservedObject private var branchTypeManager = BranchTypeManager.shared
     @ObservedObject private var appUpdateViewModel = AppUpdateViewModel.shared
+    @ObservedObject private var requiredUpdateWindow = RequiredUpdateWindowPresenter.shared
     @ObservedObject private var appModeManager = AppModeManager.shared
     @State private var searchText = ""
     @State private var selectedOrderId = ""
@@ -97,6 +98,19 @@ struct MainAppView: View {
     private var hasActiveOrder: Bool {
         orderManager.currentOrder != nil && orderManager.orderStatus != .idle
             && orderManager.orderStatus != .cancelled && orderManager.orderStatus != .delivered
+    }
+
+    /// Overlay de actualización dentro de la vista. La obligatoria NO va aquí: se presenta
+    /// en su propia ventana (`RequiredUpdateWindowPresenter`) para que ninguna hoja ni
+    /// `fullScreenCover` abierto quede por encima. Solo sirve de respaldo si esa ventana
+    /// no se pudo crear todavía.
+    private var showsInlineUpdateOverlay: Bool {
+        guard appUpdateViewModel.showUpdateAlert else { return false }
+        if appUpdateViewModel.updateType == .required {
+            return requiredUpdateWindow.needsInlineFallback
+        }
+        // Opcional/mantenimiento: no mostrar si el onboarding se mostró en esta sesión.
+        return !suppressUpdateBanner
     }
 
     var body: some View {
@@ -211,11 +225,9 @@ struct MainAppView: View {
                 }
             }
 
-            // Overlay de actualización de app — no mostrar si el onboarding se mostró en esta
-            // sesión, salvo que la actualización sea obligatoria: esa es bloqueante siempre.
-            if appUpdateViewModel.showUpdateAlert
-                && (!suppressUpdateBanner || appUpdateViewModel.updateType == .required)
-            {
+            // Overlay de actualización de app (opcional/mantenimiento, o respaldo de la
+            // obligatoria). La obligatoria es bloqueante siempre, incluso tras el onboarding.
+            if showsInlineUpdateOverlay {
                 AppUpdateModal(viewModel: appUpdateViewModel)
                     .transition(.opacity)
                     .zIndex(200)  // Mayor que el overlay de ubicación
@@ -277,6 +289,8 @@ struct MainAppView: View {
             }
         }
         .onAppear {
+            // El presentador se suscribe antes de lanzar la primera comprobación
+            RequiredUpdateWindowPresenter.shared.start()
             appUpdateViewModel.startPeriodicCheck()
             // Si el GPS no llegó antes de renderizar Home, usar La Habana como fallback
             UserLocationManager.shared.applyHavanaFallbackIfNeeded()
