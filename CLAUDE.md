@@ -297,3 +297,41 @@ npx --yes @apollo/rover graph introspect \
 ---
 
 **Última actualización**: Enero 2025
+
+## Contrato GraphQL con el backend (CI)
+
+Las operaciones GraphQL de LlegoiOS son texto: si el backend renombra o quita un campo, o si
+la app pide uno que no existe, el compilador no se entera y falla en el dispositivo del
+usuario. Por eso el CI valida las operaciones contra el schema **real de producción**.
+
+- **Qué comprueba.** `scripts/ci/validate_graphql_contract.py` descarga por introspección el
+  schema de `https://llegobackend-production.up.railway.app/graphql` y valida todas las
+  operaciones del repo:
+  - los `.graphql` de la raíz y de `graphql/`, con fragments compartidos entre archivos;
+  - las queries crudas en cadenas `"""` de Swift (`PaymentRepository`, `CreateOrderRepository`, `ConversationalSearchRepository`, ...).
+
+  Termina con código 1 si alguna es inválida e indica operación, archivo, línea y motivo. `schema.graphqls` y el código generado por Apollo (`LlegoiOS/GraphQL`) se ignoran.
+- **Cuándo corre.** `.github/workflows/graphql-contract.yml`: en cada push a `main`, en cada
+  pull request y a diario (el backend puede cambiar sin que haya commits aquí). Solo usa
+  `ubuntu-latest`: no compila la app ni usa runners de macOS.
+- **En local** (hace falta Python 3.9+ y red):
+
+  ```bash
+  python3 -m pip install "graphql-core>=3.2,<3.3"
+  python3 scripts/ci/validate_graphql_contract.py                  # contra producción
+  LLEGO_GRAPHQL_URL=http://localhost:8000/graphql \
+    python3 scripts/ci/validate_graphql_contract.py                # contra un backend local
+  python3 scripts/ci/validate_graphql_contract.py --schema-file schema.graphqls  # sin red
+  ```
+
+  `-v` lista cada operación válida y `--strict` cuenta como error las operaciones que no se
+  pueden validar (las que se arman en tiempo de ejecución con interpolación, que se avisan
+  como "No validadas"). En el workflow, la variable de repositorio `LLEGO_GRAPHQL_URL`
+  (opcional) cambia el endpoint.
+- **Si falla.** `Cannot query field "x" on type "Y"` significa que producción no tiene ese
+  campo: o es nuevo y el backend aún no se ha desplegado (no publiques esta app hasta que
+  lo esté), o está mal escrito o ya se retiró (corrige la operación). Si falla en el
+  workflow diario sin cambios aquí, el backend cambió algo que esta app usa: avisa al equipo
+  del backend antes de que lo noten los usuarios.
+- El script es idéntico en todos los repos cliente (iOS, Android, Business, Mensajeros, web
+  y panel admin); si lo modificas, cópialo a los demás.
