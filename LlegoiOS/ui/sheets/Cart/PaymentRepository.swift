@@ -511,8 +511,6 @@ class PaymentRepository {
                 kycEvalStatus
                 cashCoverageStatus
                 nextAction
-                providerErrorCode
-                providerError
               }
             }
             """
