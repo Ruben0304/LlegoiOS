@@ -1,0 +1,45 @@
+# Comprueba que TODAS las operaciones GraphQL de este repo siguen siendo válidas contra el
+# schema que sirve producción (se descarga por introspección). Así se detecta, antes de que
+# llegue a los usuarios, un campo que el cliente pide y el backend no tiene (o ya no tiene).
+#
+# Solo corre en ubuntu-latest y no compila la app. Cómo ejecutarlo en local y qué hacer si
+# falla: ver la sección "Contrato GraphQL con el backend" de la documentación del repo.
+name: Contrato GraphQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Diario (UTC): el backend de producción puede cambiar sin que este repo tenga commits.
+    - cron: "23 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: graphql-contract-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  validar-contrato:
+    name: Validar operaciones contra producción
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Instalar graphql-core
+        run: python -m pip install "graphql-core>=3.2,<3.3"
+
+      - name: Validar las operaciones contra el schema de producción
+        env:
+          # Opcional: variable de repositorio (Settings > Variables) para apuntar a otro
+          # entorno. Si está vacía se usa https://llegobackend-production.up.railway.app/graphql
+          LLEGO_GRAPHQL_URL: ${{ vars.LLEGO_GRAPHQL_URL }}
+        run: python scripts/ci/validate_graphql_contract.py
