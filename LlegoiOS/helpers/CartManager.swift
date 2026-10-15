@@ -108,6 +108,42 @@ class CartManager: ObservableObject {
         sendAddToCartMutation(productId: productId)
     }
 
+    /// Guarda una combinación de búsqueda en una sola actualización. Son productos
+    /// normales: no se envía un comboId comercial al crear el pedido.
+    func addSearchCombinationProducts(_ products: [SearchCombinationCartLine]) throws {
+        guard !products.isEmpty else { throw SearchCombinationCartError.invalidCombination }
+        var items = localItems
+        for product in products {
+            guard product.quantity > 0, product.basePrice.isFinite,
+                  product.unitPrice.isFinite, product.basePrice >= 0,
+                  product.unitPrice >= 0 else {
+                throw SearchCombinationCartError.invalidCombination
+            }
+            let id = CartItemLocal.buildCartItemId(
+                productId: product.productId, selectedVariants: product.selectedVariants)
+            if let index = items.firstIndex(where: { $0.cartItemId == id && $0.comboGroupId == nil }) {
+                let (quantity, overflow) = items[index].quantity.addingReportingOverflow(product.quantity)
+                guard !overflow else { throw SearchCombinationCartError.invalidCombination }
+                items[index].quantity = quantity
+                items[index].basePrice = product.basePrice
+                items[index].finalUnitPrice = product.unitPrice
+                items[index].finalTotalPrice = product.unitPrice * Double(quantity)
+            } else {
+                items.append(CartItemLocal(
+                    productId: product.productId, quantity: product.quantity,
+                    selectedVariants: product.selectedVariants, basePrice: product.basePrice,
+                    finalUnitPrice: product.unitPrice))
+            }
+        }
+        // Encode before publishing so a validation/encoding failure cannot leave
+        // only some components in the user's cart.
+        let encoded = try JSONEncoder().encode(items)
+        userDefaults.set(encoded, forKey: cartKey)
+        localItems = items
+        updateItemCount()
+        for product in products { sendAddToCartMutation(productId: product.productId) }
+    }
+
     /// Añadir un combo al carrito como múltiples líneas de producto agrupadas.
     func addComboToCart(
         comboId: String,

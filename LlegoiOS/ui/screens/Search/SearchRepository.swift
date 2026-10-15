@@ -9,8 +9,197 @@ import Apollo
 import Foundation
 import MapKit
 
-class SearchRepository {
-    private let apolloClient = ApolloClientManager.shared.apollo
+@MainActor
+final class SearchRepository {
+    private let apolloClient: ApolloClient
+
+    init(apolloClient: ApolloClient = ApolloClientManager.shared.apollo) {
+        self.apolloClient = apolloClient
+    }
+
+    struct CombinationPage: Sendable {
+        let candidates: [SearchCombinationCandidate]
+        let didReachPageLimit: Bool
+    }
+
+    struct CartSuggestions: Sendable {
+        let context: SearchCartContext
+        let products: [SearchCombinationCandidate]
+    }
+
+    /// Resolve the cart's actual branch, then search its own inventory. This is
+    /// independent of global ranking, which may omit a matching local product.
+    func searchCartSuggestions(
+        query: String, cartProductIds: Set<String>, showcaseBranchIds: Set<String> = []
+    ) async throws -> CartSuggestions? {
+        guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              !cartProductIds.isEmpty else { return nil }
+        switch SearchCombinationParser.parse(query) {
+        case .quantityNeedsConfiguration, .tooManyIntents: return nil
+        case .single, .combination: break
+        }
+        let cartResponse = try await apolloClient.fetch(
+            query: LlegoAPI.GetProductsByIdsQuery(ids: cartProductIds.sorted(), jwt: .none),
+            cachePolicy: .networkOnly)
+        try Task.checkCancellation()
+        guard cartResponse.errors?.isEmpty != false, let cartProducts = cartResponse.data?.productsByIds,
+              Set(cartProducts.map(\.id)) == cartProductIds else { return nil }
+        let branchIds = Set(cartProducts.map(\.branchId)).union(showcaseBranchIds)
+        guard branchIds.count == 1, let branchId = branchIds.first, !branchId.isEmpty,
+              let sourceId = cartProductIds.sorted().first else { return nil }
+        guard let branch = try await fetchCombinationBranch(branchId: branchId), !branch.catalogOnly else { return nil }
+        let context = SearchCartContext(
+            branchId: branchId, branchName: branch.name,
+            cartProductNames: cartProducts.map(\.name), productIds: cartProductIds)
+
+        let inventoryResponse = try await apolloClient.fetch(
+            query: LlegoAPI.GetBranchProductsForAIQuery(productId: sourceId, limit: 100, jwt: .none),
+            cachePolicy: .networkOnly)
+        try Task.checkCancellation()
+        guard inventoryResponse.errors?.isEmpty != false,
+              let inventory = inventoryResponse.data?.productsFromSameBranch else { return nil }
+        let candidates = inventory.filter {
+            $0.branchId == branchId && $0.availability && !cartProductIds.contains($0.id)
+        }.map { product in
+            SearchCombinationCandidate(
+                id: product.id, branchId: product.branchId, branchName: branch.name,
+                businessName: branch.name, name: product.name, description: product.description,
+                price: product.price, currency: product.currency, imageUrl: product.imageUrlBaja,
+                availability: product.availability)
+        }
+        let segments = SearchCombinationParser.segments(query)
+        let intents = SearchCombinationIntentResolver.resolve(
+            segments: segments,
+            candidatesBySegment: Array(repeating: candidates, count: segments.count),
+            catalogCandidates: candidates)
+        var seen: Set<String> = []
+        let products = intents.flatMap {
+            SearchCombinationMatcher.matchingCandidates(intent: $0.intent, candidates: candidates, limit: 4)
+        }.filter { seen.insert($0.id).inserted }
+        return CartSuggestions(context: context, products: branch.acceptingOrders ? Array(products.prefix(4)) : [])
+    }
+
+    /// Keep the cart's product names (including qualifiers) as intents. A shop
+    /// qualifies only when it can satisfy the entire selection in one branch.
+    func searchCartAlternatives(query: String, context: SearchCartContext) async throws -> [SearchCombination] {
+        var intents = context.cartProductNames
+        guard !intents.isEmpty else { return [] }
+        let segments = SearchCombinationParser.segments(query)
+        var catalog: [SearchCombinationCandidate] = []
+        var segmentCandidates: [[SearchCombinationCandidate]] = []
+        for segment in segments {
+            let page = try await searchCombinationCandidates(query: segment.text)
+            segmentCandidates.append(page.candidates)
+            catalog += page.candidates
+        }
+        if segments.contains(where: \.canMergeWithPrevious) {
+            catalog += try await searchCombinationCandidates(query: query).candidates
+        }
+        intents += SearchCombinationIntentResolver.resolve(
+            segments: segments, candidatesBySegment: segmentCandidates,
+            catalogCandidates: catalog).map(\.intent)
+        var seen: Set<String> = []
+        intents = intents.filter { seen.insert($0.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)).inserted }
+        guard (2...4).contains(intents.count) else { return [] }
+        var candidates: [[SearchCombinationCandidate]] = []
+        for intent in intents {
+            candidates.append(try await searchCombinationCandidates(query: intent).candidates)
+        }
+        let combinations = SearchCombinationMatcher.build(intents: intents, candidatesByIntent: candidates)
+            .filter { $0.branchId != context.branchId }
+        let branches = await fetchCombinationBranches(branchIDs: Set(combinations.map(\.branchId)))
+        try Task.checkCancellation()
+        return combinations.compactMap { combination in
+            guard let branch = branches[combination.branchId], !branch.catalogOnly, branch.acceptingOrders else { return nil }
+            return SearchCombination(
+                id: combination.id, branchId: combination.branchId, branchName: branch.name,
+                products: combination.products, totalPrice: combination.totalPrice, currency: combination.currency)
+        }
+    }
+
+    /// Each intent has an independent, cancellable and bounded paginated query.
+    @MainActor
+    func searchCombinationCandidates(
+        query: String, pageSize: Int32 = 20, maxPages: Int = 3
+    ) async throws -> CombinationPage {
+        var accumulated: [SearchCombinationCandidate] = []
+        var cursor: String?
+        var hasNextPage = false
+        for _ in 0..<max(1, maxPages) {
+            try Task.checkCancellation()
+            let searchQuery = LlegoAPI.SearchProductsQuery(
+                query: query, first: pageSize,
+                after: cursor.map { .some($0) } ?? .none,
+                useVectorSearch: .some(true),
+                // This is the global search tab, like SearchBothQuery. The
+                // category selected on Home must not hide combination products.
+                branchTipo: .none,
+                categoryId: .none, radiusKm: .none,
+                jwt: .none
+            )
+            let response = try await apolloClient.fetch(query: searchQuery, cachePolicy: .networkOnly)
+            try Task.checkCancellation()
+            if let error = response.errors?.first {
+                throw NSError(domain: "GraphQL", code: -1, userInfo: [
+                    NSLocalizedDescriptionKey: error.message ?? "No se pudo completar la búsqueda."
+                ])
+            }
+            guard let data = response.data else {
+                throw NSError(domain: "GraphQL", code: -1, userInfo: [
+                    NSLocalizedDescriptionKey: "No se pudo completar la búsqueda."
+                ])
+            }
+            accumulated += data.searchProducts.edges.map { edge in
+                let node = edge.node
+                return SearchCombinationCandidate(
+                    id: node.id, branchId: node.branchId,
+                    branchName: node.business?.name ?? "Negocio",
+                    businessName: node.business?.name ?? "Negocio",
+                    name: node.name, description: node.description,
+                    price: node.price, currency: node.currency,
+                    imageUrl: node.imageUrlBaja, availability: node.availability)
+            }
+            hasNextPage = data.searchProducts.pageInfo.hasNextPage
+            guard hasNextPage else { break }
+            guard let next = data.searchProducts.pageInfo.endCursor, next != cursor else { break }
+            cursor = next
+        }
+        return CombinationPage(candidates: accumulated, didReachPageLimit: hasNextPage)
+    }
+
+    struct CombinationBranch: Sendable {
+        let name: String
+        let catalogOnly: Bool
+        let acceptingOrders: Bool
+    }
+
+    @MainActor
+    private func fetchCombinationBranch(branchId: String) async throws -> CombinationBranch? {
+        let response = try await apolloClient.fetch(
+            query: LlegoAPI.GetBranchDetailQuery(id: branchId), cachePolicy: .networkOnly)
+        try Task.checkCancellation()
+        guard response.errors?.isEmpty != false,
+              let branch = response.data?.branch, branch.id == branchId else { return nil }
+        let name = [branch.name, branch.address].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
+        return CombinationBranch(name: name, catalogOnly: branch.catalogOnly, acceptingOrders: branch.acceptingOrders)
+    }
+
+    @MainActor
+    func fetchCombinationBranches(branchIDs: Set<String>) async -> [String: CombinationBranch] {
+        await withTaskGroup(of: (String, CombinationBranch?).self) { group in
+            for branchID in branchIDs {
+                group.addTask { [self] in
+                    let branch = try? await self.fetchCombinationBranch(branchId: branchID)
+                    return (branchID, branch)
+                }
+            }
+            var branches: [String: CombinationBranch] = [:]
+            for await (branchID, branch) in group {
+                if let branch { branches[branchID] = branch }
+            }
+            return branches
+        }
+    }
 
     // MARK: - Search Products
     @MainActor

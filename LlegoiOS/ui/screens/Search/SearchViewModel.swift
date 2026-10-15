@@ -54,12 +54,21 @@ class SearchViewModel: ObservableObject {
     @Published var stores: [StoreWithCoordinates] = []
     @Published var storeProducts: [String: [ProductGraphQL]] = [:]
     @Published var selectedCategory: SearchCategory = .both
+    @Published var searchCombinations: [SearchCombination] = []
+    @Published var combinationIntentResults: [SearchCombinationIntentResult] = []
+    @Published var combinationNotice: String?
+    @Published var isShowingCombinationResults = false
+    @Published private(set) var cartSearchContext: SearchCartContext?
+    @Published private(set) var cartSearchSuggestions: [SearchCombinationCandidate] = []
+    @Published private(set) var cartAlternativeCombinations: [SearchCombination] = []
+    @Published private(set) var isLoadingCartSuggestions = false
 
     /// True cuando los resultados mostrados vienen de datos locales porque el
     /// intento por internet falló o tardó demasiado (no es un toggle manual).
     @Published var isShowingOfflineFallback: Bool = false
 
-    private let searchRepository = SearchRepository()
+    private let searchRepository: SearchRepository
+    private let cartManager: CartManager
     private let productRepository = ProductListRepository()
     private let storeRepository = StoreListRepository()
     private let branchTypeManager = BranchTypeManager.shared
@@ -69,6 +78,12 @@ class SearchViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var offlineSearchTask: Task<Void, Never>?
     private var currentRequestTask: Task<Void, Never>?
+    private var branchNameResolutionTask: Task<Void, Never>?
+    private var cartSuggestionsTask: Task<Void, Never>?
+    private var cartSuggestionGeneration = 0
+    private var activeSearchQuery = ""
+    private var cartProductIds: Set<String> = []
+    private var showcaseBranchIds: Set<String> = []
 
     /// Se incrementa en cada nuevo loadInitialData()/search(); usado para descartar
     /// respuestas de intentos ya superados (p. ej. el usuario cambió de categoría
@@ -78,8 +93,76 @@ class SearchViewModel: ObservableObject {
     private let onlineTimeoutSeconds: TimeInterval = 15
 
     // MARK: - Initialization
-    init() {
+    init(searchRepository: SearchRepository = SearchRepository(), cartManager: CartManager = .shared) {
+        self.searchRepository = searchRepository
+        self.cartManager = cartManager
         setupBranchTypeObserver()
+        observeCart()
+    }
+
+    private func observeCart() {
+        cartManager.$localItems.combineLatest(cartManager.$localShowcaseItems)
+            .sink { [weak self] items, showcases in
+                guard let self else { return }
+                // Use publisher values: @Published emits before the property is
+                // written, so rereading cartManager here would see the old cart.
+                let productIds = Set(items.filter { $0.quantity > 0 }.map(\.productId))
+                let branches = Set(showcases.filter { $0.quantity > 0 }.map(\.branchId))
+                guard productIds != self.cartProductIds || branches != self.showcaseBranchIds else { return }
+                self.cartProductIds = productIds
+                self.showcaseBranchIds = branches
+                self.refreshCartSuggestions()
+            }
+            .store(in: &cancellables)
+    }
+
+    private func clearCartSuggestions() {
+        cartSuggestionGeneration += 1
+        cartSuggestionsTask?.cancel()
+        cartSuggestionsTask = nil
+        cartSearchContext = nil
+        cartSearchSuggestions = []
+        cartAlternativeCombinations = []
+        isLoadingCartSuggestions = false
+    }
+
+    private func refreshCartSuggestions() {
+        clearCartSuggestions()
+        guard !activeSearchQuery.isEmpty, !cartProductIds.isEmpty,
+              selectedCategory != .stores, !isShowingOfflineFallback else { return }
+        let generation = cartSuggestionGeneration
+        isLoadingCartSuggestions = true
+        let query = activeSearchQuery
+        let productIds = cartProductIds
+        let branches = showcaseBranchIds
+        cartSuggestionsTask = Task { [weak self] in
+            guard let self else { return }
+            defer {
+                if generation == self.cartSuggestionGeneration {
+                    self.cartSuggestionsTask = nil
+                    self.isLoadingCartSuggestions = false
+                }
+            }
+            do {
+                let result = try await withTimeout(seconds: self.onlineTimeoutSeconds) {
+                    try await self.searchRepository.searchCartSuggestions(
+                        query: query, cartProductIds: productIds, showcaseBranchIds: branches)
+                }
+                guard !Task.isCancelled, generation == self.cartSuggestionGeneration,
+                      query == self.activeSearchQuery, let result else { return }
+                self.cartSearchContext = result.context
+                self.cartSearchSuggestions = result.products
+                let alternatives = try await withTimeout(seconds: self.onlineTimeoutSeconds) {
+                    try await self.searchRepository.searchCartAlternatives(query: query, context: result.context)
+                }
+                guard !Task.isCancelled, generation == self.cartSuggestionGeneration,
+                      query == self.activeSearchQuery else { return }
+                self.cartAlternativeCombinations = alternatives
+            } catch {
+                // Recommendations are optional: their failure must never clear
+                // or replace the normal search results.
+            }
+        }
     }
 
     // MARK: - Configure offline repository
@@ -101,6 +184,9 @@ class SearchViewModel: ObservableObject {
     // MARK: - Load Initial Data
 
     func loadInitialData() {
+        activeSearchQuery = ""
+        clearCartSuggestions()
+        clearCombinationResults()
         requestGeneration += 1
         let generation = requestGeneration
         currentRequestTask?.cancel()
@@ -181,6 +267,7 @@ class SearchViewModel: ObservableObject {
     /// Decide qué mostrar cuando el intento online falla o hace timeout:
     /// si hay datos locales, cae a offline (con aviso); si no, error de sin conexión.
     private func fallbackAfterOnlineFailure(offline: @escaping () -> Void) {
+        clearCartSuggestions()
         if OfflineSyncService.shared.hasLocalData {
             isShowingOfflineFallback = true
             offline()
@@ -274,10 +361,17 @@ class SearchViewModel: ObservableObject {
     // MARK: - Live search (offline only, llamado en onChange del texto)
     func searchLive(query: String) {
         guard isShowingOfflineFallback else { return }
+        clearCartSuggestions()
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             clearSearch()
             return
+        }
+        clearCombinationResults()
+        if case .combination = SearchCombinationParser.parse(trimmed) {
+            combinationNotice = "Para buscar combinaciones necesitas conexión. Estos son resultados guardados por separado."
+        } else if case .quantityNeedsConfiguration = SearchCombinationParser.parse(trimmed) {
+            combinationNotice = "La búsqueda offline no puede respetar cantidades automáticamente. Busca cada producto por separado y configura su cantidad en el detalle."
         }
         // Cancelar búsqueda anterior y lanzar nueva con pequeño debounce
         offlineSearchTask?.cancel()
@@ -296,12 +390,161 @@ class SearchViewModel: ObservableObject {
             clearSearch()
             return
         }
+        activeSearchQuery = trimmed
+        isShowingOfflineFallback = false
+        refreshCartSuggestions()
+        offlineSearchTask?.cancel()
+        offlineSearchTask = nil
+
+        if selectedCategory != .stores {
+            switch SearchCombinationParser.parse(trimmed) {
+            case .quantityNeedsConfiguration:
+                requestGeneration += 1
+                currentRequestTask?.cancel()
+                clearCombinationResults()
+                combinationNotice = "Para elegir cantidades, busca cada producto por separado y ajusta su cantidad antes de añadirlo."
+                isShowingCombinationResults = true
+                isShowingOfflineFallback = false
+                state = .error(combinationNotice ?? "Configura las cantidades de cada producto.")
+                return
+            case .tooManyIntents:
+                requestGeneration += 1
+                currentRequestTask?.cancel()
+                clearCombinationResults()
+                combinationNotice = "Puedes combinar hasta 4 productos a la vez. Divide la búsqueda en grupos más pequeños."
+                isShowingCombinationResults = true
+                isShowingOfflineFallback = false
+                state = .error(combinationNotice ?? "Demasiados pedidos para combinar.")
+                return
+            case .combination(let intents):
+                requestGeneration += 1
+                let generation = requestGeneration
+                currentRequestTask?.cancel()
+                currentRequestTask = Task { [weak self] in
+                    await self?.performCombinationSearch(query: trimmed, intents: intents, generation: generation)
+                }
+                return
+            case .single:
+                break
+            }
+        }
+
+        clearCombinationResults()
 
         requestGeneration += 1
         let generation = requestGeneration
         currentRequestTask?.cancel()
         currentRequestTask = Task { [weak self] in
             await self?.performSearch(query: trimmed, generation: generation)
+        }
+    }
+
+    private func performCombinationSearch(query: String, intents: [String], generation: Int) async {
+        clearCombinationResults()
+        isShowingCombinationResults = true
+        isShowingOfflineFallback = false
+        state = .loading
+
+        do {
+            let segments = SearchCombinationParser.segments(query)
+            // Search the complete name too, so catalog evidence can distinguish
+            // one product ("jamón y queso") from independent requested items.
+            let queries = segments.dropFirst().contains(where: \.canMergeWithPrevious)
+                ? intents + [query] : intents
+            let pages = try await withTimeout(seconds: onlineTimeoutSeconds) {
+                try await self.fetchCombinationCandidates(for: queries)
+            }
+
+            guard generation == requestGeneration else { return }
+            let resolved = SearchCombinationIntentResolver.resolve(
+                segments: segments,
+                candidatesBySegment: pages.prefix(intents.count).map(\.candidates),
+                catalogCandidates: pages.flatMap(\.candidates))
+            if resolved.count == 1, let productQuery = resolved.first?.intent {
+                clearCombinationResults()
+                await performSearch(query: productQuery, generation: generation)
+                return
+            }
+            let resolvedIntents = resolved.map(\.intent)
+            let candidateLists = resolved.map(\.products)
+            searchCombinations = SearchCombinationMatcher.build(
+                intents: resolvedIntents,
+                candidatesByIntent: candidateLists
+            )
+            combinationIntentResults = zip(resolvedIntents, candidateLists).map { intent, candidates in
+                SearchCombinationIntentResult(
+                    intent: intent,
+                    products: SearchCombinationMatcher.matchingCandidates(intent: intent, candidates: candidates)
+                )
+            }
+            if pages.contains(where: \.didReachPageLimit) {
+                combinationNotice = "Estos son los primeros resultados; puede haber más opciones en otras sucursales."
+            } else if searchCombinations.isEmpty {
+                combinationNotice = "No encontramos una combinación disponible en la misma sucursal entre los resultados revisados. Puedes pedir los productos por separado."
+            } else {
+                combinationNotice = nil
+            }
+            state = (searchCombinations.isEmpty && combinationIntentResults.allSatisfy { $0.products.isEmpty }) ? .empty : .success
+            resolveCombinationBranchNames(generation: generation)
+        } catch is CancellationError {
+            return
+        } catch {
+            guard generation == requestGeneration else { return }
+            clearCombinationResults()
+            clearCartSuggestions()
+            isShowingOfflineFallback = OfflineSyncService.shared.hasLocalData
+            if isShowingOfflineFallback {
+                combinationNotice = "Para buscar combinaciones necesitas conexión. Mostramos los resultados guardados."
+                isShowingCombinationResults = false
+                searchOffline(query: intents.joined(separator: " "))
+            } else {
+                state = .error("No se pudo buscar la combinación. Comprueba tu conexión e inténtalo de nuevo.")
+            }
+        }
+    }
+
+    private func fetchCombinationCandidates(for intents: [String]) async throws -> [SearchRepository.CombinationPage] {
+        try await withThrowingTaskGroup(of: (Int, SearchRepository.CombinationPage).self) { group in
+            for (index, intent) in intents.enumerated() {
+                group.addTask { [searchRepository] in
+                    let page = try await searchRepository.searchCombinationCandidates(query: intent)
+                    return (index, page)
+                }
+            }
+            var pages: [Int: SearchRepository.CombinationPage] = [:]
+            for try await (index, page) in group { pages[index] = page }
+            return intents.indices.compactMap { pages[$0] }
+        }
+    }
+
+    private func resolveCombinationBranchNames(generation: Int) {
+        branchNameResolutionTask?.cancel()
+        let branchIDs = Set(searchCombinations.map(\.branchId))
+        guard !branchIDs.isEmpty else { return }
+
+        branchNameResolutionTask = Task { [weak self] in
+            guard let self else { return }
+            let branches = await self.searchRepository.fetchCombinationBranches(branchIDs: branchIDs)
+            guard !Task.isCancelled, generation == self.requestGeneration else { return }
+            self.searchCombinations.removeAll {
+                branches[$0.branchId]?.catalogOnly == true || branches[$0.branchId]?.acceptingOrders == false
+            }
+            if self.searchCombinations.isEmpty, self.combinationNotice == nil {
+                self.combinationNotice = "No encontramos una combinación disponible para comprar en una misma sucursal. Puedes pedir los productos por separado."
+            }
+            for index in self.searchCombinations.indices {
+                guard let branch = branches[self.searchCombinations[index].branchId] else { continue }
+                let name = branch.name
+                let current = self.searchCombinations[index]
+                self.searchCombinations[index] = SearchCombination(
+                    id: current.id,
+                    branchId: current.branchId,
+                    branchName: name,
+                    products: current.products,
+                    totalPrice: current.totalPrice,
+                    currency: current.currency
+                )
+            }
         }
     }
 
@@ -418,7 +661,31 @@ class SearchViewModel: ObservableObject {
 
     // MARK: - Clear Search
     func clearSearch() {
+        offlineSearchTask?.cancel()
+        offlineSearchTask = nil
+        clearCombinationResults()
         loadInitialData()
+    }
+
+    func cancelCurrentSearch() {
+        activeSearchQuery = ""
+        clearCartSuggestions()
+        requestGeneration += 1
+        currentRequestTask?.cancel()
+        currentRequestTask = nil
+        offlineSearchTask?.cancel()
+        offlineSearchTask = nil
+        branchNameResolutionTask?.cancel()
+        branchNameResolutionTask = nil
+    }
+
+    private func clearCombinationResults() {
+        branchNameResolutionTask?.cancel()
+        branchNameResolutionTask = nil
+        searchCombinations = []
+        combinationIntentResults = []
+        combinationNotice = nil
+        isShowingCombinationResults = false
     }
 
     // MARK: - Load Products for Store

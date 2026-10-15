@@ -19,6 +19,13 @@ struct SearchView: View {
     @State private var navigationDestination: NavigationDestination? = nil
     @State private var pendingDestination: NavigationDestination? = nil
     @State private var selectedProductId: String?
+    @State private var showCombinationAlert = false
+    @State private var combinationAlertTitle = ""
+    @State private var combinationAlertMessage = ""
+    @State private var configurationCombination: SearchCombination?
+    @State private var didAddConfiguredCombination = false
+    @State private var isPreparingCombination = false
+    @State private var combinationPreparationTask: Task<Void, Never>?
     @State private var showSyncSheet: Bool = false
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.modelContext) private var modelContext
@@ -41,6 +48,9 @@ struct SearchView: View {
                         if viewModel.isShowingOfflineFallback {
                             offlineFallbackBanner
                         }
+                        if let notice = viewModel.combinationNotice {
+                            combinationNoticeBanner(notice)
+                        }
 
                         // Contenido según estado
                         switch viewModel.state {
@@ -51,7 +61,13 @@ struct SearchView: View {
                         case .success:
                             resultsContent
                         case .empty:
-                            emptyContent
+                            if !viewModel.cartSearchSuggestions.isEmpty || !viewModel.cartAlternativeCombinations.isEmpty || viewModel.isLoadingCartSuggestions {
+                                resultsContent
+                            } else if viewModel.isShowingCombinationResults {
+                                combinationResultsContent
+                            } else {
+                                emptyContent
+                            }
                         case .error(let message):
                             errorContent(message: message)
                         }
@@ -69,6 +85,18 @@ struct SearchView: View {
                     text: $searchText,
                     prompt: viewModel.isShowingOfflineFallback ? "Buscar sin internet..." : "Buscar productos o negocios..."
                 )
+                .sheet(item: $configurationCombination, onDismiss: {
+                    if didAddConfiguredCombination {
+                        didAddConfiguredCombination = false
+                        combinationAlertTitle = "Añadido al carrito"
+                        combinationAlertMessage = "Productos añadidos al carrito"
+                        showCombinationAlert = true
+                    }
+                }) { combination in
+                    SearchCombinationConfigurationSheet(combination: combination) {
+                        didAddConfiguredCombination = true
+                    }
+                }
             }
             .navigationTitle("Buscar")
             .toolbar {
@@ -104,7 +132,17 @@ struct SearchView: View {
             .onAppear {
                 viewModel.configure(modelContext: modelContext)
                 syncService.configure(modelContext: modelContext)
-                viewModel.loadInitialData()
+                if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    viewModel.loadInitialData()
+                } else {
+                    viewModel.search(query: searchText)
+                }
+            }
+            .onDisappear {
+                combinationPreparationTask?.cancel()
+                combinationPreparationTask = nil
+                isPreparingCombination = false
+                viewModel.cancelCurrentSearch()
             }
             .ignoresSafeArea(.container, edges: .bottom)
             .navigationDestination(item: $navigationDestination) { destination in
@@ -149,10 +187,30 @@ struct SearchView: View {
             .fullScreenCover(item: $selectedProductId) { productId in
                 ProductDetailView(productId: productId)
             }
+            .alert(combinationAlertTitle, isPresented: $showCombinationAlert) {
+                Button("Aceptar", role: .cancel) {}
+            } message: {
+                Text(combinationAlertMessage)
+            }
             .sheet(isPresented: $showSyncSheet) {
                 SyncSettingsSheet(syncService: syncService) {
                     viewModel.configure(modelContext: modelContext)
                     viewModel.loadInitialData()
+                }
+            }
+        }
+        .disabled(isPreparingCombination)
+        .overlay {
+            if isPreparingCombination {
+                ZStack {
+                    Color.black.opacity(0.14).ignoresSafeArea()
+                    HStack(spacing: 12) {
+                        ProgressView()
+                        Text("Preparando combinación…")
+                            .font(.system(size: 15, weight: .semibold))
+                    }
+                    .padding(18)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
                 }
             }
         }
@@ -352,6 +410,13 @@ struct SearchView: View {
             Text(viewModel.isShowingOfflineFallback ? "Escribe para buscar en datos locales" : "Busca productos y negocios a la vez")
                 .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.secondary)
+            if !viewModel.isShowingOfflineFallback {
+                Text("Prueba: pizza de piña y helado de chocolate")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 60)
@@ -366,13 +431,143 @@ struct SearchView: View {
     // MARK: - Results Content
 
     private var resultsContent: some View {
-        Group {
-            switch viewModel.selectedCategory {
-            case .products: productsGrid
-            case .stores: storesGrid
-            case .both: bothContent
+        VStack(alignment: .leading, spacing: 16) {
+            if viewModel.isLoadingCartSuggestions {
+                ProgressView("Buscando opciones para tu carrito…")
+                    .font(.footnote)
+                    .tint(Color.llegoPrimary)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 12)
+            }
+            if let context = viewModel.cartSearchContext, !viewModel.cartSearchSuggestions.isEmpty {
+                SearchCartSuggestionsView(context: context, suggestions: viewModel.cartSearchSuggestions) { productId in
+                    selectedProductId = productId
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+            }
+            if !viewModel.cartAlternativeCombinations.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Tu combinación en otros negocios")
+                        .font(.headline)
+                    Text("Lo que tienes en el carrito junto con lo que buscas, disponible en una misma sucursal. Toca un producto para ver sus opciones.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    ForEach(viewModel.cartAlternativeCombinations) { combination in
+                        SearchCombinationCard(
+                            combination: combination, isPreparing: false,
+                            onAdd: {}, onProductTap: { selectedProductId = $0 })
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+            if viewModel.isShowingCombinationResults {
+                combinationResultsContent
+            } else {
+                switch viewModel.selectedCategory {
+                case .products:
+                    if !viewModel.cartSearchSuggestions.isEmpty, !regularProducts.isEmpty {
+                        Text("Más opciones")
+                            .font(.headline)
+                            .padding(.horizontal, 20)
+                    }
+                    productsGrid
+                case .stores: storesGrid
+                case .both: bothContent
+                }
             }
         }
+    }
+
+    private var combinationResultsContent: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            if !viewModel.searchCombinations.isEmpty {
+                Text("Combinaciones en la misma sucursal")
+                    .font(.system(size: 19, weight: .bold, design: .rounded))
+                    .padding(.horizontal, 20)
+                ForEach(viewModel.searchCombinations) { combination in
+                    SearchCombinationCard(combination: combination, isPreparing: isPreparingCombination) {
+                        addCombination(combination)
+                    }
+                    .padding(.horizontal, 20)
+                }
+            }
+
+            if !viewModel.combinationIntentResults.isEmpty {
+                Text(viewModel.searchCombinations.isEmpty ? "Productos por separado" : "Más opciones por producto")
+                    .font(.system(size: 19, weight: .bold, design: .rounded))
+                    .padding(.horizontal, 20)
+                ForEach(Array(viewModel.combinationIntentResults.enumerated()), id: \.offset) { _, group in
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(group.intent.capitalized)
+                            .font(.system(size: 16, weight: .semibold))
+                            .padding(.horizontal, 20)
+                        if group.products.isEmpty {
+                            Text("No encontramos productos para «\(group.intent)».")
+                                .font(.system(size: 14))
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 20)
+                        } else {
+                            ForEach(group.products, id: \.id) { product in
+                                SearchCombinationSuggestionRow(product: product) {
+                                    selectedProductId = product.id
+                                }
+                                .padding(.horizontal, 20)
+                            }
+                        }
+                    }
+                }
+            }
+
+            if viewModel.searchCombinations.isEmpty && viewModel.combinationIntentResults.isEmpty {
+                Text("No encontramos productos disponibles para todos los pedidos.")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.secondary)
+                    .padding(20)
+            }
+        }
+        .padding(.top, 14)
+    }
+
+    private func addCombination(_ combination: SearchCombination) {
+        guard !isPreparingCombination else { return }
+        isPreparingCombination = true
+        combinationPreparationTask = Task { @MainActor in
+            defer {
+                isPreparingCombination = false
+                combinationPreparationTask = nil
+            }
+            do {
+                switch try await SearchCombinationCartCoordinator.shared.prepare(combination) {
+                case .added:
+                    combinationAlertTitle = "Añadido al carrito"
+                    combinationAlertMessage = "Productos añadidos al carrito"
+                    showCombinationAlert = true
+                case .requiresConfiguration:
+                    configurationCombination = combination
+                }
+            } catch is CancellationError {
+                return
+            } catch {
+                combinationAlertTitle = "No se pudo preparar la combinación"
+                combinationAlertMessage = error.localizedDescription
+                showCombinationAlert = true
+            }
+        }
+    }
+
+    private func combinationNoticeBanner(_ message: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "info.circle.fill")
+            Text(message)
+                .font(.system(size: 13, weight: .medium))
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(Color.llegoPrimary)
+        .padding(12)
+        .background(Color.llegoAccent.opacity(0.28), in: RoundedRectangle(cornerRadius: 12))
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
     }
 
     // MARK: - Both Content
@@ -405,8 +600,8 @@ struct SearchView: View {
                 .padding(.bottom, 8)
             }
 
-            if !viewModel.products.isEmpty {
-                Text("Productos")
+            if !regularProducts.isEmpty {
+                Text(viewModel.cartSearchSuggestions.isEmpty ? "Productos" : "Más opciones")
                     .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
                     .padding(.horizontal, 20)
@@ -420,6 +615,11 @@ struct SearchView: View {
 
     // MARK: - Products Grid
 
+    private var regularProducts: [Product] {
+        let highlightedIds = Set(viewModel.cartSearchSuggestions.map(\.id))
+        return viewModel.products.filter { !highlightedIds.contains($0.id) }
+    }
+
     private var productsGrid: some View {
         LazyVGrid(
             columns: [
@@ -429,7 +629,7 @@ struct SearchView: View {
             alignment: .center,
             spacing: 20
         ) {
-            ForEach(viewModel.products) { product in
+            ForEach(regularProducts) { product in
                 ProductCard(
                     product: product,
                     count: Binding(
@@ -545,6 +745,156 @@ struct SearchView: View {
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 32)
         .padding(.top, 60)
+    }
+}
+
+private struct SearchCombinationCard: View {
+    let combination: SearchCombination
+    let isPreparing: Bool
+    let onAdd: () -> Void
+    var onProductTap: ((String) -> Void)? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "storefront")
+                Text(combination.branchName)
+                    .font(.system(size: 14, weight: .semibold))
+                Spacer()
+                Text("Misma sucursal")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+
+            ForEach(combination.products) { product in
+                if let onProductTap {
+                    Button { onProductTap(product.id) } label: {
+                        productRow(product)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Ver opciones del producto")
+                } else {
+                    productRow(product)
+                }
+            }
+
+            HStack {
+                Text("Total de productos")
+                    .font(.system(size: 15, weight: .semibold))
+                Spacer()
+                Text(String(format: "%.2f %@", combination.totalPrice, combination.currency))
+                    .font(.system(size: 16, weight: .bold))
+            }
+
+            Text("Las opciones, el envío y los cargos pueden cambiar el total.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            if onProductTap == nil {
+                Button(action: onAdd) {
+                    HStack(spacing: 8) {
+                        if isPreparing { ProgressView().tint(.white) }
+                        Text(isPreparing ? "Preparando…" : (combination.products.count == 2 ? "Añadir ambos" : "Añadir combinación"))
+                            .font(.system(size: 15, weight: .semibold))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.llegoPrimary, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(isPreparing)
+            }
+        }
+        .padding(14)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
+    }
+
+    private func productRow(_ product: SearchCombinationProduct) -> some View {
+        HStack(spacing: 12) {
+            combinationImage(product.imageUrl)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(product.name)
+                    .font(.system(size: 14, weight: .medium))
+                    .lineLimit(2)
+                Text(String(format: "%.2f %@", product.price, product.currency))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.llegoPrimary)
+            }
+            Spacer(minLength: 0)
+            if onProductTap != nil {
+                Image(systemName: "chevron.right").foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func combinationImage(_ url: String?) -> some View {
+        if let url, let imageURL = URL(string: url) {
+            AsyncImage(url: imageURL) { phase in
+                if let image = phase.image {
+                    image.resizable().scaledToFill()
+                } else {
+                    imagePlaceholder
+                }
+            }
+            .frame(width: 58, height: 52)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        } else {
+            imagePlaceholder
+        }
+    }
+
+    private var imagePlaceholder: some View {
+        RoundedRectangle(cornerRadius: 10)
+            .fill(Color.gray.opacity(0.12))
+            .frame(width: 58, height: 52)
+            .overlay(Image(systemName: "photo").foregroundStyle(.secondary))
+    }
+}
+
+private struct SearchCombinationSuggestionRow: View {
+    let product: SearchCombinationCandidate
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 12) {
+                if let url = product.imageUrl, let imageURL = URL(string: url) {
+                    AsyncImage(url: imageURL) { phase in
+                        if let image = phase.image { image.resizable().scaledToFill() }
+                        else { suggestionPlaceholder }
+                    }
+                    .frame(width: 56, height: 48)
+                    .clipShape(RoundedRectangle(cornerRadius: 9))
+                } else {
+                    suggestionPlaceholder
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(product.name)
+                        .font(.system(size: 14, weight: .medium))
+                        .lineLimit(2)
+                    Text("Negocio: \(product.businessName) · \(String(format: "%.2f %@", product.price, product.currency))")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(10)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var suggestionPlaceholder: some View {
+        RoundedRectangle(cornerRadius: 9)
+            .fill(Color.gray.opacity(0.12))
+            .frame(width: 56, height: 48)
+            .overlay(Image(systemName: "photo").foregroundStyle(.secondary))
     }
 }
 
