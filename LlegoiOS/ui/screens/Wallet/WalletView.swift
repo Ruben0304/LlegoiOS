@@ -695,25 +695,6 @@ struct LocalRechargeSheet: View {
                                     )
                                 }
 
-                                // Manual Test Button
-                                Button(action: {
-                                    viewModel.rechargeAmount = sanitizedAmount
-                                    viewModel.processManualRecharge(for: selectedCurrency)
-                                }) {
-                                    HStack {
-                                        Image(systemName: "testtube.2")
-                                            .font(.system(size: 18))
-                                        Text("Recarga Manual (Prueba)")
-                                            .font(.system(size: 17, weight: .semibold))
-                                    }
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 14)
-                                            .fill(Color.llegoAccent)
-                                    )
-                                }
                             } else {
                                 // Info: Stripe no soporta CUP
                                 HStack(spacing: 12) {
@@ -775,25 +756,6 @@ struct LocalRechargeSheet: View {
                                 }
                                 .padding(.horizontal)
 
-                                // Manual Test Button for CUP
-                                Button(action: {
-                                    viewModel.rechargeAmount = sanitizedAmount
-                                    viewModel.processManualRecharge(for: selectedCurrency)
-                                }) {
-                                    HStack {
-                                        Image(systemName: "testtube.2")
-                                            .font(.system(size: 18))
-                                        Text("Recarga Manual (Prueba)")
-                                            .font(.system(size: 16, weight: .semibold))
-                                    }
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 14)
-                                            .fill(Color.llegoAccent)
-                                    )
-                                }
                             }
                         }
                         .padding(.horizontal)

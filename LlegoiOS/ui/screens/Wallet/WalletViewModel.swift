@@ -134,64 +134,6 @@ class WalletViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Manual Recharge (for testing)
-    func processManualRecharge(for currency: WalletCurrency) {
-        guard let amount = Double(rechargeAmount), amount > 0 else {
-            return
-        }
-
-        Task {
-            guard let jwt = await authManager.getAccessToken() else {
-                print("⚠️ No JWT token available")
-                return
-            }
-
-            isLoading = true
-
-            do {
-                let currencyCode = currency == .usd ? "usd" : "local"
-                let _ = try await repository.depositMoney(
-                    jwt: jwt,
-                    amount: amount,
-                    currency: currencyCode,
-                    source: "manual_testing",
-                    description: "Recarga manual de prueba"
-                )
-
-                // Reload wallet balance
-                try await Task.sleep(nanoseconds: 500_000_000)
-                let walletBalance = try await repository.fetchWalletBalance(jwt: jwt)
-
-                await MainActor.run {
-                    self.balance = walletBalance.usd
-                    self.cupBalance = walletBalance.local
-                    self.isLoading = false
-                    self.showRechargeSheet = false
-                    self.rechargeAmount = ""
-
-                    let formattedAmount = String(format: "%.2f", amount)
-                    self.successMessage = "¡Recarga manual exitosa! Se agregaron \(currency.symbol)\(formattedAmount) \(currency.currencyCode)"
-                    self.showSuccessMessage = true
-
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                        self.showSuccessMessage = false
-                    }
-                }
-            } catch {
-                print("❌ Error en recarga manual: \(error.localizedDescription)")
-                await MainActor.run {
-                    self.isLoading = false
-                    self.successMessage = "Error: \(error.localizedDescription)"
-                    self.showSuccessMessage = true
-
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                        self.showSuccessMessage = false
-                    }
-                }
-            }
-        }
-    }
-
     // MARK: - Stripe Recharge
     func processStripeRecharge(for currency: WalletCurrency) {
         guard let amount = Double(rechargeAmount), amount > 0 else {
@@ -314,20 +256,12 @@ class WalletViewModel: ObservableObject {
                 guard let jwt = await authManager.getAccessToken() else { return }
                 
                 do {
-                    // Registrar la recarga en el backend
+                    // El saldo lo acredita el webhook de Stripe en el backend, no la app
+                    // (depositMoney es solo para admin: desde el cliente se podía crear saldo)
                     let amount = Double(rechargeAmount) ?? 0
-                    let currencyCode = pendingRechargeCurrency == .usd ? "usd" : "local"
-                    
-                    let _ = try await repository.depositMoney(
-                        jwt: jwt,
-                        amount: amount,
-                        currency: currencyCode,
-                        source: "stripe",
-                        description: "Recarga via Stripe"
-                    )
-                    
+
                     // Recargar balance
-                    try await Task.sleep(nanoseconds: 500_000_000)
+                    try await Task.sleep(nanoseconds: 2_000_000_000)
                     let walletBalance = try await repository.fetchWalletBalance(jwt: jwt)
                     
                     await MainActor.run {
@@ -347,7 +281,7 @@ class WalletViewModel: ObservableObject {
                 } catch {
                     print("❌ Error registrando recarga: \(error.localizedDescription)")
                     await MainActor.run {
-                        self.successMessage = "Pago exitoso pero error al actualizar balance"
+                        self.successMessage = "Pago recibido. El saldo se actualizará en unos segundos"
                         self.showSuccessMessage = true
                         
                         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
@@ -527,15 +461,8 @@ class WalletViewModel: ObservableObject {
                 return
             }
 
+            // La transferencia la confirma Llegó antes de acreditarla: la app no crea saldo
             do {
-                let _ = try await repository.depositMoney(
-                    jwt: jwt,
-                    amount: amount,
-                    currency: "local",
-                    source: "bank_transfer",
-                    description: "Transferencia bancaria CUP"
-                )
-
                 // Reload wallet balance
                 try await Task.sleep(nanoseconds: 500_000_000)
                 let walletBalance = try await repository.fetchWalletBalance(jwt: jwt)
@@ -545,7 +472,7 @@ class WalletViewModel: ObservableObject {
                     self.rechargeAmount = ""
 
                     let formattedAmount = String(format: "%.2f", amount)
-                    self.successMessage = "¡Transferencia CUP exitosa! Se agregaron $\(formattedAmount) CUP"
+                    self.successMessage = "Transferencia de $\(formattedAmount) CUP registrada. Se acreditará cuando se confirme"
                     self.showSuccessMessage = true
 
                     DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
