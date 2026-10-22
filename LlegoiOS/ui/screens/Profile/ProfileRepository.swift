@@ -197,12 +197,15 @@ class ProfileRepository {
     }
 
     // MARK: - Login con Apple
-    func loginWithApple(identityToken: String, authorizationCode: String?, nonce: String?) async throws -> AuthSession {
+    func loginWithApple(
+        identityToken: String, authorizationCode: String?, nonce: String?, fullName: String? = nil
+    ) async throws -> AuthSession {
         return try await withCheckedThrowingContinuation { continuation in
             let input = LlegoAPI.AppleLoginInput(
                 identityToken: identityToken,
                 authorizationCode: authorizationCode.map { .some($0) } ?? .none,
-                nonce: nonce.map { .some($0) } ?? .none
+                nonce: nonce.map { .some($0) } ?? .none,
+                fullName: fullName.map { .some($0) } ?? .none
             )
             let mutation = LlegoAPI.LoginWithAppleMutation(input: input)
 

@@ -14,12 +14,14 @@ public extension LlegoAPI {
     public init(
       identityToken: String,
       authorizationCode: GraphQLNullable<String> = nil,
-      nonce: GraphQLNullable<String> = nil
+      nonce: GraphQLNullable<String> = nil,
+      fullName: GraphQLNullable<String> = nil
     ) {
       __data = InputDict([
         "identityToken": identityToken,
         "authorizationCode": authorizationCode,
-        "nonce": nonce
+        "nonce": nonce,
+        "fullName": fullName
       ])
     }
 
@@ -36,6 +38,11 @@ public extension LlegoAPI {
     public var nonce: GraphQLNullable<String> {
       get { __data["nonce"] }
       set { __data["nonce"] = newValue }
+    }
+
+    public var fullName: GraphQLNullable<String> {
+      get { __data["fullName"] }
+      set { __data["fullName"] = newValue }
     }
   }
 

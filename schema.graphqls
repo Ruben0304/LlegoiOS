@@ -2862,6 +2862,7 @@ input AppleLoginInput {
   identityToken: String!
   authorizationCode: String = null
   nonce: String = null
+  fullName: String = null
 }
 
 input UpdateUserInput {

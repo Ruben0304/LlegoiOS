@@ -1,6 +1,7 @@
 import AuthenticationServices
 import Combine
 import Foundation
+import Security
 import SwiftUI
 
 enum ProfileViewState: Equatable {
@@ -163,6 +164,22 @@ class ProfileViewModel: ObservableObject {
     }
 
     /// Login con Apple
+    /// Nonce de la última petición a Apple. Apple lo copia en el identityToken y el backend
+    /// comprueba que coincide: un token robado de otra petición no sirve para entrar.
+    private var appleNonce: String?
+
+    /// Configura la petición de Sign in with Apple (scopes y nonce nuevo en cada intento).
+    func prepareAppleRequest(_ request: ASAuthorizationAppleIDRequest) {
+        var bytes = [UInt8](repeating: 0, count: 32)
+        if SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) != errSecSuccess {
+            bytes = (0..<32).map { _ in UInt8.random(in: 0...255) }
+        }
+        let nonce = bytes.map { String(format: "%02x", $0) }.joined()
+        appleNonce = nonce
+        request.requestedScopes = [.fullName, .email]
+        request.nonce = nonce
+    }
+
     func signInWithApple(result: Result<ASAuthorization, Error>) async {
         state = .loading
         errorMessage = nil
@@ -185,21 +202,22 @@ class ProfileViewModel: ObservableObject {
                     let authorizationCode = appleIDCredential.authorizationCode.flatMap {
                         String(data: $0, encoding: .utf8)
                     }
-                    let nonce: String?
-                    if let state = appleIDCredential.state, !state.isEmpty {
-                        nonce = state
-                    } else {
-                        nonce = nil
-                    }
+                    let nonce = appleNonce
+                    appleNonce = nil
+                    // Apple solo da el nombre la primera vez; el backend lo usa para la cuenta nueva
+                    let fullName = appleIDCredential.fullName.map {
+                        PersonNameComponentsFormatter().string(from: $0)
+                    }.flatMap { $0.trimmingCharacters(in: .whitespaces).isEmpty ? nil : $0 }
 
                     print(
-                        "🍎 Recibido AppleIDCredential. email: \(appleIDCredential.email ?? "no proporcionado"), tieneAuthCode: \(authorizationCode != nil)"
+                        "🍎 Recibido AppleIDCredential. tieneAuthCode: \(authorizationCode != nil)"
                     )
 
                     let session = try await repository.loginWithApple(
                         identityToken: identityToken,
                         authorizationCode: authorizationCode,
-                        nonce: nonce
+                        nonce: nonce,
+                        fullName: fullName
                     )
 
                     authManager.saveSession(session)
