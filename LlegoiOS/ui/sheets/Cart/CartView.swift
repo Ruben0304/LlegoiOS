@@ -273,6 +273,7 @@ struct CartView: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(gradientManager.currentAccentColor)
             }
+            .accessibilityLabel("Cerrar carrito")
         }
 
         ToolbarItem(placement: .navigationBarTrailing) {
@@ -391,6 +392,7 @@ struct CartView: View {
                             Image(systemName: "xmark")
                                 .font(.system(size: 16, weight: .semibold))
                         }
+                        .accessibilityLabel("Cerrar")
                     }
                 }
         }
@@ -1726,7 +1728,10 @@ struct CartView: View {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 18))
                             .foregroundColor(.secondary)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
+                    .accessibilityLabel("Quitar hora programada")
                 }
             }
 

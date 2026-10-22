@@ -294,7 +294,10 @@ struct PromoStoriesView: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.white)
                     .padding(8)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
+            .accessibilityLabel("Cerrar")
         }
         .padding(.horizontal, 14)
     }

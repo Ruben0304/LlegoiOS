@@ -323,6 +323,7 @@ private struct StoreProductsCardFront: View {
                     .contentShape(Rectangle())
                     .foregroundColor(.white)
             }
+            .accessibilityLabel("Ver ubicación de la tienda")
             .modifier(GlassEffectClearButtonModifier())
             .buttonStyle(.borderless)
 
@@ -334,6 +335,7 @@ private struct StoreProductsCardFront: View {
                     .contentShape(Rectangle())
                     .foregroundColor(.white)
             }
+            .accessibilityLabel("Más opciones de la tienda")
             .modifier(GlassEffectClearButtonModifier())
             .buttonStyle(.borderless)
         }
@@ -474,7 +476,10 @@ private struct StoreProductsCardBack: View {
                             .font(.system(size: 14, weight: .bold))
                             .frame(width: 36, height: 36)
                             .foregroundColor(.black)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
+                    .accessibilityLabel("Ampliar mapa")
                     .modifier(GlassEffectRegularButtonModifier())
                     .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
                     .buttonStyle(.borderless)
@@ -487,7 +492,10 @@ private struct StoreProductsCardBack: View {
                             .font(.system(size: 14, weight: .bold))
                             .frame(width: 36, height: 36)
                             .foregroundColor(.black)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
+                    .accessibilityLabel("Volver a los productos")
                     .modifier(GlassEffectRegularButtonModifier())
                     .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
                     .buttonStyle(.borderless)
@@ -687,7 +695,10 @@ struct ProductFullCoverCard: View {
                                     Circle()
                                         .fill(Color.black.opacity(0.4))
                                 )
+                                .frame(minWidth: 44, minHeight: 44)
+                                .contentShape(Rectangle())
                         }
+                        .accessibilityLabel(isFavorite ? "Quitar de favoritos" : "Agregar a favoritos")
                         .buttonStyle(PlainButtonStyle())
                     }
                 }
@@ -779,7 +790,10 @@ private struct StoreFullMapView: View {
                             .font(.system(size: 14, weight: .bold))
                             .frame(width: 36, height: 36)
                             .foregroundColor(.primary)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
+                    .accessibilityLabel("Cerrar")
                     .modifier(GlassEffectRegularButtonModifier())
                     .buttonStyle(.borderless)
                 }

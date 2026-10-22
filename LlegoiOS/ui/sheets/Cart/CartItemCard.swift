@@ -182,7 +182,10 @@ struct CartItemCard: View {
                             Circle()
                                 .fill(.ultraThinMaterial)
                         )
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
+                .accessibilityLabel("Eliminar del carrito")
 
                 // Controles de cantidad
                 HStack(spacing: 6) {
@@ -195,7 +198,10 @@ struct CartItemCard: View {
                                 Circle()
                                     .fill(.thinMaterial)
                             )
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
+                    .accessibilityLabel("Quitar uno")
 
                     Text("\(item.quantity)")
                         .font(.system(size: 14, weight: .bold, design: .rounded))
@@ -211,7 +217,10 @@ struct CartItemCard: View {
                                 Circle()
                                     .fill(.thinMaterial)
                             )
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
+                    .accessibilityLabel("Agregar uno")
                 }
             }
         }

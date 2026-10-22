@@ -197,8 +197,10 @@ struct AIProductCard: View {
                         .font(.system(size: 12, weight: .bold))
                         .foregroundColor(gradientManager.currentAccentColor)
                         .frame(width: 32, height: 34)
+                        .frame(minWidth: 44, minHeight: 44)
                         .contentShape(Rectangle())
                 }
+                .accessibilityLabel(count > 1 ? "Quitar uno" : "Eliminar del carrito")
 
                 Text("\(count)")
                     .font(.system(size: 15, weight: .bold, design: .rounded))
@@ -212,7 +214,10 @@ struct AIProductCard: View {
                         .foregroundColor(.white)
                         .frame(width: 30, height: 30)
                         .background(Circle().fill(gradientManager.currentAccentColor))
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
+                .accessibilityLabel("Agregar uno")
             }
             .padding(.leading, 6)
             .padding(.trailing, 4)
@@ -231,7 +236,10 @@ struct AIProductCard: View {
                         color: gradientManager.currentAccentColor.opacity(0.35),
                         radius: 8, x: 0, y: 4
                     )
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
+            .accessibilityLabel("Agregar al carrito")
         }
     }
 

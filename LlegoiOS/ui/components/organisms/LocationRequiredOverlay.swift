@@ -59,6 +59,7 @@ struct LocationRequiredOverlay: View {
                                     .font(.system(size: 18, weight: .semibold))
                                     .frame(width: 44, height: 44)
                             }
+                            .accessibilityLabel("Usar mi ubicación actual")
                             .modifier(LocationOverlayCircleButtonModifier(accentColor: gradientManager.currentAccentColor))
                             .tint(gradientManager.currentAccentColor)
                         }
@@ -119,6 +120,7 @@ struct LocationRequiredOverlay: View {
                         Button(action: moveToCurrentLocation) {
                             Image(systemName: "location.fill")
                         }
+                        .accessibilityLabel("Usar mi ubicación actual")
                         .tint(gradientManager.currentAccentColor)
                     }
                 }

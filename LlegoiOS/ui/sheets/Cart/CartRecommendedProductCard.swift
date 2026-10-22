@@ -66,7 +66,10 @@ struct RecommendedProductCard: View {
                                     }
                             }
                         )
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
+                .accessibilityLabel(added ? "Agregado al carrito" : "Agregar al carrito")
                 .buttonStyle(.plain)
                 .padding(8)
                 .scaleEffect(added ? 1.1 : 1.0)

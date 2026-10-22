@@ -60,6 +60,7 @@ struct ProfileLocationPickerView: View {
                             .frame(width: 44, height: 44)
                             .background(.ultraThinMaterial, in: Circle())
                     }
+                    .accessibilityLabel("Cerrar")
                     
                     Spacer()
                     
@@ -83,6 +84,7 @@ struct ProfileLocationPickerView: View {
                             .frame(width: 44, height: 44)
                             .background(.ultraThinMaterial, in: Circle())
                     }
+                    .accessibilityLabel("Usar mi ubicación actual")
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 60)

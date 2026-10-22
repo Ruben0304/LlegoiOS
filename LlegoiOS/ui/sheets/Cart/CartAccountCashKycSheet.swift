@@ -308,7 +308,10 @@ struct CartAccountCashKycSheet: View {
                             .font(.system(size: 24))
                             .foregroundColor(.secondary)
                             .symbolRenderingMode(.hierarchical)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
+                    .accessibilityLabel("Cerrar")
                 }
             }
             .sheet(isPresented: $showDocumentCamera) {

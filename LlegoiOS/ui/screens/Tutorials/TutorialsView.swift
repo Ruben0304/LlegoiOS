@@ -234,7 +234,10 @@ struct FeaturedTutorialCard: View {
                     .foregroundColor(.orange)
                     .padding(6)
                     .background(.ultraThinMaterial, in: Circle())
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
+            .accessibilityLabel("Reintentar descarga")
             .buttonStyle(.plain)
         case .notDownloaded:
             Button(action: { downloadManager.startDownload(for: tutorial) }) {
@@ -243,7 +246,10 @@ struct FeaturedTutorialCard: View {
                     .foregroundColor(.white)
                     .padding(6)
                     .background(.ultraThinMaterial, in: Circle())
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
+            .accessibilityLabel("Descargar tutorial")
             .buttonStyle(.plain)
         }
     }
@@ -277,7 +283,10 @@ struct VideoPlayerView: View {
                             .font(.system(size: 30))
                             .foregroundColor(.white)
                             .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
+                    .accessibilityLabel("Cerrar")
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 16)

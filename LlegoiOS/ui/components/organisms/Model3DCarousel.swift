@@ -160,7 +160,10 @@ struct ArrowButton: View {
                         )
                 )
                 .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
         }
+        .accessibilityLabel(direction == .left ? "Anterior" : "Siguiente")
         .buttonStyle(ArrowScaleButtonStyle())
     }
 }

@@ -209,7 +209,10 @@ struct ProductListView: View {
                                         .frame(width: 6, height: 6)
                                 }
                             }
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                         }
+                        .accessibilityLabel("Filtrar por distancia")
                     }
                 } else {
                     ToolbarItem(placement: .navigationBarTrailing) {

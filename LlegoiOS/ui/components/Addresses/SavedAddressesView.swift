@@ -72,6 +72,7 @@ struct SavedAddressesView: View {
                     }) {
                         Image(systemName: "plus")
                     }
+                    .accessibilityLabel("Agregar dirección")
                 }
                 if isSelectingDeliveryAddress {
                     ToolbarItem(placement: .navigationBarLeading) {

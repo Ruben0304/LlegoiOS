@@ -146,7 +146,10 @@ struct TutorialCard: View {
                     .foregroundColor(.orange)
                     .padding(6)
                     .background(.ultraThinMaterial, in: Circle())
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
+            .accessibilityLabel("Reintentar descarga")
             .buttonStyle(.plain)
 
         case .notDownloaded:
@@ -158,7 +161,10 @@ struct TutorialCard: View {
                     .foregroundColor(.white)
                     .padding(6)
                     .background(.ultraThinMaterial, in: Circle())
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
+            .accessibilityLabel("Descargar tutorial")
             .buttonStyle(.plain)
         }
     }

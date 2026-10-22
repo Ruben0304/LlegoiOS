@@ -28,7 +28,10 @@ struct MapView: View {
                                         .foregroundColor(.white)
                                         .font(.system(size: 18))
                                 }
+                                .frame(minWidth: 44, minHeight: 44)
+                                .contentShape(Rectangle())
                             }
+                            .accessibilityLabel(store.name)
                         }
                     }
                 }
@@ -99,6 +102,7 @@ struct MapView: View {
                         Image(systemName: "line.3.horizontal.decrease.circle")
                             .foregroundColor(.llegoPrimary)
                     }
+                    .accessibilityLabel("Filtrar por categoría")
                 }
             }
             .onAppear {

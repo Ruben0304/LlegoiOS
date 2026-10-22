@@ -141,7 +141,10 @@ struct DownloadedModelsSection: View {
                             Circle()
                                 .fill(Color.red.opacity(0.1))
                         )
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
+                .accessibilityLabel("Eliminar modelo descargado")
                 .buttonStyle(PlainButtonStyle())
             }
             .padding(16)

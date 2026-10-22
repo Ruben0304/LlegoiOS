@@ -212,7 +212,10 @@ struct ProductCard: View {
                         .fill(Color.white)
                         .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
                 )
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
         }
+        .accessibilityLabel(isFavorite ? "Quitar de favoritos" : "Agregar a favoritos")
         .scaleEffect(favoritePulse ? 1.15 : 1.0)
         .buttonStyle(.plain)
         .padding(8)
@@ -237,7 +240,10 @@ struct ProductCard: View {
                 .frame(width: 38, height: 38)
                 .scaleEffect(quickAddPulse ? 1.12 : 1.0)
                 .animation(.spring(response: 0.28, dampingFraction: 0.6), value: quickAddPulse)
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
         }
+        .accessibilityLabel("Agregar al carrito")
         .modifier(GlassButtonStyleModifier())
         .padding(8)
     }

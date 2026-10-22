@@ -13,7 +13,10 @@ struct BackButton: View {
             }
         }) {
             Image(systemName: "chevron.left")
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
         }
+        .accessibilityLabel("Atrás")
     }
 }
 

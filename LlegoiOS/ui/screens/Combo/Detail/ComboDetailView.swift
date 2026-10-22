@@ -41,6 +41,7 @@ struct ComboDetailView: View {
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(gradientManager.currentAccentColor)
                     }
+                    .accessibilityLabel("Carrito")
                 }
 
                 if viewModel.comboDetail != nil {
@@ -679,7 +680,10 @@ struct ComboDetailView: View {
                 Image(systemName: "minus")
                     .font(.system(size: 16, weight: .medium))
                     .frame(width: 36, height: 36)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
+            .accessibilityLabel("Quitar uno")
 
             Text("\(quantity)")
                 .font(.system(size: 17, weight: .semibold))
@@ -689,7 +693,10 @@ struct ComboDetailView: View {
                 Image(systemName: "plus")
                     .font(.system(size: 16, weight: .medium))
                     .frame(width: 36, height: 36)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
+            .accessibilityLabel("Agregar uno")
         }
         .padding(.horizontal, 4)
         .tint(gradientManager.currentAccentColor)

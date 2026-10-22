@@ -251,7 +251,10 @@ struct FavoriteItemCard: View {
                             Circle()
                                 .fill(.ultraThinMaterial)
                         )
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
+                .accessibilityLabel("Quitar de favoritos")
 
                 Button(action: onAddToCart) {
                     Image(systemName: "cart.badge.plus")
@@ -262,7 +265,10 @@ struct FavoriteItemCard: View {
                             Circle()
                                 .fill(.thinMaterial)
                         )
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
+                .accessibilityLabel("Agregar al carrito")
                 .disabled(!item.availability)
                 .opacity(item.availability ? 1 : 0.4)
             }

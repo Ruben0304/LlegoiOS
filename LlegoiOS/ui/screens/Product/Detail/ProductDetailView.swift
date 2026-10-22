@@ -83,6 +83,7 @@ struct ProductDetailView: View {
                         Image(systemName: "xmark")
                             .font(.system(size: 18, weight: .semibold))
                     }
+                    .accessibilityLabel("Cerrar")
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
@@ -664,7 +665,10 @@ struct ProductDetailView: View {
                     .font(.system(size: 16, weight: .medium))
 
                     .frame(width: 36, height: 36)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
+            .accessibilityLabel("Quitar uno")
 
             Text("\(quantity)")
                 .font(.system(size: 17, weight: .semibold))
@@ -676,7 +680,10 @@ struct ProductDetailView: View {
                     .font(.system(size: 16, weight: .medium))
 
                     .frame(width: 36, height: 36)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
+            .accessibilityLabel("Agregar uno")
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)

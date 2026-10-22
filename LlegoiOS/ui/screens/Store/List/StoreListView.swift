@@ -244,7 +244,10 @@ struct StoreListView: View {
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(gradientManager.currentAccentColor)
                             .frame(width: 30, height: 30)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
+                    .accessibilityLabel(viewMode == .list ? "Ver en el mapa" : "Ver en lista")
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -380,7 +383,10 @@ struct StoreListView: View {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.gray)
                         .font(.system(size: 14))
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
+                .accessibilityLabel("Borrar búsqueda")
             }
 
             if isSearchFocused {
@@ -698,6 +704,7 @@ private struct ShopMapPinView: View {
 
             }
         }
+        .accessibilityLabel(pin.type.label)
         .scaleEffect(isPressed ? 0.9 : 1.0)
         .buttonStyle(PlainButtonStyle())
     }
@@ -937,6 +944,7 @@ private struct FullScreenMapView: View {
 
                         }
                     }
+                    .accessibilityLabel(store.name)
                     .buttonStyle(PlainButtonStyle())
                 }
             }

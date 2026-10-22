@@ -188,6 +188,7 @@ struct StoreMapView: View {
 
                         }
                     }
+                    .accessibilityLabel(store.name)
                     .buttonStyle(PlainButtonStyle())
                 }
             }

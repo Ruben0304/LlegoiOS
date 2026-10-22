@@ -649,7 +649,10 @@ struct ProductFeedView: View {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 22))
                         .foregroundColor(.gray.opacity(0.7))
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
+                .accessibilityLabel("Ocultar tutoriales")
             }
             .padding(.horizontal, 20)
 

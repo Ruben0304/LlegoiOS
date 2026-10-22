@@ -295,7 +295,10 @@ struct ComboCartCard: View {
                     Circle()
                         .fill(.thinMaterial)
                 )
+                .frame(minWidth: 44, minHeight: 44)
+                .contentShape(Rectangle())
         }
+        .accessibilityLabel(systemName == "minus" ? "Quitar uno" : "Agregar uno")
     }
 }
 

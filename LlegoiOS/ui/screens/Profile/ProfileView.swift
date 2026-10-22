@@ -256,6 +256,7 @@ struct ProfileView: View {
                 } label: {
                     Image(systemName: "rectangle.portrait.and.arrow.right")
                 }
+                .accessibilityLabel("Cerrar sesión")
                 .tint(.red)
             }
         }
@@ -685,7 +686,10 @@ struct ProfileView: View {
                                     .font(.system(size: 16, weight: .bold))
                                     .foregroundColor(.white)
                                 }
+                                .frame(minWidth: 44, minHeight: 44)
+                                .contentShape(Rectangle())
                             }
+                            .accessibilityLabel("Cambiar foto de perfil")
                             .disabled(viewModel.isUploadingAvatar)
                             .offset(x: 8, y: 8)
                         }
@@ -2716,7 +2720,10 @@ private struct AccountCashKycSheet: View {
                             .font(.system(size: 24))
                             .foregroundColor(.secondary)
                             .symbolRenderingMode(.hierarchical)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
+                    .accessibilityLabel("Cerrar")
                 }
             }
             .sheet(isPresented: $showDocumentCamera) {

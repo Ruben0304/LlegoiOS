@@ -168,7 +168,10 @@ struct BankTransferSheetView: View {
                                         .background(
                                             Circle().fill(
                                                 gradientManager.currentAccentColor.opacity(0.15)))
+                                        .frame(minWidth: 44, minHeight: 44)
+                                        .contentShape(Rectangle())
                                 }
+                                .accessibilityLabel("Copiar número de cuenta")
                             }
 
                             Divider()

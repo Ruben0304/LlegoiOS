@@ -522,7 +522,10 @@ struct LoginView: View {
                 Image(systemName: showLoginPassword ? "eye.slash.fill" : "eye.fill")
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.gray)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
+            .accessibilityLabel(showLoginPassword ? "Ocultar contraseña" : "Mostrar contraseña")
         }
     }
 
@@ -615,7 +618,10 @@ struct LoginView: View {
                 Image(systemName: showRegisterPassword ? "eye.slash.fill" : "eye.fill")
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.gray)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
             }
+            .accessibilityLabel(showRegisterPassword ? "Ocultar contraseña" : "Mostrar contraseña")
         }
     }
 

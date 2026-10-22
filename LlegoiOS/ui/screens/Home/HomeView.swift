@@ -279,7 +279,10 @@ struct HomeView: View {
                                         .font(.system(size: 20, weight: .bold))
                                         .foregroundColor(.black)
                                         .frame(width: 40, height: 40)
+                                        .frame(minWidth: 44, minHeight: 44)
+                                        .contentShape(Rectangle())
                                 }
+                                .accessibilityLabel("Modelo anterior")
                                 .glassEffect(.regular.interactive(), in: .circle)
                             } else {
                                 Button(action: previousModel) {
@@ -292,7 +295,10 @@ struct HomeView: View {
                                                 .fill(Color.white.opacity(0.2))
                                                 .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
                                         )
+                                        .frame(minWidth: 44, minHeight: 44)
+                                        .contentShape(Rectangle())
                                 }
+                                .accessibilityLabel("Modelo anterior")
                             }
                             
                             // Indicadores de página (puntos)
@@ -314,7 +320,10 @@ struct HomeView: View {
                                         .font(.system(size: 20, weight: .bold))
                                         .foregroundColor(.black)
                                         .frame(width: 40, height: 40)
+                                        .frame(minWidth: 44, minHeight: 44)
+                                        .contentShape(Rectangle())
                                 }
+                                .accessibilityLabel("Modelo siguiente")
                                 .glassEffect(.regular.interactive(), in: .circle)
                             } else {
                                 Button(action: nextModel) {
@@ -327,7 +336,10 @@ struct HomeView: View {
                                                 .fill(Color.white.opacity(0.2))
                                                 .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
                                         )
+                                        .frame(minWidth: 44, minHeight: 44)
+                                        .contentShape(Rectangle())
                                 }
+                                .accessibilityLabel("Modelo siguiente")
                             }
                         }
                         .padding(.top, -6) // Espacio entre el modelo y las flechas
@@ -489,6 +501,7 @@ struct HomeView: View {
 //                        }
 //                    }
                 }
+                .accessibilityLabel("Perfil")
                 .buttonStyle(.plain)
             }
             }

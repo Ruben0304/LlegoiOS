@@ -298,7 +298,10 @@ struct TshirtCustomizerView: View {
                             .foregroundStyle(Color.red.opacity(0.9))
                             .frame(width: 30, height: 30)
                             .background(Circle().fill(Color.red.opacity(0.15)))
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
+                    .accessibilityLabel("Eliminar calcomanía")
                 }
             }
 
@@ -644,6 +647,7 @@ struct DecalThumbnail: View {
                         )
                 )
         }
+        .accessibilityLabel(isSelected ? "Calcomanía seleccionada" : "Calcomanía")
         .buttonStyle(.plain)
     }
 }

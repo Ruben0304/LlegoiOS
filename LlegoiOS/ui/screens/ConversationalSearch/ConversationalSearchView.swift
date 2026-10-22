@@ -127,7 +127,10 @@ struct ConversationalSearchView: View {
                     Image(systemName: "paperplane")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(gradientManager.currentAccentColor)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
+                .accessibilityLabel("Enviar mensaje")
                 .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
