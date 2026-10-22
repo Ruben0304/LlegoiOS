@@ -197,7 +197,7 @@ struct CartView: View {
         .sheet(isPresented: $showTransferSmsSheet) { transferSmsSheetContent }
         .sheet(isPresented: $showAddressPicker) {
             SavedAddressesView(isSelectingDeliveryAddress: true) { address in
-                viewModel.selectedAddress = address
+                viewModel.selectDeliveryAddress(address)
                 if pendingPaymentAfterAddressSelection {
                     pendingPaymentAfterAddressSelection = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { processPayment() }

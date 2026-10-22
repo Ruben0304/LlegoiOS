@@ -46,6 +46,7 @@ class CartViewModel: ObservableObject {
     @Published var isLoadingDeliveryFee: Bool = false
     @Published var deliveryFeeError: String?
     @Published var deliveryFeePaymentMode: DeliveryFeePaymentMode = .sameCurrency
+    private var deliveryFeeRequestId = 0
 
     private let repository = CartRepository()
     private let cartManager = CartManager.shared
@@ -478,8 +479,6 @@ class CartViewModel: ObservableObject {
                         self.fetchBranchAcceptedCurrency(branchId: branchId)
                         self.fetchCashKycMerchantContext(branchId: branchId)
                         self.fetchBranchScheduleStatus(branchId: branchId)
-                        // Estimar envío usando el branchId del primer producto
-                        self.fetchDeliveryFeeEstimate(branchId: branchId)
                         if self.selectedPickup == nil || self.selectedPickup?.branchId != branchId {
                             self.selectedPickup = PickupSelection(
                                 branchId: branchId,
@@ -507,8 +506,17 @@ class CartViewModel: ObservableObject {
                     {
                         if let defaultAddr = addresses.first(where: { $0.id == defaultId }) {
                             self.defaultAddress = defaultAddr
-                            self.selectedAddress = defaultAddr
+                            // Recargar el carrito (p. ej. al cambiar cantidades) no debe
+                            // deshacer la dirección que el usuario eligió.
+                            if self.selectedAddress == nil {
+                                self.selectedAddress = defaultAddr
+                            }
                         }
+                    }
+
+                    // El envío se estima con la dirección del pedido, ya resuelta arriba.
+                    if let branchId = self.cartBranchId {
+                        self.fetchDeliveryFeeEstimate(branchId: branchId)
                     }
 
                     self.state = .success
@@ -772,14 +780,34 @@ class CartViewModel: ObservableObject {
 
     // MARK: - Delivery Fee Estimation
 
-    /// Obtener estimación de envío desde el backend
+    /// Cambia la dirección de entrega del pedido y recalcula el envío hasta ella.
+    func selectDeliveryAddress(_ address: SavedAddress) {
+        selectedAddress = address
+        // El envío de la dirección anterior no vale para la nueva.
+        deliveryFeeEstimate = nil
+        if let branchId = cartBranchId {
+            fetchDeliveryFeeEstimate(branchId: branchId)
+        }
+    }
+
+    /// Obtener estimación de envío desde el backend, hasta la dirección del pedido
+    /// (la elegida o, si no hay, la ubicación actual: la misma que usa buildDeliveryAddress).
     func fetchDeliveryFeeEstimate(branchId: String) {
         isLoadingDeliveryFee = true
         deliveryFeeError = nil
+        deliveryFeeRequestId += 1
+        let requestId = deliveryFeeRequestId
+        let address = buildDeliveryAddress()
 
-        repository.estimateDeliveryFee(branchId: branchId) { [weak self] result in
+        repository.estimateDeliveryFee(
+            branchId: branchId,
+            deliveryLatitude: address?.latitude,
+            deliveryLongitude: address?.longitude
+        ) { [weak self] result in
             Task { @MainActor in
                 guard let self = self else { return }
+                // Si se cambió la dirección mientras tanto, esta respuesta ya no vale.
+                guard requestId == self.deliveryFeeRequestId else { return }
                 self.isLoadingDeliveryFee = false
 
                 switch result {

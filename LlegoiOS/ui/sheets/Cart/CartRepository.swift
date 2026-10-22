@@ -8,6 +8,10 @@ class CartRepository {
     private let apolloClient = ApolloClientManager.shared.apollo
     private let cartManager = CartManager.shared
     private let authManager = AuthManager.shared
+    // Última dirección guardada en el backend para estimar el envío; evita repetir la mutación
+    // cada vez que se recarga el carrito.
+    private var lastDeliveryFeeLatitude: Double?
+    private var lastDeliveryFeeLongitude: Double?
 
     // MARK: - GraphQL Fetching
 
@@ -244,9 +248,14 @@ class CartRepository {
         }
     }
 
-    /// Estimar el costo de envío para una sucursal
+    /// Estimar el costo de envío para una sucursal hasta la dirección del pedido.
+    /// estimateDeliveryFee no recibe coordenadas: calcula con la ubicación guardada del usuario
+    /// en el backend, así que antes se guarda ahí la dirección elegida (el pedido cobra el envío
+    /// según su deliveryAddress, y así la estimación coincide con el cobro).
     func estimateDeliveryFee(
         branchId: String,
+        deliveryLatitude: Double? = nil,
+        deliveryLongitude: Double? = nil,
         completion: @escaping @Sendable (Result<DeliveryFeeEstimate, Error>) -> Void
     ) {
         let client = apolloClient
@@ -262,6 +271,29 @@ class CartRepository {
                             userInfo: [NSLocalizedDescriptionKey: "No hay sesión activa"]
                         )))
                 return
+            }
+
+            if let deliveryLatitude, let deliveryLongitude {
+                let alreadySynced =
+                    lastDeliveryFeeLatitude == deliveryLatitude
+                    && lastDeliveryFeeLongitude == deliveryLongitude
+                if !alreadySynced {
+                    do {
+                        try await LocationSyncRepository.shared.updateLocation(
+                            longitude: deliveryLongitude,
+                            latitude: deliveryLatitude,
+                            jwt: jwt
+                        )
+                        lastDeliveryFeeLatitude = deliveryLatitude
+                        lastDeliveryFeeLongitude = deliveryLongitude
+                    } catch {
+                        print(
+                            "❌ CartRepository: No se pudo fijar la dirección para estimar el envío: \(error.localizedDescription)"
+                        )
+                        completion(.failure(error))
+                        return
+                    }
+                }
             }
 
             print("🚚 CartRepository: Estimating delivery fee for branch \(branchId)...")
