@@ -19,6 +19,7 @@ final class CreateOrderRepository {
         comments: String? = nil,
         promoCode: String? = nil,
         scheduledFor: Date? = nil,
+        idempotencyKey: String? = nil,
         completion: @escaping @Sendable (Result<CreatedOrder, Error>) -> Void
     ) {
         let client = apolloClient
@@ -46,6 +47,7 @@ final class CreateOrderRepository {
                     comments: comments,
                     promoCode: promoCode,
                     scheduledFor: scheduledFor,
+                    idempotencyKey: idempotencyKey,
                     jwt: jwt,
                     completion: completion
                 )
@@ -185,6 +187,7 @@ final class CreateOrderRepository {
         comments: String?,
         promoCode: String?,
         scheduledFor: Date?,
+        idempotencyKey: String?,
         jwt: String,
         completion: @escaping @Sendable (Result<CreatedOrder, Error>) -> Void
     ) {
@@ -321,7 +324,8 @@ final class CreateOrderRepository {
                     paymentIntentId: paymentIntentId,
                     comments: comments,
                     promoCode: promoCode,
-                    scheduledFor: scheduledFor.map { iso8601String(from: $0) }
+                    scheduledFor: scheduledFor.map { iso8601String(from: $0) },
+                    idempotencyKey: idempotencyKey
                 )
             )
         )
@@ -612,6 +616,8 @@ private struct MixedCreateOrderRequestPayload: Encodable {
         let comments: String?
         let promoCode: String?
         let scheduledFor: String?
+        // Con la misma clave, el backend devuelve el pedido ya creado en vez de duplicarlo.
+        let idempotencyKey: String?
     }
 
     struct Item: Encodable {

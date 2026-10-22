@@ -574,6 +574,9 @@ struct CartView: View {
 
     // MARK: - Process Payment
     private func processPayment() {
+        // Un segundo toque (o la vuelta del selector de dirección) no debe lanzar otra compra.
+        guard !isOrderInProgress else { return }
+
         // Validaciones iniciales
         if viewModel.cartItems.isEmpty {
             paymentAlertMessage = "No hay productos en el carrito."
@@ -1046,6 +1049,7 @@ struct CartView: View {
     private func createOrderWithPaymentMethod(
         _ paymentMethodId: String, paymentIntentId: String? = nil
     ) {
+        guard !viewModel.isCreatingOrder else { return }
         isLoadingPayment = true
 
         viewModel.createOrder(
@@ -2000,13 +2004,17 @@ struct CartView: View {
         }
         .modifier(GlassProminentButtonModifier())
         .tint(gradientManager.currentAccentColor)
-        .disabled(isPlaceOrderBlocked)
+        .disabled(isPlaceOrderBlocked || isOrderInProgress)
         .opacity(isPlaceOrderBlocked ? 0.45 : 1.0)
     }
 
     /// El pedido no se puede hacer: hay productos de varias tiendas o la tienda pausó los pedidos.
     private var isPlaceOrderBlocked: Bool {
         viewModel.hasMultipleBranches || !viewModel.branchAcceptingOrders
+    }
+
+    private var isOrderInProgress: Bool {
+        isLoadingPayment || viewModel.isCreatingOrder
     }
 
     private var deliveryAddressAlertMessage: String {

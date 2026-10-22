@@ -83,6 +83,11 @@ class CartViewModel: ObservableObject {
     // Scheduled order
     @Published var scheduledFor: Date?
 
+    // Un reintento de la misma compra reutiliza la clave para que el backend devuelva el
+    // pedido ya creado (p. ej. si se perdió la respuesta) en vez de crear otro.
+    private var orderAttemptKey: String?
+    private var orderAttemptFingerprint: String?
+
     // MARK: - AI Suggestions
     @Published var suggestedProducts: [Product] = []
     @Published var isLoadingSuggestions: Bool = false
@@ -858,6 +863,11 @@ class CartViewModel: ObservableObject {
         completion:
             @escaping @Sendable (Result<(CreatedOrder, InitiatePaymentResultModel), Error>) -> Void
     ) {
+        guard !isCreatingOrder else {
+            print("⚠️ Ya hay un pedido en creación; se ignora el nuevo intento")
+            return
+        }
+
         guard let branchId = cartBranchId else {
             let error = NSError(
                 domain: "CartViewModel", code: -1,
@@ -873,9 +883,6 @@ class CartViewModel: ObservableObject {
             completion(.failure(error))
             return
         }
-
-        isCreatingOrder = true
-        orderError = nil
 
         let items = buildOrderRequestItems()
         guard !items.isEmpty else {
@@ -915,6 +922,16 @@ class CartViewModel: ObservableObject {
             deliveryAddress = nil
         }
 
+        isCreatingOrder = true
+        orderError = nil
+        let idempotencyKey = orderIdempotencyKey(
+            branchId: branchId,
+            items: items,
+            fulfillment: fulfillment,
+            deliveryAddress: deliveryAddress,
+            paymentMethod: "pending"
+        )
+
         print("🛒 Creating order with new payment flow...")
         print("   Branch: \(branchId)")
         print("   Items: \(items.count)")
@@ -930,7 +947,8 @@ class CartViewModel: ObservableObject {
             paymentMethod: "pending",  // Temporary, will be updated by payment
             paymentIntentId: nil,
             comments: comments,
-            scheduledFor: scheduledFor
+            scheduledFor: scheduledFor,
+            idempotencyKey: idempotencyKey
         ) { [weak self] result in
             guard let self = self else { return }
 
@@ -939,6 +957,7 @@ class CartViewModel: ObservableObject {
                 case .success(let order):
                     print("✅ Order created: \(order.orderNumber)")
                     self.createdOrder = order
+                    self.resetOrderAttemptKey()
 
                     // Step 2: Initiate Payment
                     do {
@@ -1159,6 +1178,11 @@ class CartViewModel: ObservableObject {
         comments: String? = nil,
         completion: @escaping @Sendable (Result<CreatedOrder, Error>) -> Void
     ) {
+        guard !isCreatingOrder else {
+            print("⚠️ Ya hay un pedido en creación; se ignora el nuevo intento")
+            return
+        }
+
         guard let branchId = cartBranchId else {
             let error = NSError(
                 domain: "CartViewModel", code: -1,
@@ -1174,9 +1198,6 @@ class CartViewModel: ObservableObject {
             completion(.failure(error))
             return
         }
-
-        isCreatingOrder = true
-        orderError = nil
 
         let items = buildOrderRequestItems()
         guard !items.isEmpty else {
@@ -1216,6 +1237,16 @@ class CartViewModel: ObservableObject {
             deliveryAddress = nil
         }
 
+        isCreatingOrder = true
+        orderError = nil
+        let idempotencyKey = orderIdempotencyKey(
+            branchId: branchId,
+            items: items,
+            fulfillment: fulfillment,
+            deliveryAddress: deliveryAddress,
+            paymentMethod: paymentMethod
+        )
+
         print("🛒 Creating order...")
         print("   Branch: \(branchId)")
         print("   Items: \(items.count)")
@@ -1230,7 +1261,8 @@ class CartViewModel: ObservableObject {
             paymentMethod: paymentMethod,
             paymentIntentId: paymentIntentId,
             comments: comments,
-            scheduledFor: scheduledFor
+            scheduledFor: scheduledFor,
+            idempotencyKey: idempotencyKey
         ) { [weak self] result in
             Task { @MainActor in
                 guard let self = self else { return }
@@ -1240,6 +1272,7 @@ class CartViewModel: ObservableObject {
                 case .success(let order):
                     print("✅ Order created successfully: \(order.orderNumber)")
                     self.createdOrder = order
+                    self.resetOrderAttemptKey()
                     completion(.success(order))
 
                 case .failure(let error):
@@ -1309,6 +1342,7 @@ class CartViewModel: ObservableObject {
     /// Limpiar todo el carrito
     func clearCart() {
         cartManager.clearCart()
+        resetOrderAttemptKey()
         cartItems = []
         state = .success
         fulfillmentMode = .delivery
@@ -1327,6 +1361,86 @@ class CartViewModel: ObservableObject {
     func setPickupSelection(_ selection: PickupSelection?) {
         selectedPickup = selection
         persistPickupSelection()
+    }
+
+    // MARK: - Order Idempotency
+
+    /// Clave del intento de compra: se reutiliza mientras la petición sea la misma y se
+    /// renueva si cambia el carrito, la entrega, la dirección, el método o la hora.
+    private func orderIdempotencyKey(
+        branchId: String,
+        items: [OrderRequestItem],
+        fulfillment: FulfillmentPayloadInput,
+        deliveryAddress: DeliveryAddressInput?,
+        paymentMethod: String
+    ) -> String {
+        let fingerprint = orderFingerprint(
+            branchId: branchId,
+            items: items,
+            fulfillment: fulfillment,
+            deliveryAddress: deliveryAddress,
+            paymentMethod: paymentMethod
+        )
+        if let key = orderAttemptKey, orderAttemptFingerprint == fingerprint {
+            return key
+        }
+        let key = UUID().uuidString
+        orderAttemptKey = key
+        orderAttemptFingerprint = fingerprint
+        return key
+    }
+
+    private func resetOrderAttemptKey() {
+        orderAttemptKey = nil
+        orderAttemptFingerprint = nil
+    }
+
+    private func orderFingerprint(
+        branchId: String,
+        items: [OrderRequestItem],
+        fulfillment: FulfillmentPayloadInput,
+        deliveryAddress: DeliveryAddressInput?,
+        paymentMethod: String
+    ) -> String {
+        // Los ítems salen de diccionarios: se ordenan para que el mismo carrito dé la misma huella.
+        let itemLines = items.map { item -> String in
+            let selections = (item.comboSelections ?? []).map { selection -> String in
+                let options = selection.selectedOptions.map { option -> String in
+                    let modifiers = option.modifiers.map(\.name).joined(separator: ",")
+                    return "\(option.productId)x\(option.quantity)[\(modifiers)]"
+                }
+                return "\(selection.slotId){\(options.joined(separator: ";"))}"
+            }
+            let parts: [String] = [
+                item.itemType.rawValue,
+                item.productId ?? "",
+                item.comboId ?? "",
+                item.showcaseId ?? "",
+                item.description ?? "",
+                String(item.quantity),
+                selections.joined(separator: "|"),
+            ]
+            return parts.joined(separator: "#")
+        }
+        .sorted()
+
+        let addressLine: String
+        if let address = deliveryAddress {
+            addressLine = "\(address.latitude),\(address.longitude)"
+        } else {
+            addressLine = "-"
+        }
+        let scheduledLine = scheduledFor.map { String($0.timeIntervalSince1970) } ?? "-"
+        let header: [String] = [
+            branchId,
+            fulfillment.type.rawValue,
+            fulfillment.pickupBranchId ?? "",
+            fulfillment.pickupWindowId ?? "",
+            addressLine,
+            paymentMethod,
+            scheduledLine,
+        ]
+        return (header + itemLines).joined(separator: "\n")
     }
 
     private func persistPickupSelection() {
