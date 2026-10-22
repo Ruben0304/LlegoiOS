@@ -202,7 +202,7 @@ private struct StoreProductsCardFront: View {
             // Description (left side)
             if let description = store.description {
                 Text(description)
-                    .font(.system(size: 14, weight: .regular))
+                    .scaledFont(size: 14, weight: .regular, relativeTo: .subheadline)
                     .foregroundColor(.primary.opacity(0.85))
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -213,7 +213,7 @@ private struct StoreProductsCardFront: View {
             // Details Button (right side)
             HStack(spacing: 7) {
                 Text("Ver detalles")
-                    .font(.system(size: 15, weight: .semibold))
+                    .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                     .foregroundColor(.black.opacity(0.78))
 
                 Image(systemName: "arrow.right")
@@ -298,7 +298,7 @@ private struct StoreProductsCardFront: View {
             // Info
             VStack(alignment: .leading, spacing: 2) {
                 Text(store.name)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .scaledFont(size: 16, weight: .bold, design: .rounded, relativeTo: .body)
                     .foregroundColor(.white)
                     .lineLimit(1)
 
@@ -361,7 +361,7 @@ private struct StoreProductsCardFront: View {
                 .foregroundColor(.gray.opacity(0.5))
 
             Text("Sin productos disponibles")
-                .font(.system(size: 12, weight: .medium))
+                .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                 .foregroundColor(.secondary)
         }
         .frame(height: 140)
@@ -373,12 +373,12 @@ private struct StoreProductsCardFront: View {
         HStack {
             VStack(alignment: .leading, spacing: 3) {
                 Text(promo)
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .scaledFont(size: 18, weight: .bold, design: .rounded, relativeTo: .title3)
                     .foregroundColor(.primary)
 
                 HStack(spacing: 4) {
                     Text("Ahorra 30 US$")
-                        .font(.system(size: 10, weight: .bold))
+                        .scaledFont(size: 10, weight: .bold, relativeTo: .caption2)
                         .foregroundColor(.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
@@ -388,7 +388,7 @@ private struct StoreProductsCardFront: View {
                         )
 
                     Text("en pedidos +80 US$")
-                        .font(.system(size: 10, weight: .medium))
+                        .scaledFont(size: 10, weight: .medium, relativeTo: .caption2)
                         .foregroundColor(.secondary)
                 }
             }
@@ -669,7 +669,7 @@ struct ProductFullCoverCard: View {
                 VStack {
                     HStack {
                         Text(product.formattedPrice)
-                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .scaledFont(size: 11, weight: .bold, design: .rounded, relativeTo: .caption2)
                             .foregroundColor(.white)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
@@ -775,11 +775,11 @@ private struct StoreFullMapView: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(store.name)
-                            .font(.system(size: 16, weight: .semibold))
+                            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                             .foregroundColor(.primary)
                         if let address = store.address, !address.isEmpty {
                             Text(address)
-                                .font(.system(size: 13))
+                                .scaledFont(size: 13, relativeTo: .footnote)
                                 .foregroundColor(.secondary)
                                 .lineLimit(1)
                         }

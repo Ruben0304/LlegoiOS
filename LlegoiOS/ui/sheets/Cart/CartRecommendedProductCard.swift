@@ -79,13 +79,13 @@ struct RecommendedProductCard: View {
             // Info
             VStack(alignment: .leading, spacing: 3) {
                 Text(product.name)
-                    .font(.system(size: 13, weight: .regular))
+                    .scaledFont(size: 13, weight: .regular, relativeTo: .footnote)
                     .foregroundColor(.primary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text(product.price)
-                    .font(.system(size: 14, weight: .bold))
+                    .scaledFont(size: 14, weight: .bold, relativeTo: .subheadline)
                     .foregroundColor(.primary)
             }
             .padding(.horizontal, 10)

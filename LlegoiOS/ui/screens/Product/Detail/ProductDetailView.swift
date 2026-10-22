@@ -183,7 +183,7 @@ struct ProductDetailView: View {
                 .tint(gradientManager.currentAccentColor)
 
             Text("Cargando producto...")
-                .font(.system(size: 16, weight: .medium))
+                .scaledFont(size: 16, weight: .medium, relativeTo: .body)
                 .foregroundColor(.gray)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -196,7 +196,7 @@ struct ProductDetailView: View {
             Image(systemName: "wifi.slash")
                 .font(.system(size: 13, weight: .semibold))
             Text("Sin conexión · datos guardados")
-                .font(.system(size: 13, weight: .medium))
+                .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
             Spacer(minLength: 0)
         }
         .foregroundColor(.secondary)
@@ -217,11 +217,11 @@ struct ProductDetailView: View {
                 .foregroundColor(gradientManager.currentAccentColor)
 
             Text("Error")
-                .font(.system(size: 22, weight: .bold))
+                .scaledFont(size: 22, weight: .bold, relativeTo: .title2)
                 .foregroundColor(.primary)
 
             Text(message)
-                .font(.system(size: 16))
+                .scaledFont(size: 16, relativeTo: .body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
@@ -233,7 +233,7 @@ struct ProductDetailView: View {
                     Image(systemName: "arrow.clockwise")
                         .font(.system(size: 16, weight: .semibold))
                     Text("Reintentar")
-                        .font(.system(size: 17, weight: .semibold))
+                        .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
                 }
                 .foregroundColor(.white)
                 .padding(.horizontal, 32)
@@ -354,16 +354,16 @@ struct ProductDetailView: View {
             // Store Details
             HStack(spacing: 6) {
                 Text(product.shop)
-                    .font(.system(size: 14, weight: .medium))
+                    .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                     .foregroundColor(.secondary)
 
                 if let rating = viewModel.productDetail?.shopRating, rating > 0 {
                     Text("•")
-                        .font(.system(size: 14, weight: .regular))
+                        .scaledFont(size: 14, weight: .regular, relativeTo: .subheadline)
                         .foregroundColor(.secondary)
 
                     Text("\(String(format: "%.1f", rating)) ★")
-                        .font(.system(size: 14, weight: .medium))
+                        .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                         .foregroundColor(.secondary)
                 }
             }
@@ -408,14 +408,14 @@ struct ProductDetailView: View {
                        let convertedCurrency = detail.convertedCurrency {
                         HStack(spacing: 6) {
                             Text("≈ \(viewModel.formatPrice(price: convertedPrice, currency: convertedCurrency))")
-                                .font(.system(size: 14, weight: .medium))
+                                .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                                 .foregroundColor(.secondary)
 
                             if let rate = detail.exchangeRate {
                                 Text("·")
                                     .foregroundColor(.secondary)
                                 Text("1 USD = \(rate) CUP")
-                                    .font(.system(size: 12, weight: .regular))
+                                    .scaledFont(size: 12, weight: .regular, relativeTo: .caption)
                                     .foregroundColor(.secondary)
                             }
                         }
@@ -423,7 +423,7 @@ struct ProductDetailView: View {
                 }
             } else {
                 Text(product.price)
-                    .font(.system(size: 22, weight: .semibold))
+                    .scaledFont(size: 22, weight: .semibold, relativeTo: .title2)
                     .foregroundColor(.primary)
             }
         }
@@ -439,13 +439,13 @@ struct ProductDetailView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Text(list.name)
-                                    .font(.system(size: 15, weight: .semibold))
+                                    .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                                     .foregroundColor(.primary)
 
                                 Spacer()
 
                                 Text("Requerido")
-                                    .font(.system(size: 11, weight: .medium))
+                                    .scaledFont(size: 11, weight: .medium, relativeTo: .caption2)
                                     .foregroundColor(gradientManager.currentAccentColor)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
@@ -456,7 +456,7 @@ struct ProductDetailView: View {
                             // Show description if available
                             if let description = list.description, !description.isEmpty {
                                 Text(description)
-                                    .font(.system(size: 13, weight: .regular))
+                                    .scaledFont(size: 13, weight: .regular, relativeTo: .footnote)
                                     .foregroundColor(.secondary)
                                     .padding(.bottom, 4)
                             }
@@ -472,7 +472,7 @@ struct ProductDetailView: View {
                         }
                     } else {
                         Text("\(list.name): sin opciones")
-                            .font(.system(size: 13, weight: .medium))
+                            .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                             .foregroundColor(.secondary)
                     }
                 }
@@ -555,13 +555,13 @@ struct ProductDetailView: View {
     private var descriptionSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Descripción")
-                .font(.system(size: 15, weight: .semibold))
+                .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                 .foregroundColor(.primary)
 
             // Usar descripción del backend si está disponible
             if let detail = viewModel.productDetail, !detail.description.isEmpty {
                 Text(detail.description)
-                    .font(.system(size: 14, weight: .regular))
+                    .scaledFont(size: 14, weight: .regular, relativeTo: .subheadline)
                     .foregroundColor(.secondary)
                     .lineSpacing(1.5)
                     .fixedSize(horizontal: false, vertical: true)
@@ -581,7 +581,7 @@ struct ProductDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Productos similares")
-                    .font(.system(size: 20, weight: .bold))
+                    .scaledFont(size: 20, weight: .bold, relativeTo: .title3)
                     .foregroundColor(.primary)
 
                 Spacer()
@@ -593,14 +593,14 @@ struct ProductDetailView: View {
                     ProgressView()
                         .tint(gradientManager.currentAccentColor)
                     Text("Cargando similares...")
-                        .font(.system(size: 14, weight: .medium))
+                        .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.vertical, 14)
             } else if viewModel.similarProducts.isEmpty {
                 Text("No hay productos similares por ahora.")
-                    .font(.system(size: 14, weight: .regular))
+                    .scaledFont(size: 14, weight: .regular, relativeTo: .subheadline)
                     .foregroundColor(.secondary)
                     .padding(.vertical, 8)
             } else {
@@ -633,7 +633,7 @@ struct ProductDetailView: View {
     private var similarBranchesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Tiendas con productos similares")
-                .font(.system(size: 20, weight: .bold))
+                .scaledFont(size: 20, weight: .bold, relativeTo: .title3)
                 .foregroundColor(.primary)
                 .padding(.top, 8)
                 .padding(.horizontal, 20)
@@ -671,7 +671,7 @@ struct ProductDetailView: View {
             .accessibilityLabel("Quitar uno")
 
             Text("\(quantity)")
-                .font(.system(size: 17, weight: .semibold))
+                .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
 
                 .frame(minWidth: 28)
 
@@ -815,7 +815,7 @@ private struct SimilarBranchCircleCard: View {
             }
 
             Text(branch.name)
-                .font(.system(size: 13, weight: .medium))
+                .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 .lineLimit(2)
                 .multilineTextAlignment(.center)

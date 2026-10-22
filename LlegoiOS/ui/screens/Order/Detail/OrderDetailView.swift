@@ -246,11 +246,11 @@ struct OrderDetailView: View {
 
                     VStack(alignment: .leading, spacing: 3) {
                         Text(order.branchName)
-                            .font(.system(size: 16, weight: .semibold))
+                            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                             .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                             .lineLimit(1)
                         Text("#\(order.orderNumber.suffix(6)) · \(order.formattedTotal)")
-                            .font(.system(size: 13))
+                            .scaledFont(size: 13, relativeTo: .footnote)
                             .foregroundColor(.secondary)
                     }
 
@@ -270,10 +270,10 @@ struct OrderDetailView: View {
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(status.headline(isPickup: order.isPickup))
-                            .font(.system(size: 19, weight: .bold))
+                            .scaledFont(size: 19, weight: .bold, relativeTo: .title3)
                             .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                         Text(status.nextStep(isPickup: order.isPickup))
-                            .font(.system(size: 14))
+                            .scaledFont(size: 14, relativeTo: .subheadline)
                             .foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -309,7 +309,7 @@ struct OrderDetailView: View {
                         Image(systemName: "clock.fill")
                             .font(.system(size: 13))
                         Text(etaText)
-                            .font(.system(size: 14, weight: .semibold))
+                            .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                     }
                     .foregroundColor(gradientManager.currentAccentColor)
                 }
@@ -327,7 +327,7 @@ struct OrderDetailView: View {
                         showCancelOptions = true
                     } label: {
                         Text("Cancelar pedido")
-                            .font(.system(size: 14, weight: .semibold))
+                            .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.plain)
@@ -351,7 +351,7 @@ struct OrderDetailView: View {
                 .foregroundColor(color)
                 .padding(.top, 1)
             Text(text)
-                .font(.system(size: 13, weight: .medium))
+                .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme).opacity(0.85))
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
@@ -411,7 +411,7 @@ struct OrderDetailView: View {
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundColor(.green)
             Text(message)
-                .font(.system(size: 14, weight: .semibold))
+                .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -447,7 +447,7 @@ struct OrderDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Text("Productos")
-                    .font(.system(size: 18, weight: .bold))
+                    .scaledFont(size: 18, weight: .bold, relativeTo: .title3)
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 Spacer()
                 if order.isEditable {
@@ -544,11 +544,11 @@ struct OrderDetailView: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Text(item.name)
-                        .font(.system(size: 15, weight: .medium))
+                        .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
                         .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                     if item.wasModifiedByStore {
                         Text("Modificado")
-                            .font(.system(size: 10, weight: .semibold))
+                            .scaledFont(size: 10, weight: .semibold, relativeTo: .caption2)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 3)
                             .background(Color.orange.opacity(0.15))
@@ -557,14 +557,14 @@ struct OrderDetailView: View {
                     }
                 }
                 Text("x\(item.quantity)")
-                    .font(.system(size: 13))
+                    .scaledFont(size: 13, relativeTo: .footnote)
                     .foregroundColor(.secondary)
             }
 
             Spacer()
 
             Text(item.formattedLineTotal)
-                .font(.system(size: 15, weight: .semibold))
+                .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
         }
         .padding(.vertical, 12)
@@ -581,7 +581,7 @@ struct OrderDetailView: View {
     private func pricingSection(_ order: OrderDetail) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Resumen")
-                .font(.system(size: 18, weight: .bold))
+                .scaledFont(size: 18, weight: .bold, relativeTo: .title3)
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 .padding(.horizontal, 2)
 
@@ -612,7 +612,7 @@ struct OrderDetailView: View {
     private func fulfillmentSection(_ order: OrderDetail) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(order.isPickup ? "Recogida" : "Entrega")
-                .font(.system(size: 18, weight: .bold))
+                .scaledFont(size: 18, weight: .bold, relativeTo: .title3)
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 .padding(.horizontal, 2)
 
@@ -628,16 +628,16 @@ struct OrderDetailView: View {
 
                         VStack(alignment: .leading, spacing: 4) {
                             Text(order.isPickup ? "Recogida en tienda" : "Envío a domicilio")
-                                .font(.system(size: 15, weight: .semibold))
+                                .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
 
                             if order.isPickup {
                                 Text(order.pickupAddress?.displayText ?? order.branchAddress ?? order.branchName)
-                                    .font(.system(size: 13))
+                                    .scaledFont(size: 13, relativeTo: .footnote)
                                     .foregroundColor(.secondary)
                             } else {
                                 Text(order.deliveryAddress?.fullAddress ?? "Dirección de entrega")
-                                    .font(.system(size: 13))
+                                    .scaledFont(size: 13, relativeTo: .footnote)
                                     .foregroundColor(.secondary)
                             }
                         }
@@ -657,7 +657,7 @@ struct OrderDetailView: View {
                                         Image(systemName: "map.fill")
                                             .font(.system(size: 14))
                                         Text("Ver en mapa")
-                                            .font(.system(size: 13, weight: .semibold))
+                                            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                                     }
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 40)
@@ -675,7 +675,7 @@ struct OrderDetailView: View {
                                         Image(systemName: "phone.fill")
                                             .font(.system(size: 14))
                                         Text("Llamar")
-                                            .font(.system(size: 13, weight: .semibold))
+                                            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                                     }
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 40)
@@ -693,7 +693,7 @@ struct OrderDetailView: View {
                                         .font(.system(size: 14))
                                         .foregroundColor(.secondary)
                                     Text(reference)
-                                        .font(.system(size: 13))
+                                        .scaledFont(size: 13, relativeTo: .footnote)
                                         .foregroundColor(.secondary)
                                     Spacer()
                                 }
@@ -704,7 +704,7 @@ struct OrderDetailView: View {
                                         .font(.system(size: 14))
                                         .foregroundColor(.secondary)
                                     Text(instructions)
-                                        .font(.system(size: 13))
+                                        .scaledFont(size: 13, relativeTo: .footnote)
                                         .foregroundColor(.secondary)
                                     Spacer()
                                 }
@@ -737,7 +737,7 @@ struct OrderDetailView: View {
     private func paymentSection(_ order: OrderDetail) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Pago")
-                .font(.system(size: 18, weight: .bold))
+                .scaledFont(size: 18, weight: .bold, relativeTo: .title3)
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 .padding(.horizontal, 2)
 
@@ -756,18 +756,18 @@ struct OrderDetailView: View {
 
                         VStack(alignment: .leading, spacing: 4) {
                             Text(paymentMethodLabel(order))
-                                .font(.system(size: 15, weight: .semibold))
+                                .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                             HStack(spacing: 6) {
                                 Text(paymentStatusText(order.paymentStatus))
-                                    .font(.system(size: 13))
+                                    .scaledFont(size: 13, relativeTo: .footnote)
                                     .foregroundColor(.secondary)
                                 if viewModel.isPollingQvaPay {
                                     ProgressView()
                                         .scaleEffect(0.7)
                                         .tint(gradientManager.currentAccentColor)
                                     Text("Verificando...")
-                                        .font(.system(size: 12))
+                                        .scaledFont(size: 12, relativeTo: .caption)
                                         .foregroundColor(gradientManager.currentAccentColor)
                                 }
                             }
@@ -822,7 +822,7 @@ struct OrderDetailView: View {
                 .font(.system(size: 14))
                 .foregroundColor(color)
             Text(text)
-                .font(.system(size: 13))
+                .scaledFont(size: 13, relativeTo: .footnote)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -855,7 +855,7 @@ struct OrderDetailView: View {
         if let refund = viewModel.refundInfo {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Reembolso")
-                    .font(.system(size: 18, weight: .bold))
+                    .scaledFont(size: 18, weight: .bold, relativeTo: .title3)
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                     .padding(.horizontal, 2)
 
@@ -872,10 +872,10 @@ struct OrderDetailView: View {
                                     .clipShape(Circle())
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("¿Algún problema con tu pedido?")
-                                        .font(.system(size: 15, weight: .semibold))
+                                        .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                                         .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                                     Text("Puedes solicitar el reembolso de este pago.")
-                                        .font(.system(size: 13))
+                                        .scaledFont(size: 13, relativeTo: .footnote)
                                         .foregroundColor(.secondary)
                                 }
                                 Spacer(minLength: 0)
@@ -885,7 +885,7 @@ struct OrderDetailView: View {
                                 viewModel.showRefundSheet = true
                             } label: {
                                 Text("Solicitar reembolso")
-                                    .font(.system(size: 15, weight: .semibold))
+                                    .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 46)
                             }
@@ -918,7 +918,7 @@ struct OrderDetailView: View {
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(color)
             Text(text)
-                .font(.system(size: 14))
+                .scaledFont(size: 14, relativeTo: .subheadline)
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
             Spacer(minLength: 0)
         }
@@ -932,7 +932,7 @@ struct OrderDetailView: View {
         if order.status == .delivered {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Tu calificación")
-                    .font(.system(size: 18, weight: .bold))
+                    .scaledFont(size: 18, weight: .bold, relativeTo: .title3)
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                     .padding(.horizontal, 2)
 
@@ -942,18 +942,18 @@ struct OrderDetailView: View {
                             starsRow(current: rating, interactive: false)
                             if let comment = order.ratingComment, !comment.isEmpty {
                                 Text(comment)
-                                    .font(.system(size: 14))
+                                    .scaledFont(size: 14, relativeTo: .subheadline)
                                     .foregroundColor(.secondary)
                             }
                             Text("¡Gracias por tu calificación!")
-                                .font(.system(size: 13))
+                                .scaledFont(size: 13, relativeTo: .footnote)
                                 .foregroundColor(.secondary)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     } else {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("¿Cómo estuvo tu pedido?")
-                                .font(.system(size: 15, weight: .semibold))
+                                .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                             starsRow(current: viewModel.ratingDraft, interactive: true)
                             TextField("Comentario (opcional)", text: $viewModel.ratingCommentDraft)
@@ -967,7 +967,7 @@ struct OrderDetailView: View {
                                         ProgressView().tint(.white)
                                     }
                                     Text(viewModel.isSubmittingRating ? "Enviando..." : "Enviar calificación")
-                                        .font(.system(size: 15, weight: .semibold))
+                                        .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                                 }
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 46)
@@ -1023,7 +1023,7 @@ struct OrderDetailView: View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Cuéntanos el motivo del reembolso")
-                    .font(.system(size: 16, weight: .semibold))
+                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
 
                 ZStack(alignment: .topLeading) {
@@ -1031,7 +1031,7 @@ struct OrderDetailView: View {
                         .stroke(Color.gray.opacity(0.3), lineWidth: 1)
                     if viewModel.refundReason.isEmpty {
                         Text("Ej. El pedido llegó incompleto…")
-                            .font(.system(size: 14))
+                            .scaledFont(size: 14, relativeTo: .subheadline)
                             .foregroundColor(.secondary)
                             .padding(.horizontal, 13)
                             .padding(.vertical, 16)
@@ -1049,7 +1049,7 @@ struct OrderDetailView: View {
                     HStack {
                         if viewModel.isSubmittingRefund { ProgressView().tint(.white) }
                         Text(viewModel.isSubmittingRefund ? "Enviando..." : "Enviar solicitud")
-                            .font(.system(size: 15, weight: .semibold))
+                            .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 48)
@@ -1078,7 +1078,7 @@ struct OrderDetailView: View {
     private func timelineSection(_ order: OrderDetail) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Historial")
-                .font(.system(size: 18, weight: .bold))
+                .scaledFont(size: 18, weight: .bold, relativeTo: .title3)
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 .padding(.horizontal, 2)
 
@@ -1101,10 +1101,10 @@ struct OrderDetailView: View {
 
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(event.message)
-                                    .font(.system(size: 15, weight: .medium))
+                                    .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
                                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                                 Text(event.formattedDate)
-                                    .font(.system(size: 13))
+                                    .scaledFont(size: 13, relativeTo: .footnote)
                                     .foregroundColor(.secondary)
                             }
                             .padding(.bottom, index < order.timeline.count - 1 ? 18 : 0)
@@ -1122,7 +1122,7 @@ struct OrderDetailView: View {
     private func commentsSection(_ order: OrderDetail) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Comentarios")
-                .font(.system(size: 18, weight: .bold))
+                .scaledFont(size: 18, weight: .bold, relativeTo: .title3)
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 .padding(.horizontal, 2)
 
@@ -1142,10 +1142,10 @@ struct OrderDetailView: View {
 
             VStack(alignment: comment.author == .customer ? .leading : .trailing, spacing: 4) {
                 Text(comment.message)
-                    .font(.system(size: 14))
+                    .scaledFont(size: 14, relativeTo: .subheadline)
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 Text(comment.formattedTime)
-                    .font(.system(size: 12))
+                    .scaledFont(size: 12, relativeTo: .caption)
                     .foregroundColor(.secondary)
             }
             .padding(12)
@@ -1233,7 +1233,7 @@ struct OrderDetailView: View {
                             .font(.system(size: 16, weight: .semibold))
                     }
                     Text(primaryActionTitle(action, order: order))
-                        .font(.system(size: 16, weight: .semibold))
+                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                 }
                 .frame(minWidth: 220)
                 .frame(height: 52)
@@ -1381,7 +1381,7 @@ struct OrderDetailView: View {
                     Image(systemName: "checkmark.shield.fill")
                         .font(.system(size: 13, weight: .semibold))
                     Text("Código de verificación de entrega")
-                        .font(.system(size: 12, weight: .semibold))
+                        .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                         .tracking(0.3)
                     Spacer()
                     Image(systemName: codeCopied ? "checkmark" : "doc.on.doc")
@@ -1418,7 +1418,7 @@ struct OrderDetailView: View {
                     Spacer()
 
                     Text(codeCopied ? "Copiado" : "Toca para\ncopiar")
-                        .font(.system(size: 11, weight: .medium))
+                        .scaledFont(size: 11, weight: .medium, relativeTo: .caption2)
                         .multilineTextAlignment(.trailing)
                         .foregroundColor(.secondary)
                         .opacity(0.7)
@@ -1433,7 +1433,7 @@ struct OrderDetailView: View {
                         .foregroundColor(.orange)
                         .padding(.top, 1)
                     Text("Comparte este código **solo cuando tengas el pedido en tus manos**. Dárselo antes equivale a confirmar la entrega sin haberla recibido.")
-                        .font(.system(size: 12, weight: .regular))
+                        .scaledFont(size: 12, weight: .regular, relativeTo: .caption)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }

@@ -102,7 +102,7 @@ struct ProductCard: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(product.name)
-                        .font(.system(size: 17, weight: .semibold))
+                        .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
                         .foregroundColor(.primary)
                         .lineLimit(2)
                         .truncationMode(.tail)
@@ -135,14 +135,14 @@ struct ProductCard: View {
                         }
                         
                         Text(product.shop)
-                            .font(.system(size: 13))
+                            .scaledFont(size: 13, relativeTo: .footnote)
                             .foregroundColor(.secondary)
                             .lineLimit(1)
                     }
                 }
 
                 Text(product.price)
-                    .font(.system(size: 18, weight: .bold))
+                    .scaledFont(size: 18, weight: .bold, relativeTo: .title3)
                     .foregroundColor(.primary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }

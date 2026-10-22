@@ -34,7 +34,7 @@ struct PaymentMethodPickerView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Métodos de pago")
-                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .scaledFont(size: 22, weight: .bold, design: .rounded, relativeTo: .title2)
                 .foregroundColor(.primary)
 
             Text(
@@ -57,11 +57,11 @@ struct PaymentMethodPickerView: View {
                         .foregroundColor(.gray)
 
                     Text("No hay métodos de pago disponibles")
-                        .font(.system(size: 16, weight: .semibold))
+                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                         .foregroundColor(.primary)
 
                     Text("Por favor, intenta de nuevo más tarde")
-                        .font(.system(size: 14))
+                        .scaledFont(size: 14, relativeTo: .subheadline)
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity)

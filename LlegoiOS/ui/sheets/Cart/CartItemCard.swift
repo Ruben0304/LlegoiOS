@@ -49,41 +49,41 @@ struct CartItemCard: View {
             // Información del producto
             VStack(alignment: .leading, spacing: 5) {
                 Text(item.name)
-                    .font(.system(size: 15, weight: .bold))
+                    .scaledFont(size: 15, weight: .bold, relativeTo: .subheadline)
                     .foregroundColor(.primary)
                     .lineLimit(1)
 
                 if item.isShowcase {
                     Text(item.showcaseRequestDescription ?? "")
-                        .font(.system(size: 12, weight: .regular))
+                        .scaledFont(size: 12, weight: .regular, relativeTo: .caption)
                         .foregroundColor(.secondary)
                         .lineLimit(2)
                 } else if item.isComboComponent {
                     HStack(spacing: 6) {
                         Text(item.comboName ?? "Combo")
-                            .font(.system(size: 12, weight: .semibold))
+                            .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                             .foregroundColor(gradientManager.currentAccentColor)
                         if let slotName = item.comboComponentSlotName, !slotName.isEmpty {
                             Text("•")
-                                .font(.system(size: 10, weight: .medium))
+                                .scaledFont(size: 10, weight: .medium, relativeTo: .caption2)
                                 .foregroundColor(.secondary)
                             Text(slotName)
-                                .font(.system(size: 12, weight: .medium))
+                                .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                                 .foregroundColor(.secondary)
                         }
                     }
                 } else {
                     HStack(spacing: 6) {
                         Text(item.shop)
-                            .font(.system(size: 12, weight: .medium))
+                            .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                             .foregroundColor(.secondary)
 
                         Text("•")
-                            .font(.system(size: 10, weight: .medium))
+                            .scaledFont(size: 10, weight: .medium, relativeTo: .caption2)
                             .foregroundColor(.secondary)
 
                         Text(item.weight)
-                            .font(.system(size: 11, weight: .medium))
+                            .scaledFont(size: 11, weight: .medium, relativeTo: .caption2)
                             .foregroundColor(gradientManager.currentAccentColor)
                     }
                 }
@@ -92,33 +92,33 @@ struct CartItemCard: View {
                 if item.isShowcase {
                     HStack(spacing: 6) {
                         Text("Precio por confirmar")
-                            .font(.system(size: 12, weight: .semibold))
+                            .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                             .foregroundColor(.orange)
 
                         Text("•")
-                            .font(.system(size: 10, weight: .medium))
+                            .scaledFont(size: 10, weight: .medium, relativeTo: .caption2)
                             .foregroundColor(.secondary)
 
                         Text("Cantidad: \(item.quantity)")
-                            .font(.system(size: 12, weight: .bold))
+                            .scaledFont(size: 12, weight: .bold, relativeTo: .caption)
                             .foregroundColor(gradientManager.currentAccentColor)
                     }
                 } else {
                     HStack(spacing: 6) {
                         Text(item.formattedPrice(for: selectedCurrency))
-                            .font(.system(size: 13, weight: .semibold))
+                            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                             .foregroundColor(.secondary)
 
                         Text("× \(item.quantity)")
-                            .font(.system(size: 12, weight: .bold))
+                            .scaledFont(size: 12, weight: .bold, relativeTo: .caption)
                             .foregroundColor(gradientManager.currentAccentColor)
 
                         Text("=")
-                            .font(.system(size: 11, weight: .medium))
+                            .scaledFont(size: 11, weight: .medium, relativeTo: .caption2)
                             .foregroundColor(.secondary)
 
                         Text(item.formattedItemTotal(for: selectedCurrency))
-                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .scaledFont(size: 15, weight: .bold, design: .rounded, relativeTo: .subheadline)
                             .foregroundColor(gradientManager.currentAccentColor)
                     }
                 }
@@ -128,7 +128,7 @@ struct CartItemCard: View {
                         Image(systemName: "info.circle.fill")
                             .font(.system(size: 10, weight: .medium))
                         Text(currencyInfo)
-                            .font(.system(size: 11, weight: .medium))
+                            .scaledFont(size: 11, weight: .medium, relativeTo: .caption2)
                             .lineLimit(2)
                     }
                     .foregroundColor(.orange.opacity(0.9))
@@ -145,10 +145,10 @@ struct CartItemCard: View {
                         ForEach(item.selectedVariants, id: \.self) { variant in
                             HStack(spacing: 4) {
                                 Text("\(variant.listName):")
-                                    .font(.system(size: 11, weight: .semibold))
+                                    .scaledFont(size: 11, weight: .semibold, relativeTo: .caption2)
                                     .foregroundColor(.secondary)
                                 Text(variant.optionName)
-                                    .font(.system(size: 11, weight: .regular))
+                                    .scaledFont(size: 11, weight: .regular, relativeTo: .caption2)
                                     .foregroundColor(.primary)
                                 if variant.priceAdjustment != .zero {
                                     Text(
@@ -204,7 +204,7 @@ struct CartItemCard: View {
                     .accessibilityLabel("Quitar uno")
 
                     Text("\(item.quantity)")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .scaledFont(size: 14, weight: .bold, design: .rounded, relativeTo: .subheadline)
                         .foregroundColor(.primary)
                         .frame(width: 22)
 

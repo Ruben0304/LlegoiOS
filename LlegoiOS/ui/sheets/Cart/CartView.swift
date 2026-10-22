@@ -250,7 +250,7 @@ struct CartView: View {
                     .progressViewStyle(.circular)
                     .tint(gradientManager.currentAccentColor)
                 Text("Preparando pago...")
-                    .font(.system(size: 16, weight: .medium))
+                    .scaledFont(size: 16, weight: .medium, relativeTo: .body)
                     .foregroundColor(.primary)
                     .padding(.top, 4)
             }
@@ -460,7 +460,7 @@ struct CartView: View {
         VStack(spacing: 16) {
             HStack {
                 Text("Método de Pago")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .scaledFont(size: 18, weight: .bold, design: .rounded, relativeTo: .title3)
                     .foregroundColor(gradientManager.currentAccentColor)
 
                 Spacer()
@@ -470,7 +470,7 @@ struct CartView: View {
                 }) {
                     HStack(spacing: 6) {
                         Text(selectedPaymentMethod != nil ? "Cambiar" : "Seleccionar")
-                            .font(.system(size: 14, weight: .semibold))
+                            .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                         Image(systemName: "chevron.right")
                             .font(.system(size: 12, weight: .bold))
                     }
@@ -505,11 +505,11 @@ struct CartView: View {
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(method.name)
-                            .font(.system(size: 16, weight: .semibold))
+                            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                             .foregroundColor(gradientManager.currentAccentColor)
 
                         Text(method.description)
-                            .font(.system(size: 13, weight: .medium))
+                            .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                             .foregroundColor(.gray)
                     }
 
@@ -517,7 +517,7 @@ struct CartView: View {
 
                     // Moneda
                     Text(method.currency)
-                        .font(.system(size: 13, weight: .bold))
+                        .scaledFont(size: 13, weight: .bold, relativeTo: .footnote)
                         .foregroundColor(method.color)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
@@ -550,7 +550,7 @@ struct CartView: View {
                             .foregroundColor(.gray)
 
                         Text("Selecciona un método de pago")
-                            .font(.system(size: 15, weight: .medium))
+                            .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
                             .foregroundColor(.gray)
 
                         Spacer()
@@ -738,11 +738,11 @@ struct CartView: View {
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Activa tu KYC para pagar en efectivo")
-                        .font(.system(size: 15, weight: .semibold))
+                        .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                         .foregroundColor(.primary)
 
                     Text(cashKycBannerMessage)
-                        .font(.system(size: 13, weight: .medium))
+                        .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -787,7 +787,7 @@ struct CartView: View {
                 .tint(gradientManager.currentAccentColor)
 
             Text("Consultando estado de tu KYC para efectivo...")
-                .font(.system(size: 13, weight: .medium))
+                .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                 .foregroundColor(.secondary)
 
             Spacer(minLength: 0)
@@ -1107,7 +1107,7 @@ struct CartView: View {
             LottieView(name: "loader")
                 .frame(width: 150, height: 150)
             Text("Cargando carrito...")
-                .font(.system(size: 16, weight: .medium))
+                .scaledFont(size: 16, weight: .medium, relativeTo: .body)
                 .foregroundColor(.gray)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1119,7 +1119,7 @@ struct CartView: View {
                 .font(.system(size: 60))
                 .foregroundColor(.red.opacity(0.6))
             Text(message)
-                .font(.system(size: 16, weight: .medium))
+                .scaledFont(size: 16, weight: .medium, relativeTo: .body)
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
@@ -1556,7 +1556,7 @@ struct CartView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text("Lo que le falta a tu carrito")
-                            .font(.system(size: 15, weight: .semibold))
+                            .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                             .foregroundColor(.primary)
                         if viewModel.isLoadingSuggestions {
                             ProgressView()
@@ -1565,7 +1565,7 @@ struct CartView: View {
                         }
                     }
                     Text("Seleccionado con Inteligencia Artificial para ti")
-                        .font(.system(size: 12, weight: .regular))
+                        .scaledFont(size: 12, weight: .regular, relativeTo: .caption)
                         .foregroundColor(Color(red: 0.45, green: 0.22, blue: 0.90))
                 }
 
@@ -1645,7 +1645,7 @@ struct CartView: View {
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
                     Text("No se encontraron recomendaciones")
-                        .font(.system(size: 13))
+                        .scaledFont(size: 13, relativeTo: .footnote)
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -1683,11 +1683,11 @@ struct CartView: View {
 
             VStack(spacing: 8) {
                 Text("Tu carrito está vacío")
-                    .font(.system(size: 22, weight: .semibold, design: .rounded))
+                    .scaledFont(size: 22, weight: .semibold, design: .rounded, relativeTo: .title2)
                     .foregroundColor(.primary)
 
                 Text("Agrega productos para comenzar tu pedido")
-                    .font(.system(size: 15, weight: .regular))
+                    .scaledFont(size: 15, weight: .regular, relativeTo: .subheadline)
                     .foregroundColor(.secondary.opacity(0.85))
                     .multilineTextAlignment(.center)
             }
@@ -1698,7 +1698,7 @@ struct CartView: View {
                     Image(systemName: "bag")
                         .font(.system(size: 14, weight: .semibold))
                     Text("Ver mis pedidos")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .scaledFont(size: 15, weight: .bold, design: .rounded, relativeTo: .subheadline)
                 }
                 .frame(height: 44)
                 .frame(maxWidth: 200)
@@ -1720,7 +1720,7 @@ struct CartView: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(gradientManager.currentAccentColor)
                 Text("Programar pedido")
-                    .font(.system(size: 16, weight: .semibold))
+                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                     .foregroundColor(gradientManager.currentAccentColor)
                 Spacer()
                 if viewModel.scheduledFor != nil {
@@ -1740,12 +1740,12 @@ struct CartView: View {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.green)
                     Text(formattedScheduledDate(date))
-                        .font(.system(size: 15, weight: .medium))
+                        .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
                         .foregroundColor(.primary)
                 }
             } else {
                 Text("Elige una franja horaria para hoy o mañana")
-                    .font(.system(size: 13))
+                    .scaledFont(size: 13, relativeTo: .footnote)
                     .foregroundColor(.secondary)
             }
 
@@ -1754,7 +1754,7 @@ struct CartView: View {
                     Image(systemName: viewModel.scheduledFor != nil ? "pencil" : "clock")
                         .font(.system(size: 13, weight: .semibold))
                     Text(viewModel.scheduledFor != nil ? "Cambiar hora" : "Seleccionar hora")
-                        .font(.system(size: 14, weight: .semibold))
+                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                 }
                 .foregroundColor(gradientManager.currentAccentColor)
                 .frame(maxWidth: .infinity)
@@ -1789,7 +1789,7 @@ struct CartView: View {
     private var fulfillmentSelectorCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Método de entrega")
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .scaledFont(size: 15, weight: .bold, design: .rounded, relativeTo: .subheadline)
                 .foregroundColor(gradientManager.currentAccentColor)
 
             HStack(spacing: 8) {
@@ -1817,15 +1817,15 @@ struct CartView: View {
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         Text(pickup.branchName)
-                            .font(.system(size: 14, weight: .semibold))
+                            .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                             .foregroundColor(.primary)
                         if let address = pickup.address, !address.isEmpty {
                             Text(address)
-                                .font(.system(size: 12, weight: .regular))
+                                .scaledFont(size: 12, weight: .regular, relativeTo: .caption)
                                 .foregroundColor(.secondary)
                         } else {
                             Text("La tienda te indicará el punto de recogida")
-                                .font(.system(size: 12, weight: .regular))
+                                .scaledFont(size: 12, weight: .regular, relativeTo: .caption)
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -1857,7 +1857,7 @@ struct CartView: View {
                 Image(systemName: icon)
                     .font(.system(size: 13, weight: .semibold))
                 Text(title)
-                    .font(.system(size: 13, weight: .semibold))
+                    .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
             }
@@ -1902,10 +1902,10 @@ struct CartView: View {
                     .foregroundColor(.orange)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(BranchOrderingMessages.notAcceptingOrdersShort)
-                        .font(.system(size: 13, weight: .bold))
+                        .scaledFont(size: 13, weight: .bold, relativeTo: .footnote)
                         .foregroundColor(.primary)
                     Text(BranchOrderingMessages.notAcceptingOrdersDetail)
-                        .font(.system(size: 12, weight: .regular))
+                        .scaledFont(size: 12, weight: .regular, relativeTo: .caption)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -1923,11 +1923,11 @@ struct CartView: View {
                     .fill(Color.red)
                     .frame(width: 8, height: 8)
                 Text(status.label)
-                    .font(.system(size: 12, weight: .semibold))
+                    .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                     .foregroundColor(.red)
                 Spacer()
                 Text("Programa tu pedido para cuando abra")
-                    .font(.system(size: 11, weight: .regular))
+                    .scaledFont(size: 11, weight: .regular, relativeTo: .caption2)
                     .foregroundColor(.secondary)
             }
             .padding(.horizontal, 12)
@@ -1967,9 +1967,9 @@ struct CartView: View {
 
                     VStack(alignment: .leading, spacing: 1) {
                         Text("Pagar con")
-                            .font(.system(size: 12, weight: .medium))
+                            .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                         Text(method.name)
-                            .font(.system(size: 13, weight: .bold))
+                            .scaledFont(size: 13, weight: .bold, relativeTo: .footnote)
                             .lineLimit(1)
                             .truncationMode(.tail)
                     }
@@ -1978,7 +1978,7 @@ struct CartView: View {
                     Image(systemName: "creditcard")
                         .font(.system(size: 15, weight: .semibold))
                     Text("Método")
-                        .font(.system(size: 14, weight: .semibold))
+                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                 }
             }
             .frame(minWidth: 140)
@@ -2003,12 +2003,12 @@ struct CartView: View {
             HStack(spacing: 6) {
                 if selectedPaymentMethod?.id == "invoice_international" {
                     Text("Enviar factura")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .scaledFont(size: 14, weight: .bold, design: .rounded, relativeTo: .subheadline)
                 } else {
                     Text("Pedir")
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .scaledFont(size: 16, weight: .bold, design: .rounded, relativeTo: .body)
                     Text(viewModel.formattedTotal)
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .scaledFont(size: 14, weight: .bold, design: .rounded, relativeTo: .subheadline)
                 }
             }
             .frame(minWidth: 150)
@@ -2061,11 +2061,11 @@ struct CartView: View {
                 // Envío
                 HStack {
                     Text("Envío")
-                        .font(.system(size: 14, weight: .regular))
+                        .scaledFont(size: 14, weight: .regular, relativeTo: .subheadline)
                         .foregroundColor(.secondary)
                     if !viewModel.deliveryFeeDescription.isEmpty {
                         Text("· \(viewModel.deliveryFeeDescription)")
-                            .font(.system(size: 13, weight: .regular))
+                            .scaledFont(size: 13, weight: .regular, relativeTo: .footnote)
                             .foregroundColor(
                                 viewModel.deliveryFeeError != nil
                                     && viewModel.deliveryFeeEstimate == nil
@@ -2080,7 +2080,7 @@ struct CartView: View {
                             .scaleEffect(0.75)
                     } else {
                         Text(viewModel.formattedDeliveryFee)
-                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                            .scaledFont(size: 14, weight: .medium, design: .rounded, relativeTo: .subheadline)
                             .foregroundColor(.primary)
                     }
                 }
@@ -2107,11 +2107,11 @@ struct CartView: View {
                 // Total
                 HStack {
                     Text("Total")
-                        .font(.system(size: 16, weight: .semibold))
+                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                         .foregroundColor(.primary)
                     Spacer()
                     Text(viewModel.formattedTotal)
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .scaledFont(size: 20, weight: .bold, design: .rounded, relativeTo: .title3)
                         .foregroundColor(.primary)
                 }
                 .padding(.top, 14)
@@ -2121,7 +2121,7 @@ struct CartView: View {
                     viewModel.deliveryFeePaymentMode == .cashCUP
                 {
                     Text("El envío se paga en efectivo CUP al entregar")
-                        .font(.system(size: 11, weight: .medium))
+                        .scaledFont(size: 11, weight: .medium, relativeTo: .caption2)
                         .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 16)
@@ -2141,7 +2141,7 @@ struct CartView: View {
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Ahorra viendo una promoción")
-                            .font(.system(size: 14, weight: .semibold))
+                            .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                             .foregroundColor(.primary)
                         Text(
                             "\(viewModel.formattedTotalWithDiscount) · ahorras \(viewModel.formattedPotentialSavings)"
@@ -2154,7 +2154,7 @@ struct CartView: View {
 
                     Button(action: { showAdView = true }) {
                         Text("Ver")
-                            .font(.system(size: 13, weight: .semibold))
+                            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                             .foregroundColor(.white)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 8)
@@ -2208,7 +2208,7 @@ struct CartView: View {
     private var deliveryFeePaymentPrompt: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("¿Quieres pagar el envío en USD o en efectivo CUP al mensajero?")
-                .font(.system(size: 12, weight: .medium))
+                .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -2241,7 +2241,7 @@ struct CartView: View {
     {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 11, weight: .semibold))
+                .scaledFont(size: 11, weight: .semibold, relativeTo: .caption2)
                 .foregroundColor(isSelected ? .white : .secondary)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 7)
@@ -2269,20 +2269,20 @@ struct CartView: View {
         HStack {
             HStack(spacing: 6) {
                 Text("Cargo de servicio")
-                    .font(.system(size: 14, weight: .regular))
+                    .scaledFont(size: 14, weight: .regular, relativeTo: .subheadline)
                     .foregroundColor(.secondary)
                 Text("\(viewModel.serviceFeePercentage)%")
-                    .font(.system(size: 12, weight: .medium))
+                    .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                     .foregroundColor(Color(.tertiaryLabel))
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
                 Text(viewModel.formattedServiceFee)
-                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .scaledFont(size: 14, weight: .medium, design: .rounded, relativeTo: .subheadline)
                     .foregroundColor(viewModel.hasWatchedAds ? Color(.systemGreen) : .primary)
                 if viewModel.hasWatchedAds {
                     Text("-\(viewModel.formattedAdSavings)")
-                        .font(.system(size: 11, weight: .regular))
+                        .scaledFont(size: 11, weight: .regular, relativeTo: .caption2)
                         .foregroundColor(Color(.systemGreen))
                 }
             }
@@ -2311,7 +2311,7 @@ struct CartView: View {
                     ProgressView()
                         .scaleEffect(0.8)
                     Text("Cargando métodos de pago...")
-                        .font(.system(size: 12, weight: .medium))
+                        .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -2327,7 +2327,7 @@ struct CartView: View {
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(gradientManager.currentAccentColor)
                         Text("Este negocio acepta")
-                            .font(.system(size: 13, weight: .bold))
+                            .scaledFont(size: 13, weight: .bold, relativeTo: .footnote)
                             .foregroundColor(gradientManager.currentAccentColor)
                     }
 
@@ -2351,7 +2351,7 @@ struct CartView: View {
                                             .foregroundColor(method.color)
                                     }
                                     Text(method.name)
-                                        .font(.system(size: 11, weight: .semibold))
+                                        .scaledFont(size: 11, weight: .semibold, relativeTo: .caption2)
                                         .foregroundColor(.primary)
                                 }
                                 .padding(.horizontal, 10)
@@ -2373,7 +2373,7 @@ struct CartView: View {
                             .font(.system(size: 10, weight: .medium))
                             .foregroundColor(.secondary.opacity(0.6))
                         Text("Otros negocios pueden ofrecer métodos adicionales.")
-                            .font(.system(size: 11, weight: .medium))
+                            .scaledFont(size: 11, weight: .medium, relativeTo: .caption2)
                             .foregroundColor(.secondary.opacity(0.6))
                             .italic()
                     }

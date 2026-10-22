@@ -77,3 +77,35 @@ extension Color {
             : Color.white
     }
 }
+
+// MARK: - Dynamic Type
+
+/// Fuente del sistema con el tamaño del diseño que además sigue el tamaño de texto elegido
+/// por el usuario: con el tamaño por defecto se ve igual que `.font(.system(size:))`.
+struct ScaledSystemFont: ViewModifier {
+    @ScaledMetric private var size: CGFloat
+    private let weight: Font.Weight
+    private let design: Font.Design
+
+    init(size: CGFloat, weight: Font.Weight, design: Font.Design, relativeTo textStyle: Font.TextStyle) {
+        _size = ScaledMetric(wrappedValue: size, relativeTo: textStyle)
+        self.weight = weight
+        self.design = design
+    }
+
+    func body(content: Content) -> some View {
+        content.font(.system(size: size, weight: weight, design: design))
+    }
+}
+
+extension View {
+    /// `.font(.system(size:weight:design:))` que crece con Dynamic Type según `textStyle`.
+    func scaledFont(
+        size: CGFloat,
+        weight: Font.Weight = .regular,
+        design: Font.Design = .default,
+        relativeTo textStyle: Font.TextStyle = .body
+    ) -> some View {
+        modifier(ScaledSystemFont(size: size, weight: weight, design: design, relativeTo: textStyle))
+    }
+}

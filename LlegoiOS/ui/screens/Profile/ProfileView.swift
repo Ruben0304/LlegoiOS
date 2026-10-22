@@ -338,7 +338,7 @@ struct ProfileView: View {
                     .frame(width: 150, height: 150)
 
                 Text("Cargando perfil...")
-                    .font(.system(size: 16, weight: .medium))
+                    .scaledFont(size: 16, weight: .medium, relativeTo: .body)
                     .foregroundColor(.gray)
             }
         }
@@ -350,7 +350,7 @@ struct ProfileView: View {
                 .tint(gradientManager.currentAccentColor)
 
             Text("Cargando datos del perfil...")
-                .font(.system(size: 14, weight: .medium))
+                .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                 .foregroundColor(.gray)
         }
         .padding(.vertical, 8)
@@ -367,7 +367,7 @@ struct ProfileView: View {
                     .foregroundColor(.red)
 
                 Text(message)
-                    .font(.system(size: 16, weight: .medium))
+                    .scaledFont(size: 16, weight: .medium, relativeTo: .body)
                     .foregroundColor(.gray)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
@@ -376,7 +376,7 @@ struct ProfileView: View {
                     viewModel.checkAuthenticationStatus()
                 }) {
                     Text("Reintentar")
-                        .font(.system(size: 16, weight: .semibold))
+                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                         .foregroundColor(.white)
                         .frame(width: 150, height: 50)
                         .background(Color.llegoButton)
@@ -416,7 +416,7 @@ struct ProfileView: View {
                     .foregroundColor(.red)
 
                 Text("Cerrar sesión")
-                    .font(.system(size: 16, weight: .semibold))
+                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                     .foregroundColor(.red)
 
                 Spacer()
@@ -444,12 +444,12 @@ struct ProfileView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Tu cuenta se eliminará el \(scheduledAt.longDateInHavana)")
-                        .font(.system(size: 15, weight: .semibold))
+                        .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                         .foregroundColor(.primary)
                         .fixedSize(horizontal: false, vertical: true)
 
                     Text("Puedes cancelar la eliminación antes de esa fecha y tu cuenta seguirá como siempre.")
-                        .font(.system(size: 13, weight: .medium))
+                        .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -466,7 +466,7 @@ struct ProfileView: View {
                             .tint(.white)
                     } else {
                         Text("Cancelar eliminación")
-                            .font(.system(size: 14, weight: .semibold))
+                            .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                     }
                 }
                 .foregroundColor(.white)
@@ -508,7 +508,7 @@ struct ProfileView: View {
                 }
 
                 Text(viewModel.isDeletingAccount ? "Programando eliminación..." : "Eliminar cuenta")
-                    .font(.system(size: 16, weight: .semibold))
+                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                     .foregroundColor(.red)
 
                 Spacer()
@@ -711,7 +711,7 @@ struct ProfileView: View {
                         .foregroundColor(gradientManager.currentAccentColor.opacity(0.8))
 
                         Text(viewModel.currentUser?.email ?? cachedProfile?.email ?? "")
-                            .font(.system(size: 15, weight: .medium))
+                            .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
                             .foregroundColor(.gray)
                     }
                     .padding(.horizontal, 20)
@@ -733,7 +733,7 @@ struct ProfileView: View {
                                 .foregroundColor(gradientManager.currentAccentColor)
 
                             Text(viewModel.currentUser?.username ?? "")
-                                .font(.system(size: 15, weight: .medium))
+                                .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
                                 .foregroundColor(.gray)
 
                             Image(systemName: "pencil")
@@ -770,7 +770,7 @@ struct ProfileView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Teléfono de contacto")
-                        .font(.system(size: 16, weight: .semibold))
+                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                         .foregroundColor(.primary)
 
                     Text(
@@ -814,11 +814,11 @@ struct ProfileView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Ubicación de entrega")
-                        .font(.system(size: 16, weight: .semibold))
+                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                         .foregroundColor(.primary)
 
                     Text(userLocationManager.userAddress)
-                        .font(.system(size: 14, weight: .medium))
+                        .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                         .foregroundColor(.gray)
                         .lineLimit(2)
                 }
@@ -850,13 +850,13 @@ struct ProfileView: View {
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(gradientManager.currentAccentColor)
                 Text("Verificación de identidad para efectivo")
-                    .font(.system(size: 18, weight: .semibold))
+                    .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
                     .foregroundColor(.primary)
                 Spacer()
             }
 
             Text("Verifica tu identidad una vez para habilitar pagos en efectivo cuando aplique.")
-                .font(.system(size: 13, weight: .medium))
+                .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                 .foregroundColor(.gray)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -872,10 +872,10 @@ struct ProfileView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(cashKycStatusTitle)
-                        .font(.system(size: 14, weight: .semibold))
+                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                         .foregroundColor(.primary)
                     Text(cashKycStatusSubtitle)
-                        .font(.system(size: 12, weight: .medium))
+                        .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                         .foregroundColor(.gray)
                 }
 
@@ -889,7 +889,7 @@ struct ProfileView: View {
                 HStack(spacing: 10) {
                     ProgressView()
                     Text("Consultando estado de verificación...")
-                        .font(.system(size: 14, weight: .medium))
+                        .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                         .foregroundColor(.gray)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -903,10 +903,10 @@ struct ProfileView: View {
                         .foregroundColor(gradientManager.currentAccentColor)
                     VStack(alignment: .leading, spacing: 4) {
                         Text(cashKycActionTitle)
-                            .font(.system(size: 15, weight: .semibold))
+                            .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                             .foregroundColor(.primary)
                         Text("Se solicitará foto del documento y selfie sosteniendo el documento.")
-                            .font(.system(size: 12, weight: .medium))
+                            .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                             .foregroundColor(.gray)
                     }
                     Spacer()
@@ -1063,11 +1063,11 @@ struct ProfileView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Mis direcciones")
-                        .font(.system(size: 16, weight: .semibold))
+                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                         .foregroundColor(.primary)
 
                     Text("Gestiona tus lugares de entrega")
-                        .font(.system(size: 13, weight: .medium))
+                        .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                         .foregroundColor(.gray)
                 }
 
@@ -1101,18 +1101,18 @@ struct ProfileView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Wallet")
-                        .font(.system(size: 16, weight: .semibold))
+                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                         .foregroundColor(.primary)
 
                     Text("Saldo disponible")
-                        .font(.system(size: 13, weight: .medium))
+                        .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                         .foregroundColor(.gray)
                 }
 
                 Spacer()
 
                 Text(walletBalance)
-                    .font(.system(size: 15, weight: .semibold))
+                    .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                     .foregroundColor(.primary)
             }
             .padding(16)
@@ -1137,7 +1137,7 @@ struct ProfileView: View {
                     .foregroundColor(.llegoSecondary)
 
                 Text("Nivel de Cliente")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .scaledFont(size: 18, weight: .bold, design: .rounded, relativeTo: .title3)
                     .foregroundColor(.primary)
 
                 Spacer()
@@ -1167,11 +1167,11 @@ struct ProfileView: View {
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Cliente \(effectiveCustomerLevel.name)")
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .scaledFont(size: 20, weight: .bold, design: .rounded, relativeTo: .title3)
                             .foregroundColor(.primary)
 
                         Text("\(effectiveCurrentPoints) puntos de \(effectiveNextLevelPoints)")
-                            .font(.system(size: 14, weight: .medium))
+                            .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                             .foregroundColor(.gray)
                     }
 
@@ -1180,11 +1180,11 @@ struct ProfileView: View {
                     // Indicador de siguiente nivel
                     VStack(alignment: .trailing, spacing: 2) {
                         Text("\(pointsToNextLevel)")
-                            .font(.system(size: 16, weight: .bold))
+                            .scaledFont(size: 16, weight: .bold, relativeTo: .body)
                             .foregroundColor(.llegoAccent)
 
                         Text(nextCustomerLevel.map { "para \($0.name)" } ?? "Nivel máximo")
-                            .font(.system(size: 11, weight: .medium))
+                            .scaledFont(size: 11, weight: .medium, relativeTo: .caption2)
                             .foregroundColor(.gray)
                     }
                 }
@@ -1215,7 +1215,7 @@ struct ProfileView: View {
                                     .frame(width: 8, height: 8)
 
                                 Text(level.name)
-                                    .font(.system(size: 9, weight: .semibold))
+                                    .scaledFont(size: 9, weight: .semibold, relativeTo: .caption2)
                                     .foregroundColor(
                                         level.rawValue <= 3 ? gradientManager.currentAccentColor : .gray.opacity(0.6))
                             }
@@ -1242,13 +1242,13 @@ struct ProfileView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 8) {
                     Text(level.name)
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .scaledFont(size: 12, weight: .semibold, design: .rounded, relativeTo: .caption)
                         .foregroundColor(.black)
 
                     Spacer(minLength: 6)
 
                     Text("\(effectiveCurrentPoints) pts")
-                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .scaledFont(size: 11, weight: .medium, design: .rounded, relativeTo: .caption2)
                         .foregroundColor(.black)
                 }
                 .frame(maxWidth: .infinity)
@@ -1298,14 +1298,14 @@ struct ProfileView: View {
         return VStack(spacing: 12) {
             HStack {
                 Text("Pedidos recientes")
-                    .font(.system(size: 18, weight: .semibold))
+                    .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
                     .foregroundColor(.primary)
 
                 Spacer()
 
                 NavigationLink(destination: OrderListView()) {
                     Text("Ver todos")
-                        .font(.system(size: 14, weight: .semibold))
+                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                         .foregroundColor(.gray)
                 }
             }
@@ -1324,7 +1324,7 @@ struct ProfileView: View {
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Pedidos realizados")
-                            .font(.system(size: 13, weight: .semibold))
+                            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                             .foregroundColor(.gray)
 
                         Text("\(completedCount)")
@@ -1354,7 +1354,7 @@ struct ProfileView: View {
                     ProgressView()
                         .tint(gradientManager.currentAccentColor)
                     Text("Cargando pedidos...")
-                        .font(.system(size: 14, weight: .medium))
+                        .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                         .foregroundColor(.gray)
                 }
                 .frame(maxWidth: .infinity)
@@ -1370,7 +1370,7 @@ struct ProfileView: View {
                         .foregroundColor(.gray.opacity(0.5))
 
                     Text("No tienes pedidos aún")
-                        .font(.system(size: 15, weight: .medium))
+                        .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
                         .foregroundColor(.gray)
                 }
                 .frame(maxWidth: .infinity)
@@ -1411,11 +1411,11 @@ struct ProfileView: View {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(order.storeName)
-                        .font(.system(size: 15, weight: .semibold))
+                        .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                         .foregroundColor(.primary)
 
                     Text(order.formattedDate)
-                        .font(.system(size: 13, weight: .medium))
+                        .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                         .foregroundColor(.gray)
                 }
 
@@ -1423,11 +1423,11 @@ struct ProfileView: View {
 
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(order.formattedTotal)
-                        .font(.system(size: 15, weight: .semibold))
+                        .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                         .foregroundColor(.primary)
 
                     Text(order.displayStatus.displayName)
-                        .font(.system(size: 12, weight: .medium))
+                        .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                         .foregroundColor(order.displayStatus.color)
                 }
             }
@@ -1449,7 +1449,7 @@ struct ProfileView: View {
                     .foregroundColor(gradientManager.currentAccentColor)
 
                 Text("Método de Pago Preferido")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .scaledFont(size: 18, weight: .bold, design: .rounded, relativeTo: .title3)
                     .foregroundColor(.primary)
 
                 Spacer()
@@ -1482,12 +1482,12 @@ struct ProfileView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 8) {
                             Text("Stripe próximamente")
-                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                                .scaledFont(size: 16, weight: .bold, design: .rounded, relativeTo: .body)
                                 .foregroundColor(.secondary)
                         }
 
                         Text("Tarjetas de crédito/débito próximamente disponibles")
-                            .font(.system(size: 12, weight: .medium))
+                            .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                             .foregroundColor(.secondary.opacity(0.7))
                     }
 
@@ -1519,11 +1519,11 @@ struct ProfileView: View {
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Motor de Recomendaciones")
-                            .font(.system(size: 16, weight: .semibold))
+                            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                             .foregroundColor(.primary)
 
                         Text("Elige cómo obtener sugerencias")
-                            .font(.system(size: 13, weight: .medium))
+                            .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                             .foregroundColor(.gray)
                     }
 
@@ -1546,11 +1546,11 @@ struct ProfileView: View {
 
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(engine.displayName)
-                                    .font(.system(size: 15, weight: .semibold))
+                                    .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                                     .foregroundColor(.primary)
 
                                 Text(engine.description)
-                                    .font(.system(size: 12, weight: .regular))
+                                    .scaledFont(size: 12, weight: .regular, relativeTo: .caption)
                                     .foregroundColor(.secondary)
                                     .multilineTextAlignment(.leading)
                             }
@@ -1599,7 +1599,7 @@ struct ProfileView: View {
                         .foregroundColor(status.isAvailable ? .green : .orange)
 
                         Text(status.message)
-                            .font(.system(size: 12, weight: .medium))
+                            .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                             .foregroundColor(.secondary)
 
                         Spacer()
@@ -1635,11 +1635,11 @@ struct ProfileView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Modo de la app")
-                        .font(.system(size: 16, weight: .semibold))
+                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                         .foregroundColor(.primary)
 
                     Text(appModeManager.mode.summary)
-                        .font(.system(size: 13, weight: .medium))
+                        .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                         .foregroundColor(.gray)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -1656,7 +1656,7 @@ struct ProfileView: View {
                         pendingAppMode = mode
                     } label: {
                         Text(mode.title)
-                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .scaledFont(size: 14, weight: .semibold, design: .rounded, relativeTo: .subheadline)
                             .foregroundColor(isSelected ? .white : .primary.opacity(0.7))
                             .frame(maxWidth: .infinity)
                             .frame(height: 40)
@@ -1715,11 +1715,11 @@ struct ProfileView: View {
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Tutoriales")
-                            .font(.system(size: 16, weight: .semibold))
+                            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                             .foregroundColor(.primary)
 
                         Text("Aprende a usar Llego")
-                            .font(.system(size: 13, weight: .medium))
+                            .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                             .foregroundColor(.gray)
                     }
 
@@ -1752,7 +1752,7 @@ struct ProfileView: View {
                             .foregroundColor(gradientManager.currentAccentColor.opacity(0.82))
 
                         Text("Mostrar tutoriales en el feed")
-                            .font(.system(size: 14, weight: .semibold))
+                            .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                             .foregroundColor(.primary)
 
                         Spacer()
@@ -1781,11 +1781,11 @@ struct ProfileView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Volver a ver onboarding")
-                        .font(.system(size: 16, weight: .semibold))
+                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                         .foregroundColor(.primary)
 
                     Text("Se mostrará al próximo inicio")
-                        .font(.system(size: 13, weight: .medium))
+                        .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                         .foregroundColor(.gray)
                 }
 
@@ -1824,7 +1824,7 @@ struct EditNameView: View {
                 VStack(spacing: 32) {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Nombre completo")
-                            .font(.system(size: 16, weight: .semibold))
+                            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                             .foregroundColor(.primary)
 
                         HStack(spacing: 16) {
@@ -1858,7 +1858,7 @@ struct EditNameView: View {
                         presentationMode.wrappedValue.dismiss()
                     }) {
                         Text("Guardar")
-                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                            .scaledFont(size: 17, weight: .bold, design: .rounded, relativeTo: .body)
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 54)
@@ -1972,7 +1972,7 @@ struct PaymentMethodsSheet: View {
                                     .foregroundColor(.llegoAccent)
 
                                 Text("Agregar método de pago")
-                                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                    .scaledFont(size: 16, weight: .semibold, design: .rounded, relativeTo: .body)
                                     .foregroundColor(.primary)
 
                                 Spacer()
@@ -2024,7 +2024,7 @@ struct PaymentCardView: View {
 
                 if isPreferred {
                     Text("PREFERIDA")
-                        .font(.system(size: 10, weight: .heavy))
+                        .scaledFont(size: 10, weight: .heavy, relativeTo: .caption2)
                         .foregroundColor(cardColor)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
@@ -2038,24 +2038,24 @@ struct PaymentCardView: View {
             Spacer()
 
             Text("•••• •••• •••• \(lastFour)")
-                .font(.system(size: 20, weight: .semibold, design: .monospaced))
+                .scaledFont(size: 20, weight: .semibold, design: .monospaced, relativeTo: .title3)
                 .foregroundColor(.white)
 
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("VENCE")
-                        .font(.system(size: 9, weight: .semibold))
+                        .scaledFont(size: 9, weight: .semibold, relativeTo: .caption2)
                         .foregroundColor(.white.opacity(0.7))
 
                     Text(expiryDate)
-                        .font(.system(size: 14, weight: .semibold))
+                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                         .foregroundColor(.white)
                 }
 
                 Spacer()
 
                 Text(type)
-                    .font(.system(size: 18, weight: .bold))
+                    .scaledFont(size: 18, weight: .bold, relativeTo: .title3)
                     .foregroundColor(.white)
             }
         }
@@ -2172,12 +2172,12 @@ struct EditUsernameSheet: View {
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Nombre de usuario")
-                        .font(.system(size: 14, weight: .medium))
+                        .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                         .foregroundColor(.secondary)
 
                     HStack(spacing: 8) {
                         Text("@")
-                            .font(.system(size: 18, weight: .semibold))
+                            .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
                             .foregroundColor(.gray)
 
                         TextField("usuario", text: $viewModel.editingUsername)
@@ -2194,7 +2194,7 @@ struct EditUsernameSheet: View {
                     )
 
                     Text("Solo letras, números, puntos y guiones bajos")
-                        .font(.system(size: 12))
+                        .scaledFont(size: 12, relativeTo: .caption)
                         .foregroundColor(.secondary)
                         .padding(.leading, 4)
                 }
@@ -2207,7 +2207,7 @@ struct EditUsernameSheet: View {
                             .foregroundColor(.red)
 
                         Text(errorMessage)
-                            .font(.system(size: 13))
+                            .scaledFont(size: 13, relativeTo: .footnote)
                             .foregroundColor(.red)
                     }
                     .padding(.horizontal)
@@ -2227,7 +2227,7 @@ struct EditUsernameSheet: View {
                                 Image(systemName: "checkmark")
                                     .font(.system(size: 16, weight: .semibold))
                                 Text("Guardar cambios")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                             }
                         }
                     }
@@ -2300,7 +2300,7 @@ struct EditPhoneSheet: View {
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Teléfono")
-                        .font(.system(size: 14, weight: .medium))
+                        .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                         .foregroundColor(.secondary)
 
                     HStack(spacing: 8) {
@@ -2335,7 +2335,7 @@ struct EditPhoneSheet: View {
                             .foregroundColor(.red)
 
                         Text(errorMessage)
-                            .font(.system(size: 13))
+                            .scaledFont(size: 13, relativeTo: .footnote)
                             .foregroundColor(.red)
                     }
                     .padding(.horizontal)
@@ -2355,7 +2355,7 @@ struct EditPhoneSheet: View {
                                 Image(systemName: "checkmark")
                                     .font(.system(size: 16, weight: .semibold))
                                 Text("Guardar cambios")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                             }
                         }
                     }
@@ -2797,12 +2797,12 @@ private struct AccountCashKycSheet: View {
     private var kycIntroSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Verifica tu identidad para habilitar funciones que requieren validación de cuenta.")
-                .font(.system(size: 15, weight: .medium))
+                .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 .fixedSize(horizontal: false, vertical: true)
 
             Text(viewModel.message)
-                .font(.system(size: 14, weight: .medium))
+                .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -2811,7 +2811,7 @@ private struct AccountCashKycSheet: View {
     private var kycPurposeSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Sirve para")
-                .font(.system(size: 13, weight: .semibold))
+                .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                 .foregroundColor(gradientManager.currentAccentColor)
 
             HStack(spacing: 12) {
@@ -2827,11 +2827,11 @@ private struct AccountCashKycSheet: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Pagar en efectivo")
-                        .font(.system(size: 15, weight: .semibold))
+                        .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                         .foregroundColor(Color.adaptiveOnSurface(colorScheme))
 
                     Text("Activa esta opción cuando tu cuenta quede verificada.")
-                        .font(.system(size: 13, weight: .medium))
+                        .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -2913,11 +2913,11 @@ private struct AccountCashKycSheet: View {
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text(title)
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .scaledFont(size: 16, weight: .bold, design: .rounded, relativeTo: .body)
                         .foregroundColor(Color.adaptiveOnSurface(colorScheme))
 
                     Text(subtitle)
-                        .font(.system(size: 14, weight: .medium))
+                        .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
@@ -2926,7 +2926,7 @@ private struct AccountCashKycSheet: View {
                             .fill(isComplete ? Color.green : gradientManager.currentAccentColor)
                             .frame(width: 7, height: 7)
                         Text(isComplete ? "Foto agregada" : "Pendiente")
-                            .font(.system(size: 12, weight: .semibold))
+                            .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                             .foregroundColor(isComplete ? .green : gradientManager.currentAccentColor)
                     }
                 }
@@ -3028,7 +3028,7 @@ private struct AccountCashKycSheet: View {
                 ProgressView()
                     .tint(gradientManager.currentAccentColor)
                 Text("Procesando verificación...")
-                    .font(.system(size: 15, weight: .semibold))
+                    .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                     .foregroundColor(gradientManager.currentAccentColor)
             }
             .frame(maxWidth: .infinity)

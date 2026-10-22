@@ -97,7 +97,7 @@ struct FavoritesView: View {
                 .controlSize(.large)
                 .tint(gradientManager.currentAccentColor)
             Text("Cargando favoritos...")
-                .font(.system(size: 16, weight: .medium))
+                .scaledFont(size: 16, weight: .medium, relativeTo: .body)
                 .foregroundColor(.gray)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -109,7 +109,7 @@ struct FavoritesView: View {
                 .font(.system(size: 60))
                 .foregroundColor(.red.opacity(0.6))
             Text(message)
-                .font(.system(size: 16, weight: .medium))
+                .scaledFont(size: 16, weight: .medium, relativeTo: .body)
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
@@ -149,11 +149,11 @@ struct FavoritesView: View {
 
             VStack(spacing: 8) {
                 Text("Aun no tienes favoritos")
-                    .font(.system(size: 22, weight: .semibold, design: .rounded))
+                    .scaledFont(size: 22, weight: .semibold, design: .rounded, relativeTo: .title2)
                     .foregroundColor(.primary)
 
                 Text("Agrega productos para verlos aqui")
-                    .font(.system(size: 15, weight: .regular))
+                    .scaledFont(size: 15, weight: .regular, relativeTo: .subheadline)
                     .foregroundColor(.secondary.opacity(0.85))
                     .multilineTextAlignment(.center)
             }
@@ -164,7 +164,7 @@ struct FavoritesView: View {
                     Image(systemName: "storefront")
                         .font(.system(size: 14, weight: .semibold))
                     Text("Explorar productos")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .scaledFont(size: 15, weight: .bold, design: .rounded, relativeTo: .subheadline)
                 }
                 .frame(height: 44)
                 .frame(maxWidth: 200)
@@ -216,26 +216,26 @@ struct FavoriteItemCard: View {
 
             VStack(alignment: .leading, spacing: 5) {
                 Text(item.name)
-                    .font(.system(size: 15, weight: .bold))
+                    .scaledFont(size: 15, weight: .bold, relativeTo: .subheadline)
                     .foregroundColor(.primary)
                     .lineLimit(1)
 
                 HStack(spacing: 6) {
                     Text(item.shop)
-                        .font(.system(size: 12, weight: .medium))
+                        .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                         .foregroundColor(.secondary)
 
                     Text("•")
-                        .font(.system(size: 10, weight: .medium))
+                        .scaledFont(size: 10, weight: .medium, relativeTo: .caption2)
                         .foregroundColor(.secondary)
 
                     Text(item.weight)
-                        .font(.system(size: 11, weight: .medium))
+                        .scaledFont(size: 11, weight: .medium, relativeTo: .caption2)
                         .foregroundColor(.llegoAccent)
                 }
 
                 Text(item.formattedPrice)
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .scaledFont(size: 15, weight: .bold, design: .rounded, relativeTo: .subheadline)
                     .foregroundColor(gradientManager.currentAccentColor)
             }
 

@@ -92,7 +92,7 @@ struct ComboCartCard: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .center, spacing: 8) {
                         Text("COMBO")
-                            .font(.system(size: 10, weight: .black, design: .rounded))
+                            .scaledFont(size: 10, weight: .black, design: .rounded, relativeTo: .caption2)
                             .foregroundColor(gradientManager.currentAccentColor)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 5)
@@ -102,13 +102,13 @@ struct ComboCartCard: View {
                             )
 
                         Text(comboHeaderTitle)
-                            .font(.system(size: 17, weight: .bold))
+                            .scaledFont(size: 17, weight: .bold, relativeTo: .body)
                             .foregroundColor(.primary)
                             .lineLimit(2)
                     }
 
                     Text("Configurado como una sola selección del carrito")
-                        .font(.system(size: 12, weight: .medium))
+                        .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                         .foregroundColor(.secondary)
 
                     VStack(alignment: .leading, spacing: 4) {
@@ -137,19 +137,19 @@ struct ComboCartCard: View {
 
                         HStack(spacing: 6) {
                             Text("\(currencyLabel) \(String(format: "%.2f", comboUnitPrice))")
-                                .font(.system(size: 13, weight: .semibold))
+                                .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                                 .foregroundColor(.secondary)
 
                             Text("× \(quantity)")
-                                .font(.system(size: 12, weight: .bold))
+                                .scaledFont(size: 12, weight: .bold, relativeTo: .caption)
                                 .foregroundColor(gradientManager.currentAccentColor)
 
                             Text("=")
-                                .font(.system(size: 11, weight: .medium))
+                                .scaledFont(size: 11, weight: .medium, relativeTo: .caption2)
                                 .foregroundColor(.secondary)
 
                             Text("\(currencyLabel) \(String(format: "%.2f", comboTotalPrice))")
-                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                                .scaledFont(size: 16, weight: .bold, design: .rounded, relativeTo: .body)
                                 .foregroundColor(gradientManager.currentAccentColor)
                         }
                     }
@@ -162,7 +162,7 @@ struct ComboCartCard: View {
                 ForEach(groupedSlots) { slot in
                     VStack(alignment: .leading, spacing: 6) {
                         Text(slot.title)
-                            .font(.system(size: 12, weight: .bold))
+                            .scaledFont(size: 12, weight: .bold, relativeTo: .caption)
                             .foregroundColor(.secondary)
 
                         ForEach(slot.items, id: \.id) { item in
@@ -173,19 +173,19 @@ struct ComboCartCard: View {
                                         .frame(width: 6, height: 6)
 
                                     Text(item.name)
-                                        .font(.system(size: 14, weight: .semibold))
+                                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                                         .foregroundColor(.primary)
 
                                     Spacer(minLength: 8)
 
                                     Text(item.formattedPrice(for: selectedCurrency))
-                                        .font(.system(size: 12, weight: .semibold))
+                                        .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                                         .foregroundColor(.secondary)
                                 }
 
                                 if !item.comboModifierNames.isEmpty {
                                     Text(item.comboModifierNames.joined(separator: ", "))
-                                        .font(.system(size: 11, weight: .medium))
+                                        .scaledFont(size: 11, weight: .medium, relativeTo: .caption2)
                                         .foregroundColor(.secondary)
                                         .padding(.leading, 14)
                                 }
@@ -221,7 +221,7 @@ struct ComboCartCard: View {
                     quantityButton(systemName: "minus", action: onDecrement)
 
                     Text("\(quantity)")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .scaledFont(size: 14, weight: .bold, design: .rounded, relativeTo: .subheadline)
                         .foregroundColor(.primary)
                         .frame(width: 24)
 

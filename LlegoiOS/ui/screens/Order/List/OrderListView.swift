@@ -85,7 +85,7 @@ struct OrderListView: View {
                 .tint(gradientManager.currentAccentColor)
 
             Text("Cargando pedidos...")
-                .font(.system(size: 15, weight: .medium))
+                .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
                 .foregroundColor(.secondary)
         }
     }
@@ -106,11 +106,11 @@ struct OrderListView: View {
 
             VStack(spacing: 8) {
                 Text("Algo salió mal")
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .scaledFont(size: 20, weight: .bold, design: .rounded, relativeTo: .title3)
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
 
                 Text(message)
-                    .font(.system(size: 15, weight: .medium))
+                    .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
@@ -123,7 +123,7 @@ struct OrderListView: View {
                     Image(systemName: "arrow.clockwise")
                         .font(.system(size: 14, weight: .semibold))
                     Text("Reintentar")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .scaledFont(size: 15, weight: .bold, design: .rounded, relativeTo: .subheadline)
                 }
                 .frame(height: 48)
                 .frame(maxWidth: 200)
@@ -150,11 +150,11 @@ struct OrderListView: View {
 
             VStack(spacing: 8) {
                 Text("Sin pedidos aún")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .scaledFont(size: 22, weight: .bold, design: .rounded, relativeTo: .title2)
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
 
                 Text("Tus pedidos aparecerán aquí una vez que realices tu primera compra")
-                    .font(.system(size: 15, weight: .medium))
+                    .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
@@ -169,7 +169,7 @@ struct OrderListView: View {
                     Image(systemName: "storefront")
                         .font(.system(size: 14, weight: .semibold))
                     Text("Empezar a comprar")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .scaledFont(size: 15, weight: .bold, design: .rounded, relativeTo: .subheadline)
                 }
                 .frame(height: 48)
                 .frame(maxWidth: 220)
@@ -221,7 +221,7 @@ struct OrderListView: View {
                             .tint(gradientManager.currentAccentColor)
 
                         Text("Cargando más...")
-                            .font(.system(size: 14, weight: .medium))
+                            .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                             .foregroundColor(.secondary)
                     }
                     .padding()
@@ -241,7 +241,7 @@ struct OrderListView: View {
                 .font(.system(size: 34, weight: .medium))
                 .foregroundColor(gradientManager.currentAccentColor.opacity(0.7))
             Text(filteredEmptyMessage)
-                .font(.system(size: 15, weight: .medium))
+                .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
         }
@@ -293,7 +293,7 @@ struct OrderStatusFilterView: View {
                     .font(.system(size: 14))
                 Text(filter.title)
                     .fontWeight(.semibold)
-                    .font(.system(size: 14))
+                    .scaledFont(size: 14, relativeTo: .subheadline)
             }
             .padding(.horizontal, 3)
             .padding(.vertical, 2)

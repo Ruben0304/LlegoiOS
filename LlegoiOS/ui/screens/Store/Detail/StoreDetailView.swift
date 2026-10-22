@@ -59,10 +59,10 @@ struct StoreDetailView: View {
                     .foregroundColor(.orange)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(BranchOrderingMessages.notAcceptingOrdersShort)
-                        .font(.system(size: 14, weight: .bold))
+                        .scaledFont(size: 14, weight: .bold, relativeTo: .subheadline)
                         .foregroundColor(.primary)
                     Text(BranchOrderingMessages.notAcceptingOrdersDetail)
-                        .font(.system(size: 12, weight: .regular))
+                        .scaledFont(size: 12, weight: .regular, relativeTo: .caption)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -95,7 +95,7 @@ struct StoreDetailView: View {
                                 .fill(status.isOpen ? Color.green : Color.red)
                                 .frame(width: 7, height: 7)
                             Text(status.label)
-                                .font(.system(size: 12, weight: .semibold))
+                                .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                                 .foregroundColor(status.isOpen ? Color.green : Color.red)
                         }
                         .padding(.horizontal, 10)
@@ -116,7 +116,7 @@ struct StoreDetailView: View {
                                 .font(.system(size: 12))
                                 .foregroundColor(.orange)
                             Text(ts.reason ?? "Temporalmente cerrado")
-                                .font(.system(size: 12, weight: .medium))
+                                .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                                 .foregroundColor(.orange)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
@@ -135,7 +135,7 @@ struct StoreDetailView: View {
                                 .font(.system(size: 12))
                                 .foregroundColor(.green)
                             Text(specialHoursText(hoursLabel, reason: ts.reason))
-                                .font(.system(size: 12, weight: .medium))
+                                .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                                 .foregroundColor(.green)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
@@ -180,7 +180,7 @@ struct StoreDetailView: View {
                 .frame(width: 36, alignment: .leading)
             if isToday {
                 Text("Hoy")
-                    .font(.system(size: 11, weight: .semibold))
+                    .scaledFont(size: 11, weight: .semibold, relativeTo: .caption2)
                     .foregroundColor(accent)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
@@ -189,7 +189,7 @@ struct StoreDetailView: View {
             Spacer()
             if !day.isOpen || day.hours.isEmpty {
                 Text("Cerrado")
-                    .font(.system(size: 13, weight: .medium))
+                    .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                     .foregroundColor(.red.opacity(0.7))
             } else {
                 VStack(alignment: .trailing, spacing: 2) {
@@ -215,12 +215,12 @@ struct StoreDetailView: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(style.iconColor)
                 Text(style.label)
-                    .font(.system(size: 12, weight: .bold))
+                    .scaledFont(size: 12, weight: .bold, relativeTo: .caption)
                     .foregroundColor(style.textColor)
             }
             if currency.uppercased() == "BOTH", let rate = exchangeRate {
                 Text("1 USD = \(rate) CUP")
-                    .font(.system(size: 10, weight: .medium))
+                    .scaledFont(size: 10, weight: .medium, relativeTo: .caption2)
                     .foregroundColor(style.secondaryTextColor)
             }
         }
@@ -384,7 +384,7 @@ struct StoreDetailView: View {
                                 .tint(gradientManager.currentAccentColor)
 
                             Text("Cargando información...")
-                                .font(.system(size: 16, weight: .medium))
+                                .scaledFont(size: 16, weight: .medium, relativeTo: .body)
                                 .foregroundColor(.gray)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -398,7 +398,7 @@ struct StoreDetailView: View {
                                 .foregroundColor(.red)
 
                             Text(errorMessage)
-                                .font(.system(size: 16))
+                                .scaledFont(size: 16, relativeTo: .body)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
                                 .padding()
@@ -521,7 +521,7 @@ struct StoreDetailView: View {
                                                         .font(.system(size: 14, weight: .semibold))
                                                         .foregroundColor(gradientManager.currentAccentColor)
                                                     Text(address)
-                                                        .font(.system(size: 14, weight: .medium))
+                                                        .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                                                         .foregroundColor(.secondary)
                                                         .lineLimit(1)
                                                 }
@@ -536,7 +536,7 @@ struct StoreDetailView: View {
                                                     .font(.system(size: 12, weight: .bold))
                                                     .foregroundColor(.yellow)
                                                 Text(String(format: "%.1f", rating))
-                                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                                                    .scaledFont(size: 15, weight: .bold, design: .rounded, relativeTo: .subheadline)
                                                     .foregroundColor(.primary)
                                             }
                                             .padding(.horizontal, 12)
@@ -554,7 +554,7 @@ struct StoreDetailView: View {
                                             Image(systemName: "clock.fill")
                                                 .font(.system(size: 11, weight: .semibold))
                                             Text("\(store.etaMinutes) min")
-                                                .font(.system(size: 13, weight: .bold))
+                                                .scaledFont(size: 13, weight: .bold, relativeTo: .footnote)
                                         }
                                         .foregroundColor(.primary)
                                         .padding(.horizontal, 12)
@@ -569,7 +569,7 @@ struct StoreDetailView: View {
                                                     .fill(status.isOpen ? Color.green : Color.red)
                                                     .frame(width: 6, height: 6)
                                                 Text(status.label)
-                                                    .font(.system(size: 13, weight: .bold))
+                                                    .scaledFont(size: 13, weight: .bold, relativeTo: .footnote)
                                                     .foregroundColor(status.isOpen ? Color.green : Color.red)
                                             }
                                             .padding(.horizontal, 12)
@@ -586,7 +586,7 @@ struct StoreDetailView: View {
                                             let style = currencyBadgeStyle(currency: currency)
                                             HStack(spacing: 4) {
                                                 Text(style.label)
-                                                    .font(.system(size: 12, weight: .bold))
+                                                    .scaledFont(size: 12, weight: .bold, relativeTo: .caption)
                                                     .foregroundColor(.primary)
                                             }
                                             .padding(.horizontal, 12)
@@ -604,7 +604,7 @@ struct StoreDetailView: View {
                                                 Image(systemName: "eye.fill")
                                                     .font(.system(size: 11, weight: .semibold))
                                                 Text("Solo catálogo")
-                                                    .font(.system(size: 12, weight: .bold))
+                                                    .scaledFont(size: 12, weight: .bold, relativeTo: .caption)
                                             }
                                             .foregroundColor(.white)
                                             .padding(.horizontal, 12)
@@ -692,10 +692,10 @@ struct StoreDetailView: View {
                                                     .font(.system(size: 30, weight: .medium))
                                                     .foregroundColor(.secondary.opacity(0.7))
                                                 Text("Sin ubicación disponible")
-                                                    .font(.system(size: 15, weight: .semibold))
+                                                    .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                                                     .foregroundColor(.secondary)
                                                 Text("Esta tienda aún no ha configurado su ubicación")
-                                                    .font(.system(size: 12, weight: .medium))
+                                                    .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                                                     .foregroundColor(.secondary.opacity(0.85))
                                             }
                                             .frame(maxWidth: .infinity)
@@ -812,7 +812,7 @@ struct StoreDetailView: View {
                                                 NavigationLink(destination: ProductListView(branchId: storeId, branchName: store.name, storeGradient: resolvedStoreGradient, catalogOnly: viewModel.branchDetail?.catalogOnly ?? false)) {
                                                     HStack(spacing: 4) {
                                                         Text("Ver todos")
-                                                            .font(.system(size: 13, weight: .semibold))
+                                                            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                                                         Image(systemName: "chevron.right")
                                                             .font(.system(size: 11, weight: .bold))
                                                     }
@@ -946,7 +946,7 @@ struct StoreDetailView: View {
                         Image(systemName: "wifi.slash")
                             .font(.system(size: 13, weight: .semibold))
                         Text("Sin conexión · datos guardados")
-                            .font(.system(size: 13, weight: .medium))
+                            .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                         Spacer(minLength: 0)
                     }
                     .foregroundColor(.secondary)
@@ -963,7 +963,7 @@ struct StoreDetailView: View {
             .overlay(alignment: .bottom) {
                 if showShowcaseAddedToast {
                     Text("Se agregó el pedido de vitrina al carrito")
-                        .font(.system(size: 13, weight: .semibold))
+                        .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                         .foregroundColor(.white)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
@@ -991,11 +991,11 @@ struct StoreDetailView: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(gradientManager.currentAccentColor)
                 Text(title)
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .scaledFont(size: 20, weight: .bold, design: .rounded, relativeTo: .title3)
                     .foregroundColor(.primary)
             }
             Text(subtitle)
-                .font(.system(size: 12, weight: .medium))
+                .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                 .foregroundColor(.secondary)
         }
     }
@@ -1005,7 +1005,7 @@ struct StoreDetailView: View {
             Image(systemName: icon)
                 .font(.system(size: 11, weight: .semibold))
             Text(text)
-                .font(.system(size: 12, weight: .semibold))
+                .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
         }
         .foregroundColor(tint)
         .padding(.horizontal, 12)
@@ -1056,24 +1056,24 @@ struct StoreDetailView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 12))
 
                             Text(showcase.title)
-                                .font(.system(size: 15, weight: .bold))
+                                .scaledFont(size: 15, weight: .bold, relativeTo: .subheadline)
                                 .foregroundColor(.primary)
                                 .lineLimit(2)
 
                             if let description = showcase.description, !description.isEmpty {
                                 Text(description)
-                                    .font(.system(size: 12, weight: .medium))
+                                    .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                                     .foregroundColor(.secondary)
                                     .lineLimit(2)
                             }
 
                             if let items = showcase.items, !items.isEmpty {
                                 Text("\(min(items.count, 3)) items sugeridos")
-                                    .font(.system(size: 11, weight: .semibold))
+                                    .scaledFont(size: 11, weight: .semibold, relativeTo: .caption2)
                                     .foregroundColor(gradientManager.currentAccentColor)
                             } else {
                                 Text("Pide por descripción libre")
-                                    .font(.system(size: 11, weight: .semibold))
+                                    .scaledFont(size: 11, weight: .semibold, relativeTo: .caption2)
                                     .foregroundColor(gradientManager.currentAccentColor)
                             }
 
@@ -1081,7 +1081,7 @@ struct StoreDetailView: View {
                                 selectedShowcase = showcase
                             }) {
                                 Text("Pedir desde vitrina")
-                                    .font(.system(size: 13, weight: .bold))
+                                    .scaledFont(size: 13, weight: .bold, relativeTo: .footnote)
                                     .foregroundColor(.white)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 10)
@@ -1207,9 +1207,9 @@ struct ShowcaseOrderSheet: View {
             Form {
                 Section("Vitrina") {
                     Text(showcase.title)
-                        .font(.system(size: 16, weight: .semibold))
+                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                     Text("Este pedido será confirmado por la tienda según disponibilidad y precio final.")
-                        .font(.system(size: 12, weight: .regular))
+                        .scaledFont(size: 12, weight: .regular, relativeTo: .caption)
                         .foregroundColor(.secondary)
                 }
 
@@ -1219,18 +1219,18 @@ struct ShowcaseOrderSheet: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack {
                                     Text(item.name)
-                                        .font(.system(size: 14, weight: .semibold))
+                                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                                     Spacer()
                                     if let price = item.price {
                                         Text(String(format: "%.2f", price))
-                                            .font(.system(size: 13, weight: .medium))
+                                            .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                                             .foregroundColor(.secondary)
                                     }
                                 }
 
                                 if let description = item.description, !description.isEmpty {
                                     Text(description)
-                                        .font(.system(size: 12, weight: .regular))
+                                        .scaledFont(size: 12, weight: .regular, relativeTo: .caption)
                                         .foregroundColor(.secondary)
                                 }
                             }
@@ -1243,7 +1243,7 @@ struct ShowcaseOrderSheet: View {
                         .frame(minHeight: 120)
                     if showValidationError {
                         Text("Debes escribir una descripción para pedir desde vitrina.")
-                            .font(.system(size: 12, weight: .medium))
+                            .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                             .foregroundColor(.red)
                     }
                 }
@@ -1313,7 +1313,7 @@ struct SocialButton: View {
                     .frame(width: 20, height: 20)
 
                 Text(title)
-                    .font(.system(size: 14, weight: .semibold))
+                    .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
             }
             .foregroundColor(.white)
             .padding(.horizontal, 18)
@@ -1375,7 +1375,7 @@ struct SiblingBranchCard: View {
             // Info Content
             VStack(alignment: .leading, spacing: 6) {
                 Text(branch.name)
-                    .font(.system(size: 15, weight: .bold))
+                    .scaledFont(size: 15, weight: .bold, relativeTo: .subheadline)
                     .foregroundColor(.black)
                     .lineLimit(1)
 
@@ -1385,7 +1385,7 @@ struct SiblingBranchCard: View {
                             .font(.system(size: 10))
                             .foregroundColor(.gray)
                         Text(branch.address)
-                            .font(.system(size: 12))
+                            .scaledFont(size: 12, relativeTo: .caption)
                             .foregroundColor(.gray)
                             .lineLimit(1)
                     }
@@ -1396,7 +1396,7 @@ struct SiblingBranchCard: View {
                         .font(.system(size: 10))
                         .foregroundColor(gradientManager.currentAccentColor)
                     Text("\(eta) min")
-                        .font(.system(size: 12, weight: .semibold))
+                        .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                         .foregroundColor(gradientManager.currentAccentColor)
                 }
                 .padding(.horizontal, 8)
