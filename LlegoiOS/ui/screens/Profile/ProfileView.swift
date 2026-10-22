@@ -223,6 +223,7 @@ struct ProfileView: View {
                             onboardingSection
 
                             // Botón de cerrar sesión
+                            legalLinksRow
                             signOutButton
 
                             // Botón de eliminar cuenta (si ya hay una eliminación programada,
@@ -382,6 +383,25 @@ struct ProfileView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Legal
+    /// Privacidad y términos también desde el perfil (antes solo en la pantalla de login)
+    private var legalLinksRow: some View {
+        HStack(spacing: 16) {
+            if let terms = URL(string: LegalLinks.termsURL) {
+                Link("Términos", destination: terms)
+            }
+            if let privacy = URL(string: LegalLinks.privacyURL) {
+                Link("Privacidad", destination: privacy)
+            }
+            if let help = URL(string: "\(LegalLinks.baseURL)/soporte") {
+                Link("Ayuda", destination: help)
+            }
+        }
+        .font(.system(size: 14, weight: .medium))
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
     }
 
     // MARK: - Sign Out Button

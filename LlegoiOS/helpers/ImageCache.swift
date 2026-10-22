@@ -116,20 +116,40 @@ final class ImageCacheManager: @unchecked Sendable {
         }
     }
 
+    /// Clave estable para una URL: las fotos llegan como URL firmada de S3 y la firma
+    /// (`X-Amz-*`) cambia cada ~50 min. Con la URL entera como clave, cada sesión volvía a
+    /// descargar todas las imágenes; sin la firma, la misma foto es la misma clave.
+    static func stableKey(for url: URL?) -> String {
+        guard let url else { return "" }
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let items = components.queryItems,
+              items.contains(where: { $0.name.hasPrefix("X-Amz-") || $0.name == "Signature" || $0.name == "Expires" })
+        else { return url.absoluteString }
+        let resto = items.filter { !($0.name.hasPrefix("X-Amz-") || $0.name == "Signature" || $0.name == "Expires") }
+        components.queryItems = resto.isEmpty ? nil : resto
+        return components.string ?? url.absoluteString
+    }
+
+    /// Lecturas de `metadata` siempre en su cola: se escribe en `metadataQueue` y leerlo
+    /// desde otro hilo a la vez es una carrera de datos que puede cerrar la app.
+    private func metadataEntry(_ key: String) -> ImageMetadata? {
+        metadataQueue.sync { metadata[key] }
+    }
+
     /// Get ETag for cached image (for conditional requests)
     func getETag(for key: String) -> String? {
-        return metadata[key]?.etag
+        return metadataEntry(key)?.etag
     }
 
     /// Check if image needs refresh based on expiration
     func needsRefresh(for key: String) -> Bool {
-        guard let meta = metadata[key] else { return true }
+        guard let meta = metadataEntry(key) else { return true }
         return meta.expirationDate < Date()
     }
 
     /// Check if image is expired beyond grace period (won't attempt background refresh)
     func isExpiredBeyondGracePeriod(for key: String) -> Bool {
-        guard let meta = metadata[key] else { return true }
+        guard let meta = metadataEntry(key) else { return true }
         let gracePeriod: TimeInterval = 30 * 24 * 60 * 60 // 30 días de gracia
         return meta.expirationDate.addingTimeInterval(gracePeriod) < Date()
     }
@@ -396,7 +416,7 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
     @State private var backgroundRefreshTask: Task<Void, Never>?
 
     private var effectiveCacheKey: String {
-        let urlKey = url?.absoluteString ?? ""
+        let urlKey = ImageCacheManager.stableKey(for: url)
         if let cacheKey, !cacheKey.isEmpty {
             return urlKey.isEmpty ? cacheKey : "\(cacheKey)|\(urlKey)"
         }
@@ -407,7 +427,8 @@ struct CachedAsyncImage<Content: View, Placeholder: View, Failure: View>: View {
     /// `cacheKey` propio pero la imagen ya está guardada bajo su URL — es el caso
     /// de las imágenes descargadas por la sincronización offline.
     private var sharedURLKey: String? {
-        guard let urlKey = url?.absoluteString, !urlKey.isEmpty else { return nil }
+        let urlKey = ImageCacheManager.stableKey(for: url)
+        guard !urlKey.isEmpty else { return nil }
         return urlKey == effectiveCacheKey ? nil : urlKey
     }
 

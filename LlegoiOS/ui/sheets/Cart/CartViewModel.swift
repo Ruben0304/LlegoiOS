@@ -179,9 +179,11 @@ class CartViewModel: ObservableObject {
         deliveryFeeEstimate?.zoneName
     }
 
-    /// Tasa de servicio actual: reducida si el usuario vio las promociones
+    /// Tasa de servicio actual. El descuento por ver promociones solo existía en la app:
+    /// el backend no lo conoce y cobra la tasa completa, así que el total que se mostraba
+    /// no era el que se cobraba. Hasta que el backend lo aplique, se muestra la tasa completa.
     var currentServiceFeeRate: Double {
-        hasWatchedAds ? discountedServiceFeeRate : serviceFeeRate
+        serviceFeeRate
     }
 
     /// Porcentaje de servicio formateado
@@ -200,7 +202,7 @@ class CartViewModel: ObservableObject {
     }
 
     /// Ahorro ya aplicado por ver las promociones
-    var adSavings: Double { hasWatchedAds ? serviceFeeSavingsAmount : 0 }
+    var adSavings: Double { 0 }
 
     var total: Double {
         subtotal + payableDeliveryFee + serviceFee

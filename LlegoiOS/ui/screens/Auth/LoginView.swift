@@ -37,9 +37,9 @@ struct LoginView: View {
         var title: String {
             switch self {
             case .login:
-                return "Login"
+                return "Entrar"
             case .register:
-                return "Register"
+                return "Crear cuenta"
             }
         }
     }
@@ -345,10 +345,10 @@ struct LoginView: View {
             loginEmailField
             loginPasswordField
 
-            rememberAndForgotRow
+            // «Remember me» y «Forgot Password?» no hacían nada (y estaban en inglés): fuera hasta que exista recuperar la contraseña
 
             primaryButton(
-                title: "Login",
+                title: "Entrar",
                 isEnabled: viewModel.isLoginButtonEnabled
             ) {
                 Task {
@@ -366,7 +366,7 @@ struct LoginView: View {
             registerPasswordField
 
             primaryButton(
-                title: "Register",
+                title: "Crear cuenta",
                 isEnabled: viewModel.isRegisterButtonEnabled
             ) {
                 Task {
@@ -474,11 +474,11 @@ struct LoginView: View {
     private var loginEmailField: some View {
         authField(icon: "envelope.fill", isFocused: focusedLoginField == .email) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Email Address")
+                Text("Correo electrónico")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.gray)
 
-                TextField("", text: $viewModel.email, prompt: Text("Email Address").foregroundColor(.gray))
+                TextField("", text: $viewModel.email, prompt: Text("Correo electrónico").foregroundColor(.gray))
                     .font(.system(size: 16))
                     .keyboardType(.emailAddress)
                     .textInputAutocapitalization(.none)
@@ -495,15 +495,15 @@ struct LoginView: View {
     private var loginPasswordField: some View {
         authField(icon: "lock.fill", isFocused: focusedLoginField == .password) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Password")
+                Text("Contraseña")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.gray)
 
                 Group {
                     if showLoginPassword {
-                        TextField("", text: $viewModel.password, prompt: Text("Password").foregroundColor(.gray))
+                        TextField("", text: $viewModel.password, prompt: Text("Contraseña").foregroundColor(.gray))
                     } else {
-                        SecureField("", text: $viewModel.password, prompt: Text("Password").foregroundColor(.gray))
+                        SecureField("", text: $viewModel.password, prompt: Text("Contraseña").foregroundColor(.gray))
                     }
                 }
                 .font(.system(size: 16))
@@ -529,11 +529,11 @@ struct LoginView: View {
     private var registerNameField: some View {
         authField(icon: "person.fill", isFocused: focusedRegisterField == .name) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Full Name")
+                Text("Nombre completo")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.gray)
 
-                TextField("", text: $viewModel.registerName, prompt: Text("Full Name").foregroundColor(.gray))
+                TextField("", text: $viewModel.registerName, prompt: Text("Nombre completo").foregroundColor(.gray))
                     .font(.system(size: 16))
                     .textContentType(.name)
                     .focused($focusedRegisterField, equals: .name)
@@ -548,11 +548,11 @@ struct LoginView: View {
     private var registerEmailField: some View {
         authField(icon: "envelope.fill", isFocused: focusedRegisterField == .email) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Email Address")
+                Text("Correo electrónico")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.gray)
 
-                TextField("", text: $viewModel.registerEmail, prompt: Text("Email Address").foregroundColor(.gray))
+                TextField("", text: $viewModel.registerEmail, prompt: Text("Correo electrónico").foregroundColor(.gray))
                     .font(.system(size: 16))
                     .keyboardType(.emailAddress)
                     .textInputAutocapitalization(.none)
@@ -573,7 +573,7 @@ struct LoginView: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.gray)
 
-                TextField("", text: $viewModel.registerPhone, prompt: Text("Phone Number").foregroundColor(.gray))
+                TextField("", text: $viewModel.registerPhone, prompt: Text("Teléfono").foregroundColor(.gray))
                     .font(.system(size: 16))
                     .keyboardType(.phonePad)
                     .focused($focusedRegisterField, equals: .phone)
@@ -588,7 +588,7 @@ struct LoginView: View {
     private var registerPasswordField: some View {
         authField(icon: "lock.fill", isFocused: focusedRegisterField == .password) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Password")
+                Text("Contraseña")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.gray)
 

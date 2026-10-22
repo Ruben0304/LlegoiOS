@@ -18,7 +18,8 @@ struct StripeConfig {
     static let paymentIntentURL = "https://llegobackend-production.up.railway.app/create-payment-intent"
 
     /// URL scheme personalizada para retorno después de autenticación
-    static let returnURL = "llegoi-os://stripe-redirect"
+    // Esquema registrado en Info.plist (llegoi-os:// no lo estaba y 3D Secure no volvía a la app)
+    static let returnURL = "llego://stripe-redirect"
 
     /// Modo de desarrollo: usa datos mock sin llamar al backend
     /// ⚠️ ACTIVAR SOLO PARA TESTING. Desactivar cuando el backend esté listo.

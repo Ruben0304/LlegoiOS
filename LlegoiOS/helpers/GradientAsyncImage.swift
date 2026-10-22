@@ -30,7 +30,7 @@ struct GradientAsyncImage<Content: View, Placeholder: View, Failure: View>: View
         @ViewBuilder failure: @escaping (Error, ExtractedGradient) -> Failure
     ) {
         self.url = url
-        self.cacheKey = cacheKey ?? url?.absoluteString
+        self.cacheKey = cacheKey ?? (url.map { ImageCacheManager.stableKey(for: $0) })
         self._extractedGradient = extractedGradient
         self.fallbackImage = fallbackImage
         self.fallbackGradient = fallbackGradient ?? .placeholder
@@ -191,7 +191,7 @@ struct SimpleGradientAsyncImage<Content: View>: View {
         @ViewBuilder content: @escaping (Image, ExtractedGradient) -> Content
     ) {
         self.url = url
-        self.cacheKey = cacheKey ?? url?.absoluteString
+        self.cacheKey = cacheKey ?? (url.map { ImageCacheManager.stableKey(for: $0) })
         self.content = content
         if let size = displaySize {
             let scale = UIScreen.main.scale
@@ -292,7 +292,7 @@ struct GradientAsyncBackground: View {
     private func extractColors(from image: UIImage) {
         ImageColorExtractor.shared.extractColors(
             from: image,
-            cacheKey: cacheKey ?? url?.absoluteString
+            cacheKey: cacheKey ?? (url.map { ImageCacheManager.stableKey(for: $0) })
         ) { extractedGradient in
             self.gradient = extractedGradient
         }
