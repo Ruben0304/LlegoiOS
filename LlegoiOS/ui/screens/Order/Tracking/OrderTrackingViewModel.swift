@@ -14,12 +14,12 @@ final class OrderTrackingViewModel: ObservableObject {
     private let repository = OrderTrackingRepository()
     private let orderId: String
     private var refreshTimer: Timer?
+    private var isRefreshing = false
     private var cancellables = Set<AnyCancellable>()
 
     init(orderId: String) {
         self.orderId = orderId
         load()
-        startPolling()
     }
 
     // MARK: - Load Tracking
@@ -48,7 +48,9 @@ final class OrderTrackingViewModel: ObservableObject {
 
     // MARK: - Polling for Real-time Updates
 
+    /// La vista lo llama al aparecer y `stopPolling()` al salir: sin pantalla no se sondea.
     func startPolling() {
+        guard refreshTimer == nil else { return }
         refreshTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) {
             [weak self] _ in
             Task { @MainActor in
@@ -70,10 +72,14 @@ final class OrderTrackingViewModel: ObservableObject {
         else {
             return
         }
+        // Con red lenta una consulta puede tardar más que el intervalo: nunca dos a la vez.
+        guard !isRefreshing else { return }
+        isRefreshing = true
 
         repository.fetchTracking(orderId: orderId) { [weak self] result in
             Task { @MainActor in
                 guard let self = self else { return }
+                self.isRefreshing = false
 
                 switch result {
                 case .success(let trackingData):

@@ -245,11 +245,16 @@ class OrderManager: ObservableObject {
     private var realtimeSubscriptionTask: Task<Void, Never>?
     private var realtimePollingTask: Task<Void, Never>?
     private var activeRealtimeOrderId: String?
+    /// Pedido cuyo seguimiento se pausó al pasar la app a segundo plano.
+    private var pausedRealtimeOrderId: String?
+    private var isFetchingTrackingSnapshot = false
+    private var lifecycleCancellables = Set<AnyCancellable>()
     private let trackingRepository = OrderTrackingRepository()
     private let realtimeClient = OrderTrackingRealtimeClient(baseURL: ApolloClientManager.baseURL)
 
     private init() {
         restorePersistedActiveOrderIfNeeded()
+        observeAppLifecycle()
     }
 
     // MARK: - Public Methods
@@ -424,27 +429,40 @@ class OrderManager: ObservableObject {
     }
 
     private func startRealtimeSync(orderId: String) {
+        // Un solo par suscripción + sondeo por pedido: los anteriores se cancelan.
+        stopRealtimeSync()
         activeRealtimeOrderId = orderId
+        pausedRealtimeOrderId = nil
 
         realtimeSubscriptionTask = Task { [weak self] in
-            guard let self else { return }
-            guard let jwt = AuthManager.shared.getAccessToken() else { return }
+            // La conexión se cae con la red móvil o al bloquear el teléfono: se reintenta con
+            // espera creciente mientras siga el seguimiento (el sondeo cubre el hueco).
+            var retryDelaySeconds: UInt64 = 5
+            while !Task.isCancelled {
+                guard let self else { return }
+                guard let jwt = AuthManager.shared.getAccessToken() else { return }
 
-            do {
-                try await self.realtimeClient.streamOrderUpdates(orderId: orderId, jwt: jwt) {
-                    [weak self] event in
-                    await MainActor.run {
-                        self?.applyRealtimeEvent(event)
+                do {
+                    try await self.realtimeClient.streamOrderUpdates(orderId: orderId, jwt: jwt) {
+                        [weak self] event in
+                        await MainActor.run {
+                            self?.applyRealtimeEvent(event)
+                        }
                     }
+                    retryDelaySeconds = 5
+                } catch {
+                    print("⚠️ Subscription order-tracking desconectada: \(error.localizedDescription)")
                 }
-            } catch {
-                print("⚠️ Subscription order-tracking desconectada: \(error.localizedDescription)")
+
+                guard !Task.isCancelled else { return }
+                try? await Task.sleep(nanoseconds: retryDelaySeconds * 1_000_000_000)
+                retryDelaySeconds = min(retryDelaySeconds * 2, 60)
             }
         }
 
         realtimePollingTask = Task { [weak self] in
-            guard let self else { return }
             while !Task.isCancelled {
+                guard let self else { return }
                 await self.refreshTrackingSnapshot(orderId: orderId)
                 try? await Task.sleep(nanoseconds: 6_000_000_000)
             }
@@ -457,15 +475,59 @@ class OrderManager: ObservableObject {
         realtimePollingTask?.cancel()
         realtimePollingTask = nil
         activeRealtimeOrderId = nil
+        pausedRealtimeOrderId = nil
+    }
+
+    // MARK: - App Lifecycle
+
+    private func observeAppLifecycle() {
+        NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)
+            .sink { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.pauseRealtimeSync()
+                }
+            }
+            .store(in: &lifecycleCancellables)
+
+        NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)
+            .sink { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.resumeRealtimeSync()
+                }
+            }
+            .store(in: &lifecycleCancellables)
+    }
+
+    /// En segundo plano iOS corta el WebSocket: se cierra y se deja de sondear hasta volver.
+    private func pauseRealtimeSync() {
+        guard let orderId = activeRealtimeOrderId else { return }
+        stopRealtimeSync()
+        pausedRealtimeOrderId = orderId
+    }
+
+    /// Al volver a primer plano se reconecta el WebSocket y se pide el estado al momento.
+    private func resumeRealtimeSync() {
+        guard let orderId = pausedRealtimeOrderId else { return }
+        pausedRealtimeOrderId = nil
+        guard currentOrder?.id == orderId,
+            orderStatus != .delivered, orderStatus != .cancelled
+        else { return }
+        startRealtimeSync(orderId: orderId)
     }
 
     private func refreshTrackingSnapshot(orderId: String) async {
         guard activeRealtimeOrderId == orderId else { return }
+        // Con red lenta una consulta puede tardar más que el intervalo: nunca dos a la vez.
+        guard !isFetchingTrackingSnapshot else { return }
+        isFetchingTrackingSnapshot = true
+        defer { isFetchingTrackingSnapshot = false }
+
         let result = await withCheckedContinuation { continuation in
             trackingRepository.fetchTracking(orderId: orderId) { fetchResult in
                 continuation.resume(returning: fetchResult)
             }
         }
+        guard activeRealtimeOrderId == orderId else { return }
 
         switch result {
         case .success(let tracking):

@@ -40,6 +40,10 @@ struct OrderTrackingView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             updateMapRegion()
+            viewModel.startPolling()
+        }
+        .onDisappear {
+            viewModel.stopPolling()
         }
         .onReceive(viewModel.$currentDeliveryLocation) { _ in
             updateMapRegion()
