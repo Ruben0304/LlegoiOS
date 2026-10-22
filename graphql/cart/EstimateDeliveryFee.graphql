@@ -1,5 +1,5 @@
-query EstimateDeliveryFee($branchId: String!, $jwt: String!) {
-  estimateDeliveryFee(branchId: $branchId, jwt: $jwt) {
+query EstimateDeliveryFee($branchId: String!, $jwt: String!, $latitude: Float, $longitude: Float) {
+  estimateDeliveryFee(branchId: $branchId, jwt: $jwt, latitude: $latitude, longitude: $longitude) {
     deliveryFee
     currency
     distanceKm

@@ -9,23 +9,31 @@ public extension LlegoAPI {
     public static let operationName: String = "EstimateDeliveryFee"
     public static let operationDocument: ApolloAPI.OperationDocument = .init(
       definition: .init(
-        #"query EstimateDeliveryFee($branchId: String!, $jwt: String!) { estimateDeliveryFee(branchId: $branchId, jwt: $jwt) { __typename deliveryFee currency distanceKm zoneName branchId branchName } }"#
+        #"query EstimateDeliveryFee($branchId: String!, $jwt: String!, $latitude: Float, $longitude: Float) { estimateDeliveryFee( branchId: $branchId jwt: $jwt latitude: $latitude longitude: $longitude ) { __typename deliveryFee currency distanceKm zoneName branchId branchName } }"#
       ))
 
     public var branchId: String
     public var jwt: String
+    public var latitude: GraphQLNullable<Double>
+    public var longitude: GraphQLNullable<Double>
 
     public init(
       branchId: String,
-      jwt: String
+      jwt: String,
+      latitude: GraphQLNullable<Double>,
+      longitude: GraphQLNullable<Double>
     ) {
       self.branchId = branchId
       self.jwt = jwt
+      self.latitude = latitude
+      self.longitude = longitude
     }
 
     @_spi(Unsafe) public var __variables: Variables? { [
       "branchId": branchId,
-      "jwt": jwt
+      "jwt": jwt,
+      "latitude": latitude,
+      "longitude": longitude
     ] }
 
     public struct Data: LlegoAPI.SelectionSet {
@@ -36,7 +44,9 @@ public extension LlegoAPI {
       @_spi(Execution) public static var __selections: [ApolloAPI.Selection] { [
         .field("estimateDeliveryFee", EstimateDeliveryFee.self, arguments: [
           "branchId": .variable("branchId"),
-          "jwt": .variable("jwt")
+          "jwt": .variable("jwt"),
+          "latitude": .variable("latitude"),
+          "longitude": .variable("longitude")
         ]),
       ] }
       @_spi(Execution) public static var __fulfilledFragments: [any ApolloAPI.SelectionSet.Type] { [
