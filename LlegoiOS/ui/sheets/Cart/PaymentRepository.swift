@@ -928,7 +928,8 @@ class PaymentRepository {
     private func uploadKycEvidenceRef(imageData: Data, jwt: String, label: String) async throws
         -> String
     {
-        guard let url = URL(string: "\(ApolloClientManager.baseURL)/upload/user/avatar") else {
+        // Endpoint propio: el de avatares dejaba la foto en 400x400 y el documento no se leía
+        guard let url = URL(string: "\(ApolloClientManager.baseURL)/upload/kyc/evidence") else {
             throw graphQLError("Endpoint de upload inválido")
         }
 
