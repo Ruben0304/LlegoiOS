@@ -592,6 +592,13 @@ struct CartView: View {
             return
         }
 
+        if let message = viewModel.missingExchangeRateMessage {
+            viewModel.refreshExchangeRate()
+            paymentAlertMessage = message
+            showPaymentAlert = true
+            return
+        }
+
         guard let paymentMethod = selectedPaymentMethod else {
             paymentAlertMessage = "Por favor selecciona un método de pago."
             showPaymentAlert = true

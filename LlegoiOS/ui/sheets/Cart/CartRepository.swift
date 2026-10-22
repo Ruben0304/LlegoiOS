@@ -127,10 +127,10 @@ class CartRepository {
 
     // MARK: - Delivery Fee Estimation
 
-    /// Obtener moneda aceptada por la sucursal (CUP, USD, BOTH)
+    /// Obtener moneda aceptada por la sucursal (CUP, USD, BOTH) y su tasa de cambio
     func fetchBranchAcceptedCurrency(
         branchId: String,
-        completion: @escaping @Sendable (Result<String?, Error>) -> Void
+        completion: @escaping @Sendable (Result<BranchCurrencyInfo, Error>) -> Void
     ) {
         apolloClient.fetchCompat(
             query: LlegoAPI.GetBranchDetailQuery(id: branchId),
@@ -142,8 +142,13 @@ class CartRepository {
                     completion(.failure(firstError))
                     return
                 }
-                let accepted = graphQLResult.data?.branch?.acceptedCurrency?.value?.rawValue
-                completion(.success(accepted))
+                let branch = graphQLResult.data?.branch
+                completion(
+                    .success(
+                        BranchCurrencyInfo(
+                            acceptedCurrency: branch?.acceptedCurrency?.value?.rawValue,
+                            exchangeRate: branch?.exchangeRate
+                        )))
 
             case .failure(let error):
                 completion(.failure(error))

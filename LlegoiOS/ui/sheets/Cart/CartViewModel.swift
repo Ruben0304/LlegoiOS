@@ -68,6 +68,9 @@ class CartViewModel: ObservableObject {
     private var cartBranchId: String?
     private var cartProducts: [CartProductGraphQL] = []
     @Published private(set) var branchAcceptedCurrency: String?
+    /// Tasa CUP por USD de la sucursal; respaldo cuando los productos no traen la suya.
+    @Published private(set) var branchExchangeRate: Int?
+    @Published private(set) var isLoadingExchangeRate: Bool = false
     @Published private(set) var cashKycMerchantId: String?
     @Published private(set) var cashKycBranchId: String?
     @Published private(set) var branchOpenStatus: BranchOpenStatus?
@@ -159,14 +162,61 @@ class CartViewModel: ObservableObject {
 
         switch deliveryFeePaymentMode {
         case .sameCurrency:
+            // Sin tasa no se suma nada: el pedido queda bloqueado por missingExchangeRateMessage.
             return convertAmount(
                 estimate.deliveryFee,
                 from: estimate.currency,
                 to: selectedCurrency
-            )
+            ) ?? 0.0
         case .cashCUP:
             return 0.0
         }
+    }
+
+    /// Tasa CUP por USD disponible: la de los productos del carrito o, si no traen, la de la sucursal.
+    private var availableExchangeRate: Int? {
+        if let rate = cartItems.compactMap(\.exchangeRate).first(where: { $0 > 0 }) {
+            return rate
+        }
+        if let rate = branchExchangeRate, rate > 0 {
+            return rate
+        }
+        return nil
+    }
+
+    /// El envío hay que convertirlo de moneda y no hay tasa para hacerlo.
+    private var isDeliveryFeeMissingExchangeRate: Bool {
+        guard fulfillmentMode == .delivery, let estimate = deliveryFeeEstimate else {
+            return false
+        }
+        let target = deliveryFeePaymentMode == .sameCurrency ? selectedCurrency : "CUP"
+        return convertAmount(estimate.deliveryFee, from: estimate.currency, to: target) == nil
+    }
+
+    /// Mensaje que bloquea el pedido mientras falte la tasa de cambio (convertir 1:1 cobraría
+    /// p. ej. 500 CUP de envío como 500 USD).
+    var missingExchangeRateMessage: String? {
+        guard !cartItems.isEmpty else { return nil }
+        let currency = selectedCurrency.uppercased()
+        let itemsMissingRate = cartItems.contains { $0.isMissingExchangeRate(for: currency) }
+        let deliveryMissingRate = isDeliveryFeeMissingExchangeRate
+        guard itemsMissingRate || deliveryMissingRate else { return nil }
+
+        if isLoadingExchangeRate {
+            return "Estamos obteniendo la tasa de cambio. Espera unos segundos e inténtalo de nuevo."
+        }
+        if deliveryMissingRate && !itemsMissingRate {
+            return
+                "No pudimos obtener la tasa de cambio para pasar el envío a \(currency). Inténtalo de nuevo en unos segundos o paga el envío en efectivo (CUP)."
+        }
+        return
+            "No pudimos obtener la tasa de cambio para calcular el total en \(currency). Inténtalo de nuevo en unos segundos o cambia de moneda."
+    }
+
+    /// Vuelve a pedir la tasa de la sucursal (p. ej. al intentar pagar sin ella).
+    func refreshExchangeRate() {
+        guard let branchId = cartBranchId, !isLoadingExchangeRate else { return }
+        fetchBranchAcceptedCurrency(branchId: branchId)
     }
 
     /// Moneda del envío estimado
@@ -230,18 +280,26 @@ class CartViewModel: ObservableObject {
         if let estimate = deliveryFeeEstimate {
             switch deliveryFeePaymentMode {
             case .sameCurrency:
-                let converted = convertAmount(
-                    estimate.deliveryFee,
-                    from: estimate.currency,
-                    to: selectedCurrency
-                )
+                guard
+                    let converted = convertAmount(
+                        estimate.deliveryFee,
+                        from: estimate.currency,
+                        to: selectedCurrency
+                    )
+                else {
+                    return "Sin tasa"
+                }
                 return formatPriceWithCurrency(converted, currency: selectedCurrency.uppercased())
             case .cashCUP:
-                let cupAmount = convertAmount(
-                    estimate.deliveryFee,
-                    from: estimate.currency,
-                    to: "CUP"
-                )
+                guard
+                    let cupAmount = convertAmount(
+                        estimate.deliveryFee,
+                        from: estimate.currency,
+                        to: "CUP"
+                    )
+                else {
+                    return "Sin tasa"
+                }
                 return formatPriceWithCurrency(cupAmount, currency: "CUP")
             }
         }
@@ -771,12 +829,17 @@ class CartViewModel: ObservableObject {
     }
 
     private func fetchBranchAcceptedCurrency(branchId: String) {
+        isLoadingExchangeRate = true
         repository.fetchBranchAcceptedCurrency(branchId: branchId) { [weak self] result in
             guard let self = self else { return }
             Task { @MainActor in
+                self.isLoadingExchangeRate = false
+                // Ignorar respuestas de una tienda que ya no es la del carrito.
+                guard self.cartBranchId == branchId else { return }
                 switch result {
-                case .success(let accepted):
-                    self.branchAcceptedCurrency = accepted?.uppercased()
+                case .success(let info):
+                    self.branchAcceptedCurrency = info.acceptedCurrency?.uppercased()
+                    self.branchExchangeRate = info.exchangeRate
                 case .failure(let error):
                     print("⚠️ Error loading branch accepted currency: \(error.localizedDescription)")
                 }
@@ -1628,17 +1691,18 @@ class CartViewModel: ObservableObject {
         return String(format: "%.2f %@", price, currency)
     }
 
+    /// nil cuando hace falta una tasa de cambio y no hay ninguna.
     private func convertAmount(
         _ amount: Double, from sourceCurrency: String, to targetCurrency: String
     )
-        -> Double
+        -> Double?
     {
         let from = sourceCurrency.uppercased()
         let to = targetCurrency.uppercased()
         if from == to { return amount }
 
-        guard let rate = cartItems.compactMap(\.exchangeRate).first(where: { $0 > 0 }) else {
-            return amount
+        guard let rate = availableExchangeRate else {
+            return nil
         }
 
         if from == "USD" && to == "CUP" {
@@ -1746,6 +1810,20 @@ struct CartItem: Identifiable, Hashable {
         }
 
         return finalUnitPrice
+    }
+
+    /// El precio habría que convertirlo con la tasa y el producto no trae ni tasa ni precio convertido.
+    func isMissingExchangeRate(for selectedCurrency: String) -> Bool {
+        let selected = selectedCurrency.uppercased()
+        let original = canonicalCurrencyForDisplay
+        guard selected != original, supportsCurrency(selected) else { return false }
+        if let convertedCurrency, convertedCurrency.uppercased() == selected,
+            convertedPrice != nil
+        {
+            return false
+        }
+        if let rate = exchangeRate, rate > 0 { return false }
+        return (original == "USD" && selected == "CUP") || (original == "CUP" && selected == "USD")
     }
 
     func formattedPrice(for selectedCurrency: String) -> String {

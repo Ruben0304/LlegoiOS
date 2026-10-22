@@ -9,6 +9,12 @@ struct BranchOrderingInfo: Sendable {
     let acceptingOrders: Bool
 }
 
+/// Moneda que acepta la sucursal (CUP, USD, BOTH) y su tasa CUP por USD.
+struct BranchCurrencyInfo: Sendable {
+    let acceptedCurrency: String?
+    let exchangeRate: Int?
+}
+
 /// Textos para cuando la sucursal pausó los pedidos (`acceptingOrders = false`).
 enum BranchOrderingMessages {
     /// Etiqueta corta para chips y avisos.
