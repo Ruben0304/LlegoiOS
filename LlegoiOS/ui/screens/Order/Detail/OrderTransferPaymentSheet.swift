@@ -71,7 +71,7 @@ struct OrderTransferPaymentSheet: View {
                         onDismiss()
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 22))
+                            .scaledFont(size: 22, relativeTo: .title2)
                             .foregroundColor(.secondary)
                             .symbolRenderingMode(.hierarchical)
                     }
@@ -103,14 +103,14 @@ struct OrderTransferPaymentSheet: View {
                 ZStack {
                     gradientManager.currentAccentColor.opacity(0.12)
                     Image(systemName: "storefront")
-                        .font(.system(size: 28, weight: .medium))
+                        .scaledFont(size: 28, weight: .medium, relativeTo: .title)
                         .foregroundColor(gradientManager.currentAccentColor)
                 }
             } failure: {
                 ZStack {
                     gradientManager.currentAccentColor.opacity(0.12)
                     Image(systemName: "storefront")
-                        .font(.system(size: 28, weight: .medium))
+                        .scaledFont(size: 28, weight: .medium, relativeTo: .title)
                         .foregroundColor(gradientManager.currentAccentColor)
                 }
             }
@@ -123,22 +123,22 @@ struct OrderTransferPaymentSheet: View {
 
             VStack(spacing: 6) {
                 Text(order.branchName)
-                    .font(.system(size: 20, weight: .bold))
+                    .scaledFont(size: 20, weight: .bold, relativeTo: .title3)
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
 
                 Text("Pedido \(order.orderNumber.suffix(6))")
-                    .font(.system(size: 14))
+                    .scaledFont(size: 14, relativeTo: .subheadline)
                     .foregroundColor(.secondary)
 
                 HStack(spacing: 4) {
                     Text("Total a pagar:")
-                        .font(.system(size: 15))
+                        .scaledFont(size: 15, relativeTo: .subheadline)
                         .foregroundColor(.secondary)
                     Text(order.formattedTotal)
-                        .font(.system(size: 26, weight: .bold))
+                        .scaledFont(size: 26, weight: .bold, relativeTo: .title)
                         .foregroundColor(gradientManager.currentAccentColor)
                     Text(order.currency.uppercased())
-                        .font(.system(size: 14, weight: .semibold))
+                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                         .foregroundColor(.secondary)
                 }
             }
@@ -151,11 +151,11 @@ struct OrderTransferPaymentSheet: View {
     private var accountsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Label("Tarjetas del negocio", systemImage: "creditcard.fill")
-                .font(.system(size: 15, weight: .semibold))
+                .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
 
             Text("Realiza la transferencia a una de estas tarjetas por el monto exacto indicado arriba.")
-                .font(.system(size: 13))
+                .scaledFont(size: 13, relativeTo: .footnote)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -172,10 +172,10 @@ struct OrderTransferPaymentSheet: View {
     private var noAccountsPlaceholder: some View {
         HStack(spacing: 12) {
             Image(systemName: "info.circle.fill")
-                .font(.system(size: 16))
+                .scaledFont(size: 16, relativeTo: .body)
                 .foregroundColor(.orange)
             Text("Este negocio aún no tiene tarjetas de transferencia configuradas. Contáctalos directamente.")
-                .font(.system(size: 13))
+                .scaledFont(size: 13, relativeTo: .footnote)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -191,17 +191,17 @@ struct OrderTransferPaymentSheet: View {
     private var phonesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Label("Número para SMS de verificación", systemImage: "message.fill")
-                .font(.system(size: 15, weight: .semibold))
+                .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
 
             // Explicación del flujo cubano de Transfermóvil
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: "info.circle.fill")
-                    .font(.system(size: 14))
+                    .scaledFont(size: 14, relativeTo: .subheadline)
                     .foregroundColor(.secondary)
                     .padding(.top, 1)
                 Text("Al hacer la transferencia en Transfermóvil, escribe este número en el campo opcional de teléfono. El banco enviará un SMS al negocio para confirmar tu pago.")
-                    .font(.system(size: 12))
+                    .scaledFont(size: 12, relativeTo: .caption)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -214,16 +214,16 @@ struct OrderTransferPaymentSheet: View {
                                 .fill(gradientManager.currentAccentColor.opacity(0.1))
                                 .frame(width: 40, height: 40)
                             Image(systemName: "message.fill")
-                                .font(.system(size: 15))
+                                .scaledFont(size: 15, relativeTo: .subheadline)
                                 .foregroundColor(gradientManager.currentAccentColor)
                         }
 
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Número de confirmación")
-                                .font(.system(size: 11))
+                                .scaledFont(size: 11, relativeTo: .caption)
                                 .foregroundColor(.secondary)
                             Text(entry.phone)
-                                .font(.system(size: 17, weight: .bold, design: .monospaced))
+                                .scaledFont(size: 17, weight: .bold, design: .monospaced, relativeTo: .body)
                                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                                 .tracking(1)
                         }
@@ -235,9 +235,9 @@ struct OrderTransferPaymentSheet: View {
                         } label: {
                             HStack(spacing: 5) {
                                 Image(systemName: "doc.on.doc")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                                 Text("Copiar")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                             }
                             .foregroundColor(.white)
                             .padding(.horizontal, 14)
@@ -267,22 +267,22 @@ struct OrderTransferPaymentSheet: View {
     private var proofSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Label("Comprobante de pago", systemImage: "doc.viewfinder")
-                .font(.system(size: 15, weight: .semibold))
+                .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
 
             // Info banner
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: "sparkles")
-                    .font(.system(size: 15))
+                    .scaledFont(size: 15, relativeTo: .subheadline)
                     .foregroundColor(gradientManager.currentAccentColor)
                     .padding(.top, 1)
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text("No es obligatorio, pero ayuda mucho")
-                        .font(.system(size: 13, weight: .semibold))
+                        .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                         .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                     Text("Algunos negocios no confirman el pedido hasta ver el comprobante. Sube la captura del mensaje de tu banco para que todo vaya más rápido.")
-                        .font(.system(size: 12))
+                        .scaledFont(size: 12, relativeTo: .caption)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -305,7 +305,7 @@ struct OrderTransferPaymentSheet: View {
                             .clipShape(RoundedRectangle(cornerRadius: 14))
 
                         Label("Cambiar", systemImage: "pencil.circle.fill")
-                            .font(.system(size: 12, weight: .semibold))
+                            .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                             .foregroundColor(.white)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 6)
@@ -317,15 +317,15 @@ struct OrderTransferPaymentSheet: View {
                 } else {
                     VStack(spacing: 12) {
                         Image(systemName: "photo.badge.plus")
-                            .font(.system(size: 36))
+                            .scaledFont(size: 36, relativeTo: .largeTitle)
                             .foregroundColor(gradientManager.currentAccentColor)
 
                         VStack(spacing: 3) {
                             Text("Subir captura del banco")
-                                .font(.system(size: 14, weight: .semibold))
+                                .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                             Text("Toca para elegir una imagen de tu galería")
-                                .font(.system(size: 12))
+                                .scaledFont(size: 12, relativeTo: .caption)
                                 .foregroundColor(.secondary)
                         }
                     }
@@ -363,10 +363,10 @@ struct OrderTransferPaymentSheet: View {
                             .tint(.white)
                     } else {
                         Image(systemName: "checkmark.seal.fill")
-                            .font(.system(size: 18))
+                            .scaledFont(size: 18, relativeTo: .title3)
                     }
                     Text(isConfirming ? "Enviando confirmación..." : "Ya realicé la transferencia")
-                        .font(.system(size: 16, weight: .semibold))
+                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: 54)
@@ -376,7 +376,7 @@ struct OrderTransferPaymentSheet: View {
             .disabled(isConfirming)
 
             Text("El negocio revisará tu pago y confirmará el pedido.")
-                .font(.system(size: 12))
+                .scaledFont(size: 12, relativeTo: .caption)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
         }
@@ -387,10 +387,10 @@ struct OrderTransferPaymentSheet: View {
     private var copiedToast: some View {
         HStack(spacing: 8) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 15, weight: .semibold))
+                .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                 .foregroundColor(.white)
             Text(copiedText)
-                .font(.system(size: 13, weight: .semibold))
+                .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                 .foregroundColor(.white)
         }
         .padding(.horizontal, 16)
@@ -433,14 +433,14 @@ private struct TransferAccountCard: View {
             // Bank name row
             HStack {
                 Image(systemName: "phone.fill")
-                    .font(.system(size: 13))
+                    .scaledFont(size: 13, relativeTo: .footnote)
                     .foregroundColor(gradientManager.currentAccentColor)
                 Text(account.confirmPhone)
-                    .font(.system(size: 13, weight: .medium))
+                    .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                     .foregroundColor(.secondary)
                 Spacer()
                 Text("CUP")
-                    .font(.system(size: 11, weight: .bold))
+                    .scaledFont(size: 11, weight: .bold, relativeTo: .caption)
                     .foregroundColor(gradientManager.currentAccentColor)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
@@ -457,11 +457,11 @@ private struct TransferAccountCard: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 8) {
                     Text("Número de tarjeta")
-                        .font(.system(size: 12))
+                        .scaledFont(size: 12, relativeTo: .caption)
                         .foregroundColor(.secondary)
                     Spacer()
                     Text(formattedCardNumber)
-                        .font(.system(size: 16, weight: .bold, design: .monospaced))
+                        .scaledFont(size: 16, weight: .bold, design: .monospaced, relativeTo: .body)
                         .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                         .tracking(1.5)
                         .lineLimit(1)
@@ -473,9 +473,9 @@ private struct TransferAccountCard: View {
                 } label: {
                     HStack(spacing: 5) {
                         Image(systemName: "doc.on.doc")
-                            .font(.system(size: 13, weight: .semibold))
+                            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                         Text("Copiar número")
-                            .font(.system(size: 13, weight: .semibold))
+                            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                     }
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
@@ -494,13 +494,13 @@ private struct TransferAccountCard: View {
             // Card holder
             HStack {
                 Image(systemName: "person.fill")
-                    .font(.system(size: 12))
+                    .scaledFont(size: 12, relativeTo: .caption)
                     .foregroundColor(.secondary)
                 Text("A nombre de")
-                    .font(.system(size: 12))
+                    .scaledFont(size: 12, relativeTo: .caption)
                     .foregroundColor(.secondary)
                 Text(account.cardHolderName)
-                    .font(.system(size: 13, weight: .semibold))
+                    .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 Spacer()
             }
@@ -514,7 +514,7 @@ private struct TransferAccountCard: View {
 
                 VStack(spacing: 10) {
                     Label("Pago QR", systemImage: "qrcode")
-                        .font(.system(size: 13, weight: .semibold))
+                        .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                         .foregroundColor(Color.adaptiveOnSurface(colorScheme))
 
                     Image(uiImage: qrImage)
@@ -527,7 +527,7 @@ private struct TransferAccountCard: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
 
                     Text("Escanea con tu app de banco para pagar")
-                        .font(.system(size: 11))
+                        .scaledFont(size: 11, relativeTo: .caption)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                 }

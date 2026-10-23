@@ -26,7 +26,7 @@ struct MapView: View {
 
                                     Image(systemName: "storefront.fill")
                                         .foregroundColor(.white)
-                                        .font(.system(size: 18))
+                                        .scaledFont(size: 18, relativeTo: .title3)
                                 }
                                 .frame(minWidth: 44, minHeight: 44)
                                 .contentShape(Rectangle())
@@ -47,7 +47,7 @@ struct MapView: View {
                         LottieView(name: "loader")
                             .frame(width: 150, height: 150)
                         Text("Cargando negocios...")
-                            .font(.system(size: 16, weight: .medium))
+                            .scaledFont(size: 16, weight: .medium, relativeTo: .body)
                             .foregroundColor(.gray)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -157,7 +157,7 @@ struct StoreInfoSheet: View {
                             .scaledToFill()
                     case .failure:
                         Image(systemName: "storefront")
-                            .font(.system(size: 24))
+                            .scaledFont(size: 24, relativeTo: .title)
                             .foregroundColor(.gray)
                     @unknown default:
                         EmptyView()
@@ -170,16 +170,16 @@ struct StoreInfoSheet: View {
                 // Store info
                 VStack(alignment: .leading, spacing: 8) {
                     Text(store.name)
-                        .font(.system(size: 18, weight: .bold))
+                        .scaledFont(size: 18, weight: .bold, relativeTo: .title3)
                         .foregroundColor(.primary)
 
                     if let address = store.address {
                         HStack(spacing: 4) {
                             Image(systemName: "location.fill")
-                                .font(.system(size: 12))
+                                .scaledFont(size: 12, relativeTo: .caption)
                                 .foregroundColor(.gray)
                             Text(address)
-                                .font(.system(size: 14))
+                                .scaledFont(size: 14, relativeTo: .subheadline)
                                 .foregroundColor(.gray)
                                 .lineLimit(2)
                         }
@@ -187,10 +187,10 @@ struct StoreInfoSheet: View {
 
                     HStack(spacing: 4) {
                         Image(systemName: "clock.fill")
-                            .font(.system(size: 12))
+                            .scaledFont(size: 12, relativeTo: .caption)
                             .foregroundColor(.llegoAccent)
                         Text("\(store.etaMinutes) min")
-                            .font(.system(size: 14, weight: .medium))
+                            .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                             .foregroundColor(.llegoAccent)
                     }
                 }
@@ -203,7 +203,7 @@ struct StoreInfoSheet: View {
             HStack(spacing: 12) {
                 Button(action: onDismiss) {
                     Text("Cerrar")
-                        .font(.system(size: 16, weight: .semibold))
+                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                         .foregroundColor(.llegoPrimary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
@@ -215,7 +215,7 @@ struct StoreInfoSheet: View {
 
                 Button(action: onViewStore) {
                     Text("Ver negocio")
-                        .font(.system(size: 16, weight: .semibold))
+                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)

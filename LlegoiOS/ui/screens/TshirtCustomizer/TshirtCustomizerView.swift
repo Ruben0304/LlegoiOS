@@ -93,7 +93,7 @@ struct TshirtCustomizerView: View {
         HStack(alignment: .center) {
             Button { dismiss() } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 14, weight: .semibold))
+                    .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                     .foregroundStyle(.white)
                     .frame(width: 38, height: 38)
                     .background(Circle().fill(.ultraThinMaterial))
@@ -104,10 +104,10 @@ struct TshirtCustomizerView: View {
 
             VStack(spacing: 1) {
                 Text("Diseña tu prenda")
-                    .font(.system(size: 15, weight: .semibold))
+                    .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                     .foregroundStyle(.white)
                 Text("\(vm.garmentType.rawValue) · \(vm.gender.rawValue)")
-                    .font(.system(size: 11, weight: .medium))
+                    .scaledFont(size: 11, weight: .medium, relativeTo: .caption)
                     .foregroundStyle(.white.opacity(0.55))
             }
 
@@ -118,7 +118,7 @@ struct TshirtCustomizerView: View {
                 preview: SharePreview("Mi diseño", image: Image(uiImage: vm.compositeTexture))
             ) {
                 Image(systemName: "square.and.arrow.up")
-                    .font(.system(size: 14, weight: .semibold))
+                    .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                     .foregroundStyle(.white)
                     .frame(width: 38, height: 38)
                     .background(Circle().fill(.ultraThinMaterial))
@@ -211,9 +211,9 @@ struct TshirtCustomizerView: View {
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: "plus")
-                            .font(.system(size: 12, weight: .bold))
+                            .scaledFont(size: 12, weight: .bold, relativeTo: .caption)
                         Text("Añadir PNG")
-                            .font(.system(size: 12, weight: .semibold))
+                            .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                     }
                     .foregroundStyle(.white)
                     .padding(.horizontal, 12)
@@ -257,7 +257,7 @@ struct TshirtCustomizerView: View {
                 }
             } else {
                 Text("Pulsa “Añadir PNG” para insertar una imagen, luego arrástrala, pellizca para escalar y rota con dos dedos.")
-                    .font(.system(size: 11))
+                    .scaledFont(size: 11, relativeTo: .caption)
                     .foregroundStyle(.white.opacity(0.55))
                     .padding(.horizontal, 4)
             }
@@ -276,7 +276,7 @@ struct TshirtCustomizerView: View {
                         vm.sendToBack(decalID: d.id)
                     } label: {
                         Image(systemName: "rectangle.stack")
-                            .font(.system(size: 13, weight: .semibold))
+                            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                             .foregroundStyle(.white)
                             .frame(width: 30, height: 30)
                             .background(Circle().fill(Color.white.opacity(0.10)))
@@ -285,7 +285,7 @@ struct TshirtCustomizerView: View {
                         vm.bringToFront(decalID: d.id)
                     } label: {
                         Image(systemName: "rectangle.stack.fill")
-                            .font(.system(size: 13, weight: .semibold))
+                            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                             .foregroundStyle(.white)
                             .frame(width: 30, height: 30)
                             .background(Circle().fill(Color.white.opacity(0.10)))
@@ -294,7 +294,7 @@ struct TshirtCustomizerView: View {
                         vm.removeSelectedDecal()
                     } label: {
                         Image(systemName: "trash")
-                            .font(.system(size: 13, weight: .semibold))
+                            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                             .foregroundStyle(Color.red.opacity(0.9))
                             .frame(width: 30, height: 30)
                             .background(Circle().fill(Color.red.opacity(0.15)))
@@ -386,10 +386,10 @@ struct TshirtCustomizerView: View {
     private func sectionHeader(_ title: String, icon: String) -> some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.system(size: 11, weight: .semibold))
+                .scaledFont(size: 11, weight: .semibold, relativeTo: .caption)
                 .foregroundStyle(.white.opacity(0.65))
             Text(title.uppercased())
-                .font(.system(size: 11, weight: .heavy, design: .rounded))
+                .scaledFont(size: 11, weight: .heavy, design: .rounded, relativeTo: .caption)
                 .tracking(1.4)
                 .foregroundStyle(.white.opacity(0.65))
         }
@@ -544,13 +544,13 @@ struct StyleChip: View {
         Button(action: action) {
             HStack(spacing: 10) {
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
+                    .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(title)
-                        .font(.system(size: 13, weight: .semibold))
+                        .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                     if let sub = subtitle {
                         Text(sub)
-                            .font(.system(size: 10, weight: .medium))
+                            .scaledFont(size: 10, weight: .medium, relativeTo: .caption2)
                             .opacity(0.65)
                     }
                 }
@@ -664,17 +664,17 @@ struct SliderRow: View {
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 12, weight: .semibold))
+                .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                 .foregroundStyle(.white.opacity(0.7))
                 .frame(width: 18)
             Text(label)
-                .font(.system(size: 12, weight: .semibold))
+                .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                 .foregroundStyle(.white.opacity(0.85))
                 .frame(width: 70, alignment: .leading)
             Slider(value: $value, in: range)
                 .tint(Color(red: 0.85, green: 0.30, blue: 0.55))
             Text(formatted(value))
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .scaledFont(size: 11, weight: .semibold, design: .monospaced, relativeTo: .caption)
                 .foregroundStyle(.white.opacity(0.7))
                 .frame(width: 48, alignment: .trailing)
         }

@@ -383,9 +383,9 @@ struct CashKycFlowSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     Text(viewModel.title)
-                        .font(.system(size: 22, weight: .bold))
+                        .scaledFont(size: 22, weight: .bold, relativeTo: .title2)
                     Text(viewModel.message)
-                        .font(.system(size: 15, weight: .regular))
+                        .scaledFont(size: 15, relativeTo: .subheadline)
                         .foregroundColor(.secondary)
 
                     statusPanel
@@ -429,7 +429,7 @@ struct CashKycFlowSheet: View {
             HStack(spacing: 10) {
                 ProgressView().tint(.blue)
                 Text(viewModel.state == .waitingResult ? "Esperando resultado..." : "Procesando...")
-                    .font(.system(size: 14, weight: .medium))
+                    .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -450,7 +450,7 @@ struct CashKycFlowSheet: View {
 
     private func stateBadge(_ text: String, color: Color) -> some View {
         Text(text)
-            .font(.system(size: 13, weight: .semibold))
+            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
             .foregroundColor(color)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
@@ -469,7 +469,7 @@ struct CashKycFlowSheet: View {
         if needsCapture {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Evidencia requerida")
-                    .font(.system(size: 16, weight: .semibold))
+                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                 captureRow(
                     title: "Documento (frente)",
                     isCaptured: viewModel.documentImage != nil,
@@ -502,10 +502,10 @@ struct CashKycFlowSheet: View {
             Image(systemName: isCaptured ? "checkmark.circle.fill" : "circle")
                 .foregroundColor(isCaptured ? .green : .secondary)
             Text(title)
-                .font(.system(size: 14, weight: .medium))
+                .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
             Spacer()
             Button(buttonTitle, action: action)
-                .font(.system(size: 13, weight: .semibold))
+                .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
         }
     }
 

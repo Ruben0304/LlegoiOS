@@ -57,7 +57,7 @@ struct Model3DCarousel: View {
                 .disabled(currentIndex == 0)
 
                 Text(models[currentIndex].name)
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .scaledFont(size: 28, weight: .bold, design: .rounded, relativeTo: .title)
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .multilineTextAlignment(.center)

@@ -49,7 +49,7 @@ struct TutorialCard: View {
                     .frame(width: 48, height: 48)
 
                 Image(systemName: "play.fill")
-                    .font(.system(size: 20, weight: .bold))
+                    .scaledFont(size: 20, weight: .bold, relativeTo: .title3)
                     .foregroundColor(accentColor)
                     .offset(x: 2)
             }
@@ -60,7 +60,7 @@ struct TutorialCard: View {
                 HStack {
                     Spacer()
                     Text(tutorial.duration)
-                        .font(.system(size: 11, weight: .semibold))
+                        .scaledFont(size: 11, weight: .semibold, relativeTo: .caption)
                         .foregroundColor(.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
@@ -77,7 +77,7 @@ struct TutorialCard: View {
             VStack(alignment: .leading, spacing: 4) {
                 if let category = tutorial.category {
                     Text(category)
-                        .font(.system(size: 10, weight: .semibold))
+                        .scaledFont(size: 10, weight: .semibold, relativeTo: .caption2)
                         .foregroundColor(.llegoSecondary)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
@@ -88,7 +88,7 @@ struct TutorialCard: View {
                 }
 
                 Text(tutorial.title)
-                    .font(.system(size: 13, weight: .bold))
+                    .scaledFont(size: 13, weight: .bold, relativeTo: .footnote)
                     .foregroundColor(.white)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
@@ -106,6 +106,8 @@ struct TutorialCard: View {
         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
         .contentShape(Rectangle())
         .onTapGesture { onTutorialTap?() }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
         .onLongPressGesture(minimumDuration: 0.0, maximumDistance: .infinity, pressing: { pressing in
             withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                 isPressed = pressing
@@ -118,7 +120,7 @@ struct TutorialCard: View {
         switch downloadManager.status(for: tutorial.id) {
         case .downloaded:
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 20))
+                .scaledFont(size: 20, relativeTo: .title3)
                 .foregroundColor(.green)
                 .padding(6)
                 .background(.ultraThinMaterial, in: Circle())
@@ -130,7 +132,7 @@ struct TutorialCard: View {
                     .tint(.white)
                     .frame(width: 18, height: 18)
                 Text("\(Int(progress * 100))%")
-                    .font(.system(size: 11, weight: .semibold))
+                    .scaledFont(size: 11, weight: .semibold, relativeTo: .caption)
                     .foregroundColor(.white)
             }
             .padding(.horizontal, 8)
@@ -142,7 +144,7 @@ struct TutorialCard: View {
                 downloadManager.startDownload(for: tutorial)
             }) {
                 Image(systemName: "arrow.clockwise.circle.fill")
-                    .font(.system(size: 20))
+                    .scaledFont(size: 20, relativeTo: .title3)
                     .foregroundColor(.orange)
                     .padding(6)
                     .background(.ultraThinMaterial, in: Circle())
@@ -157,7 +159,7 @@ struct TutorialCard: View {
                 downloadManager.startDownload(for: tutorial)
             }) {
                 Image(systemName: "arrow.down.circle.fill")
-                    .font(.system(size: 20))
+                    .scaledFont(size: 20, relativeTo: .title3)
                     .foregroundColor(.white)
                     .padding(6)
                     .background(.ultraThinMaterial, in: Circle())

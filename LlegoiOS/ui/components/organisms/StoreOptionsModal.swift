@@ -72,7 +72,7 @@ struct StoreOptionsModal: View {
                         ZStack {
                             Color.gray.opacity(0.15)
                             Image(systemName: "storefront")
-                                .font(.system(size: 28))
+                                .scaledFont(size: 28, relativeTo: .title)
                                 .foregroundColor(.gray.opacity(0.5))
                         }
                     }
@@ -94,7 +94,7 @@ struct StoreOptionsModal: View {
             // MARK: - Información del negocio
             VStack(spacing: 8) {
                 Text(store.name)
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .scaledFont(size: 24, weight: .bold, design: .rounded, relativeTo: .title)
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
 
@@ -104,7 +104,7 @@ struct StoreOptionsModal: View {
                             .fill(isOpen ? Color.green : Color.red)
                             .frame(width: 8, height: 8)
                         Text(isOpen ? "Abierto ahora" : "Cerrado ahora")
-                            .font(.system(size: 13, weight: .semibold))
+                            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                             .foregroundColor(isOpen ? Color.green : Color.red)
                     }
                     .padding(.horizontal, 14)
@@ -120,9 +120,9 @@ struct StoreOptionsModal: View {
                 if !store.acceptingOrders {
                     HStack(spacing: 6) {
                         Image(systemName: "pause.circle.fill")
-                            .font(.system(size: 12, weight: .semibold))
+                            .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                         Text(BranchOrderingMessages.notAcceptingOrdersShort)
-                            .font(.system(size: 13, weight: .semibold))
+                            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                     }
                     .foregroundColor(.orange)
                     .padding(.horizontal, 14)
@@ -133,10 +133,10 @@ struct StoreOptionsModal: View {
                 if let address = store.address {
                     HStack(spacing: 6) {
                         Image(systemName: "location.fill")
-                            .font(.system(size: 12, weight: .medium))
+                            .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                             .foregroundColor(.secondary)
                         Text(address)
-                            .font(.system(size: 15, weight: .regular))
+                            .scaledFont(size: 15, relativeTo: .subheadline)
                             .foregroundColor(.secondary)
                     }
                 }
@@ -181,9 +181,9 @@ struct StoreOptionsModal: View {
                 Button(action: onViewProducts) {
                     HStack(spacing: 10) {
                         Image(systemName: "bag.fill")
-                            .font(.system(size: 18, weight: .semibold))
+                            .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
                         Text("Ver Productos")
-                            .font(.system(size: 17, weight: .semibold))
+                            .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
@@ -204,9 +204,9 @@ struct StoreOptionsModal: View {
                 Button(action: onViewProfile) {
                     HStack(spacing: 10) {
                         Image(systemName: "storefront")
-                            .font(.system(size: 18, weight: .semibold))
+                            .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
                         Text("Ver Perfil de Tienda")
-                            .font(.system(size: 17, weight: .semibold))
+                            .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)

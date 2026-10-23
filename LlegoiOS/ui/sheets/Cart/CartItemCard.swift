@@ -22,7 +22,7 @@ struct CartItemCard: View {
 
                 if item.isShowcase && item.imageUrl.isEmpty {
                     Image(systemName: "sparkles.rectangle.stack.fill")
-                        .font(.system(size: 22, weight: .medium))
+                        .scaledFont(size: 22, weight: .medium, relativeTo: .title2)
                         .foregroundColor(gradientManager.currentAccentColor)
                 } else {
                     CachedAsyncImage(
@@ -126,7 +126,7 @@ struct CartItemCard: View {
                 if let currencyInfo = item.currencyInfoText(for: selectedCurrency) {
                     HStack(spacing: 6) {
                         Image(systemName: "info.circle.fill")
-                            .font(.system(size: 10, weight: .medium))
+                            .scaledFont(size: 10, weight: .medium, relativeTo: .caption2)
                         Text(currencyInfo)
                             .scaledFont(size: 11, weight: .medium, relativeTo: .caption2)
                             .lineLimit(2)
@@ -159,7 +159,7 @@ struct CartItemCard: View {
                                                 .doubleValue
                                         )
                                     )
-                                    .font(.system(size: 10, weight: .medium))
+                                    .scaledFont(size: 10, weight: .medium, relativeTo: .caption2)
                                     .foregroundColor(.secondary)
                                 }
                             }
@@ -175,7 +175,7 @@ struct CartItemCard: View {
             VStack(spacing: 8) {
                 Button(action: onRemove) {
                     Image(systemName: "trash.fill")
-                        .font(.system(size: 11, weight: .medium))
+                        .scaledFont(size: 11, weight: .medium, relativeTo: .caption)
                         .foregroundColor(.red.opacity(0.8))
                         .frame(width: 28, height: 28)
                         .background(
@@ -191,7 +191,7 @@ struct CartItemCard: View {
                 HStack(spacing: 6) {
                     Button(action: onDecrement) {
                         Image(systemName: "minus")
-                            .font(.system(size: 9, weight: .bold))
+                            .scaledFont(size: 9, weight: .bold, relativeTo: .caption2)
                             .foregroundColor(.primary)
                             .frame(width: 28, height: 28)
                             .background(
@@ -210,7 +210,7 @@ struct CartItemCard: View {
 
                     Button(action: onIncrement) {
                         Image(systemName: "plus")
-                            .font(.system(size: 9, weight: .bold))
+                            .scaledFont(size: 9, weight: .bold, relativeTo: .caption2)
                             .foregroundColor(.primary)
                             .frame(width: 28, height: 28)
                             .background(

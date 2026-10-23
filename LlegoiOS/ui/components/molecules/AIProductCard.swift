@@ -93,7 +93,7 @@ struct AIProductCard: View {
         ZStack {
             Rectangle().fill(Color.primary.opacity(0.04))
             Image(systemName: "bag")
-                .font(.system(size: 22, weight: .light))
+                .scaledFont(size: 22, weight: .light, relativeTo: .title2)
                 .foregroundColor(.secondary.opacity(0.5))
         }
     }
@@ -103,7 +103,7 @@ struct AIProductCard: View {
     private var infoColumn: some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(product.name)
-                .font(.system(size: 15.5, weight: .semibold))
+                .scaledFont(size: 15.5, weight: .semibold, relativeTo: .body)
                 .foregroundColor(.primary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
@@ -129,7 +129,7 @@ struct AIProductCard: View {
                     }
 
                     Text(branchName)
-                        .font(.system(size: 12))
+                        .scaledFont(size: 12, relativeTo: .caption)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
@@ -138,11 +138,11 @@ struct AIProductCard: View {
             if let reason = product.reason, !reason.isEmpty {
                 HStack(alignment: .top, spacing: 4) {
                     Image(systemName: "sparkles")
-                        .font(.system(size: 9.5, weight: .semibold))
+                        .scaledFont(size: 9.5, weight: .semibold, relativeTo: .caption2)
                         .foregroundColor(gradientManager.currentAccentColor)
                         .padding(.top, 1)
                     Text(reason)
-                        .font(.system(size: 11.5, weight: .medium))
+                        .scaledFont(size: 11.5, weight: .medium, relativeTo: .caption)
                         .foregroundColor(.secondary)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -161,24 +161,24 @@ struct AIProductCard: View {
             HStack(alignment: .firstTextBaseline, spacing: 2) {
                 if product.currency == "USD" {
                     Text("$")
-                        .font(.system(size: 13, weight: .semibold))
+                        .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                         .foregroundColor(.secondary)
                     Text(formattedPrice)
-                        .font(.system(size: 17, weight: .bold))
+                        .scaledFont(size: 17, weight: .bold, relativeTo: .body)
                         .foregroundColor(.primary)
                 } else {
                     Text(formattedPrice)
-                        .font(.system(size: 17, weight: .bold))
+                        .scaledFont(size: 17, weight: .bold, relativeTo: .body)
                         .foregroundColor(.primary)
                     Text(product.currency)
-                        .font(.system(size: 11, weight: .semibold))
+                        .scaledFont(size: 11, weight: .semibold, relativeTo: .caption)
                         .foregroundColor(.secondary)
                 }
             }
 
             if !product.availability {
                 Text("Agotado")
-                    .font(.system(size: 10, weight: .semibold))
+                    .scaledFont(size: 10, weight: .semibold, relativeTo: .caption2)
                     .foregroundColor(.secondary)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3)
@@ -194,7 +194,7 @@ struct AIProductCard: View {
             HStack(spacing: 2) {
                 Button(action: decrement) {
                     Image(systemName: count > 1 ? "minus" : "trash")
-                        .font(.system(size: 12, weight: .bold))
+                        .scaledFont(size: 12, weight: .bold, relativeTo: .caption)
                         .foregroundColor(gradientManager.currentAccentColor)
                         .frame(width: 32, height: 34)
                         .frame(minWidth: 44, minHeight: 44)
@@ -203,14 +203,14 @@ struct AIProductCard: View {
                 .accessibilityLabel(count > 1 ? "Quitar uno" : "Eliminar del carrito")
 
                 Text("\(count)")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .scaledFont(size: 15, weight: .bold, design: .rounded, relativeTo: .subheadline)
                     .foregroundColor(.primary)
                     .frame(minWidth: 20)
                     .contentTransition(.numericText())
 
                 Button(action: increment) {
                     Image(systemName: "plus")
-                        .font(.system(size: 12, weight: .bold))
+                        .scaledFont(size: 12, weight: .bold, relativeTo: .caption)
                         .foregroundColor(.white)
                         .frame(width: 30, height: 30)
                         .background(Circle().fill(gradientManager.currentAccentColor))
@@ -228,7 +228,7 @@ struct AIProductCard: View {
         } else {
             Button(action: increment) {
                 Image(systemName: "plus")
-                    .font(.system(size: 17, weight: .semibold))
+                    .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
                     .foregroundColor(.white)
                     .frame(width: 40, height: 40)
                     .background(Circle().fill(gradientManager.currentAccentColor))

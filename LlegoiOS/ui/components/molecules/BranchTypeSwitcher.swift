@@ -98,7 +98,7 @@ struct BranchTypeSwitcher: View {
                 photo(for: option, accent: accent, isSelected: isSelected)
 
                 Text(option.name)
-                    .font(.system(size: isCompact ? 14 : 15, weight: .bold, design: .rounded))
+                    .scaledFont(size: isCompact ? 14 : 15, weight: .bold, design: .rounded, relativeTo: .subheadline)
                     .foregroundColor(isSelected ? .white : Color.primary.opacity(0.85))
                     .fixedSize()
             }
@@ -143,7 +143,7 @@ struct BranchTypeSwitcher: View {
                 // Tipos dinámicos sin foto local: el icono sobre su propio color.
                 accent.opacity(0.9)
                 Image(systemName: option.icon)
-                    .font(.system(size: 20, weight: .semibold))
+                    .scaledFont(size: 20, weight: .semibold, relativeTo: .title3)
                     .foregroundColor(.white)
             }
         }

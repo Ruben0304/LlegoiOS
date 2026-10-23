@@ -23,7 +23,7 @@ struct FullLoadingView: View {
             .offset(y: -85)
 
             Text("Cargando...")
-                .font(.system(size: 22, weight: .semibold, design: .rounded))
+                .scaledFont(size: 22, weight: .semibold, design: .rounded, relativeTo: .title2)
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 .offset(y: 30)
         }

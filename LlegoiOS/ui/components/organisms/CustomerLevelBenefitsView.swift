@@ -85,11 +85,11 @@ struct CustomerLevelBenefitsView: View {
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Niveles de Cliente")
-                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .scaledFont(size: 24, weight: .bold, design: .rounded, relativeTo: .title)
                 .foregroundColor(.llegoPrimary)
 
             Text("Conoce los beneficios de cada nivel y como obtener puntos.")
-                .font(.system(size: 14, weight: .medium))
+                .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                 .foregroundColor(.gray)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -103,24 +103,24 @@ struct CustomerLevelBenefitsView: View {
                     .frame(width: 10, height: 10)
 
                 Text(item.level.name)
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .scaledFont(size: 18, weight: .bold, design: .rounded, relativeTo: .title3)
                     .foregroundColor(.llegoPrimary)
 
                 Spacer()
             }
 
             Text(item.subtitle)
-                .font(.system(size: 13, weight: .medium))
+                .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                 .foregroundColor(.gray)
 
             ForEach(item.perks, id: \.self) { perk in
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 14, weight: .semibold))
+                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                         .foregroundColor(item.level.color)
 
                     Text(perk)
-                        .font(.system(size: 14, weight: .medium))
+                        .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                         .foregroundColor(.llegoPrimary)
                 }
             }
@@ -136,17 +136,17 @@ struct CustomerLevelBenefitsView: View {
     private var pointsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Como se obtienen los puntos")
-                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .scaledFont(size: 18, weight: .bold, design: .rounded, relativeTo: .title3)
                 .foregroundColor(.llegoPrimary)
 
             ForEach(pointsInfo, id: \.self) { item in
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "sparkle")
-                        .font(.system(size: 14, weight: .semibold))
+                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                         .foregroundColor(.llegoAccent)
 
                     Text(item)
-                        .font(.system(size: 14, weight: .medium))
+                        .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                         .foregroundColor(.llegoPrimary)
                 }
             }

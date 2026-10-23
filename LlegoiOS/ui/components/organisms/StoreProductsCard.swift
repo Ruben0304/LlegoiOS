@@ -217,7 +217,7 @@ private struct StoreProductsCardFront: View {
                     .foregroundColor(.black.opacity(0.78))
 
                 Image(systemName: "arrow.right")
-                    .font(.system(size: 13, weight: .semibold))
+                    .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                     .foregroundColor(.black.opacity(0.78))
             }
             .padding(.horizontal, 16)
@@ -235,6 +235,8 @@ private struct StoreProductsCardFront: View {
             .onTapGesture {
                 onStoreTap(storeGradient)
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isButton)
         }
     }
 
@@ -269,7 +271,7 @@ private struct StoreProductsCardFront: View {
                 ZStack {
                     Color.gray.opacity(0.15)
                     Image(systemName: "storefront")
-                        .font(.system(size: 16))
+                        .scaledFont(size: 16, relativeTo: .body)
                         .foregroundColor(.gray.opacity(0.5))
                 }
                 .onAppear {
@@ -309,7 +311,7 @@ private struct StoreProductsCardFront: View {
                     }
                     Text("• \(store.etaMinutes) min")
                 }
-                .font(.system(size: 12, weight: .medium))
+                .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                 .foregroundColor(.white)
             }
 
@@ -318,7 +320,7 @@ private struct StoreProductsCardFront: View {
             // Flip Button
             Button(action: { onFlip() }) {
                 Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
-                    .font(.system(size: 14, weight: .bold))
+                    .scaledFont(size: 14, weight: .bold, relativeTo: .subheadline)
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
                     .foregroundColor(.white)
@@ -330,7 +332,7 @@ private struct StoreProductsCardFront: View {
             // Options Button
             Button(action: { onStoreTap(storeGradient) }) {
                 Image(systemName: "ellipsis")
-                    .font(.system(size: 16, weight: .bold))
+                    .scaledFont(size: 16, weight: .bold, relativeTo: .body)
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
                     .foregroundColor(.white)
@@ -357,7 +359,7 @@ private struct StoreProductsCardFront: View {
     private var emptyProductsView: some View {
         VStack(spacing: 8) {
             Image(systemName: "bag")
-                .font(.system(size: 32, weight: .light))
+                .scaledFont(size: 32, weight: .light, relativeTo: .largeTitle)
                 .foregroundColor(.gray.opacity(0.5))
 
             Text("Sin productos disponibles")
@@ -400,7 +402,7 @@ private struct StoreProductsCardFront: View {
                 .frame(width: 32, height: 32)
                 .overlay(
                     Image(systemName: "arrow.right")
-                        .font(.system(size: 12, weight: .semibold))
+                        .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                         .foregroundColor(storeGradient.primaryColor)
                 )
         }
@@ -466,6 +468,9 @@ private struct StoreProductsCardBack: View {
             .onTapGesture {
                 showFullMap = true
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Ver el mapa a pantalla completa")
+            .accessibilityAddTraits(.isButton)
 
             // Buttons floating on top
             VStack {
@@ -473,7 +478,7 @@ private struct StoreProductsCardBack: View {
                     // Expand button
                     Button(action: { showFullMap = true }) {
                         Image(systemName: "arrow.up.left.and.arrow.down.right")
-                            .font(.system(size: 14, weight: .bold))
+                            .scaledFont(size: 14, weight: .bold, relativeTo: .subheadline)
                             .frame(width: 36, height: 36)
                             .foregroundColor(.black)
                             .frame(minWidth: 44, minHeight: 44)
@@ -489,7 +494,7 @@ private struct StoreProductsCardBack: View {
                     // Flip back button
                     Button(action: onFlipBack) {
                         Image(systemName: "arrow.trianglehead.2.clockwise.rotate.90")
-                            .font(.system(size: 14, weight: .bold))
+                            .scaledFont(size: 14, weight: .bold, relativeTo: .subheadline)
                             .frame(width: 36, height: 36)
                             .foregroundColor(.black)
                             .frame(minWidth: 44, minHeight: 44)
@@ -589,7 +594,7 @@ private struct StoreMapPin: View {
                             ZStack {
                                 Color.gray.opacity(0.15)
                                 Image(systemName: "storefront")
-                                    .font(.system(size: 16))
+                                    .scaledFont(size: 16, relativeTo: .body)
                                     .foregroundColor(.gray.opacity(0.5))
                             }
                             .frame(width: 42, height: 42)
@@ -688,7 +693,7 @@ struct ProductFullCoverCard: View {
 
                         Button(action: onFavoriteTap) {
                             Image(systemName: isFavorite ? "heart.fill" : "heart")
-                                .font(.system(size: 12, weight: .medium))
+                                .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                                 .foregroundColor(isFavorite ? .red : .white)
                                 .frame(width: 28, height: 28)
                                 .background(
@@ -787,7 +792,7 @@ private struct StoreFullMapView: View {
                     Spacer()
                     Button(action: { dismiss() }) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .bold))
+                            .scaledFont(size: 14, weight: .bold, relativeTo: .subheadline)
                             .frame(width: 36, height: 36)
                             .foregroundColor(.primary)
                             .frame(minWidth: 44, minHeight: 44)

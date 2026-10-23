@@ -11,16 +11,16 @@ struct PickupStoreSelectorView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Tienda de recogida")
-                .font(.system(size: 15, weight: .semibold))
+                .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                 .foregroundColor(.primary)
 
             if let selection {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(selection.branchName)
-                        .font(.system(size: 14, weight: .semibold))
+                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                     if let address = selection.address, !address.isEmpty {
                         Text(address)
-                            .font(.system(size: 13, weight: .regular))
+                            .scaledFont(size: 13, relativeTo: .footnote)
                             .foregroundColor(.secondary)
                     }
                 }
@@ -28,16 +28,16 @@ struct PickupStoreSelectorView: View {
                 HStack(spacing: 8) {
                     ProgressView()
                     Text("Cargando tienda...")
-                        .font(.system(size: 13, weight: .medium))
+                        .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                         .foregroundColor(.secondary)
                 }
             } else if let loadError {
                 Text(loadError)
-                    .font(.system(size: 13, weight: .medium))
+                    .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                     .foregroundColor(.red)
             } else {
                 Text("Selecciona una tienda para recoger.")
-                    .font(.system(size: 13, weight: .medium))
+                    .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                     .foregroundColor(.secondary)
             }
         }

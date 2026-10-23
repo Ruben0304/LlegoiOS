@@ -204,7 +204,7 @@ struct ProductCard: View {
             }
         } label: {
             Image(systemName: isFavorite ? "heart.fill" : "heart")
-                .font(.system(size: 16, weight: .bold))
+                .scaledFont(size: 16, weight: .bold, relativeTo: .body)
                 .foregroundColor(isFavorite ? Color.red : Color.gray)
                 .frame(width: 36, height: 36)
                 .background(
@@ -235,7 +235,7 @@ struct ProductCard: View {
             }
         } label: {
             Image(systemName: quickAddPulse ? "checkmark.circle.fill" : "cart.badge.plus")
-                .font(.system(size: 16, weight: .bold))
+                .scaledFont(size: 16, weight: .bold, relativeTo: .body)
                 .foregroundColor(gradientManager.currentAccentColor)
                 .frame(width: 38, height: 38)
                 .scaleEffect(quickAddPulse ? 1.12 : 1.0)

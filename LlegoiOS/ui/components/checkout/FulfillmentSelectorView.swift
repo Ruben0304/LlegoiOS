@@ -7,7 +7,7 @@ struct FulfillmentSelectorView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Método de entrega")
-                .font(.system(size: 15, weight: .semibold))
+                .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                 .foregroundColor(.primary)
 
             Picker("Fulfillment", selection: $mode) {
@@ -20,7 +20,7 @@ struct FulfillmentSelectorView: View {
 
             if !pickupEnabled {
                 Text("La recogida en tienda no está disponible para este carrito.")
-                    .font(.system(size: 12, weight: .medium))
+                    .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                     .foregroundColor(.secondary)
             }
         }

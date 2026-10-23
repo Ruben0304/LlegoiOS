@@ -35,7 +35,7 @@ struct PaymentMethodRow: View {
             switch method.imageType {
             case .systemIcon(let iconName):
                 Image(systemName: iconName)
-                    .font(.system(size: 22, weight: .semibold))
+                    .scaledFont(size: 22, weight: .semibold, relativeTo: .title2)
                     .foregroundColor(.primary)
                     .opacity(0.8)
             case .assetImage(let imageName):
@@ -61,9 +61,9 @@ struct PaymentMethodRow: View {
                     .overlay(
                         HStack(spacing: 6) {
                             Image(systemName: "checkmark.seal.fill")
-                                .font(.system(size: 11, weight: .bold))
+                                .scaledFont(size: 11, weight: .bold, relativeTo: .caption)
                             Text("Seleccionado")
-                                .font(.system(size: 12, weight: .semibold))
+                                .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                         }
                         .foregroundColor(gradientManager.currentAccentColor)
                         .padding(.horizontal, 8)
@@ -75,9 +75,9 @@ struct PaymentMethodRow: View {
     private var currencyChip: some View {
         HStack(spacing: 6) {
             Image(systemName: "banknote")
-                .font(.system(size: 11, weight: .medium))
+                .scaledFont(size: 11, weight: .medium, relativeTo: .caption)
             Text(method.currency)
-                .font(.system(size: 12, weight: .semibold))
+                .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
@@ -90,13 +90,13 @@ struct PaymentMethodRow: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Text(method.name)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .scaledFont(size: 16, weight: .semibold, design: .rounded, relativeTo: .body)
                     .foregroundColor(.primary)
                 badgeView
             }
 
             Text(method.description)
-                .font(.system(size: 13, weight: .medium))
+                .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                 .foregroundColor(.secondary)
                 .lineLimit(2)
 
@@ -110,7 +110,7 @@ struct PaymentMethodRow: View {
             infoView
             Spacer()
             Image(systemName: "chevron.forward")
-                .font(.system(size: 12, weight: .semibold))
+                .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                 .foregroundColor(.secondary)
                 .opacity(0.6)
         }

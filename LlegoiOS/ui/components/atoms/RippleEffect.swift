@@ -145,7 +145,7 @@ struct RippleOverlay: View {
                 VStack {
                     Spacer()
                     Text("Toca en cualquier lugar")
-                        .font(.system(size: 18, weight: .medium))
+                        .scaledFont(size: 18, weight: .medium, relativeTo: .title3)
                         .foregroundColor(.gray)
                         .padding(.bottom, 50)
                 }

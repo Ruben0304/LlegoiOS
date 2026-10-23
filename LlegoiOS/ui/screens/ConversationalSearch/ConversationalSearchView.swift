@@ -57,11 +57,11 @@ struct ConversationalSearchView: View {
                                 // Estado vacío minimalista
                                 VStack(spacing: 12) {
                                     Image(systemName: "magnifyingglass")
-                                        .font(.system(size: 48, weight: .ultraLight))
+                                        .scaledFont(size: 48, weight: .ultraLight, relativeTo: .largeTitle)
                                         .foregroundColor(.secondary.opacity(0.3))
 
                                     Text("¿Qué estás buscando?")
-                                        .font(.system(size: 20, weight: .light))
+                                        .scaledFont(size: 20, weight: .light, relativeTo: .title3)
                                         .foregroundColor(.secondary.opacity(0.6))
                                 }
                                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -125,7 +125,7 @@ struct ConversationalSearchView: View {
             ToolbarItem(placement: .bottomBar) {
                 Button(action: handleSendAction) {
                     Image(systemName: "paperplane")
-                        .font(.system(size: 16, weight: .semibold))
+                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                         .foregroundColor(gradientManager.currentAccentColor)
                         .frame(minWidth: 44, minHeight: 44)
                         .contentShape(Rectangle())
@@ -314,7 +314,7 @@ struct MessageBubble: View {
             Spacer(minLength: 40)
 
             StreamingMarkdownText(text: message.text, isFromUser: true)
-                .font(.system(size: 16))
+                .scaledFont(size: 16, relativeTo: .body)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
                 .background {
@@ -344,7 +344,7 @@ struct MessageBubble: View {
         VStack(alignment: .leading, spacing: 10) {
             // Respuesta de texto — mismo ancho máximo que los cards
             StreamingMarkdownText(text: message.text, isFromUser: false)
-                .font(.system(size: 16))
+                .scaledFont(size: 16, relativeTo: .body)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
                 .background {
@@ -374,6 +374,8 @@ struct MessageBubble: View {
                                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                     selectedProductId = product.id
                                 }
+                                .accessibilityElement(children: .combine)
+                                .accessibilityAddTraits(.isButton)
                         }
                     }
                     .frame(maxWidth: maxAssistantWidth, alignment: .leading)
@@ -402,7 +404,7 @@ struct MessageBubble: View {
                     .clipShape(Circle())
                     .shadow(color: .black.opacity(0.12), radius: 3, x: 0, y: 1)
                 Text("Llego AI")
-                    .font(.system(size: 11, weight: .medium))
+                    .scaledFont(size: 11, weight: .medium, relativeTo: .caption)
                     .foregroundColor(.secondary)
             }
             .padding(.top, 2)
@@ -422,7 +424,7 @@ struct ProductsLoadingIndicator: View {
                     .scaleEffect(0.7)
                     .tint(.secondary)
                 Text("Cargando productos…")
-                    .font(.system(size: 12.5, weight: .medium))
+                    .scaledFont(size: 12.5, weight: .medium, relativeTo: .footnote)
                     .foregroundColor(.secondary)
             }
 

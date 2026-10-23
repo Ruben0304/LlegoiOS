@@ -121,18 +121,18 @@ struct AppModeSelectionView: View {
     private var header: some View {
         VStack(spacing: 11) {
             Text("LLEGÓ")
-                .font(.system(size: 13, weight: .heavy, design: .rounded))
+                .scaledFont(size: 13, weight: .heavy, design: .rounded, relativeTo: .footnote)
                 .tracking(3.6)
                 .foregroundColor(accent.opacity(0.75))
 
             Text("¿Cómo quieres\nusar la app?")
-                .font(.system(size: 33, weight: .bold, design: .rounded))
+                .scaledFont(size: 33, weight: .bold, design: .rounded, relativeTo: .largeTitle)
                 .foregroundColor(ink)
                 .multilineTextAlignment(.center)
                 .lineSpacing(2)
 
             Text("Puedes cambiarlo cuando quieras desde tu perfil.")
-                .font(.system(size: 15, weight: .medium))
+                .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
                 .foregroundColor(inkSecondary)
                 .multilineTextAlignment(.center)
         }
@@ -143,7 +143,7 @@ struct AppModeSelectionView: View {
 
     private var summaryText: some View {
         Text(selectedMode.summary)
-            .font(.system(size: 16, weight: .medium))
+            .scaledFont(size: 16, weight: .medium, relativeTo: .body)
             .foregroundColor(inkSecondary)
             .multilineTextAlignment(.center)
             .lineSpacing(3)
@@ -159,7 +159,7 @@ struct AppModeSelectionView: View {
             onContinue(selectedMode)
         } label: {
             Text("Continuar")
-                .font(.system(size: 18.5, weight: .semibold, design: .rounded))
+                .scaledFont(size: 18.5, weight: .semibold, design: .rounded, relativeTo: .title3)
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 56)
@@ -242,7 +242,7 @@ private struct ModeCard: View {
 
                     if mode.isRecommended {
                         Text("RECOMENDADO")
-                            .font(.system(size: 10, weight: .heavy, design: .rounded))
+                            .scaledFont(size: 10, weight: .heavy, design: .rounded, relativeTo: .caption2)
                             .tracking(0.6)
                             .foregroundColor(.white)
                             .padding(.horizontal, 10)
@@ -269,18 +269,18 @@ private struct ModeCard: View {
 
                             if isSelected {
                                 Image(systemName: "checkmark")
-                                    .font(.system(size: 10, weight: .black))
+                                    .scaledFont(size: 10, weight: .black, relativeTo: .caption2)
                                     .foregroundColor(.white)
                             }
                         }
 
                         Text(mode.title)
-                            .font(.system(size: 18, weight: .semibold, design: .rounded))
+                            .scaledFont(size: 18, weight: .semibold, design: .rounded, relativeTo: .title3)
                             .foregroundColor(ink)
                     }
 
                     Text(mode.tagline)
-                        .font(.system(size: 12.5, weight: .medium))
+                        .scaledFont(size: 12.5, weight: .medium, relativeTo: .footnote)
                         .foregroundColor(inkSecondary.opacity(0.85))
                         .multilineTextAlignment(.center)
                         .lineLimit(2)

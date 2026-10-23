@@ -24,7 +24,7 @@ struct HDRGlowButton: View {
                 
                 // Contenido del botón
                 Text(title)
-                    .font(.system(size: 18, weight: .bold))
+                    .scaledFont(size: 18, weight: .bold, relativeTo: .title3)
                     .foregroundColor(.white)
                     .frame(width: 200, height: 60)
                     .background(
@@ -70,7 +70,7 @@ struct HDRBorderCard: View {
                 .frame(width: 160, height: 100)
                 .overlay(
                     Text(content)
-                        .font(.system(size: 16, weight: .semibold))
+                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                 )
         }
         .animation(.easeInOut(duration: 0.3), value: isSelected)
@@ -133,7 +133,7 @@ struct HDRNotificationBadge: View {
                 .frame(width: 24, height: 24)
                 .overlay(
                     Text("\(count)")
-                        .font(.system(size: 12, weight: .bold))
+                        .scaledFont(size: 12, weight: .bold, relativeTo: .caption)
                         .foregroundColor(.white)
                 )
         }
@@ -205,7 +205,7 @@ struct HDRHighlightedText: View {
             
             // Texto
             Text(text)
-                .font(.system(size: 24, weight: .black))
+                .scaledFont(size: 24, weight: .black, relativeTo: .title)
                 .foregroundStyle(
                     LinearGradient(
                         colors: [.white, highlightColor.opacity(0.8)],
@@ -223,7 +223,7 @@ struct HDRHighlightedText: View {
     ScrollView {
         VStack(spacing: 40) {
             Text("HDR Effects Examples")
-                .font(.system(size: 28, weight: .bold))
+                .scaledFont(size: 28, weight: .bold, relativeTo: .title)
                 .padding(.top, 40)
             
             VStack(spacing: 20) {

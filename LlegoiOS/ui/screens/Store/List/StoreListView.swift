@@ -96,7 +96,7 @@ struct StoreListView: View {
                             .controlSize(.large)
                             .tint(gradientManager.currentAccentColor)
                         Text("Cargando tiendas...")
-                            .font(.system(size: 16, weight: .medium))
+                            .scaledFont(size: 16, weight: .medium, relativeTo: .body)
                             .foregroundColor(.secondary)
                     }
                 } else if viewMode == .list {
@@ -112,7 +112,7 @@ struct StoreListView: View {
                                             .controlSize(.large)
                                             .tint(gradientManager.currentAccentColor)
                                         Text("Cargando tiendas...")
-                                            .font(.system(size: 16, weight: .medium))
+                                            .scaledFont(size: 16, weight: .medium, relativeTo: .body)
                                             .foregroundColor(.secondary)
                                     }
                                     .frame(maxWidth: .infinity)
@@ -142,15 +142,15 @@ struct StoreListView: View {
                                     // Sin resultados
                                     VStack(spacing: 16) {
                                         Image(systemName: "magnifyingglass")
-                                            .font(.system(size: 50, weight: .light))
+                                            .scaledFont(size: 50, weight: .light, relativeTo: .largeTitle)
                                             .foregroundColor(.gray)
 
                                         Text("No se encontraron vendedores")
-                                            .font(.system(size: 18, weight: .semibold))
+                                            .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
                                             .foregroundColor(gradientManager.currentAccentColor)
 
                                         Text("Intenta con otra búsqueda")
-                                            .font(.system(size: 14))
+                                            .scaledFont(size: 14, relativeTo: .subheadline)
                                             .foregroundColor(.gray)
                                     }
                                     .frame(maxWidth: .infinity)
@@ -241,7 +241,7 @@ struct StoreListView: View {
                         }
                     }) {
                         Image(systemName: viewMode == .list ? "map.fill" : "list.bullet")
-                            .font(.system(size: 16, weight: .semibold))
+                            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                             .foregroundColor(gradientManager.currentAccentColor)
                             .frame(width: 30, height: 30)
                             .frame(minWidth: 44, minHeight: 44)
@@ -369,10 +369,10 @@ struct StoreListView: View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.gray)
-                .font(.system(size: 14))
+                .scaledFont(size: 14, relativeTo: .subheadline)
 
             TextField("Buscar vendedores...", text: $searchText)
-                .font(.system(size: 15))
+                .scaledFont(size: 15, relativeTo: .subheadline)
                 .autocorrectionDisabled()
                 .focused($isSearchFocused)
 
@@ -382,7 +382,7 @@ struct StoreListView: View {
                 }) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.gray)
-                        .font(.system(size: 14))
+                        .scaledFont(size: 14, relativeTo: .subheadline)
                         .frame(minWidth: 44, minHeight: 44)
                         .contentShape(Rectangle())
                 }
@@ -395,7 +395,7 @@ struct StoreListView: View {
                     searchText = ""
                 }) {
                     Text("Cancelar")
-                        .font(.system(size: 14, weight: .medium))
+                        .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                         .foregroundColor(gradientManager.currentAccentColor)
                 }
                 .transition(.move(edge: .trailing).combined(with: .opacity))
@@ -549,6 +549,9 @@ private struct RadialShopMapView: View {
                         .onTapGesture {
                             expandMap()
                         }
+                        .accessibilityElement()
+                        .accessibilityLabel("Ampliar el mapa")
+                        .accessibilityAddTraits(.isButton)
                 }
 
                 // Indicador central - solo visible cuando NO está expandido
@@ -686,7 +689,7 @@ private struct ShopMapPinView: View {
                                 .clipShape(Circle())
                         case .failure:
                             Image(systemName: pin.type.icon)
-                                .font(.system(size: 20, weight: .semibold))
+                                .scaledFont(size: 20, weight: .semibold, relativeTo: .title3)
                                 .foregroundColor(.white)
                                 .frame(width: 42, height: 42)
                         @unknown default:
@@ -774,7 +777,7 @@ private struct StoreListCard: View {
                 // Nombre y estado en línea
                 HStack(alignment: .center, spacing: 6) {
                     Text(store.name)
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .scaledFont(size: 16, weight: .bold, design: .rounded, relativeTo: .body)
                         .foregroundColor(.primary)
                         .lineLimit(1)
 
@@ -784,7 +787,7 @@ private struct StoreListCard: View {
 
                     // Flecha
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
+                        .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                         .foregroundColor(.secondary.opacity(0.4))
                 }
 
@@ -792,7 +795,7 @@ private struct StoreListCard: View {
                 HStack(spacing: 8) {
                     if let address = store.address {
                         Text(address)
-                            .font(.system(size: 12, weight: .medium))
+                            .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                             .foregroundColor(.secondary)
                             .lineLimit(1)
                     }
@@ -803,10 +806,10 @@ private struct StoreListCard: View {
                     if let rating = store.rating {
                         HStack(spacing: 3) {
                             Image(systemName: "star.fill")
-                                .font(.system(size: 9))
+                                .scaledFont(size: 9, relativeTo: .caption2)
                                 .foregroundColor(.orange)
                             Text(String(format: "%.1f", rating))
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .scaledFont(size: 11, weight: .bold, design: .rounded, relativeTo: .caption)
                                 .foregroundColor(.primary)
                         }
                     }
@@ -814,10 +817,10 @@ private struct StoreListCard: View {
                     // ETA
                     HStack(spacing: 3) {
                         Image(systemName: "clock.fill")
-                            .font(.system(size: 9))
+                            .scaledFont(size: 9, relativeTo: .caption2)
                             .foregroundColor(.llegoAccent)
                         Text("\(store.etaMinutes) min")
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .scaledFont(size: 11, weight: .semibold, design: .rounded, relativeTo: .caption)
                             .foregroundColor(.primary)
                     }
                 }
@@ -849,7 +852,7 @@ private struct StoreListCard: View {
                 ZStack {
                     Color.gray.opacity(0.15)
                     Image(systemName: "storefront")
-                        .font(.system(size: 18))
+                        .scaledFont(size: 18, relativeTo: .title3)
                         .foregroundColor(.gray.opacity(0.5))
                 }
             }
@@ -868,7 +871,7 @@ private struct StoreListCard: View {
                 .fill(Color.green)
                 .frame(width: 5, height: 5)
             Text("Abierto")
-                .font(.system(size: 10, weight: .semibold))
+                .scaledFont(size: 10, weight: .semibold, relativeTo: .caption2)
                 .foregroundColor(.green)
         }
         .padding(.horizontal, 6)
@@ -926,7 +929,7 @@ private struct FullScreenMapView: View {
                                     ZStack {
                                         Color.gray.opacity(0.15)
                                         Image(systemName: "storefront")
-                                            .font(.system(size: 16))
+                                            .scaledFont(size: 16, relativeTo: .body)
                                             .foregroundColor(.gray.opacity(0.5))
                                     }
                                     .frame(width: 42, height: 42)

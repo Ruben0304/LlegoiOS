@@ -100,7 +100,7 @@ struct ComboCard: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(combo.name)
-                    .font(.system(size: 17, weight: .semibold))
+                    .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
                     .foregroundColor(.primary)
                     .lineLimit(2)
                     .truncationMode(.tail)
@@ -122,7 +122,7 @@ struct ComboCard: View {
                         .clipShape(Circle())
                     }
                     Text(combo.shop)
-                        .font(.system(size: 13))
+                        .scaledFont(size: 13, relativeTo: .footnote)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
@@ -134,12 +134,12 @@ struct ComboCard: View {
             // Price row
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(combo.formattedFromPrice)
-                    .font(.system(size: 18, weight: .bold))
+                    .scaledFont(size: 18, weight: .bold, relativeTo: .title3)
                     .foregroundColor(.primary)
 
                 if combo.hasStartingDiscount, let formattedStartingBasePrice = combo.formattedStartingBasePrice {
                     Text(formattedStartingBasePrice)
-                        .font(.system(size: 13, weight: .regular))
+                        .scaledFont(size: 13, relativeTo: .footnote)
                         .foregroundColor(.secondary)
                         .strikethrough(true, color: .secondary)
                 }
@@ -148,7 +148,7 @@ struct ComboCard: View {
 
                 if combo.comboKind == .discounted && combo.hasDiscount && !combo.discountLabel.isEmpty {
                     Text(combo.discountLabel)
-                        .font(.system(size: 12, weight: .bold))
+                        .scaledFont(size: 12, weight: .bold, relativeTo: .caption)
                         .foregroundColor(.white)
                         .padding(.horizontal, 7)
                         .padding(.vertical, 3)
@@ -171,11 +171,11 @@ struct ComboCard: View {
         case .withGifts:
             HStack(spacing: 4) {
                 Image(systemName: "gift.fill")
-                    .font(.system(size: 10, weight: .semibold))
+                    .scaledFont(size: 10, weight: .semibold, relativeTo: .caption2)
                 Text(combo.giftOptionsCount == 1
                      ? "1 regalo incluido"
                      : "\(combo.giftOptionsCount) regalos incluidos")
-                    .font(.system(size: 12, weight: .semibold))
+                    .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
             }
             .foregroundColor(.purple)
             .padding(.horizontal, 8)
@@ -185,9 +185,9 @@ struct ComboCard: View {
         case .withFreeSlots:
             HStack(spacing: 4) {
                 Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 10, weight: .semibold))
+                    .scaledFont(size: 10, weight: .semibold, relativeTo: .caption2)
                 Text("Complementos gratis")
-                    .font(.system(size: 12, weight: .semibold))
+                    .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
             }
             .foregroundColor(.orange)
             .padding(.horizontal, 8)
@@ -197,9 +197,9 @@ struct ComboCard: View {
         case .bundle:
             HStack(spacing: 4) {
                 Image(systemName: "square.stack.3d.up.fill")
-                    .font(.system(size: 10, weight: .semibold))
+                    .scaledFont(size: 10, weight: .semibold, relativeTo: .caption2)
                 Text("\(combo.slotCount) \(combo.slotCount == 1 ? "lote" : "lotes")")
-                    .font(.system(size: 12, weight: .semibold))
+                    .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
             }
             .foregroundColor(gradientManager.currentAccentColor)
             .padding(.horizontal, 8)
@@ -224,14 +224,14 @@ struct ComboCard: View {
             // Kind overlay on image for gift and free slot types
             if combo.comboKind == .withGifts {
                 Image(systemName: "gift.fill")
-                    .font(.system(size: 14, weight: .bold))
+                    .scaledFont(size: 14, weight: .bold, relativeTo: .subheadline)
                     .foregroundColor(.white)
                     .padding(8)
                     .background(Circle().fill(Color.purple))
                     .padding(10)
             } else if combo.comboKind == .withFreeSlots {
                 Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 14, weight: .bold))
+                    .scaledFont(size: 14, weight: .bold, relativeTo: .subheadline)
                     .foregroundColor(.white)
                     .padding(8)
                     .background(Circle().fill(Color.orange))
@@ -308,7 +308,7 @@ struct ComboCard: View {
         ZStack {
             Color(red: 240/255, green: 242/255, blue: 246/255)
             Image(systemName: "square.stack.3d.up.fill")
-                .font(.system(size: 32))
+                .scaledFont(size: 32, relativeTo: .largeTitle)
                 .foregroundColor(.gray.opacity(0.4))
         }
     }

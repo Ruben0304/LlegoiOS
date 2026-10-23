@@ -40,7 +40,7 @@ struct FlyingParticleView: View {
                 },
                 failure: {
                     Image(systemName: "cart.fill")
-                        .font(.system(size: 18))
+                        .scaledFont(size: 18, relativeTo: .title3)
                         .foregroundColor(.gray)
                         .frame(width: 40, height: 40)
                 }

@@ -77,7 +77,7 @@ struct OrderTrackingView: View {
                 .frame(width: 36, height: 36)
 
             Image(systemName: item.type.icon)
-                .font(.system(size: 16, weight: .semibold))
+                .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                 .foregroundColor(.white)
         }
         .shadow(radius: 4)
@@ -170,7 +170,7 @@ struct OrderTrackingView: View {
                                 image.resizable().aspectRatio(contentMode: .fill)
                             } placeholder: {
                                 Image(systemName: "person.circle.fill")
-                                    .font(.system(size: 44))
+                                    .scaledFont(size: 44, relativeTo: .largeTitle)
                                     .foregroundColor(.gray)
                             }
                             .frame(width: 50, height: 50)

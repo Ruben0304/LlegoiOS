@@ -51,7 +51,7 @@ struct WalletView: View {
                                         }
                                     }) {
                                         Text(currency.switcherTitle)
-                                            .font(.system(size: 14, weight: .semibold))
+                                            .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                                             .foregroundColor(selectedCurrency == currency ? .white : .primary.opacity(0.7))
                                             .padding(.horizontal, 16)
                                             .padding(.vertical, 8)
@@ -77,13 +77,13 @@ struct WalletView: View {
                         VStack(spacing: 16) {
                             HStack {
                                 Text("Acciones rápidas")
-                                    .font(.system(size: 18, weight: .bold))
+                                    .scaledFont(size: 18, weight: .bold, relativeTo: .title3)
                                     .foregroundColor(.primary)
                                 
                                 Spacer()
                                 
                                 Text(selectedCurrency.currencyCode)
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                                     .foregroundColor(.secondary)
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 6)
@@ -112,12 +112,12 @@ struct WalletView: View {
                                                 .frame(width: 56, height: 56)
                                             
                                             Image(systemName: "plus.circle.fill")
-                                                .font(.system(size: 28))
+                                                .scaledFont(size: 28, relativeTo: .title)
                                                 .foregroundColor(selectedCurrency.activeColor)
                                         }
                                         
                                         Text("Recargar")
-                                            .font(.system(size: 14, weight: .semibold))
+                                            .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                                             .foregroundColor(.primary)
                                     }
                                     .frame(maxWidth: .infinity)
@@ -145,13 +145,13 @@ struct WalletView: View {
                                                     .tint(.llegoAccent)
                                             } else {
                                                 Image(systemName: "globe.americas.fill")
-                                                    .font(.system(size: 28))
+                                                    .scaledFont(size: 28, relativeTo: .title)
                                                     .foregroundColor(.llegoAccent)
                                             }
                                         }
                                         
                                         Text("Internacional")
-                                            .font(.system(size: 14, weight: .semibold))
+                                            .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                                             .foregroundColor(.primary)
                                     }
                                     .frame(maxWidth: .infinity)
@@ -180,12 +180,12 @@ struct WalletView: View {
                                                 .frame(width: 56, height: 56)
                                             
                                             Image(systemName: "arrow.left.arrow.right")
-                                                .font(.system(size: 24))
+                                                .scaledFont(size: 24, relativeTo: .title)
                                                 .foregroundColor(.llegoTertiary)
                                         }
                                         
                                         Text("Transferir")
-                                            .font(.system(size: 14, weight: .semibold))
+                                            .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                                             .foregroundColor(.primary)
                                     }
                                     .frame(maxWidth: .infinity)
@@ -209,12 +209,12 @@ struct WalletView: View {
                                                 .frame(width: 56, height: 56)
                                             
                                             Image(systemName: "clock.arrow.circlepath")
-                                                .font(.system(size: 24))
+                                                .scaledFont(size: 24, relativeTo: .title)
                                                 .foregroundColor(.gray)
                                         }
                                         
                                         Text("Historial")
-                                            .font(.system(size: 14, weight: .semibold))
+                                            .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                                             .foregroundColor(.primary)
                                     }
                                     .frame(maxWidth: .infinity)
@@ -238,16 +238,16 @@ struct WalletView: View {
                             // Security Info
                             HStack(spacing: 12) {
                                 Image(systemName: "lock.shield.fill")
-                                    .font(.system(size: 24))
+                                    .scaledFont(size: 24, relativeTo: .title)
                                     .foregroundColor(.llegoPrimary)
                                 
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text("Transacciones seguras")
-                                        .font(.system(size: 15, weight: .semibold))
+                                        .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                                         .foregroundColor(.primary)
                                     
                                     Text("Protección bancaria nivel 256-bit")
-                                        .font(.system(size: 13))
+                                        .scaledFont(size: 13, relativeTo: .footnote)
                                         .foregroundColor(.secondary)
                                 }
                                 
@@ -277,7 +277,7 @@ struct WalletView: View {
                                 )
 
                                 Text("Cargando transacciones...")
-                                    .font(.system(size: 14, weight: .medium))
+                                    .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                                     .foregroundColor(.secondary)
                             }
                             .padding(.top, 20)
@@ -302,11 +302,11 @@ struct WalletView: View {
                     VStack {
                         HStack(spacing: 12) {
                             Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 24))
+                                .scaledFont(size: 24, relativeTo: .title)
                                 .foregroundColor(.green)
                             
                             Text(viewModel.successMessage)
-                                .font(.system(size: 15, weight: .semibold))
+                                .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                                 .foregroundColor(.primary)
                         }
                         .padding(.horizontal, 20)
@@ -429,18 +429,18 @@ private struct WalletAccountCard: View {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Llego Wallet")
-                            .font(.system(size: 16, weight: .semibold))
+                            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                             .foregroundColor(.white.opacity(0.9))
 
                         Text(currency.cardSubtitle)
-                            .font(.system(size: 12, weight: .medium))
+                            .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                             .foregroundColor(.white.opacity(0.7))
                     }
 
                     Spacer()
 
                     Image(systemName: "wallet.pass.fill")
-                        .font(.system(size: 28))
+                        .scaledFont(size: 28, relativeTo: .title)
                         .foregroundColor(currency.accentIconColor)
                 }
 
@@ -448,17 +448,17 @@ private struct WalletAccountCard: View {
 
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text(currency.symbol)
-                        .font(.system(size: 24, weight: .semibold, design: .rounded))
+                        .scaledFont(size: 24, weight: .semibold, design: .rounded, relativeTo: .title)
                         .foregroundColor(.white)
 
                     Text(String(format: "%.2f", amount))
-                        .font(.system(size: 44, weight: .bold, design: .rounded))
+                        .scaledFont(size: 44, weight: .bold, design: .rounded, relativeTo: .largeTitle)
                         .foregroundColor(.white)
 
                     Spacer()
 
                     Text(currency.currencyCode)
-                        .font(.system(size: 14, weight: .semibold))
+                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                         .foregroundColor(.white.opacity(0.85))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
@@ -485,9 +485,9 @@ private struct WalletAccountCard: View {
                 Button(action: onReimburseTap) {
                     HStack(spacing: 6) {
                         Image(systemName: "arrow.uturn.backward.circle.fill")
-                            .font(.system(size: 18))
+                            .scaledFont(size: 18, relativeTo: .title3)
                         Text("Reembolsar")
-                            .font(.system(size: 13, weight: .semibold))
+                            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                     }
                     .foregroundColor(.white.opacity(0.92))
                     .padding(.horizontal, 14)
@@ -611,7 +611,7 @@ struct LocalRechargeSheet: View {
                     // Currency Picker
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Moneda")
-                            .font(.system(size: 14, weight: .medium))
+                            .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                             .foregroundColor(.secondary)
 
                         Picker("Moneda", selection: $selectedCurrency) {
@@ -628,17 +628,17 @@ struct LocalRechargeSheet: View {
                     // Amount Input
                     VStack(spacing: 8) {
                         Text("Monto a recargar")
-                            .font(.system(size: 14, weight: .medium))
+                            .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                             .foregroundColor(.secondary)
 
                         HStack(alignment: .firstTextBaseline, spacing: 4) {
                             Text(selectedCurrency.symbol)
-                                .font(.system(size: 24, weight: .semibold))
+                                .scaledFont(size: 24, weight: .semibold, relativeTo: .title)
                                 .foregroundColor(.primary)
 
                             TextField("0.00", text: $viewModel.rechargeAmount)
                                 .keyboardType(.decimalPad)
-                                .font(.system(size: 48, weight: .bold, design: .rounded))
+                                .scaledFont(size: 48, weight: .bold, design: .rounded, relativeTo: .largeTitle)
                                 .multilineTextAlignment(.leading)
                                 .focused($isAmountFocused)
                         }
@@ -657,7 +657,7 @@ struct LocalRechargeSheet: View {
                                 viewModel.rechargeAmount = String(format: "%.0f", amount)
                             }) {
                                 Text("\(selectedCurrency.symbol)\(Int(amount))")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                                     .foregroundColor(selectedCurrency.activeColor)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 12)
@@ -682,9 +682,9 @@ struct LocalRechargeSheet: View {
                                 }) {
                                     HStack {
                                         Image(systemName: "creditcard.fill")
-                                            .font(.system(size: 18))
+                                            .scaledFont(size: 18, relativeTo: .title3)
                                         Text("Pagar con tarjeta")
-                                            .font(.system(size: 17, weight: .semibold))
+                                            .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
                                     }
                                     .foregroundColor(.white)
                                     .frame(maxWidth: .infinity)
@@ -699,16 +699,16 @@ struct LocalRechargeSheet: View {
                                 // Info: Stripe no soporta CUP
                                 HStack(spacing: 12) {
                                     Image(systemName: "info.circle.fill")
-                                        .font(.system(size: 20))
+                                        .scaledFont(size: 20, relativeTo: .title3)
                                         .foregroundColor(.blue)
                                     
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text("Solo transferencia bancaria")
-                                            .font(.system(size: 14, weight: .semibold))
+                                            .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                                             .foregroundColor(.primary)
                                         
                                         Text("Los pagos con tarjeta solo están disponibles para USD")
-                                            .font(.system(size: 12))
+                                            .scaledFont(size: 12, relativeTo: .caption)
                                             .foregroundColor(.secondary)
                                     }
                                     
@@ -732,9 +732,9 @@ struct LocalRechargeSheet: View {
                                 }) {
                                     HStack(spacing: 10) {
                                         Image(systemName: "building.columns.fill")
-                                            .font(.system(size: 18))
+                                            .scaledFont(size: 18, relativeTo: .title3)
                                         Text("Continuar con transferencia CUP")
-                                            .font(.system(size: 16, weight: .semibold))
+                                            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                                             .lineLimit(1)
                                     }
                                     .foregroundColor(.white)
@@ -800,25 +800,25 @@ struct ForeignRechargeSheet: View {
                             .frame(width: 100, height: 100)
                         
                         Image(systemName: "globe.americas.fill")
-                            .font(.system(size: 48))
+                            .scaledFont(size: 48, relativeTo: .largeTitle)
                             .foregroundColor(.llegoAccent)
                     }
                     .padding(.top, 20)
 
                     // Title
                     Text("Recarga desde el extranjero")
-                        .font(.system(size: 26, weight: .bold))
+                        .scaledFont(size: 26, weight: .bold, relativeTo: .title)
                         .foregroundColor(.primary)
 
                     // Description
                     VStack(spacing: 12) {
                         Text("Comparte este enlace con familiares o amigos en el extranjero")
-                            .font(.system(size: 16))
+                            .scaledFont(size: 16, relativeTo: .body)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                         
                         Text("Ellos podrán enviarte dinero directamente a tu Wallet usando su tarjeta internacional")
-                            .font(.system(size: 14))
+                            .scaledFont(size: 14, relativeTo: .subheadline)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                     }
@@ -828,12 +828,12 @@ struct ForeignRechargeSheet: View {
                     VStack(spacing: 16) {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Tu enlace de recarga")
-                                .font(.system(size: 13, weight: .semibold))
+                                .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                                 .foregroundColor(.secondary)
                                 .padding(.horizontal, 4)
                             
                             Text(viewModel.foreignRechargeURL)
-                                .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                .scaledFont(size: 13, weight: .medium, design: .monospaced, relativeTo: .footnote)
                                 .foregroundColor(.llegoPrimary)
                                 .padding()
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -855,9 +855,9 @@ struct ForeignRechargeSheet: View {
                         }) {
                             HStack(spacing: 10) {
                                 Image(systemName: showCopiedConfirmation ? "checkmark.circle.fill" : "doc.on.doc.fill")
-                                    .font(.system(size: 18, weight: .semibold))
+                                    .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
                                 Text(showCopiedConfirmation ? "¡Copiado!" : "Copiar enlace")
-                                    .font(.system(size: 17, weight: .semibold))
+                                    .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
                             }
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -873,9 +873,9 @@ struct ForeignRechargeSheet: View {
                         ShareLink(item: viewModel.foreignRechargeURL) {
                             HStack(spacing: 10) {
                                 Image(systemName: "square.and.arrow.up")
-                                    .font(.system(size: 18, weight: .semibold))
+                                    .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
                                 Text("Compartir enlace")
-                                    .font(.system(size: 17, weight: .semibold))
+                                    .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
                             }
                             .foregroundColor(.llegoPrimary)
                             .frame(maxWidth: .infinity)
@@ -938,17 +938,17 @@ private struct InfoCard: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 22))
+                .scaledFont(size: 22, relativeTo: .title2)
                 .foregroundColor(.llegoAccent)
                 .frame(width: 40)
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 14, weight: .semibold))
+                    .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                     .foregroundColor(.primary)
                 
                 Text(description)
-                    .font(.system(size: 12))
+                    .scaledFont(size: 12, relativeTo: .caption)
                     .foregroundColor(.secondary)
             }
             
@@ -988,16 +988,16 @@ struct WalletTransferSheet: View {
                                 .frame(width: 80, height: 80)
 
                             Image(systemName: "arrow.left.arrow.right.circle.fill")
-                                .font(.system(size: 36))
+                                .scaledFont(size: 36, relativeTo: .largeTitle)
                                 .foregroundColor(selectedCurrency.activeColor)
                         }
 
                         Text("Transferir saldo")
-                            .font(.system(size: 24, weight: .bold))
+                            .scaledFont(size: 24, weight: .bold, relativeTo: .title)
                             .foregroundColor(.primary)
 
                         Text("Envía dinero a otro usuario de Llego usando su nombre de usuario o correo electrónico.")
-                            .font(.system(size: 15))
+                            .scaledFont(size: 15, relativeTo: .subheadline)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 32)
@@ -1007,7 +1007,7 @@ struct WalletTransferSheet: View {
                     VStack(spacing: 18) {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Usuario o correo destino")
-                                .font(.system(size: 14, weight: .medium))
+                                .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                                 .foregroundColor(.secondary)
 
                             TextField("ej. juan.perez o correo@ejemplo.com", text: $viewModel.transferUsername)
@@ -1049,7 +1049,7 @@ struct WalletTransferSheet: View {
                                                                 .frame(width: 40, height: 40)
                                                                 .overlay(
                                                                     Image(systemName: "person.fill")
-                                                                        .font(.system(size: 18))
+                                                                        .scaledFont(size: 18, relativeTo: .title3)
                                                                         .foregroundColor(.gray)
                                                                 )
                                                         }
@@ -1060,25 +1060,25 @@ struct WalletTransferSheet: View {
                                                         .frame(width: 40, height: 40)
                                                         .overlay(
                                                             Image(systemName: "person.fill")
-                                                                .font(.system(size: 18))
+                                                                .scaledFont(size: 18, relativeTo: .title3)
                                                                 .foregroundColor(.gray)
                                                         )
                                                 }
                                                 
                                                 VStack(alignment: .leading, spacing: 2) {
                                                     Text(user.name)
-                                                        .font(.system(size: 15, weight: .semibold))
+                                                        .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                                                         .foregroundColor(.primary)
                                                     
                                                     Text("@\(user.username)")
-                                                        .font(.system(size: 13))
+                                                        .scaledFont(size: 13, relativeTo: .footnote)
                                                         .foregroundColor(.secondary)
                                                 }
                                                 
                                                 Spacer()
                                                 
                                                 Image(systemName: "chevron.right")
-                                                    .font(.system(size: 12, weight: .semibold))
+                                                    .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                                                     .foregroundColor(.gray.opacity(0.5))
                                             }
                                             .padding(.horizontal, 12)
@@ -1107,7 +1107,7 @@ struct WalletTransferSheet: View {
                                     ProgressView()
                                         .scaleEffect(0.8)
                                     Text("Buscando usuarios...")
-                                        .font(.system(size: 13))
+                                        .scaledFont(size: 13, relativeTo: .footnote)
                                         .foregroundColor(.secondary)
                                 }
                                 .padding(.top, 4)
@@ -1116,17 +1116,17 @@ struct WalletTransferSheet: View {
 
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Monto a transferir")
-                                .font(.system(size: 14, weight: .medium))
+                                .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                                 .foregroundColor(.secondary)
 
                             HStack(alignment: .firstTextBaseline, spacing: 6) {
                                 Text(selectedCurrency.symbol)
-                                    .font(.system(size: 24, weight: .semibold))
+                                    .scaledFont(size: 24, weight: .semibold, relativeTo: .title)
                                     .foregroundColor(.primary)
 
                                 TextField("0.00", text: $viewModel.transferAmount)
                                     .keyboardType(.decimalPad)
-                                    .font(.system(size: 42, weight: .bold, design: .rounded))
+                                    .scaledFont(size: 42, weight: .bold, design: .rounded, relativeTo: .largeTitle)
                                     .multilineTextAlignment(.leading)
                                     .focused($focusedField, equals: .amount)
                             }
@@ -1137,7 +1137,7 @@ struct WalletTransferSheet: View {
                             )
 
                             Text("Saldo disponible: \(selectedCurrency.symbol)\(String(format: "%.2f", viewModel.balance(for: selectedCurrency))) \(selectedCurrency.currencyCode)")
-                                .font(.system(size: 12, weight: .semibold))
+                                .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                                 .foregroundColor(selectedCurrency.activeColor)
                         }
 
@@ -1149,7 +1149,7 @@ struct WalletTransferSheet: View {
                                     focusedField = .amount
                                 }) {
                                     Text("\(selectedCurrency.symbol)\(Int(amount))")
-                                        .font(.system(size: 16, weight: .semibold))
+                                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                                         .foregroundColor(selectedCurrency.activeColor)
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 12)
@@ -1173,9 +1173,9 @@ struct WalletTransferSheet: View {
                             } else {
                                 HStack(spacing: 10) {
                                     Image(systemName: "paperplane.fill")
-                                        .font(.system(size: 18, weight: .semibold))
+                                        .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
                                     Text("Transferir ahora")
-                                        .font(.system(size: 16, weight: .semibold))
+                                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                                 }
                             }
                         }
@@ -1237,15 +1237,15 @@ struct RefundInfoSheet: View {
                 Spacer()
 
                 Image(systemName: "arrow.uturn.backward.circle.fill")
-                    .font(.system(size: 56))
+                    .scaledFont(size: 56, relativeTo: .largeTitle)
                     .foregroundColor(currency.activeColor)
 
                 Text("Solicitar reembolso")
-                    .font(.system(size: 22, weight: .bold))
+                    .scaledFont(size: 22, weight: .bold, relativeTo: .title2)
                     .foregroundColor(.primary)
 
                 Text("Podrás solicitar un reembolso de tu saldo en \(currency.currencyCode). Nuestro equipo te guiará para completar el proceso en pocos minutos.")
-                    .font(.system(size: 15))
+                    .scaledFont(size: 15, relativeTo: .subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
@@ -1254,7 +1254,7 @@ struct RefundInfoSheet: View {
                     dismiss()
                 }) {
                     Text("Entendido")
-                        .font(.system(size: 16, weight: .semibold))
+                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding()

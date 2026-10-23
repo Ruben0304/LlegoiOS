@@ -40,7 +40,7 @@ struct PaymentMethodPickerView: View {
             Text(
                 "Elige la opción que prefieras. Mostramos sólo la información esencial para que la decisión sea rápida."
             )
-            .font(.system(size: 14, weight: .medium))
+            .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
             .foregroundColor(.secondary)
             .fixedSize(horizontal: false, vertical: true)
         }
@@ -53,7 +53,7 @@ struct PaymentMethodPickerView: View {
             if paymentMethods.isEmpty {
                 VStack(spacing: 16) {
                     Image(systemName: "creditcard.trianglebadge.exclamationmark")
-                        .font(.system(size: 50))
+                        .scaledFont(size: 50, relativeTo: .largeTitle)
                         .foregroundColor(.gray)
 
                     Text("No hay métodos de pago disponibles")

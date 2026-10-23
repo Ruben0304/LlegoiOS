@@ -14,12 +14,12 @@ struct InstructionRow: View {
                     .frame(width: 26, height: 26)
 
                 Text(number)
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .scaledFont(size: 12, weight: .bold, design: .rounded, relativeTo: .caption)
                     .foregroundColor(.llegoPrimary)
             }
 
             Text(text)
-                .font(.system(size: 14, weight: .medium))
+                .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }

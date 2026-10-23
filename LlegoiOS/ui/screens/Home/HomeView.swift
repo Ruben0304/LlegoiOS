@@ -221,7 +221,7 @@ struct HomeView: View {
                                 // Título pequeño de la categoría - arriba a la derecha
                                 VStack(alignment: .center, spacing: 2) {
                                     Text(models[currentIndex].name)
-                                        .font(.system(size: 24, weight: .black, design: .rounded))
+                                        .scaledFont(size: 24, weight: .black, design: .rounded, relativeTo: .title)
                                         .foregroundStyle(
                                             LinearGradient(
                                                 colors: [.white, .white.opacity(0.9)],
@@ -232,7 +232,7 @@ struct HomeView: View {
                                         .shadow(color: .black.opacity(0.3), radius: 6, x: 0, y: 3)
                                     
                                     Text(models[currentIndex].description)
-                                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                                        .scaledFont(size: 11, weight: .medium, design: .rounded, relativeTo: .caption)
                                         .foregroundColor(.white.opacity(0.7))
                                         .shadow(color: .black.opacity(0.2), radius: 3, x: 0, y: 1)
                                 }
@@ -242,17 +242,17 @@ struct HomeView: View {
                                     ForEach(Array(categoryFeatures.enumerated()), id: \.offset) { index, feature in
                                         HStack(spacing: 12) {
                                             Image(systemName: feature.icon)
-                                                .font(.system(size: 14, weight: .semibold))
+                                                .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                                                 .foregroundColor(.white.opacity(0.9))
                                                 .frame(width: 20, height: 20)
                                             
                                             VStack(alignment: .leading, spacing: 0) {
                                                 Text(feature.title)
-                                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                                    .scaledFont(size: 11, weight: .bold, design: .rounded, relativeTo: .caption)
                                                     .foregroundColor(.white)
                                                 
                                                 Text(feature.subtitle)
-                                                    .font(.system(size: 9, weight: .regular, design: .rounded))
+                                                    .scaledFont(size: 9, design: .rounded, relativeTo: .caption2)
                                                     .foregroundColor(.white.opacity(0.6))
                                             }
                                             .padding(.trailing, 4) // Un tin de padding derecho extra
@@ -276,7 +276,7 @@ struct HomeView: View {
                             if #available(iOS 26.0, *) {
                                 Button(action: previousModel) {
                                     Image(systemName: "chevron.left")
-                                        .font(.system(size: 20, weight: .bold))
+                                        .scaledFont(size: 20, weight: .bold, relativeTo: .title3)
                                         .foregroundColor(.black)
                                         .frame(width: 40, height: 40)
                                         .frame(minWidth: 44, minHeight: 44)
@@ -287,7 +287,7 @@ struct HomeView: View {
                             } else {
                                 Button(action: previousModel) {
                                     Image(systemName: "chevron.left")
-                                        .font(.system(size: 20, weight: .bold))
+                                        .scaledFont(size: 20, weight: .bold, relativeTo: .title3)
                                         .foregroundColor(.black)
                                         .frame(width: 40, height: 40)
                                         .background(
@@ -317,7 +317,7 @@ struct HomeView: View {
                             if #available(iOS 26.0, *) {
                                 Button(action: nextModel) {
                                     Image(systemName: "chevron.right")
-                                        .font(.system(size: 20, weight: .bold))
+                                        .scaledFont(size: 20, weight: .bold, relativeTo: .title3)
                                         .foregroundColor(.black)
                                         .frame(width: 40, height: 40)
                                         .frame(minWidth: 44, minHeight: 44)
@@ -328,7 +328,7 @@ struct HomeView: View {
                             } else {
                                 Button(action: nextModel) {
                                     Image(systemName: "chevron.right")
-                                        .font(.system(size: 20, weight: .bold))
+                                        .scaledFont(size: 20, weight: .bold, relativeTo: .title3)
                                         .foregroundColor(.black)
                                         .frame(width: 40, height: 40)
                                         .background(
@@ -349,7 +349,7 @@ struct HomeView: View {
                         Spacer()
 
                         Text("Mantén presionado para que\nla IA te ayude a encontrar lo que buscas")
-                            .font(.system(size: 20, weight: .light, design: .rounded))
+                            .scaledFont(size: 20, weight: .light, design: .rounded, relativeTo: .title3)
                             .foregroundColor(Color(red: 0.32, green: 0.35, blue: 0.4))
                             .multilineTextAlignment(.center)
                             .frame(maxWidth: .infinity, alignment: .center)
@@ -439,7 +439,7 @@ struct HomeView: View {
                         navigateToOrders = true
                     }) {
                         Image(systemName: "bag")
-                            .font(.system(size: 16, weight: .semibold))
+                            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                             .foregroundColor(.black)
                     }
                     .accessibilityLabel("Pedidos")
@@ -571,9 +571,9 @@ struct HomeView: View {
         }) {
             HStack(spacing: 4) {
                 Image(systemName: "cart")
-                    .font(.system(size: 16, weight: .semibold))
+                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                 Text(String(format: "$%.2f", cartSubtotal))
-                    .font(.system(size: 14, weight: .semibold))
+                    .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
             }
             .foregroundColor(.black)
         }

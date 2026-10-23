@@ -117,14 +117,14 @@ struct ComboCartCard: View {
                                 Text(
                                     "\(currencyLabel) \(String(format: "%.2f", comboSubtotalPrice))"
                                 )
-                                .font(.system(size: 12, weight: .semibold))
+                                .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                                 .foregroundColor(.secondary)
                                 .strikethrough()
 
                                 Text(
                                     "Ahorro \(currencyLabel) \(String(format: "%.2f", comboDiscountTotal))"
                                 )
-                                .font(.system(size: 11, weight: .bold))
+                                .scaledFont(size: 11, weight: .bold, relativeTo: .caption)
                                 .foregroundColor(.green.opacity(0.9))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
@@ -205,7 +205,7 @@ struct ComboCartCard: View {
             HStack(spacing: 10) {
                 Button(action: onRemove) {
                     Label("Quitar", systemImage: "trash.fill")
-                        .font(.system(size: 12, weight: .semibold))
+                        .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                         .foregroundColor(.red.opacity(0.85))
                         .padding(.horizontal, 12)
                         .padding(.vertical, 9)
@@ -269,13 +269,13 @@ struct ComboCartCard: View {
                     },
                     placeholder: {
                         Image(systemName: "shippingbox.fill")
-                            .font(.system(size: 24, weight: .medium))
+                            .scaledFont(size: 24, weight: .medium, relativeTo: .title)
                             .foregroundColor(gradientManager.currentAccentColor)
                     }
                 )
             } else {
                 Image(systemName: "shippingbox.fill")
-                    .font(.system(size: 24, weight: .medium))
+                    .scaledFont(size: 24, weight: .medium, relativeTo: .title)
                     .foregroundColor(gradientManager.currentAccentColor)
             }
         }
@@ -288,7 +288,7 @@ struct ComboCartCard: View {
     private func quantityButton(systemName: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.system(size: 10, weight: .bold))
+                .scaledFont(size: 10, weight: .bold, relativeTo: .caption2)
                 .foregroundColor(.primary)
                 .frame(width: 30, height: 30)
                 .background(

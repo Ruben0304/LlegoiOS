@@ -12,15 +12,15 @@ struct InfoPill: View {
         VStack(spacing: 6) {
             HStack(spacing: 4) {
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
+                    .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                     .foregroundColor(iconColor)
                 Text(value)
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .scaledFont(size: 17, weight: .bold, design: .rounded, relativeTo: .body)
                     .foregroundColor(.primary)
             }
 
             Text(label)
-                .font(.system(size: 12, weight: .medium))
+                .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity)

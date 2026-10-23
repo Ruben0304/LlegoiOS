@@ -18,23 +18,23 @@ struct PaymentMethodCard: View {
                 // Info
                 VStack(alignment: .leading, spacing: 4) {
                     Text(paymentMethod.name)
-                        .font(.system(size: 16, weight: .semibold))
+                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                         .foregroundColor(.primary)
 
                     if let instructions = paymentMethod.instructions, !instructions.isEmpty {
                         Text(instructions)
-                            .font(.system(size: 13))
+                            .scaledFont(size: 13, relativeTo: .footnote)
                             .foregroundColor(.secondary)
                             .lineLimit(2)
                     } else {
                         Text(defaultDescription)
-                            .font(.system(size: 13))
+                            .scaledFont(size: 13, relativeTo: .footnote)
                             .foregroundColor(.secondary)
                     }
 
                     if paymentMethod.commissionPercent > 0 {
                         Text("Comisión: \(String(format: "%.1f", paymentMethod.commissionPercent))%")
-                            .font(.system(size: 11, weight: .medium))
+                            .scaledFont(size: 11, weight: .medium, relativeTo: .caption)
                             .foregroundColor(.orange)
                     }
                 }
@@ -43,7 +43,7 @@ struct PaymentMethodCard: View {
 
                 // Currency badge
                 Text(paymentMethod.currency.uppercased())
-                    .font(.system(size: 12, weight: .bold))
+                    .scaledFont(size: 12, weight: .bold, relativeTo: .caption)
                     .foregroundColor(.white)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
@@ -52,7 +52,7 @@ struct PaymentMethodCard: View {
 
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 24))
+                        .scaledFont(size: 24, relativeTo: .title)
                         .foregroundColor(.llegoAccent)
                 }
             }
@@ -107,7 +107,7 @@ struct PaymentMethodCard: View {
         } else {
             // System icon
             Image(systemName: iconName)
-                .font(.system(size: 24))
+                .scaledFont(size: 24, relativeTo: .title)
                 .foregroundColor(iconBackgroundColor)
         }
     }

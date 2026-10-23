@@ -71,7 +71,7 @@ struct OrderDetailView: View {
                 } else if let errorMessage = viewModel.errorMessage {
                     VStack(spacing: 16) {
                         Image(systemName: "exclamationmark.triangle")
-                            .font(.system(size: 48))
+                            .scaledFont(size: 48, relativeTo: .largeTitle)
                             .foregroundColor(.orange)
                         Text(errorMessage)
                             .foregroundColor(.secondary)
@@ -262,7 +262,7 @@ struct OrderDetailView: View {
 
                 HStack(alignment: .top, spacing: 12) {
                     Image(systemName: status.icon)
-                        .font(.system(size: 20, weight: .semibold))
+                        .scaledFont(size: 20, weight: .semibold, relativeTo: .title3)
                         .foregroundColor(status.color)
                         .frame(width: 44, height: 44)
                         .background(status.color.opacity(0.12))
@@ -307,7 +307,7 @@ struct OrderDetailView: View {
                 if let etaText = etaText(order) {
                     HStack(spacing: 6) {
                         Image(systemName: "clock.fill")
-                            .font(.system(size: 13))
+                            .scaledFont(size: 13, relativeTo: .footnote)
                         Text(etaText)
                             .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                     }
@@ -347,7 +347,7 @@ struct OrderDetailView: View {
     private func heroNote(icon: String, text: String, color: Color) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: icon)
-                .font(.system(size: 13, weight: .semibold))
+                .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                 .foregroundColor(color)
                 .padding(.top, 1)
             Text(text)
@@ -394,7 +394,7 @@ struct OrderDetailView: View {
         ZStack {
             gradientManager.currentAccentColor.opacity(0.1)
             Image(systemName: "storefront")
-                .font(.system(size: 18, weight: .medium))
+                .scaledFont(size: 18, weight: .medium, relativeTo: .title3)
                 .foregroundColor(gradientManager.currentAccentColor)
         }
     }
@@ -408,7 +408,7 @@ struct OrderDetailView: View {
     private func successToast(_ message: String) -> some View {
         HStack(spacing: 10) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 18, weight: .semibold))
+                .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
                 .foregroundColor(.green)
             Text(message)
                 .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
@@ -454,7 +454,7 @@ struct OrderDetailView: View {
                     Button("Modificar productos") {
                         handleOpenInCartTap()
                     }
-                    .font(.system(size: 13, weight: .semibold))
+                    .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                     .foregroundColor(gradientManager.currentAccentColor)
                 }
             }
@@ -527,14 +527,14 @@ struct OrderDetailView: View {
                 ZStack {
                     Color.gray.opacity(0.1)
                     Image(systemName: "photo")
-                        .font(.system(size: 16))
+                        .scaledFont(size: 16, relativeTo: .body)
                         .foregroundColor(.gray)
                 }
             } failure: {
                 ZStack {
                     Color.gray.opacity(0.1)
                     Image(systemName: "photo")
-                        .font(.system(size: 16))
+                        .scaledFont(size: 16, relativeTo: .body)
                         .foregroundColor(.gray)
                 }
             }
@@ -620,7 +620,7 @@ struct OrderDetailView: View {
                 VStack(spacing: 12) {
                     HStack(spacing: 12) {
                         Image(systemName: order.isPickup ? "bag.fill" : "shippingbox.fill")
-                            .font(.system(size: 18, weight: .semibold))
+                            .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
                             .foregroundColor(gradientManager.currentAccentColor)
                             .frame(width: 44, height: 44)
                             .background(gradientManager.currentAccentColor.opacity(0.12))
@@ -655,7 +655,7 @@ struct OrderDetailView: View {
                                 } label: {
                                     HStack(spacing: 6) {
                                         Image(systemName: "map.fill")
-                                            .font(.system(size: 14))
+                                            .scaledFont(size: 14, relativeTo: .subheadline)
                                         Text("Ver en mapa")
                                             .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                                     }
@@ -673,7 +673,7 @@ struct OrderDetailView: View {
                                 } label: {
                                     HStack(spacing: 6) {
                                         Image(systemName: "phone.fill")
-                                            .font(.system(size: 14))
+                                            .scaledFont(size: 14, relativeTo: .subheadline)
                                         Text("Llamar")
                                             .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                                     }
@@ -690,7 +690,7 @@ struct OrderDetailView: View {
                             if let reference = address.reference, !reference.isEmpty {
                                 HStack(spacing: 8) {
                                     Image(systemName: "mappin.circle.fill")
-                                        .font(.system(size: 14))
+                                        .scaledFont(size: 14, relativeTo: .subheadline)
                                         .foregroundColor(.secondary)
                                     Text(reference)
                                         .scaledFont(size: 13, relativeTo: .footnote)
@@ -701,7 +701,7 @@ struct OrderDetailView: View {
                             if let instructions = address.deliveryInstructions, !instructions.isEmpty {
                                 HStack(spacing: 8) {
                                     Image(systemName: "text.bubble.fill")
-                                        .font(.system(size: 14))
+                                        .scaledFont(size: 14, relativeTo: .subheadline)
                                         .foregroundColor(.secondary)
                                     Text(instructions)
                                         .scaledFont(size: 13, relativeTo: .footnote)
@@ -748,7 +748,7 @@ struct OrderDetailView: View {
                             systemName: paymentIconName(
                                 for: viewModel.paymentMethod, fallback: order.paymentMethod)
                         )
-                        .font(.system(size: 18, weight: .semibold))
+                        .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
                         .foregroundColor(gradientManager.currentAccentColor)
                         .frame(width: 44, height: 44)
                         .background(gradientManager.currentAccentColor.opacity(0.12))
@@ -819,7 +819,7 @@ struct OrderDetailView: View {
     private func paymentNote(icon: String, text: String, color: Color) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: icon)
-                .font(.system(size: 14))
+                .scaledFont(size: 14, relativeTo: .subheadline)
                 .foregroundColor(color)
             Text(text)
                 .scaledFont(size: 13, relativeTo: .footnote)
@@ -843,7 +843,7 @@ struct OrderDetailView: View {
                 .foregroundColor(isEmphasis ? Color.adaptiveOnSurface(colorScheme) : .secondary)
             Spacer()
             Text(value)
-                .font(.system(size: isEmphasis ? 18 : 15, weight: isEmphasis ? .bold : .semibold))
+                .scaledFont(size: isEmphasis ? 18 : 15, weight: isEmphasis ? .bold : .semibold, relativeTo: .title3)
                 .foregroundColor(valueColor ?? Color.adaptiveOnSurface(colorScheme))
         }
     }
@@ -865,7 +865,7 @@ struct OrderDetailView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack(spacing: 12) {
                                 Image(systemName: "arrow.uturn.backward.circle.fill")
-                                    .font(.system(size: 18, weight: .semibold))
+                                    .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
                                     .foregroundColor(gradientManager.currentAccentColor)
                                     .frame(width: 44, height: 44)
                                     .background(gradientManager.currentAccentColor.opacity(0.12))
@@ -915,7 +915,7 @@ struct OrderDetailView: View {
     private func refundStatusRow(icon: String, color: Color, text: String) -> some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 16, weight: .semibold))
+                .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                 .foregroundColor(color)
             Text(text)
                 .scaledFont(size: 14, relativeTo: .subheadline)
@@ -957,7 +957,7 @@ struct OrderDetailView: View {
                                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                             starsRow(current: viewModel.ratingDraft, interactive: true)
                             TextField("Comentario (opcional)", text: $viewModel.ratingCommentDraft)
-                                .font(.system(size: 14))
+                                .scaledFont(size: 14, relativeTo: .subheadline)
                                 .textFieldStyle(.roundedBorder)
                             Button {
                                 viewModel.submitRating()
@@ -987,7 +987,7 @@ struct OrderDetailView: View {
         let stars = HStack(spacing: 8) {
             ForEach(1...5, id: \.self) { index in
                 let star = Image(systemName: index <= current ? "star.fill" : "star")
-                    .font(.system(size: 26))
+                    .scaledFont(size: 26, relativeTo: .title)
                     .foregroundColor(index <= current ? .yellow : Color.gray.opacity(0.4))
                     .frame(width: 36, height: 36)
                     .contentShape(Rectangle())
@@ -1037,7 +1037,7 @@ struct OrderDetailView: View {
                             .padding(.vertical, 16)
                     }
                     TextEditor(text: $viewModel.refundReason)
-                        .font(.system(size: 14))
+                        .scaledFont(size: 14, relativeTo: .subheadline)
                         .padding(8)
                         .frame(height: 120)
                 }
@@ -1230,7 +1230,7 @@ struct OrderDetailView: View {
                         ProgressView().tint(.white)
                     } else {
                         Image(systemName: primaryActionIcon(action, order: order))
-                            .font(.system(size: 16, weight: .semibold))
+                            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                     }
                     Text(primaryActionTitle(action, order: order))
                         .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
@@ -1305,7 +1305,7 @@ struct OrderDetailView: View {
         }()
 
         return Text(text)
-            .font(.system(size: 11, weight: .bold))
+            .scaledFont(size: 11, weight: .bold, relativeTo: .caption)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
             .background(color.opacity(0.15))
@@ -1379,13 +1379,13 @@ struct OrderDetailView: View {
                 // Top strip — label row
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.shield.fill")
-                        .font(.system(size: 13, weight: .semibold))
+                        .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                     Text("Código de verificación de entrega")
                         .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                         .tracking(0.3)
                     Spacer()
                     Image(systemName: codeCopied ? "checkmark" : "doc.on.doc")
-                        .font(.system(size: 12, weight: .medium))
+                        .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                         .contentTransition(.symbolEffect(.replace))
                 }
                 .foregroundStyle(
@@ -1411,7 +1411,7 @@ struct OrderDetailView: View {
                 // Code row
                 HStack(alignment: .center) {
                     Text(code)
-                        .font(.system(size: 38, weight: .black, design: .monospaced))
+                        .scaledFont(size: 38, weight: .black, design: .monospaced, relativeTo: .largeTitle)
                         .kerning(6)
                         .foregroundColor(Color.adaptiveOnSurface(colorScheme))
 
@@ -1429,7 +1429,7 @@ struct OrderDetailView: View {
                 // Bottom warning
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 12))
+                        .scaledFont(size: 12, relativeTo: .caption)
                         .foregroundColor(.orange)
                         .padding(.top, 1)
                     Text("Comparte este código **solo cuando tengas el pedido en tus manos**. Dárselo antes equivale a confirmar la entrega sin haberla recibido.")

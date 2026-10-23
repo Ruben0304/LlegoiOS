@@ -19,9 +19,9 @@ struct TronDealerPaymentView: View {
                     // Header
                     VStack(spacing: 8) {
                         Text("Pagar con USDT")
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .scaledFont(size: 28, weight: .bold, design: .rounded, relativeTo: .title)
                         Text("Red TRON (TRC20)")
-                            .font(.system(size: 15))
+                            .scaledFont(size: 15, relativeTo: .subheadline)
                             .foregroundColor(.secondary)
                     }
                     .padding(.top, 20)
@@ -29,10 +29,10 @@ struct TronDealerPaymentView: View {
                     // Amount
                     VStack(spacing: 8) {
                         Text("Monto a pagar")
-                            .font(.system(size: 14))
+                            .scaledFont(size: 14, relativeTo: .subheadline)
                             .foregroundColor(.secondary)
                         Text("\(String(format: "%.2f", amount)) USDT")
-                            .font(.system(size: 36, weight: .bold))
+                            .scaledFont(size: 36, weight: .bold, relativeTo: .largeTitle)
                             .foregroundColor(gradientManager.currentAccentColor)
                     }
                     .padding(.vertical, 16)
@@ -57,19 +57,19 @@ struct TronDealerPaymentView: View {
                                 .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
                         }
                         Text("Escanea con tu wallet")
-                            .font(.system(size: 13))
+                            .scaledFont(size: 13, relativeTo: .footnote)
                             .foregroundColor(.secondary)
                     }
                     
                     // Wallet Address
                     VStack(spacing: 12) {
                         Text("Dirección de wallet")
-                            .font(.system(size: 14, weight: .semibold))
+                            .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                             .foregroundColor(.secondary)
                         
                         VStack(spacing: 12) {
                             Text(address)
-                                .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                .scaledFont(size: 13, weight: .medium, design: .monospaced, relativeTo: .footnote)
                                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 16)
@@ -92,9 +92,9 @@ struct TronDealerPaymentView: View {
                             } label: {
                                 HStack(spacing: 8) {
                                     Image(systemName: showCopiedFeedback ? "checkmark.circle.fill" : "doc.on.doc.fill")
-                                        .font(.system(size: 16))
+                                        .scaledFont(size: 16, relativeTo: .body)
                                     Text(showCopiedFeedback ? "¡Copiado!" : "Copiar dirección")
-                                        .font(.system(size: 15, weight: .semibold))
+                                        .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
@@ -109,7 +109,7 @@ struct TronDealerPaymentView: View {
                     // Instructions
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Instrucciones")
-                            .font(.system(size: 16, weight: .bold))
+                            .scaledFont(size: 16, weight: .bold, relativeTo: .body)
                             .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                         
                         VStack(alignment: .leading, spacing: 10) {
@@ -152,7 +152,7 @@ struct TronDealerPaymentView: View {
                             ProgressView()
                                 .tint(gradientManager.currentAccentColor)
                             Text("Esperando confirmación del pago...")
-                                .font(.system(size: 14))
+                                .scaledFont(size: 14, relativeTo: .subheadline)
                                 .foregroundColor(.secondary)
                         }
                         .padding(.vertical, 16)
@@ -184,14 +184,14 @@ struct TronDealerPaymentView: View {
     private func instructionRow(number: String, text: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Text(number)
-                .font(.system(size: 14, weight: .bold))
+                .scaledFont(size: 14, weight: .bold, relativeTo: .subheadline)
                 .foregroundColor(.white)
                 .frame(width: 24, height: 24)
                 .background(gradientManager.currentAccentColor)
                 .clipShape(Circle())
             
             Text(text)
-                .font(.system(size: 14))
+                .scaledFont(size: 14, relativeTo: .subheadline)
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -200,11 +200,11 @@ struct TronDealerPaymentView: View {
     private func warningRow(icon: String, text: String) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 14))
+                .scaledFont(size: 14, relativeTo: .subheadline)
                 .foregroundColor(.orange)
             
             Text(text)
-                .font(.system(size: 13))
+                .scaledFont(size: 13, relativeTo: .footnote)
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 .fixedSize(horizontal: false, vertical: true)
         }

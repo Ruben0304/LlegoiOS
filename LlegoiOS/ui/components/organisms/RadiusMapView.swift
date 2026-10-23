@@ -92,10 +92,10 @@ struct RadiusMapView: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Image(systemName: "location.fill")
-                        .font(.system(size: 12, weight: .semibold))
+                        .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                         .foregroundColor(.white)
                     Text("Tu ubicación")
-                        .font(.system(size: 12, weight: .semibold))
+                        .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                         .foregroundColor(.white)
                 }
                 .padding(.horizontal, 12)
@@ -139,11 +139,11 @@ struct RadiusMapView: View {
     private var distanceBadge: some View {
         VStack(spacing: 2) {
             Text(radiusKm < 50 ? "\(Int(radiusKm))" : "∞")
-                .font(.system(size: 22, weight: .bold))
+                .scaledFont(size: 22, weight: .bold, relativeTo: .title2)
                 .foregroundColor(.llegoPrimary)
 
             Text("km")
-                .font(.system(size: 10, weight: .semibold))
+                .scaledFont(size: 10, weight: .semibold, relativeTo: .caption2)
                 .foregroundColor(.gray)
         }
         .padding(.horizontal, 14)

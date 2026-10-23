@@ -17,11 +17,11 @@ struct TutorialsView: View {
                         // Hero section
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Aprende a usar Llego")
-                                .font(.system(size: 28, weight: .bold))
+                                .scaledFont(size: 28, weight: .bold, relativeTo: .title)
                                 .foregroundColor(.llegoPrimary)
 
                             Text("Descubre todos los tips y trucos para sacar el máximo provecho de tu experiencia de compra.")
-                                .font(.system(size: 16, weight: .regular))
+                                .scaledFont(size: 16, relativeTo: .body)
                                 .foregroundColor(.gray)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
@@ -33,7 +33,7 @@ struct TutorialsView: View {
                                 .padding(.top, 32)
                         } else if let errorMessage = viewModel.errorMessage, viewModel.tutorials.isEmpty {
                             Text(errorMessage)
-                                .font(.system(size: 14, weight: .regular))
+                                .scaledFont(size: 14, relativeTo: .subheadline)
                                 .foregroundColor(.red)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 20)
@@ -43,7 +43,7 @@ struct TutorialsView: View {
                             if let featured = viewModel.tutorials.first {
                                 VStack(alignment: .leading, spacing: 12) {
                                     Text("Destacado")
-                                        .font(.system(size: 14, weight: .semibold))
+                                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                                         .foregroundColor(.llegoTertiary)
                                         .padding(.horizontal, 16)
 
@@ -57,7 +57,7 @@ struct TutorialsView: View {
                             // All tutorials grid
                             VStack(alignment: .leading, spacing: 12) {
                                 Text("Todos los tutoriales")
-                                    .font(.system(size: 20, weight: .semibold))
+                                    .scaledFont(size: 20, weight: .semibold, relativeTo: .title3)
                                     .foregroundColor(.llegoPrimary)
                                     .padding(.horizontal, 16)
 
@@ -146,7 +146,7 @@ struct FeaturedTutorialCard: View {
                     .frame(width: 60, height: 60)
 
                 Image(systemName: "play.fill")
-                    .font(.system(size: 24, weight: .bold))
+                    .scaledFont(size: 24, weight: .bold, relativeTo: .title)
                     .foregroundColor(.llegoPrimary)
                     .offset(x: 2)
             }
@@ -157,7 +157,7 @@ struct FeaturedTutorialCard: View {
                 HStack {
                     if let category = tutorial.category {
                         Text(category)
-                            .font(.system(size: 12, weight: .semibold))
+                            .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                             .foregroundColor(.llegoSecondary)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
@@ -170,7 +170,7 @@ struct FeaturedTutorialCard: View {
                     Spacer()
 
                     Text(tutorial.duration)
-                        .font(.system(size: 12, weight: .semibold))
+                        .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                         .foregroundColor(.white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
@@ -181,7 +181,7 @@ struct FeaturedTutorialCard: View {
                 }
 
                 Text(tutorial.title)
-                    .font(.system(size: 18, weight: .bold))
+                    .scaledFont(size: 18, weight: .bold, relativeTo: .title3)
                     .foregroundColor(.white)
                     .lineLimit(2)
             }
@@ -198,6 +198,8 @@ struct FeaturedTutorialCard: View {
         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
         .contentShape(Rectangle())
         .onTapGesture { onTap() }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
         .onLongPressGesture(minimumDuration: 0.0, maximumDistance: .infinity, pressing: { pressing in
             withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
                 isPressed = pressing
@@ -210,7 +212,7 @@ struct FeaturedTutorialCard: View {
         switch downloadManager.status(for: tutorial.id) {
         case .downloaded:
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 22))
+                .scaledFont(size: 22, relativeTo: .title2)
                 .foregroundColor(.green)
                 .padding(6)
                 .background(.ultraThinMaterial, in: Circle())
@@ -221,7 +223,7 @@ struct FeaturedTutorialCard: View {
                     .tint(.white)
                     .frame(width: 18, height: 18)
                 Text("\(Int(progress * 100))%")
-                    .font(.system(size: 11, weight: .semibold))
+                    .scaledFont(size: 11, weight: .semibold, relativeTo: .caption)
                     .foregroundColor(.white)
             }
             .padding(.horizontal, 8)
@@ -230,7 +232,7 @@ struct FeaturedTutorialCard: View {
         case .failed:
             Button(action: { downloadManager.startDownload(for: tutorial) }) {
                 Image(systemName: "arrow.clockwise.circle.fill")
-                    .font(.system(size: 22))
+                    .scaledFont(size: 22, relativeTo: .title2)
                     .foregroundColor(.orange)
                     .padding(6)
                     .background(.ultraThinMaterial, in: Circle())
@@ -242,7 +244,7 @@ struct FeaturedTutorialCard: View {
         case .notDownloaded:
             Button(action: { downloadManager.startDownload(for: tutorial) }) {
                 Image(systemName: "arrow.down.circle.fill")
-                    .font(.system(size: 22))
+                    .scaledFont(size: 22, relativeTo: .title2)
                     .foregroundColor(.white)
                     .padding(6)
                     .background(.ultraThinMaterial, in: Circle())
@@ -280,7 +282,7 @@ struct VideoPlayerView: View {
                     Spacer()
                     Button(action: onDismiss) {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 30))
+                            .scaledFont(size: 30, relativeTo: .largeTitle)
                             .foregroundColor(.white)
                             .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
                             .frame(minWidth: 44, minHeight: 44)
@@ -296,7 +298,7 @@ struct VideoPlayerView: View {
 
             if let playbackError {
                 Text(playbackError)
-                    .font(.system(size: 14, weight: .semibold))
+                    .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                     .foregroundColor(.white)
                     .padding(12)
                     .background(Color.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 12))
@@ -307,17 +309,17 @@ struct VideoPlayerView: View {
                 Spacer()
                 VStack(alignment: .leading, spacing: 8) {
                     Text(tutorial.title)
-                        .font(.system(size: 20, weight: .bold))
+                        .scaledFont(size: 20, weight: .bold, relativeTo: .title3)
                         .foregroundColor(.white)
 
                     Text(tutorial.description)
-                        .font(.system(size: 14, weight: .regular))
+                        .scaledFont(size: 14, relativeTo: .subheadline)
                         .foregroundColor(.white.opacity(0.9))
                         .lineLimit(2)
 
                     if let category = tutorial.category {
                         Text(category)
-                            .font(.system(size: 12, weight: .semibold))
+                            .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                             .foregroundColor(.llegoSecondary)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
@@ -361,7 +363,7 @@ struct VideoPlayerView: View {
                 Image(systemName: "checkmark.circle.fill")
                 Text("Descargado")
             }
-            .font(.system(size: 13, weight: .semibold))
+            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
             .foregroundColor(.green)
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
@@ -375,7 +377,7 @@ struct VideoPlayerView: View {
                     .frame(width: 18, height: 18)
                 Text("Descargando \(Int(progress * 100))%")
             }
-            .font(.system(size: 13, weight: .semibold))
+            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
             .foregroundColor(.white)
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
@@ -384,7 +386,7 @@ struct VideoPlayerView: View {
         case .failed:
             Button(action: { downloadManager.startDownload(for: tutorial) }) {
                 Label("Reintentar", systemImage: "arrow.clockwise")
-                    .font(.system(size: 13, weight: .semibold))
+                    .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                     .foregroundColor(.white)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
@@ -395,7 +397,7 @@ struct VideoPlayerView: View {
         case .notDownloaded:
             Button(action: { downloadManager.startDownload(for: tutorial) }) {
                 Label("Descargar", systemImage: "arrow.down.circle")
-                    .font(.system(size: 13, weight: .semibold))
+                    .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                     .foregroundColor(.white)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)

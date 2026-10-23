@@ -192,9 +192,15 @@ struct PromoStoriesView: View {
                         .contentShape(Rectangle())
                         .frame(width: geo.size.width * 0.3)
                         .onTapGesture { engine.previous() }
+                        .accessibilityElement()
+                        .accessibilityLabel("Historia anterior")
+                        .accessibilityAddTraits(.isButton)
                     Color.clear
                         .contentShape(Rectangle())
                         .onTapGesture { engine.next() }
+                        .accessibilityElement()
+                        .accessibilityLabel("Historia siguiente")
+                        .accessibilityAddTraits(.isButton)
                 }
             }
             .ignoresSafeArea()
@@ -283,7 +289,7 @@ struct PromoStoriesView: View {
 
             if let name = engine.current?.branchName, !name.isEmpty {
                 Text(name)
-                    .font(.system(size: 14, weight: .semibold))
+                    .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                     .foregroundColor(.white)
             }
 
@@ -291,7 +297,7 @@ struct PromoStoriesView: View {
 
             Button(action: onClose) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 16, weight: .semibold))
+                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                     .foregroundColor(.white)
                     .padding(8)
                     .frame(minWidth: 44, minHeight: 44)
@@ -306,12 +312,12 @@ struct PromoStoriesView: View {
         VStack(alignment: .leading, spacing: 4) {
             if let title = engine.current?.title, !title.isEmpty {
                 Text(title)
-                    .font(.system(size: 18, weight: .bold))
+                    .scaledFont(size: 18, weight: .bold, relativeTo: .title3)
                     .foregroundColor(.white)
             }
             if let description = engine.current?.description, !description.isEmpty {
                 Text(description)
-                    .font(.system(size: 14, weight: .regular))
+                    .scaledFont(size: 14, relativeTo: .subheadline)
                     .foregroundColor(.white.opacity(0.85))
                     .lineLimit(3)
             }
@@ -326,16 +332,16 @@ struct PromoStoriesView: View {
     private var emptyState: some View {
         VStack(spacing: 16) {
             Image(systemName: "play.slash")
-                .font(.system(size: 40, weight: .light))
+                .scaledFont(size: 40, weight: .light, relativeTo: .largeTitle)
                 .foregroundColor(.white.opacity(0.7))
             Text(viewModel.errorMessage ?? "No hay promociones disponibles por ahora")
-                .font(.system(size: 15, weight: .regular))
+                .scaledFont(size: 15, relativeTo: .subheadline)
                 .foregroundColor(.white.opacity(0.8))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
             Button(action: onClose) {
                 Text("Cerrar")
-                    .font(.system(size: 15, weight: .semibold))
+                    .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                     .foregroundColor(.black)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 10)

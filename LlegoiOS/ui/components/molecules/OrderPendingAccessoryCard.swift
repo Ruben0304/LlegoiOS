@@ -64,16 +64,16 @@ struct OrderPendingAccessoryCard: View {
 
             if placement == .inline {
                 Text(needsCustomerAction ? "Acción requerida" : "Pedido")
-                    .font(.system(size: 13, weight: .semibold))
+                    .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                     .foregroundColor(.primary)
                     .lineLimit(1)
             } else {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(needsCustomerAction ? "Acción requerida" : "Pedido")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .scaledFont(size: 13, weight: .bold, design: .rounded, relativeTo: .footnote)
                         .foregroundColor(.primary)
                     Text(storeName)
-                        .font(.system(size: 11, weight: .medium))
+                        .scaledFont(size: 11, weight: .medium, relativeTo: .caption)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
@@ -82,7 +82,7 @@ struct OrderPendingAccessoryCard: View {
             Spacer(minLength: 8)
 
             Text(statusText)
-                .font(.system(size: 11, weight: .bold))
+                .scaledFont(size: 11, weight: .bold, relativeTo: .caption)
                 .foregroundColor(needsCustomerAction ? .white : statusColor)
                 .lineLimit(1)
                 .padding(.horizontal, 10)
@@ -93,7 +93,7 @@ struct OrderPendingAccessoryCard: View {
                 )
 
             Image(systemName: "chevron.right")
-                .font(.system(size: 11, weight: .semibold))
+                .scaledFont(size: 11, weight: .semibold, relativeTo: .caption)
                 .foregroundColor(.secondary)
         }
         .padding(.horizontal, 12)

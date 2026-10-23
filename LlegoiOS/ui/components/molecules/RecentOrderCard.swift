@@ -53,7 +53,7 @@ struct RecentOrderCard: View {
                     gradientManager.currentAccentColor.opacity(0.1)
 
                     Image(systemName: "storefront")
-                        .font(.system(size: 20, weight: .medium))
+                        .scaledFont(size: 20, weight: .medium, relativeTo: .title3)
                         .foregroundColor(gradientManager.currentAccentColor)
                 }
             } failure: {
@@ -61,7 +61,7 @@ struct RecentOrderCard: View {
                     gradientManager.currentAccentColor.opacity(0.1)
 
                     Image(systemName: "storefront")
-                        .font(.system(size: 20, weight: .medium))
+                        .scaledFont(size: 20, weight: .medium, relativeTo: .title3)
                         .foregroundColor(gradientManager.currentAccentColor)
                 }
             }
@@ -75,12 +75,12 @@ struct RecentOrderCard: View {
             // Store Info
             VStack(alignment: .leading, spacing: 4) {
                 Text(order.storeName)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .scaledFont(size: 16, weight: .bold, design: .rounded, relativeTo: .body)
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                     .lineLimit(1)
 
                 Text(order.orderNumber)
-                    .font(.system(size: 12, weight: .medium))
+                    .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                     .foregroundColor(.secondary)
             }
 
@@ -117,14 +117,14 @@ struct RecentOrderCard: View {
                         ZStack {
                             Color.gray.opacity(0.2)
                             Image(systemName: "photo")
-                                .font(.system(size: 16, weight: .medium))
+                                .scaledFont(size: 16, weight: .medium, relativeTo: .body)
                                 .foregroundColor(.gray)
                         }
                     } failure: {
                         ZStack {
                             Color.gray.opacity(0.2)
                             Image(systemName: "photo")
-                                .font(.system(size: 16, weight: .medium))
+                                .scaledFont(size: 16, weight: .medium, relativeTo: .body)
                                 .foregroundColor(.gray)
                         }
                     }
@@ -145,7 +145,7 @@ struct RecentOrderCard: View {
                         .fill(gradientManager.currentAccentColor.opacity(0.12))
 
                     Text("+\(order.itemCount - 3)")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .scaledFont(size: 14, weight: .bold, design: .rounded, relativeTo: .subheadline)
                         .foregroundColor(gradientManager.currentAccentColor)
                 }
                 .frame(width: 48, height: 48)
@@ -156,15 +156,15 @@ struct RecentOrderCard: View {
             // Item Count
             VStack(alignment: .trailing, spacing: 4) {
                 Text("\(order.itemCount) artículo\(order.itemCount > 1 ? "s" : "")")
-                    .font(.system(size: 13, weight: .medium))
+                    .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                     .foregroundColor(.secondary)
 
                 HStack(spacing: 4) {
                     Image(systemName: "clock")
-                        .font(.system(size: 11, weight: .medium))
+                        .scaledFont(size: 11, weight: .medium, relativeTo: .caption)
 
                     Text(order.formattedDate)
-                        .font(.system(size: 12, weight: .medium))
+                        .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                 }
                 .foregroundColor(.secondary)
             }
@@ -179,14 +179,14 @@ struct RecentOrderCard: View {
         VStack(spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
                 Text(order.displayStatus.headline(isPickup: order.isPickup))
-                    .font(.system(size: 13, weight: .semibold))
+                    .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
 
                 Spacer()
 
                 Text(order.formattedTotal)
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .scaledFont(size: 20, weight: .bold, design: .rounded, relativeTo: .title3)
                     .foregroundColor(gradientManager.currentAccentColor)
             }
 
@@ -201,13 +201,13 @@ struct RecentOrderCard: View {
             if let callToAction {
                 HStack(spacing: 8) {
                     Image(systemName: order.displayStatus.icon)
-                        .font(.system(size: 14, weight: .semibold))
+                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                     Text(callToAction)
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .scaledFont(size: 14, weight: .bold, design: .rounded, relativeTo: .subheadline)
                         .lineLimit(2)
                     Spacer(minLength: 4)
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .bold))
+                        .scaledFont(size: 12, weight: .bold, relativeTo: .caption)
                 }
                 .foregroundColor(.white)
                 .padding(.horizontal, 14)

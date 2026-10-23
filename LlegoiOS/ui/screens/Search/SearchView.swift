@@ -207,7 +207,7 @@ struct SearchView: View {
                     HStack(spacing: 12) {
                         ProgressView()
                         Text("Preparando combinación…")
-                            .font(.system(size: 15, weight: .semibold))
+                            .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                     }
                     .padding(18)
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
@@ -262,9 +262,9 @@ struct SearchView: View {
     private var offlineFallbackBanner: some View {
         HStack(spacing: 10) {
             Image(systemName: "wifi.slash")
-                .font(.system(size: 12, weight: .semibold))
+                .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
             Text("Buscando sin internet")
-                .font(.system(size: 13, weight: .medium))
+                .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
             Spacer()
             Button {
                 if searchText.isEmpty {
@@ -274,7 +274,7 @@ struct SearchView: View {
                 }
             } label: {
                 Text("Probar con internet")
-                    .font(.system(size: 12, weight: .semibold))
+                    .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
                     .background(.white.opacity(0.25), in: Capsule())
@@ -323,18 +323,19 @@ struct SearchView: View {
                 if phase == .embeddings {
                     // Mostrar barra de progreso para indexación vectorial
                     Image(systemName: "brain")
-                        .font(.system(size: 12))
+                        .scaledFont(size: 12, relativeTo: .caption)
                 } else {
                     ProgressView()
                         .scaleEffect(0.75)
                         .tint(.white)
                 }
                 Text(phase.rawValue)
-                    .font(.system(size: 12, weight: .medium))
+                    .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                 Spacer()
                 if phase == .embeddings {
                     Text("\(Int(syncService.embeddingProgress * 100))%")
-                        .font(.system(size: 12, weight: .semibold).monospacedDigit())
+                        .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
+                        .monospacedDigit()
                 }
             }
             .foregroundColor(.white)
@@ -405,14 +406,14 @@ struct SearchView: View {
     private var bothEmptyPrompt: some View {
         VStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 40, weight: .ultraLight))
+                .scaledFont(size: 40, weight: .ultraLight, relativeTo: .largeTitle)
                 .foregroundColor(.secondary.opacity(0.4))
             Text(viewModel.isShowingOfflineFallback ? "Escribe para buscar en datos locales" : "Busca productos y negocios a la vez")
-                .font(.system(size: 16, weight: .medium))
+                .scaledFont(size: 16, weight: .medium, relativeTo: .body)
                 .foregroundColor(.secondary)
             if !viewModel.isShowingOfflineFallback {
                 Text("Prueba: pizza de piña y helado de chocolate")
-                    .font(.system(size: 14))
+                    .scaledFont(size: 14, relativeTo: .subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 20)
@@ -483,7 +484,7 @@ struct SearchView: View {
         VStack(alignment: .leading, spacing: 16) {
             if !viewModel.searchCombinations.isEmpty {
                 Text("Combinaciones en la misma sucursal")
-                    .font(.system(size: 19, weight: .bold, design: .rounded))
+                    .scaledFont(size: 19, weight: .bold, design: .rounded, relativeTo: .title3)
                     .padding(.horizontal, 20)
                 ForEach(viewModel.searchCombinations) { combination in
                     SearchCombinationCard(combination: combination, isPreparing: isPreparingCombination) {
@@ -495,16 +496,16 @@ struct SearchView: View {
 
             if !viewModel.combinationIntentResults.isEmpty {
                 Text(viewModel.searchCombinations.isEmpty ? "Productos por separado" : "Más opciones por producto")
-                    .font(.system(size: 19, weight: .bold, design: .rounded))
+                    .scaledFont(size: 19, weight: .bold, design: .rounded, relativeTo: .title3)
                     .padding(.horizontal, 20)
                 ForEach(Array(viewModel.combinationIntentResults.enumerated()), id: \.offset) { _, group in
                     VStack(alignment: .leading, spacing: 8) {
                         Text(group.intent.capitalized)
-                            .font(.system(size: 16, weight: .semibold))
+                            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                             .padding(.horizontal, 20)
                         if group.products.isEmpty {
                             Text("No encontramos productos para «\(group.intent)».")
-                                .font(.system(size: 14))
+                                .scaledFont(size: 14, relativeTo: .subheadline)
                                 .foregroundStyle(.secondary)
                                 .padding(.horizontal, 20)
                         } else {
@@ -521,7 +522,7 @@ struct SearchView: View {
 
             if viewModel.searchCombinations.isEmpty && viewModel.combinationIntentResults.isEmpty {
                 Text("No encontramos productos disponibles para todos los pedidos.")
-                    .font(.system(size: 15))
+                    .scaledFont(size: 15, relativeTo: .subheadline)
                     .foregroundStyle(.secondary)
                     .padding(20)
             }
@@ -560,7 +561,7 @@ struct SearchView: View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "info.circle.fill")
             Text(message)
-                .font(.system(size: 13, weight: .medium))
+                .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
             Spacer(minLength: 0)
         }
         .foregroundStyle(Color.llegoPrimary)
@@ -577,7 +578,7 @@ struct SearchView: View {
             if !viewModel.stores.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Negocios")
-                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .scaledFont(size: 18, weight: .bold, design: .rounded, relativeTo: .title3)
                         .foregroundColor(.primary)
                         .padding(.horizontal, 20)
                         .padding(.top, 16)
@@ -602,7 +603,7 @@ struct SearchView: View {
 
             if !regularProducts.isEmpty {
                 Text(viewModel.cartSearchSuggestions.isEmpty ? "Productos" : "Más opciones")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .scaledFont(size: 18, weight: .bold, design: .rounded, relativeTo: .title3)
                     .foregroundColor(.primary)
                     .padding(.horizontal, 20)
                     .padding(.top, 8)
@@ -702,17 +703,17 @@ struct SearchView: View {
     private var emptyContent: some View {
         VStack(spacing: 16) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 48, weight: .ultraLight))
+                .scaledFont(size: 48, weight: .ultraLight, relativeTo: .largeTitle)
                 .foregroundColor(.secondary.opacity(0.5))
 
             Text("No se encontraron resultados")
-                .font(.system(size: 18, weight: .medium))
+                .scaledFont(size: 18, weight: .medium, relativeTo: .title3)
                 .foregroundColor(.secondary)
 
             Text(viewModel.isShowingOfflineFallback
                  ? "Intenta con otra búsqueda o descarga más datos"
                  : "Intenta con otra búsqueda")
-                .font(.system(size: 14))
+                .scaledFont(size: 14, relativeTo: .subheadline)
                 .foregroundColor(.secondary.opacity(0.7))
         }
         .frame(maxWidth: .infinity)
@@ -724,22 +725,22 @@ struct SearchView: View {
     private func errorContent(message: String) -> some View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 48, weight: .ultraLight))
+                .scaledFont(size: 48, weight: .ultraLight, relativeTo: .largeTitle)
                 .foregroundColor(.orange.opacity(0.7))
 
             Text("Error al buscar")
-                .font(.system(size: 18, weight: .medium))
+                .scaledFont(size: 18, weight: .medium, relativeTo: .title3)
                 .foregroundColor(.secondary)
 
             Text(message)
-                .font(.system(size: 14))
+                .scaledFont(size: 14, relativeTo: .subheadline)
                 .foregroundColor(.secondary.opacity(0.7))
                 .multilineTextAlignment(.center)
 
             Button("Reintentar") {
                 viewModel.search(query: searchText)
             }
-            .font(.system(size: 16, weight: .medium))
+            .scaledFont(size: 16, weight: .medium, relativeTo: .body)
             .foregroundColor(gradientManager.currentAccentColor)
         }
         .frame(maxWidth: .infinity)
@@ -759,10 +760,10 @@ private struct SearchCombinationCard: View {
             HStack {
                 Image(systemName: "storefront")
                 Text(combination.branchName)
-                    .font(.system(size: 14, weight: .semibold))
+                    .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                 Spacer()
                 Text("Misma sucursal")
-                    .font(.system(size: 11, weight: .medium))
+                    .scaledFont(size: 11, weight: .medium, relativeTo: .caption)
                     .foregroundStyle(.secondary)
             }
 
@@ -780,10 +781,10 @@ private struct SearchCombinationCard: View {
 
             HStack {
                 Text("Total de productos")
-                    .font(.system(size: 15, weight: .semibold))
+                    .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                 Spacer()
                 Text(String(format: "%.2f %@", combination.totalPrice, combination.currency))
-                    .font(.system(size: 16, weight: .bold))
+                    .scaledFont(size: 16, weight: .bold, relativeTo: .body)
             }
 
             Text("Las opciones, el envío y los cargos pueden cambiar el total.")
@@ -795,7 +796,7 @@ private struct SearchCombinationCard: View {
                     HStack(spacing: 8) {
                         if isPreparing { ProgressView().tint(.white) }
                         Text(isPreparing ? "Preparando…" : (combination.products.count == 2 ? "Añadir ambos" : "Añadir combinación"))
-                            .font(.system(size: 15, weight: .semibold))
+                            .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                     }
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -815,10 +816,10 @@ private struct SearchCombinationCard: View {
             combinationImage(product.imageUrl)
             VStack(alignment: .leading, spacing: 3) {
                 Text(product.name)
-                    .font(.system(size: 14, weight: .medium))
+                    .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                     .lineLimit(2)
                 Text(String(format: "%.2f %@", product.price, product.currency))
-                    .font(.system(size: 13, weight: .semibold))
+                    .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                     .foregroundStyle(Color.llegoPrimary)
             }
             Spacer(minLength: 0)
@@ -872,15 +873,15 @@ private struct SearchCombinationSuggestionRow: View {
                 }
                 VStack(alignment: .leading, spacing: 3) {
                     Text(product.name)
-                        .font(.system(size: 14, weight: .medium))
+                        .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                         .lineLimit(2)
                     Text("Negocio: \(product.businessName) · \(String(format: "%.2f %@", product.price, product.currency))")
-                        .font(.system(size: 12))
+                        .scaledFont(size: 12, relativeTo: .caption)
                         .foregroundStyle(.secondary)
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
+                    .scaledFont(size: 11, weight: .semibold, relativeTo: .caption)
                     .foregroundStyle(.tertiary)
             }
             .padding(10)
@@ -921,7 +922,7 @@ private struct SearchStoreCircleCard: View {
                         placeholder: { Circle().fill(Color.gray.opacity(0.2)) },
                         failure: {
                             Image(systemName: "storefront")
-                                .font(.system(size: 28))
+                                .scaledFont(size: 28, relativeTo: .title)
                                 .foregroundColor(.gray)
                         }
                     )
@@ -929,13 +930,13 @@ private struct SearchStoreCircleCard: View {
                     .clipShape(Circle())
                 } else {
                     Image(systemName: "storefront")
-                        .font(.system(size: 28))
+                        .scaledFont(size: 28, relativeTo: .title)
                         .foregroundColor(gradientManager.currentAccentColor)
                 }
             }
 
             Text(store.name)
-                .font(.system(size: 12, weight: .medium))
+                .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                 .foregroundColor(.primary)
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
@@ -1007,11 +1008,12 @@ struct SyncSettingsSheet: View {
                                     ProgressView().scaleEffect(0.85)
                                 }
                                 Text(phase.rawValue)
-                                    .font(.system(size: 14))
+                                    .scaledFont(size: 14, relativeTo: .subheadline)
                                 Spacer()
                                 if phase == .embeddings {
                                     Text("\(Int(syncService.embeddingProgress * 100))%")
-                                        .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                                        .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
+                                        .monospacedDigit()
                                         .foregroundColor(gradientManager.currentAccentColor)
                                 }
                             }

@@ -100,7 +100,7 @@ struct OrderListView: View {
                     .frame(width: 100, height: 100)
 
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 44, weight: .medium))
+                    .scaledFont(size: 44, weight: .medium, relativeTo: .largeTitle)
                     .foregroundColor(.orange)
             }
 
@@ -121,7 +121,7 @@ struct OrderListView: View {
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 14, weight: .semibold))
+                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                     Text("Reintentar")
                         .scaledFont(size: 15, weight: .bold, design: .rounded, relativeTo: .subheadline)
                 }
@@ -144,7 +144,7 @@ struct OrderListView: View {
                     .frame(width: 120, height: 120)
 
                 Image(systemName: "bag.fill")
-                    .font(.system(size: 50, weight: .medium))
+                    .scaledFont(size: 50, weight: .medium, relativeTo: .largeTitle)
                     .foregroundColor(gradientManager.currentAccentColor)
             }
 
@@ -167,7 +167,7 @@ struct OrderListView: View {
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "storefront")
-                        .font(.system(size: 14, weight: .semibold))
+                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                     Text("Empezar a comprar")
                         .scaledFont(size: 15, weight: .bold, design: .rounded, relativeTo: .subheadline)
                 }
@@ -238,7 +238,7 @@ struct OrderListView: View {
     private var filteredEmptyView: some View {
         VStack(spacing: 10) {
             Image(systemName: viewModel.selectedFilter.icon)
-                .font(.system(size: 34, weight: .medium))
+                .scaledFont(size: 34, weight: .medium, relativeTo: .largeTitle)
                 .foregroundColor(gradientManager.currentAccentColor.opacity(0.7))
             Text(filteredEmptyMessage)
                 .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
@@ -290,7 +290,7 @@ struct OrderStatusFilterView: View {
             HStack(spacing: 8) {
                 Image(systemName: isSelected ? "checkmark" : filter.icon)
                     .fontWeight(.semibold)
-                    .font(.system(size: 14))
+                    .scaledFont(size: 14, relativeTo: .subheadline)
                 Text(filter.title)
                     .fontWeight(.semibold)
                     .scaledFont(size: 14, relativeTo: .subheadline)

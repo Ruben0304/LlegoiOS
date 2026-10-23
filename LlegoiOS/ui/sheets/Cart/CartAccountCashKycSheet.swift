@@ -305,7 +305,7 @@ struct CartAccountCashKycSheet: View {
                         dismiss()
                     }) {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 24))
+                            .scaledFont(size: 24, relativeTo: .title)
                             .foregroundColor(.secondary)
                             .symbolRenderingMode(.hierarchical)
                             .frame(minWidth: 44, minHeight: 44)
@@ -367,12 +367,12 @@ struct CartAccountCashKycSheet: View {
                     .frame(width: 52, height: 52)
 
                 Image(systemName: "checkmark.shield")
-                    .font(.system(size: 21, weight: .semibold))
+                    .scaledFont(size: 21, weight: .semibold, relativeTo: .title2)
                     .foregroundColor(gradientManager.currentAccentColor)
             }
 
             Text("Verificacion KYC")
-                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .scaledFont(size: 24, weight: .bold, design: .rounded, relativeTo: .title)
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
 
             Spacer(minLength: 0)
@@ -383,12 +383,12 @@ struct CartAccountCashKycSheet: View {
     private var introSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Verifica tu identidad para poder pagar en efectivo cuando el negocio lo requiera.")
-                .font(.system(size: 15, weight: .medium))
+                .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 .fixedSize(horizontal: false, vertical: true)
 
             Text(viewModel.message)
-                .font(.system(size: 14, weight: .medium))
+                .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -397,7 +397,7 @@ struct CartAccountCashKycSheet: View {
     private var purposeSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Sirve para")
-                .font(.system(size: 13, weight: .semibold))
+                .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                 .foregroundColor(gradientManager.currentAccentColor)
 
             HStack(spacing: 12) {
@@ -407,17 +407,17 @@ struct CartAccountCashKycSheet: View {
                         .frame(width: 40, height: 40)
 
                     Image(systemName: "banknote")
-                        .font(.system(size: 18, weight: .semibold))
+                        .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
                         .foregroundColor(gradientManager.currentAccentColor)
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Pagar en efectivo")
-                        .font(.system(size: 15, weight: .semibold))
+                        .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                         .foregroundColor(Color.adaptiveOnSurface(colorScheme))
 
                     Text("Solo tomara unos segundos activar esta verificacion.")
-                        .font(.system(size: 13, weight: .medium))
+                        .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -462,13 +462,13 @@ struct CartAccountCashKycSheet: View {
                             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
 
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 22, weight: .semibold))
+                            .scaledFont(size: 22, weight: .semibold, relativeTo: .title2)
                             .foregroundStyle(.white, .green)
                             .background(Color.white, in: Circle())
                             .offset(x: 6, y: -6)
                     } else {
                         Image(systemName: icon)
-                            .font(.system(size: 24, weight: .medium))
+                            .scaledFont(size: 24, weight: .medium, relativeTo: .title)
                             .foregroundColor(gradientManager.currentAccentColor)
                             .frame(width: 84, height: 84, alignment: .center)
                     }
@@ -476,11 +476,11 @@ struct CartAccountCashKycSheet: View {
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text(title)
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .scaledFont(size: 16, weight: .bold, design: .rounded, relativeTo: .body)
                         .foregroundColor(Color.adaptiveOnSurface(colorScheme))
 
                     Text(subtitle)
-                        .font(.system(size: 14, weight: .medium))
+                        .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
@@ -489,7 +489,7 @@ struct CartAccountCashKycSheet: View {
                             .fill(isComplete ? Color.green : gradientManager.currentAccentColor)
                             .frame(width: 7, height: 7)
                         Text(isComplete ? "Foto agregada" : "Pendiente")
-                            .font(.system(size: 12, weight: .semibold))
+                            .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                             .foregroundColor(isComplete ? .green : gradientManager.currentAccentColor)
                     }
                 }
@@ -502,7 +502,7 @@ struct CartAccountCashKycSheet: View {
                     Image(systemName: isComplete ? "arrow.triangle.2.circlepath" : "plus")
                     Text(isComplete ? "Cambiar foto" : "Agregar foto")
                 }
-                .font(.system(size: 15, weight: .semibold))
+                .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                 .foregroundColor(isComplete ? Color.adaptiveOnSurface(colorScheme) : .white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 46)
@@ -534,7 +534,7 @@ struct CartAccountCashKycSheet: View {
                     Text("Listo")
                         .fontWeight(.semibold)
                 }
-                .font(.system(size: 16, weight: .semibold))
+                .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 54)
@@ -553,7 +553,7 @@ struct CartAccountCashKycSheet: View {
                     Text("Entendido")
                         .fontWeight(.semibold)
                 }
-                .font(.system(size: 16, weight: .semibold))
+                .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 54)
@@ -571,7 +571,7 @@ struct CartAccountCashKycSheet: View {
                     Text("Enviar verificacion")
                         .fontWeight(.semibold)
                 }
-                .font(.system(size: 16, weight: .semibold))
+                .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 54)
@@ -589,7 +589,7 @@ struct CartAccountCashKycSheet: View {
                 ProgressView()
                     .tint(gradientManager.currentAccentColor)
                 Text("Procesando verificacion...")
-                    .font(.system(size: 15, weight: .semibold))
+                    .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                     .foregroundColor(gradientManager.currentAccentColor)
             }
             .frame(maxWidth: .infinity)

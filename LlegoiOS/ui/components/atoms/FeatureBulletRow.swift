@@ -9,7 +9,7 @@ struct FeatureBulletRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "crown.fill")
-                .font(.system(size: 18, weight: .semibold))
+                .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
                 .foregroundColor(Color(red: 0.96, green: 0.74, blue: 0.18))
                 .frame(width: 26, height: 26, alignment: .top)
 
@@ -17,7 +17,7 @@ struct FeatureBulletRow: View {
                 Text(title).fontWeight(.bold)
                 + Text(" " + description)
             )
-            .font(.system(size: 16, weight: .regular))
+            .scaledFont(size: 16, relativeTo: .body)
             .foregroundColor(.black.opacity(0.8))
             .fixedSize(horizontal: false, vertical: true)
 

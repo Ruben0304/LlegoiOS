@@ -64,7 +64,7 @@ struct AddressFormView: View {
                                 if let coordinate = selectedCoordinate {
                                     Annotation("", coordinate: coordinate) {
                                         Image(systemName: "mappin.circle.fill")
-                                            .font(.system(size: 34))
+                                            .scaledFont(size: 34, relativeTo: .largeTitle)
                                             .foregroundColor(.red)
                                     }
                                 }

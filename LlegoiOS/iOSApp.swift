@@ -99,14 +99,14 @@ private struct StartupErrorView: View {
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 40))
+                .scaledFont(size: 40, relativeTo: .largeTitle)
                 .foregroundColor(.orange)
 
             Text("No se pudo iniciar la app")
-                .font(.system(size: 20, weight: .bold))
+                .scaledFont(size: 20, weight: .bold, relativeTo: .title3)
 
             Text(message)
-                .font(.system(size: 15))
+                .scaledFont(size: 15, relativeTo: .subheadline)
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
                 .padding(.horizontal, 24)

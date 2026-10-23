@@ -201,7 +201,7 @@ struct ProductListView: View {
                         }) {
                             HStack(spacing: 6) {
                                 Image(systemName: "location.circle")
-                                    .font(.system(size: 14, weight: .semibold))
+                                    .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
 
                                 if activeViewModel.maxDistance < 50 {
                                     Circle()
@@ -220,7 +220,7 @@ struct ProductListView: View {
                             showFavoritesSheet = true
                         }) {
                             Image(systemName: "heart")
-                                .font(.system(size: 16, weight: .semibold))
+                                .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                                 .frame(width: 30, height: 30)
                                 .foregroundColor(gradientManager.currentAccentColor)
                         }
@@ -235,7 +235,7 @@ struct ProductListView: View {
                                 showCart = true
                             }) {
                                 Image(systemName: "cart")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                                     .frame(width: 30, height: 30)
                                     .foregroundColor(gradientManager.currentAccentColor)
                             }
@@ -252,7 +252,7 @@ struct ProductListView: View {
                             showFavoritesSheet = true
                         }) {
                             Image(systemName: "heart")
-                                .font(.system(size: 16, weight: .semibold))
+                                .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                                 .frame(width: 30, height: 30)
                                 .foregroundColor(gradientManager.currentAccentColor)
                         }
@@ -439,17 +439,17 @@ struct ProductListView: View {
 
             // Icono minimalista
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 48, weight: .regular))
+                .scaledFont(size: 48, relativeTo: .largeTitle)
                 .foregroundColor(.black)
                 .padding(.bottom, 8)
 
             VStack(spacing: 8) {
                 Text("No encontramos productos")
-                    .font(.system(size: 22, weight: .semibold, design: .rounded))
+                    .scaledFont(size: 22, weight: .semibold, design: .rounded, relativeTo: .title2)
                     .foregroundColor(.primary)
 
                 Text(emptyStateMessage)
-                    .font(.system(size: 15, weight: .regular))
+                    .scaledFont(size: 15, relativeTo: .subheadline)
                     .foregroundColor(.secondary.opacity(0.8))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
@@ -466,9 +466,9 @@ struct ProductListView: View {
                 }) {
                     HStack(spacing: 8) {
                         Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 14, weight: .semibold))
+                            .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                         Text("Limpiar filtros")
-                            .font(.system(size: 16, weight: .semibold))
+                            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                     }
                     .foregroundColor(gradientManager.currentAccentColor)
                     .frame(height: 50)
@@ -501,7 +501,7 @@ struct ProductListView: View {
                 .controlSize(.large)
                 .tint(.white)
             Text("Cargando...")
-                .font(.system(size: 16, weight: .medium))
+                .scaledFont(size: 16, weight: .medium, relativeTo: .body)
                 .foregroundColor(.white)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -511,10 +511,10 @@ struct ProductListView: View {
     private func errorState(message: String) -> some View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 50))
+                .scaledFont(size: 50, relativeTo: .largeTitle)
                 .foregroundColor(.orange)
             Text(message)
-                .font(.system(size: 16, weight: .medium))
+                .scaledFont(size: 16, weight: .medium, relativeTo: .body)
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
@@ -552,11 +552,11 @@ private struct FiltersSheet: View {
                     VStack(alignment: .leading, spacing: 24) {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Distancia de búsqueda")
-                                .font(.system(size: 22, weight: .bold))
+                                .scaledFont(size: 22, weight: .bold, relativeTo: .title2)
                                 .foregroundColor(.onSurfaceColor)
 
                             Text("Ajusta el rango para ver opciones cerca de ti.")
-                                .font(.system(size: 14, weight: .regular))
+                                .scaledFont(size: 14, relativeTo: .subheadline)
                                 .foregroundColor(.secondary)
                         }
 
@@ -585,10 +585,10 @@ private struct FiltersSheet: View {
 
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(tempDistance < 50 ? "\(Int(tempDistance)) km" : "Sin límite")
-                                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                                        .scaledFont(size: 20, weight: .bold, design: .rounded, relativeTo: .title3)
                                         .foregroundColor(gradientManager.currentAccentColor)
                                     Text("Radio actual")
-                                        .font(.system(size: 12, weight: .medium))
+                                        .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                                         .foregroundColor(.secondary)
                                 }
                                 .padding(.horizontal, 10)
@@ -601,8 +601,10 @@ private struct FiltersSheet: View {
                             VStack(spacing: 14) {
                                 HStack(spacing: 12) {
                                     Image(systemName: "minus.circle.fill")
-                                        .font(.system(size: 18))
+                                        .scaledFont(size: 18, relativeTo: .title3)
                                         .foregroundColor(tempDistance > 1 ? gradientManager.currentAccentColor : .gray.opacity(0.3))
+                                        .frame(minWidth: 44, minHeight: 44)
+                                        .contentShape(Rectangle())
                                         .onTapGesture {
                                             if tempDistance > 1 {
                                                 withAnimation(.spring(response: 0.3)) {
@@ -610,6 +612,8 @@ private struct FiltersSheet: View {
                                                 }
                                             }
                                         }
+                                        .accessibilityLabel("Reducir la distancia")
+                                        .accessibilityAddTraits(.isButton)
 
                                     Slider(value: $tempDistance, in: 1...50, step: 1)
                                         .tint(
@@ -624,8 +628,10 @@ private struct FiltersSheet: View {
                                         )
 
                                     Image(systemName: "plus.circle.fill")
-                                        .font(.system(size: 18))
+                                        .scaledFont(size: 18, relativeTo: .title3)
                                         .foregroundColor(tempDistance < 50 ? gradientManager.currentAccentColor : .gray.opacity(0.3))
+                                        .frame(minWidth: 44, minHeight: 44)
+                                        .contentShape(Rectangle())
                                         .onTapGesture {
                                             if tempDistance < 50 {
                                                 withAnimation(.spring(response: 0.3)) {
@@ -633,15 +639,17 @@ private struct FiltersSheet: View {
                                                 }
                                             }
                                         }
+                                        .accessibilityLabel("Aumentar la distancia")
+                                        .accessibilityAddTraits(.isButton)
                                 }
 
                                 HStack {
                                     Text("1 km")
-                                        .font(.system(size: 12))
+                                        .scaledFont(size: 12, relativeTo: .caption)
                                         .foregroundColor(.gray)
                                     Spacer()
                                     Text("50+ km")
-                                        .font(.system(size: 12))
+                                        .scaledFont(size: 12, relativeTo: .caption)
                                         .foregroundColor(.gray)
                                 }
 
@@ -662,11 +670,11 @@ private struct FiltersSheet: View {
 
                         HStack(spacing: 10) {
                             Image(systemName: "info.circle.fill")
-                                .font(.system(size: 16))
+                                .scaledFont(size: 16, relativeTo: .body)
                                 .foregroundColor(.llegoAccent)
 
                             Text("Mientras más cerca busques, menores serán los costos de entrega.")
-                                .font(.system(size: 13, weight: .regular))
+                                .scaledFont(size: 13, relativeTo: .footnote)
                                 .foregroundColor(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
@@ -688,7 +696,7 @@ private struct FiltersSheet: View {
                         tempDistance = 50
                     }) {
                         Text("Restablecer")
-                            .font(.system(size: 16, weight: .semibold))
+                            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                             .frame(maxWidth: .infinity)
                             .frame(height: 44)
                     }
@@ -701,7 +709,7 @@ private struct FiltersSheet: View {
                         onApply()
                     }) {
                         Text("Aplicar distancia")
-                            .font(.system(size: 16, weight: .bold))
+                            .scaledFont(size: 16, weight: .bold, relativeTo: .body)
                             .frame(maxWidth: .infinity)
                             .frame(height: 44)
                     }
@@ -716,7 +724,7 @@ private struct FiltersSheet: View {
     private func presetButton(title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 12, weight: .semibold))
+                .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                 .foregroundColor(gradientManager.currentAccentColor)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)

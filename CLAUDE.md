@@ -246,6 +246,13 @@ Ver `PaymentManager.swift` como referencia.
 - **UI Models**: Definidos en `models/Models.swift` (`Product`, `Store`)
 - ViewModel mapea GraphQL → UI Models
 
+### 7. Letra escalable y accesibilidad
+- Tamaños de letra con `.scaledFont(size:weight:design:relativeTo:)` (`ui/theme/Theme.swift`), no con
+  `.font(.system(size:))`: crece con el tamaño de texto del sistema (Dynamic Type). Solo quedan fijos los
+  tamaños calculados con la geometría (tarjeta HDR, carrusel 3D).
+- Lo que se toca con `.onTapGesture` en vez de `Button` lleva `.accessibilityAddTraits(.isButton)` y una
+  etiqueta (o `.accessibilityElement(children: .combine)` si es una tarjeta), y una zona de toque de 44 pt.
+
 ## 🔧 Helpers Principales
 
 | Helper | Propósito | Ubicación |

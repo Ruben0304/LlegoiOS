@@ -65,7 +65,7 @@ struct BankTransferSheetView: View {
                         LottieView(name: "loading")
                             .frame(width: 80, height: 80)
                         Text("Verificando comprobante...")
-                            .font(.system(size: 14, weight: .semibold))
+                            .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                             .foregroundColor(.white)
                     }
                 )
@@ -78,7 +78,7 @@ struct BankTransferSheetView: View {
                             .fill(gradientManager.currentAccentColor)
                             .frame(width: 40, height: 40)
                         Image(systemName: "checkmark")
-                            .font(.system(size: 20, weight: .bold))
+                            .scaledFont(size: 20, weight: .bold, relativeTo: .title3)
                             .foregroundColor(.white)
                     }
                     .shadow(
@@ -98,7 +98,7 @@ struct BankTransferSheetView: View {
                             .fill(Color.red)
                             .frame(width: 40, height: 40)
                         Image(systemName: "xmark")
-                            .font(.system(size: 20, weight: .bold))
+                            .scaledFont(size: 20, weight: .bold, relativeTo: .title3)
                             .foregroundColor(.white)
                     }
                     .shadow(color: Color.red.opacity(0.5), radius: 8, x: 0, y: 4)
@@ -125,15 +125,15 @@ struct BankTransferSheetView: View {
                         VStack(spacing: 16) {
                             HStack {
                                 Image(systemName: "building.2.fill")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                                     .foregroundColor(.llegoSecondary)
 
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Banco")
-                                        .font(.system(size: 12, weight: .medium))
+                                        .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                                         .foregroundColor(.gray)
                                     Text(bankName)
-                                        .font(.system(size: 16, weight: .bold))
+                                        .scaledFont(size: 16, weight: .bold, relativeTo: .body)
                                         .foregroundColor(gradientManager.currentAccentColor)
                                 }
 
@@ -144,15 +144,15 @@ struct BankTransferSheetView: View {
 
                             HStack {
                                 Image(systemName: "creditcard.fill")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                                     .foregroundColor(.llegoSecondary)
 
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Número de Tarjeta")
-                                        .font(.system(size: 12, weight: .medium))
+                                        .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                                         .foregroundColor(.gray)
                                     Text(bankAccountNumber)
-                                        .font(.system(size: 16, weight: .bold, design: .monospaced))
+                                        .scaledFont(size: 16, weight: .bold, design: .monospaced, relativeTo: .body)
                                         .foregroundColor(gradientManager.currentAccentColor)
                                 }
 
@@ -162,7 +162,7 @@ struct BankTransferSheetView: View {
                                     UIPasteboard.general.string = bankAccountNumber
                                 }) {
                                     Image(systemName: "doc.on.doc.fill")
-                                        .font(.system(size: 14, weight: .semibold))
+                                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                                         .foregroundColor(gradientManager.currentAccentColor)
                                         .padding(8)
                                         .background(
@@ -178,15 +178,15 @@ struct BankTransferSheetView: View {
 
                             HStack {
                                 Image(systemName: "phone.fill")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                                     .foregroundColor(.llegoSecondary)
 
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Teléfono de Confirmación")
-                                        .font(.system(size: 12, weight: .medium))
+                                        .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                                         .foregroundColor(.gray)
                                     Text(phoneNumber)
-                                        .font(.system(size: 16, weight: .bold, design: .monospaced))
+                                        .scaledFont(size: 16, weight: .bold, design: .monospaced, relativeTo: .body)
                                         .foregroundColor(gradientManager.currentAccentColor)
                                 }
 
@@ -197,12 +197,12 @@ struct BankTransferSheetView: View {
 
                             HStack {
                                 Image(systemName: "dollarsign.circle.fill")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                                     .foregroundColor(gradientManager.currentAccentColor)
 
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text("Monto a Transferir")
-                                        .font(.system(size: 12, weight: .medium))
+                                        .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                                         .foregroundColor(.gray)
                                     if allowAmountEditing {
                                         HStack(alignment: .firstTextBaseline, spacing: 6) {
@@ -216,7 +216,7 @@ struct BankTransferSheetView: View {
                                                 .multilineTextAlignment(.leading)
 
                                             Text("CUP")
-                                                .font(.system(size: 14, weight: .semibold))
+                                                .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                                                 .foregroundColor(
                                                     gradientManager.currentAccentColor.opacity(0.85)
                                                 )
@@ -244,18 +244,18 @@ struct BankTransferSheetView: View {
                         VStack(spacing: 16) {
                             HStack {
                                 Image(systemName: "number.circle.fill")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                                     .foregroundColor(gradientManager.currentAccentColor)
 
                                 Text("Identificador de Transferencia")
-                                    .font(.system(size: 16, weight: .bold))
+                                    .scaledFont(size: 16, weight: .bold, relativeTo: .body)
                                     .foregroundColor(gradientManager.currentAccentColor)
 
                                 Spacer()
                             }
 
                             TextField("Ej: 1234567890", text: $transferId)
-                                .font(.system(size: 16, weight: .medium, design: .monospaced))
+                                .scaledFont(size: 16, weight: .medium, design: .monospaced, relativeTo: .body)
                                 .padding(16)
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
@@ -278,11 +278,11 @@ struct BankTransferSheetView: View {
                         VStack(spacing: 16) {
                             HStack {
                                 Image(systemName: "photo.badge.plus.fill")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                                     .foregroundColor(gradientManager.currentAccentColor)
 
                                 Text("Comprobante de Pago")
-                                    .font(.system(size: 16, weight: .bold))
+                                    .scaledFont(size: 16, weight: .bold, relativeTo: .body)
                                     .foregroundColor(gradientManager.currentAccentColor)
 
                                 Spacer()
@@ -290,9 +290,9 @@ struct BankTransferSheetView: View {
                                 if validationState == .validated {
                                     HStack(spacing: 4) {
                                         Image(systemName: "checkmark.circle.fill")
-                                            .font(.system(size: 14, weight: .bold))
+                                            .scaledFont(size: 14, weight: .bold, relativeTo: .subheadline)
                                         Text("Verificado")
-                                            .font(.system(size: 12, weight: .semibold))
+                                            .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                                     }
                                     .foregroundColor(gradientManager.currentAccentColor)
                                     .padding(.horizontal, 10)
@@ -332,9 +332,9 @@ struct BankTransferSheetView: View {
                                     }) {
                                         HStack(spacing: 8) {
                                             Image(systemName: "arrow.triangle.2.circlepath")
-                                                .font(.system(size: 14, weight: .semibold))
+                                                .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                                             Text("Cambiar imagen")
-                                                .font(.system(size: 14, weight: .semibold))
+                                                .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                                         }
                                         .foregroundColor(gradientManager.currentAccentColor)
                                         .padding(.vertical, 8)
@@ -358,12 +358,12 @@ struct BankTransferSheetView: View {
                                                 .frame(width: 60, height: 60)
 
                                             Image(systemName: "photo.badge.plus")
-                                                .font(.system(size: 28, weight: .medium))
+                                                .scaledFont(size: 28, weight: .medium, relativeTo: .title)
                                                 .foregroundColor(.llegoSecondary)
                                         }
 
                                         Text("Subir Comprobante")
-                                            .font(.system(size: 16, weight: .semibold))
+                                            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                                             .foregroundColor(
                                                 transferId.isEmpty
                                                     ? .gray : gradientManager.currentAccentColor)
@@ -373,7 +373,7 @@ struct BankTransferSheetView: View {
                                                 ? "Primero introduce el identificador"
                                                 : "Toca para seleccionar una imagen"
                                         )
-                                        .font(.system(size: 13, weight: .medium))
+                                        .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                                         .foregroundColor(.gray)
                                     }
                                     .frame(maxWidth: .infinity)
@@ -396,10 +396,10 @@ struct BankTransferSheetView: View {
                         }) {
                             HStack(spacing: 12) {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 18, weight: .bold))
+                                    .scaledFont(size: 18, weight: .bold, relativeTo: .title3)
 
                                 Text("Confirmar Transferencia")
-                                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                                    .scaledFont(size: 16, weight: .bold, design: .rounded, relativeTo: .body)
                             }
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -439,7 +439,7 @@ struct BankTransferSheetView: View {
                         dismiss()
                         onDismiss()
                     }
-                    .font(.system(size: 16, weight: .semibold))
+                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                     .foregroundColor(.gray)
                 }
             }
@@ -476,7 +476,7 @@ struct BankTransferSheetView: View {
                 .frame(width: 120, height: 120)
 
             Image(systemName: "building.columns.fill")
-                .font(.system(size: 60, weight: .medium))
+                .scaledFont(size: 60, weight: .medium, relativeTo: .largeTitle)
                 .foregroundColor(Color.llegoSecondary)
         }
         .padding(.top, 20)
@@ -485,11 +485,11 @@ struct BankTransferSheetView: View {
     private var titleSection: some View {
         VStack(spacing: 8) {
             Text("Transferencia Bancaria")
-                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .scaledFont(size: 24, weight: .bold, design: .rounded, relativeTo: .title)
                 .foregroundColor(gradientManager.currentAccentColor)
 
             Text("Realiza tu transferencia y sube el comprobante")
-                .font(.system(size: 15, weight: .medium))
+                .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 30)
@@ -514,11 +514,11 @@ struct BankTransferSheetView: View {
                     systemName: result.matched
                         ? "checkmark.seal.fill" : "exclamationmark.triangle.fill"
                 )
-                .font(.system(size: 16, weight: .semibold))
+                .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                 .foregroundColor(result.matched ? gradientManager.currentAccentColor : .red)
 
                 Text(result.matched ? "Transferencia validada" : "Verifica el identificador")
-                    .font(.system(size: 15, weight: .semibold))
+                    .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                     .foregroundColor(result.matched ? gradientManager.currentAccentColor : .red)
 
                 Spacer()
@@ -552,7 +552,7 @@ struct BankTransferSheetView: View {
             }
 
             Text(result.message)
-                .font(.system(size: 13, weight: .medium))
+                .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                 .foregroundColor(.gray)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -575,13 +575,13 @@ struct BankTransferSheetView: View {
     private func validationDetailRow(title: String, value: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Text(title)
-                .font(.system(size: 13, weight: .medium))
+                .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                 .foregroundColor(.gray)
 
             Spacer()
 
             Text(value)
-                .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                .scaledFont(size: 13, weight: .semibold, design: .monospaced, relativeTo: .footnote)
                 .foregroundColor(gradientManager.currentAccentColor)
         }
     }

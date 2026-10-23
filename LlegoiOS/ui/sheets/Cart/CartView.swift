@@ -270,7 +270,7 @@ struct CartView: View {
         ToolbarItem(placement: .navigationBarLeading) {
             Button(action: { dismiss() }) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 14, weight: .semibold))
+                    .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                     .foregroundColor(gradientManager.currentAccentColor)
             }
             .accessibilityLabel("Cerrar carrito")
@@ -390,7 +390,7 @@ struct CartView: View {
                     ToolbarItem(placement: .navigationBarLeading) {
                         Button(action: { showOrdersFromCart = false }) {
                             Image(systemName: "xmark")
-                                .font(.system(size: 16, weight: .semibold))
+                                .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                         }
                         .accessibilityLabel("Cerrar")
                     }
@@ -472,7 +472,7 @@ struct CartView: View {
                         Text(selectedPaymentMethod != nil ? "Cambiar" : "Seleccionar")
                             .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .bold))
+                            .scaledFont(size: 12, weight: .bold, relativeTo: .caption)
                     }
                     .foregroundColor(gradientManager.currentAccentColor)
                 }
@@ -489,7 +489,7 @@ struct CartView: View {
                         switch method.imageType {
                         case .systemIcon(let iconName):
                             Image(systemName: iconName)
-                                .font(.system(size: 22, weight: .semibold))
+                                .scaledFont(size: 22, weight: .semibold, relativeTo: .title2)
                                 .foregroundColor(method.color)
                         case .assetImage(let imageName):
                             Image(imageName)
@@ -498,7 +498,7 @@ struct CartView: View {
                                 .frame(width: 30, height: 30)
                         case .url:
                             Image(systemName: "creditcard")
-                                .font(.system(size: 22, weight: .semibold))
+                                .scaledFont(size: 22, weight: .semibold, relativeTo: .title2)
                                 .foregroundColor(method.color)
                         }
                     }
@@ -546,7 +546,7 @@ struct CartView: View {
                 }) {
                     HStack {
                         Image(systemName: "creditcard")
-                            .font(.system(size: 20, weight: .semibold))
+                            .scaledFont(size: 20, weight: .semibold, relativeTo: .title3)
                             .foregroundColor(.gray)
 
                         Text("Selecciona un método de pago")
@@ -556,7 +556,7 @@ struct CartView: View {
                         Spacer()
 
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 14, weight: .bold))
+                            .scaledFont(size: 14, weight: .bold, relativeTo: .subheadline)
                             .foregroundColor(.gray)
                     }
                     .padding(16)
@@ -732,7 +732,7 @@ struct CartView: View {
                         .frame(width: 40, height: 40)
 
                     Image(systemName: "exclamationmark.shield")
-                        .font(.system(size: 17, weight: .semibold))
+                        .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
                         .foregroundColor(gradientManager.currentAccentColor)
                 }
 
@@ -758,7 +758,7 @@ struct CartView: View {
                     Text("Hacer KYC ahora")
                         .fontWeight(.semibold)
                 }
-                .font(.system(size: 14, weight: .semibold))
+                .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                 .foregroundColor(gradientManager.currentAccentColor)
                 .frame(maxWidth: .infinity)
                 .frame(height: 44)
@@ -1116,7 +1116,7 @@ struct CartView: View {
     private func errorView(message: String) -> some View {
         VStack(spacing: 20) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 60))
+                .scaledFont(size: 60, relativeTo: .largeTitle)
                 .foregroundColor(.red.opacity(0.6))
             Text(message)
                 .scaledFont(size: 16, weight: .medium, relativeTo: .body)
@@ -1126,7 +1126,7 @@ struct CartView: View {
             Button("Reintentar") {
                 viewModel.loadCart()
             }
-            .font(.system(size: 16, weight: .bold))
+            .scaledFont(size: 16, weight: .bold, relativeTo: .body)
             .foregroundColor(.white)
             .padding(.horizontal, 30)
             .padding(.vertical, 12)
@@ -1642,7 +1642,7 @@ struct CartView: View {
             } else {
                 HStack(spacing: 8) {
                     Image(systemName: "sparkles")
-                        .font(.system(size: 14))
+                        .scaledFont(size: 14, relativeTo: .subheadline)
                         .foregroundColor(.secondary)
                     Text("No se encontraron recomendaciones")
                         .scaledFont(size: 13, relativeTo: .footnote)
@@ -1677,7 +1677,7 @@ struct CartView: View {
                     .frame(width: 92, height: 92)
 
                 Image(systemName: "cart")
-                    .font(.system(size: 34, weight: .semibold))
+                    .scaledFont(size: 34, weight: .semibold, relativeTo: .largeTitle)
                     .foregroundColor(gradientManager.currentAccentColor)
             }
 
@@ -1696,7 +1696,7 @@ struct CartView: View {
             Button(action: openMyOrdersFromCart) {
                 HStack(spacing: 8) {
                     Image(systemName: "bag")
-                        .font(.system(size: 14, weight: .semibold))
+                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                     Text("Ver mis pedidos")
                         .scaledFont(size: 15, weight: .bold, design: .rounded, relativeTo: .subheadline)
                 }
@@ -1717,7 +1717,7 @@ struct CartView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: "calendar.clock")
-                    .font(.system(size: 16, weight: .semibold))
+                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                     .foregroundColor(gradientManager.currentAccentColor)
                 Text("Programar pedido")
                     .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
@@ -1726,7 +1726,7 @@ struct CartView: View {
                 if viewModel.scheduledFor != nil {
                     Button(action: { viewModel.scheduledFor = nil }) {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 18))
+                            .scaledFont(size: 18, relativeTo: .title3)
                             .foregroundColor(.secondary)
                             .frame(minWidth: 44, minHeight: 44)
                             .contentShape(Rectangle())
@@ -1752,7 +1752,7 @@ struct CartView: View {
             Button(action: { showScheduledOrderPicker = true }) {
                 HStack(spacing: 6) {
                     Image(systemName: viewModel.scheduledFor != nil ? "pencil" : "clock")
-                        .font(.system(size: 13, weight: .semibold))
+                        .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                     Text(viewModel.scheduledFor != nil ? "Cambiar hora" : "Seleccionar hora")
                         .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                 }
@@ -1812,7 +1812,7 @@ struct CartView: View {
                             .fill(gradientManager.currentAccentColor.opacity(0.12))
                             .frame(width: 34, height: 34)
                         Image(systemName: "mappin.circle.fill")
-                            .font(.system(size: 16, weight: .semibold))
+                            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                             .foregroundColor(gradientManager.currentAccentColor)
                     }
                     VStack(alignment: .leading, spacing: 2) {
@@ -1855,7 +1855,7 @@ struct CartView: View {
         }) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 13, weight: .semibold))
+                    .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                 Text(title)
                     .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                     .lineLimit(1)
@@ -1875,12 +1875,12 @@ struct CartView: View {
     private var multipleBranchesBanner: some View {
         HStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 13, weight: .semibold))
+                .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                 .foregroundColor(.orange)
             Text(
                 "Solo puedes pedir a una tienda a la vez. Elimina productos de otras tiendas para continuar."
             )
-            .font(.system(size: 12, weight: .medium))
+            .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
             .foregroundColor(.primary)
             .fixedSize(horizontal: false, vertical: true)
         }
@@ -1898,7 +1898,7 @@ struct CartView: View {
             // Pedidos pausados por la tienda: el checkout está bloqueado.
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: "pause.circle.fill")
-                    .font(.system(size: 16, weight: .semibold))
+                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                     .foregroundColor(.orange)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(BranchOrderingMessages.notAcceptingOrdersShort)
@@ -1954,7 +1954,7 @@ struct CartView: View {
                     switch method.imageType {
                     case .systemIcon(let iconName):
                         Image(systemName: iconName)
-                            .font(.system(size: 13, weight: .semibold))
+                            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                     case .assetImage(let imageName):
                         Image(imageName)
                             .resizable()
@@ -1962,7 +1962,7 @@ struct CartView: View {
                             .frame(width: 18, height: 18)
                     case .url:
                         Image(systemName: "creditcard")
-                            .font(.system(size: 13, weight: .semibold))
+                            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                     }
 
                     VStack(alignment: .leading, spacing: 1) {
@@ -1976,7 +1976,7 @@ struct CartView: View {
                     .frame(maxWidth: 120)
                 } else {
                     Image(systemName: "creditcard")
-                        .font(.system(size: 15, weight: .semibold))
+                        .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                     Text("Método")
                         .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                 }
@@ -2146,7 +2146,7 @@ struct CartView: View {
                         Text(
                             "\(viewModel.formattedTotalWithDiscount) · ahorras \(viewModel.formattedPotentialSavings)"
                         )
-                        .font(.system(size: 13, weight: .regular))
+                        .scaledFont(size: 13, relativeTo: .footnote)
                         .foregroundColor(.secondary)
                     }
 
@@ -2194,11 +2194,11 @@ struct CartView: View {
     ) -> some View {
         HStack {
             Text(label)
-                .font(.system(size: 14, weight: labelWeight))
+                .scaledFont(size: 14, weight: labelWeight, relativeTo: .subheadline)
                 .foregroundColor(.secondary)
             Spacer()
             Text(value)
-                .font(.system(size: 14, weight: valueWeight, design: .rounded))
+                .scaledFont(size: 14, weight: valueWeight, design: .rounded, relativeTo: .subheadline)
                 .foregroundColor(.primary)
         }
         .padding(.horizontal, 16)
@@ -2324,7 +2324,7 @@ struct CartView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 6) {
                         Image(systemName: "creditcard.fill")
-                            .font(.system(size: 12, weight: .semibold))
+                            .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                             .foregroundColor(gradientManager.currentAccentColor)
                         Text("Este negocio acepta")
                             .scaledFont(size: 13, weight: .bold, relativeTo: .footnote)
@@ -2338,7 +2338,7 @@ struct CartView: View {
                                     switch method.imageType {
                                     case .systemIcon(let iconName):
                                         Image(systemName: iconName)
-                                            .font(.system(size: 11, weight: .semibold))
+                                            .scaledFont(size: 11, weight: .semibold, relativeTo: .caption)
                                             .foregroundColor(method.color)
                                     case .assetImage(let imageName):
                                         Image(imageName)
@@ -2347,7 +2347,7 @@ struct CartView: View {
                                             .frame(width: 13, height: 13)
                                     case .url:
                                         Image(systemName: "creditcard")
-                                            .font(.system(size: 11, weight: .semibold))
+                                            .scaledFont(size: 11, weight: .semibold, relativeTo: .caption)
                                             .foregroundColor(method.color)
                                     }
                                     Text(method.name)
@@ -2370,7 +2370,7 @@ struct CartView: View {
 
                     HStack(spacing: 4) {
                         Image(systemName: "info.circle")
-                            .font(.system(size: 10, weight: .medium))
+                            .scaledFont(size: 10, weight: .medium, relativeTo: .caption2)
                             .foregroundColor(.secondary.opacity(0.6))
                         Text("Otros negocios pueden ofrecer métodos adicionales.")
                             .scaledFont(size: 11, weight: .medium, relativeTo: .caption2)
@@ -2426,7 +2426,7 @@ private struct CartAIIcon: View {
                 .frame(width: 50, height: 50)
 
             Image(systemName: "sparkles")
-                .font(.system(size: 15, weight: .semibold))
+                .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                 .foregroundColor(.white)
                 .shadow(color: .black.opacity(0.25), radius: 2, x: 0, y: 1)
         }

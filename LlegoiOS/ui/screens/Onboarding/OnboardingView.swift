@@ -192,7 +192,7 @@ struct OnboardingView: View {
                         if isIntroPhase {
                             // "Mantén presionado" — solo visible cuando termina la cinemática
                             Text("Mantén presionado\npara empezar...")
-                                .font(.system(size: 26, weight: .light, design: .rounded))
+                                .scaledFont(size: 26, weight: .light, design: .rounded, relativeTo: .title)
                                 .foregroundColor(Color(red: 0.32, green: 0.35, blue: 0.4))
                                 .multilineTextAlignment(.center)
                                 .frame(maxWidth: .infinity, alignment: .center)
@@ -529,12 +529,12 @@ struct CinematicOverlay: View {
                 .matchedGeometryEffect(id: "logo", in: heroNS)
 
             Text("Llegó")
-                .font(.system(size: 52, weight: .bold, design: .rounded))
+                .scaledFont(size: 52, weight: .bold, design: .rounded, relativeTo: .largeTitle)
                 .foregroundColor(inkColor)
                 .matchedGeometryEffect(id: "title", in: heroNS)
 
             Text("Bienvenido a tu delivery en Cuba")
-                .font(.system(size: 18, weight: .medium, design: .rounded))
+                .scaledFont(size: 18, weight: .medium, design: .rounded, relativeTo: .title3)
                 .foregroundColor(subInkColor)
                 .multilineTextAlignment(.center)
                 .transition(.opacity)
@@ -555,7 +555,7 @@ struct CinematicOverlay: View {
                 .matchedGeometryEffect(id: "logo", in: heroNS)
 
             Text("Llegó")
-                .font(.system(size: 42, weight: .bold, design: .rounded))
+                .scaledFont(size: 42, weight: .bold, design: .rounded, relativeTo: .largeTitle)
                 .foregroundColor(inkColor)
                 .matchedGeometryEffect(id: "title", in: heroNS)
         }
@@ -572,12 +572,12 @@ struct CinematicOverlay: View {
                 .frame(width: 50, height: 44)
 
             Text(title)
-                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .scaledFont(size: 30, weight: .bold, design: .rounded, relativeTo: .largeTitle)
                 .foregroundColor(inkColor)
                 .multilineTextAlignment(.center)
 
             Text(subtitle)
-                .font(.system(size: 16, weight: .medium, design: .rounded))
+                .scaledFont(size: 16, weight: .medium, design: .rounded, relativeTo: .body)
                 .foregroundColor(subInkColor)
                 .multilineTextAlignment(.center)
         }
@@ -925,13 +925,13 @@ struct OnboardingTextBlock: View {
     var body: some View {
         VStack(spacing: 12) {
             Text(title)
-                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .scaledFont(size: 30, weight: .bold, design: .rounded, relativeTo: .largeTitle)
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
                 .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 2)
 
             Text(description)
-                .font(.system(size: 16, weight: .regular, design: .rounded))
+                .scaledFont(size: 16, design: .rounded, relativeTo: .body)
                 .foregroundColor(.white.opacity(0.78))
                 .multilineTextAlignment(.center)
                 .lineSpacing(3)
@@ -960,14 +960,14 @@ struct OnboardingIntroPage: View {
                         .shadow(color: .black.opacity(0.22), radius: 6, x: 0, y: 3)
 
                     Text(page.title)
-                        .font(.system(size: 48, weight: .bold, design: .rounded))
+                        .scaledFont(size: 48, weight: .bold, design: .rounded, relativeTo: .largeTitle)
                         .foregroundColor(.white)
                         .kerning(0.4)
                         .multilineTextAlignment(.center)
                 }
 
                 Text(page.description)
-                    .font(.system(size: 17, weight: .medium, design: .rounded))
+                    .scaledFont(size: 17, weight: .medium, design: .rounded, relativeTo: .body)
                     .foregroundColor(Color.white.opacity(0.82))
                     .multilineTextAlignment(.center)
                     .lineSpacing(3)
@@ -1042,7 +1042,7 @@ struct OnboardingMediaPlaceholder: View {
 
             VStack(spacing: 16) {
                 Image(systemName: icon)
-                    .font(.system(size: 64, weight: .light))
+                    .scaledFont(size: 64, weight: .light, relativeTo: .largeTitle)
                     .foregroundStyle(
                         LinearGradient(
                             colors: [.white, .white.opacity(0.7)],
@@ -1053,7 +1053,7 @@ struct OnboardingMediaPlaceholder: View {
                     .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
 
                 Text(label)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .scaledFont(size: 12, weight: .medium, design: .rounded, relativeTo: .caption)
                     .foregroundColor(.white.opacity(0.7))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
@@ -1093,10 +1093,10 @@ struct OnboardingPrimaryButton: View {
         }) {
             HStack(spacing: 10) {
                 Text(title)
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .scaledFont(size: 18, weight: .semibold, design: .rounded, relativeTo: .title3)
 
                 Image(systemName: "arrow.right")
-                    .font(.system(size: 16, weight: .bold))
+                    .scaledFont(size: 16, weight: .bold, relativeTo: .body)
             }
             .foregroundColor(.white)
             .frame(maxWidth: .infinity)

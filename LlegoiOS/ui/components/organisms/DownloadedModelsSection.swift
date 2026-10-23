@@ -11,18 +11,18 @@ struct DownloadedModelsSection: View {
             // Header
             HStack {
                 Image(systemName: "cube.box.fill")
-                    .font(.system(size: 20, weight: .semibold))
+                    .scaledFont(size: 20, weight: .semibold, relativeTo: .title3)
                     .foregroundColor(.llegoPrimary)
                 
                 Text("Modelos 3D Descargados")
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .scaledFont(size: 18, weight: .bold, design: .rounded, relativeTo: .title3)
                     .foregroundColor(.llegoPrimary)
                 
                 Spacer()
                 
                 // Tamaño total
                 Text(formattedSize)
-                    .font(.system(size: 13, weight: .medium))
+                    .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                     .foregroundColor(.gray)
             }
             
@@ -76,15 +76,15 @@ struct DownloadedModelsSection: View {
     private var emptyState: some View {
         VStack(spacing: 12) {
             Image(systemName: "cube.transparent")
-                .font(.system(size: 32, weight: .light))
+                .scaledFont(size: 32, weight: .light, relativeTo: .largeTitle)
                 .foregroundColor(.gray.opacity(0.5))
             
             Text("No hay modelos descargados")
-                .font(.system(size: 15, weight: .medium))
+                .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
                 .foregroundColor(.gray)
             
             Text("Los modelos de nuevas categorías se descargarán automáticamente")
-                .font(.system(size: 13, weight: .regular))
+                .scaledFont(size: 13, relativeTo: .footnote)
                 .foregroundColor(.gray.opacity(0.8))
                 .multilineTextAlignment(.center)
         }
@@ -111,18 +111,18 @@ struct DownloadedModelsSection: View {
                         .frame(width: 44, height: 44)
                     
                     Image(systemName: config.icon)
-                        .font(.system(size: 18, weight: .semibold))
+                        .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
                         .foregroundColor(config.glowSwiftUIColor)
                 }
                 
                 // Info
                 VStack(alignment: .leading, spacing: 4) {
                     Text(config.name)
-                        .font(.system(size: 15, weight: .semibold))
+                        .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                         .foregroundColor(.llegoPrimary)
                     
                     Text(config.model3dFileName)
-                        .font(.system(size: 13, weight: .medium))
+                        .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                         .foregroundColor(.gray)
                 }
                 
@@ -134,7 +134,7 @@ struct DownloadedModelsSection: View {
                     showingDeleteConfirmation = true
                 }) {
                     Image(systemName: "trash")
-                        .font(.system(size: 16, weight: .medium))
+                        .scaledFont(size: 16, weight: .medium, relativeTo: .body)
                         .foregroundColor(.red.opacity(0.7))
                         .frame(width: 36, height: 36)
                         .background(
@@ -199,19 +199,19 @@ struct Model3DDownloadOverlay: View {
                             .frame(width: 70, height: 70)
                         
                         Image(systemName: "arrow.down.circle.fill")
-                            .font(.system(size: 36, weight: .medium))
+                            .scaledFont(size: 36, weight: .medium, relativeTo: .largeTitle)
                             .foregroundColor(.white)
                     }
                     
                     Text("Descargar modelo 3D")
-                        .font(.system(size: 14, weight: .semibold))
+                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                         .foregroundColor(.white)
                 }
             }
             .buttonStyle(DownloadScaleButtonStyle())
             
             Text("Toca para descargar")
-                .font(.system(size: 12, weight: .medium))
+                .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                 .foregroundColor(.white.opacity(0.7))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -235,12 +235,12 @@ struct Model3DDownloadOverlay: View {
                     .rotationEffect(.degrees(-90))
                 
                 Text("\(Int(progress * 100))%")
-                    .font(.system(size: 16, weight: .bold))
+                    .scaledFont(size: 16, weight: .bold, relativeTo: .body)
                     .foregroundColor(.white)
             }
             
             Text("Descargando...")
-                .font(.system(size: 14, weight: .semibold))
+                .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                 .foregroundColor(.white)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -260,19 +260,19 @@ struct Model3DDownloadOverlay: View {
                             .frame(width: 70, height: 70)
                         
                         Image(systemName: "arrow.clockwise.circle.fill")
-                            .font(.system(size: 36, weight: .medium))
+                            .scaledFont(size: 36, weight: .medium, relativeTo: .largeTitle)
                             .foregroundColor(.white)
                     }
                     
                     Text("Reintentar descarga")
-                        .font(.system(size: 14, weight: .semibold))
+                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                         .foregroundColor(.white)
                 }
             }
             .buttonStyle(DownloadScaleButtonStyle())
             
             Text(message)
-                .font(.system(size: 11, weight: .medium))
+                .scaledFont(size: 11, weight: .medium, relativeTo: .caption)
                 .foregroundColor(.white.opacity(0.7))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)

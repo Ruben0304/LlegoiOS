@@ -34,7 +34,7 @@ struct RecommendedProductCard: View {
                             .frame(width: 148, height: 148)
                             .overlay(
                                 Image(systemName: "photo")
-                                    .font(.system(size: 28))
+                                    .scaledFont(size: 28, relativeTo: .title)
                                     .foregroundColor(Color(.systemGray3))
                             )
                     }
@@ -51,7 +51,7 @@ struct RecommendedProductCard: View {
                     }
                 }) {
                     Image(systemName: added ? "checkmark" : "plus")
-                        .font(.system(size: 14, weight: .bold))
+                        .scaledFont(size: 14, weight: .bold, relativeTo: .subheadline)
                         .foregroundColor(.white)
                         .frame(width: 32, height: 32)
                         .background(

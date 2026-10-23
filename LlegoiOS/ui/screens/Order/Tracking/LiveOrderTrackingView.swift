@@ -96,7 +96,7 @@ struct LiveOrderTrackingView: View {
                     dismiss()
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 28))
+                        .scaledFont(size: 28, relativeTo: .title)
                         .symbolRenderingMode(.hierarchical)
                         .foregroundStyle(.primary)
                 }
@@ -139,18 +139,18 @@ struct LiveOrderTrackingView: View {
     private var distanceChip: some View {
         HStack(spacing: 8) {
             Image(systemName: "location.fill")
-                .font(.system(size: 13, weight: .semibold))
+                .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                 .foregroundColor(.llegoAccent)
 
             Text(formattedDistance)
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .scaledFont(size: 15, weight: .bold, design: .rounded, relativeTo: .subheadline)
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
 
             Text("•")
                 .foregroundColor(.secondary)
 
             Text(orderManager.orderStatus.displayText)
-                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .scaledFont(size: 13, weight: .medium, design: .rounded, relativeTo: .footnote)
                 .foregroundColor(.secondary)
         }
         .padding(.horizontal, 18)
@@ -290,11 +290,11 @@ struct LiveOrderTrackingView: View {
                                 .aspectRatio(contentMode: .fill)
                         } placeholder: {
                             Image(systemName: "person.fill")
-                                .font(.system(size: 18, weight: .semibold))
+                                .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
                                 .foregroundColor(.white)
                         } failure: {
                             Image(systemName: "person.fill")
-                                .font(.system(size: 18, weight: .semibold))
+                                .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
                                 .foregroundColor(.white)
                         }
                     }
@@ -319,7 +319,7 @@ struct LiveOrderTrackingView: View {
                             .stroke(Color.white, lineWidth: 3)
                     )
                 Image(systemName: "bicycle")
-                    .font(.system(size: 20, weight: .bold))
+                    .scaledFont(size: 20, weight: .bold, relativeTo: .title3)
                     .foregroundColor(.white)
             }
             .shadow(color: Color.llegoAccent.opacity(0.4), radius: 8, y: 2)

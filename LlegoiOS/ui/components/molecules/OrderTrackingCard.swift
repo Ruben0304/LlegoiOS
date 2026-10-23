@@ -87,11 +87,11 @@ struct OrderTrackingCard: View {
                         .aspectRatio(contentMode: .fill)
                 } placeholder: {
                     Image(systemName: "person.fill")
-                        .font(.system(size: 12, weight: .semibold))
+                        .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                         .foregroundColor(.white)
                 } failure: {
                     Image(systemName: "person.fill")
-                        .font(.system(size: 12, weight: .semibold))
+                        .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                         .foregroundColor(.white)
                 }
             }
@@ -122,6 +122,8 @@ struct OrderTrackingCard: View {
         .onTapGesture {
             onTap()
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
         .onAppear {
             captureUrlsOnce()
         }
@@ -224,7 +226,7 @@ struct OrderTrackingCard: View {
                     )
 
                 Text("Origen")
-                    .font(.system(size: 9, weight: .medium))
+                    .scaledFont(size: 9, weight: .medium, relativeTo: .caption2)
                     .foregroundColor(.secondary)
             }
             .frame(width: 50)
@@ -254,7 +256,7 @@ struct OrderTrackingCard: View {
 
                     // Bicicleta animada
                     Image(systemName: "bicycle")
-                        .font(.system(size: 16, weight: .bold))
+                        .scaledFont(size: 16, weight: .bold, relativeTo: .body)
                         .foregroundColor(gradientManager.currentAccentColor)
                         .offset(
                             x: max(
@@ -294,7 +296,7 @@ struct OrderTrackingCard: View {
                     )
 
                 Text("Destino")
-                    .font(.system(size: 9, weight: .medium))
+                    .scaledFont(size: 9, weight: .medium, relativeTo: .caption2)
                     .foregroundColor(deliveryProgress >= 1.0 ? .llegoAccent : .secondary)
             }
             .frame(width: 50)
@@ -303,10 +305,10 @@ struct OrderTrackingCard: View {
             if orderManager.remainingDistanceMeters > 0 {
                 VStack(spacing: 2) {
                     Image(systemName: "location.fill")
-                        .font(.system(size: 10, weight: .semibold))
+                        .scaledFont(size: 10, weight: .semibold, relativeTo: .caption2)
                         .foregroundColor(.llegoAccent)
                     Text(formattedDistance)
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .scaledFont(size: 11, weight: .bold, design: .rounded, relativeTo: .caption)
                         .foregroundColor(gradientManager.currentAccentColor)
                 }
                 .frame(width: 55)
@@ -352,7 +354,7 @@ struct OrderTrackingCard: View {
                         .animation(.easeInOut(duration: 0.8), value: deliveryProgress)
 
                     Image(systemName: "bicycle")
-                        .font(.system(size: 16, weight: .bold))
+                        .scaledFont(size: 16, weight: .bold, relativeTo: .body)
                         .foregroundColor(gradientManager.currentAccentColor)
                         .offset(
                             x: max(

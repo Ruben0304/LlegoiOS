@@ -7,18 +7,18 @@ struct TransactionHistoryView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Historial de Transacciones")
-                .font(.system(size: 18, weight: .bold))
+                .scaledFont(size: 18, weight: .bold, relativeTo: .title3)
                 .foregroundColor(.primary)
                 .padding(.horizontal, 20)
 
             if transactions.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "tray")
-                        .font(.system(size: 48))
+                        .scaledFont(size: 48, relativeTo: .largeTitle)
                         .foregroundColor(.secondary.opacity(0.5))
 
                     Text("No hay transacciones")
-                        .font(.system(size: 15, weight: .medium))
+                        .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity)
@@ -107,7 +107,7 @@ struct TransactionRow: View {
                     .frame(width: 44, height: 44)
 
                 Image(systemName: transactionInfo.icon)
-                    .font(.system(size: 20, weight: .semibold))
+                    .scaledFont(size: 20, weight: .semibold, relativeTo: .title3)
                     .foregroundColor(transactionInfo.color)
             }
 
@@ -115,12 +115,12 @@ struct TransactionRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 8) {
                     Text(transactionInfo.title)
-                        .font(.system(size: 15, weight: .semibold))
+                        .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                         .foregroundColor(.primary)
 
                     if let badge = statusBadge {
                         Text(badge.text)
-                            .font(.system(size: 11, weight: .semibold))
+                            .scaledFont(size: 11, weight: .semibold, relativeTo: .caption)
                             .foregroundColor(.white)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
@@ -132,12 +132,12 @@ struct TransactionRow: View {
                 }
 
                 Text(transactionInfo.subtitle)
-                    .font(.system(size: 13))
+                    .scaledFont(size: 13, relativeTo: .footnote)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
 
                 Text(formatDate(transaction.createdAt))
-                    .font(.system(size: 12))
+                    .scaledFont(size: 12, relativeTo: .caption)
                     .foregroundColor(.secondary.opacity(0.8))
             }
 
@@ -146,11 +146,11 @@ struct TransactionRow: View {
             // Amount
             VStack(alignment: .trailing, spacing: 2) {
                 Text("\(transactionInfo.isIncoming ? "+" : "-")\(transaction.currency == "usd" ? "$" : "$")\(String(format: "%.2f", transaction.amount))")
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .scaledFont(size: 16, weight: .bold, design: .rounded, relativeTo: .body)
                     .foregroundColor(transactionInfo.isIncoming ? .green : .red)
 
                 Text(transaction.currency.uppercased())
-                    .font(.system(size: 11, weight: .semibold))
+                    .scaledFont(size: 11, weight: .semibold, relativeTo: .caption)
                     .foregroundColor(.secondary)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)

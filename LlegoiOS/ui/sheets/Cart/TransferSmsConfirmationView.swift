@@ -71,15 +71,15 @@ struct TransferSmsConfirmationView: View {
 
             VStack(spacing: 16) {
                 Image(systemName: "message.badge.filled.fill")
-                    .font(.system(size: 56))
+                    .scaledFont(size: 56, relativeTo: .largeTitle)
                     .foregroundColor(gradientManager.currentAccentColor)
 
                 Text("¿Tu transferencia enviará SMS?")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .scaledFont(size: 22, weight: .bold, design: .rounded, relativeTo: .title2)
                     .multilineTextAlignment(.center)
 
                 Text("El sistema Shortcut puede confirmar tu pago automáticamente si tu banco o Transfermóvil envía un SMS de notificación.")
-                    .font(.system(size: 15))
+                    .scaledFont(size: 15, relativeTo: .subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 8)
@@ -92,17 +92,17 @@ struct TransferSmsConfirmationView: View {
                 } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 20))
+                            .scaledFont(size: 20, relativeTo: .title3)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Sí, envía SMS")
-                                .font(.system(size: 16, weight: .semibold))
+                                .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                             Text("Confirmación automática")
-                                .font(.system(size: 12))
+                                .scaledFont(size: 12, relativeTo: .caption)
                                 .opacity(0.8)
                         }
                         Spacer()
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 14, weight: .semibold))
+                            .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                     }
                     .foregroundColor(.white)
                     .padding(.horizontal, 20)
@@ -116,17 +116,17 @@ struct TransferSmsConfirmationView: View {
                 } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "xmark.circle")
-                            .font(.system(size: 20))
+                            .scaledFont(size: 20, relativeTo: .title3)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("No, sin SMS")
-                                .font(.system(size: 16, weight: .semibold))
+                                .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                             Text("Subiré foto del comprobante")
-                                .font(.system(size: 12))
+                                .scaledFont(size: 12, relativeTo: .caption)
                                 .opacity(0.8)
                         }
                         Spacer()
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 14, weight: .semibold))
+                            .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                     }
                     .foregroundColor(gradientManager.currentAccentColor)
                     .padding(.horizontal, 20)
@@ -154,7 +154,7 @@ struct TransferSmsConfirmationView: View {
                 .scaleEffect(1.4)
                 .tint(gradientManager.currentAccentColor)
             Text("Iniciando pago...")
-                .font(.system(size: 16, weight: .medium))
+                .scaledFont(size: 16, weight: .medium, relativeTo: .body)
                 .foregroundColor(.secondary)
         }
     }
@@ -183,16 +183,16 @@ struct TransferSmsConfirmationView: View {
                         )
 
                     Image(systemName: "arrow.triangle.2.circlepath")
-                        .font(.system(size: 28, weight: .medium))
+                        .scaledFont(size: 28, weight: .medium, relativeTo: .title)
                         .foregroundColor(gradientManager.currentAccentColor)
                 }
 
                 VStack(spacing: 8) {
                     Text("Verificando transferencia...")
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                        .scaledFont(size: 20, weight: .bold, design: .rounded, relativeTo: .title3)
 
                     Text("Buscando tu transferencia en Shortcut.\nEsto puede tardar unos segundos.")
-                        .font(.system(size: 14))
+                        .scaledFont(size: 14, relativeTo: .subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                 }
@@ -204,7 +204,7 @@ struct TransferSmsConfirmationView: View {
                 Image(systemName: "banknote")
                     .foregroundColor(.llegoAccent)
                 Text("Total: \(totalAmount)")
-                    .font(.system(size: 15, weight: .semibold))
+                    .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                     .foregroundColor(gradientManager.currentAccentColor)
             }
             .padding(.horizontal, 20)
@@ -215,7 +215,7 @@ struct TransferSmsConfirmationView: View {
             // Opción manual si no aparece
             VStack(spacing: 8) {
                 Text("¿No aparece tu transferencia?")
-                    .font(.system(size: 13))
+                    .scaledFont(size: 13, relativeTo: .footnote)
                     .foregroundColor(.secondary)
 
                 Button {
@@ -227,7 +227,7 @@ struct TransferSmsConfirmationView: View {
                     }
                 } label: {
                     Text("Subir comprobante manualmente")
-                        .font(.system(size: 14, weight: .medium))
+                        .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                         .foregroundColor(gradientManager.currentAccentColor)
                         .underline()
                 }
@@ -245,14 +245,14 @@ struct TransferSmsConfirmationView: View {
     private func errorView(message: String) -> some View {
         VStack(spacing: 20) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 48))
+                .scaledFont(size: 48, relativeTo: .largeTitle)
                 .foregroundColor(.orange)
 
             Text("Algo salió mal")
-                .font(.system(size: 20, weight: .bold))
+                .scaledFont(size: 20, weight: .bold, relativeTo: .title3)
 
             Text(message)
-                .font(.system(size: 14))
+                .scaledFont(size: 14, relativeTo: .subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)

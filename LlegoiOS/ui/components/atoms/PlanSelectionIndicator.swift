@@ -17,7 +17,7 @@ struct PlanSelectionIndicator: View {
                     .frame(width: 22, height: 22)
 
                 Image(systemName: "checkmark")
-                    .font(.system(size: 12, weight: .bold))
+                    .scaledFont(size: 12, weight: .bold, relativeTo: .caption)
                     .foregroundColor(.white)
             }
         }

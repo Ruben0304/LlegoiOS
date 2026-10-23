@@ -80,17 +80,17 @@ struct StoreCard: View {
                     // Store Info Row - full width below logo
                     VStack(alignment: .leading, spacing: 4) {
                         Text(storeName)
-                            .font(.system(size: nameFontSize, weight: .semibold, design: .rounded))
+                            .scaledFont(size: nameFontSize, weight: .semibold, design: .rounded, relativeTo: .body)
                             .foregroundColor(.black)
                             .lineLimit(1)
                             .frame(maxWidth: .infinity, alignment: .leading)
 
                         HStack(spacing: 4) {
                             Text("⚡")
-                                .font(.system(size: etaFontSize))
+                                .scaledFont(size: etaFontSize, relativeTo: .subheadline)
 
                             Text("In \(etaMinutes) minutes")
-                                .font(.system(size: etaFontSize, weight: .regular, design: .rounded))
+                                .scaledFont(size: etaFontSize, design: .rounded, relativeTo: .subheadline)
                                 .foregroundColor(.gray)
                         }
                     }
@@ -165,7 +165,7 @@ struct StoreCard: View {
                 VStack(alignment: .leading, spacing: 10) {
                     // Store Name - Left aligned
                     Text(storeName)
-                        .font(.system(size: nameFontSize, weight: .bold, design: .rounded))
+                        .scaledFont(size: nameFontSize, weight: .bold, design: .rounded, relativeTo: .title3)
                         .foregroundColor(.black)
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -177,11 +177,11 @@ struct StoreCard: View {
                         if let address = address {
                             HStack(spacing: 6) {
                                 Image(systemName: "location.fill")
-                                    .font(.system(size: 12, weight: .medium))
+                                    .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                                     .foregroundColor(Color.llegoTertiary)
 
                                 Text(address)
-                                    .font(.system(size: detailFontSize, weight: .regular, design: .rounded))
+                                    .scaledFont(size: detailFontSize, design: .rounded, relativeTo: .subheadline)
                                     .foregroundColor(.gray)
                                     .lineLimit(1)
                                     .truncationMode(.tail)
@@ -195,11 +195,11 @@ struct StoreCard: View {
                         if let rating = rating {
                             HStack(spacing: 4) {
                                 Image(systemName: "star.fill")
-                                    .font(.system(size: 12, weight: .medium))
+                                    .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                                     .foregroundColor(Color.yellow)
 
                                 Text(String(format: "%.1f", rating))
-                                    .font(.system(size: detailFontSize, weight: .semibold, design: .rounded))
+                                    .scaledFont(size: detailFontSize, weight: .semibold, design: .rounded, relativeTo: .subheadline)
                                     .foregroundColor(.black)
                             }
                             .fixedSize()
@@ -209,10 +209,10 @@ struct StoreCard: View {
                     // ETA - Left aligned
                     HStack(spacing: 4) {
                         Text("⚡")
-                            .font(.system(size: detailFontSize))
+                            .scaledFont(size: detailFontSize, relativeTo: .subheadline)
 
                         Text("\(etaMinutes) min")
-                            .font(.system(size: detailFontSize, weight: .medium, design: .rounded))
+                            .scaledFont(size: detailFontSize, weight: .medium, design: .rounded, relativeTo: .subheadline)
                             .foregroundColor(.gray)
                     }
                 }

@@ -234,10 +234,10 @@ struct HDRCreditCardView: View {
         Button(action: action) {
             HStack(spacing: 6) {
                 Image(systemName: "arrow.uturn.backward.circle.fill")
-                    .font(.system(size: 14))
+                    .scaledFont(size: 14, relativeTo: .subheadline)
 
                 Text("Reembolsar")
-                    .font(.system(size: 12, weight: .semibold))
+                    .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
             }
             .foregroundColor(.white)
             .padding(.horizontal, 12)
@@ -270,7 +270,7 @@ private struct CardBrandMark: View {
         switch brand {
         case .visa:
             Text("VISA")
-                .font(.system(size: 20, weight: .black, design: .rounded))
+                .scaledFont(size: 20, weight: .black, design: .rounded, relativeTo: .title3)
                 .foregroundColor(color)
                 .italic()
                 .shadow(color: .black.opacity(0.35), radius: 3, x: 0, y: 2)
@@ -288,7 +288,7 @@ private struct CardBrandMark: View {
             .shadow(color: .black.opacity(0.25), radius: 3, x: 0, y: 2)
         case .local:
             Text("LLEGO")
-                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .scaledFont(size: 18, weight: .bold, design: .rounded, relativeTo: .title3)
                 .foregroundColor(color)
         }
     }

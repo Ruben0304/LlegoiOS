@@ -25,7 +25,7 @@ struct AppUpdateModal: View {
                         .frame(width: 80, height: 80)
 
                     Image(systemName: iconName)
-                        .font(.system(size: 40, weight: .medium))
+                        .scaledFont(size: 40, weight: .medium, relativeTo: .largeTitle)
                         .foregroundColor(viewModel.updateType == .maintenance ? .orange : .llegoPrimary)
                 }
                 .padding(.top, 40)
@@ -33,13 +33,13 @@ struct AppUpdateModal: View {
 
                 // Title
                 Text(viewModel.updateTitle)
-                    .font(.system(size: 24, weight: .bold))
+                    .scaledFont(size: 24, weight: .bold, relativeTo: .title)
                     .foregroundColor(colorScheme == .dark ? .white : .black)
                     .padding(.bottom, 12)
 
                 // Message
                 Text(viewModel.updateMessage)
-                    .font(.system(size: 16))
+                    .scaledFont(size: 16, relativeTo: .body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
@@ -49,11 +49,11 @@ struct AppUpdateModal: View {
                 if let changelog = viewModel.changelog, !changelog.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Novedades:")
-                            .font(.system(size: 14, weight: .semibold))
+                            .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                             .foregroundColor(.secondary)
 
                         Text(changelog)
-                            .font(.system(size: 14))
+                            .scaledFont(size: 14, relativeTo: .subheadline)
                             .foregroundColor(.secondary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -75,10 +75,10 @@ struct AppUpdateModal: View {
                         }) {
                             HStack {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 18))
+                                    .scaledFont(size: 18, relativeTo: .title3)
 
                                 Text("Entendido")
-                                    .font(.system(size: 17, weight: .semibold))
+                                    .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
                             }
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -96,10 +96,10 @@ struct AppUpdateModal: View {
                         }) {
                             HStack {
                                 Image(systemName: "arrow.down.circle.fill")
-                                    .font(.system(size: 18))
+                                    .scaledFont(size: 18, relativeTo: .title3)
 
                                 Text(viewModel.updateType == .required ? "Actualizar Ahora" : "Ir al App Store")
-                                    .font(.system(size: 17, weight: .semibold))
+                                    .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
                             }
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -115,7 +115,7 @@ struct AppUpdateModal: View {
                                 viewModel.dismissOptionalUpdate()
                             }) {
                                 Text("Más Tarde")
-                                    .font(.system(size: 17, weight: .medium))
+                                    .scaledFont(size: 17, weight: .medium, relativeTo: .body)
                                     .foregroundColor(.llegoPrimary)
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 52)

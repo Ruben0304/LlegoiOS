@@ -50,7 +50,7 @@ struct PaymentLinkSheetView: View {
                                 .frame(width: 120, height: 120)
 
                             Image(systemName: "link.circle.fill")
-                                .font(.system(size: 60, weight: .medium))
+                                .scaledFont(size: 60, weight: .medium, relativeTo: .largeTitle)
                                 .foregroundStyle(
                                     LinearGradient(
                                         gradient: Gradient(colors: [
@@ -67,13 +67,13 @@ struct PaymentLinkSheetView: View {
                         // Title & Description
                         VStack(spacing: 12) {
                             Text("Link de Pago Generado")
-                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .scaledFont(size: 24, weight: .bold, design: .rounded, relativeTo: .title)
                                 .foregroundColor(.primary)
 
                             Text(
                                 "Comparte este link con alguien en el exterior para que pague tu pedido"
                             )
-                            .font(.system(size: 15, weight: .medium))
+                            .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 30)
@@ -84,11 +84,11 @@ struct PaymentLinkSheetView: View {
                             // Link Display
                             HStack(spacing: 12) {
                                 Image(systemName: "link")
-                                    .font(.system(size: 15, weight: .semibold))
+                                    .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                                     .foregroundColor(gradientManager.currentAccentColor)
 
                                 Text(paymentLink)
-                                    .font(.system(size: 13, weight: .medium, design: .monospaced))
+                                    .scaledFont(size: 13, weight: .medium, design: .monospaced, relativeTo: .footnote)
                                     .foregroundColor(.primary)
                                     .lineLimit(2)
                                     .truncationMode(.middle)
@@ -116,10 +116,10 @@ struct PaymentLinkSheetView: View {
                                         systemName: showCopiedMessage
                                             ? "checkmark.circle.fill" : "doc.on.doc.fill"
                                     )
-                                    .font(.system(size: 18, weight: .bold))
+                                    .scaledFont(size: 18, weight: .bold, relativeTo: .title3)
 
                                     Text(showCopiedMessage ? "¡Copiado!" : "Copiar Link")
-                                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                                        .scaledFont(size: 16, weight: .bold, design: .rounded, relativeTo: .body)
                                 }
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
@@ -145,11 +145,11 @@ struct PaymentLinkSheetView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack(spacing: 8) {
                                 Image(systemName: "info.circle.fill")
-                                    .font(.system(size: 15, weight: .semibold))
+                                    .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                                     .foregroundColor(gradientManager.currentAccentColor)
 
                                 Text("Instrucciones")
-                                    .font(.system(size: 15, weight: .bold))
+                                    .scaledFont(size: 15, weight: .bold, relativeTo: .subheadline)
                                     .foregroundColor(.primary)
                             }
 
@@ -182,7 +182,7 @@ struct PaymentLinkSheetView: View {
                         dismiss()
                         onDismiss()
                     }
-                    .font(.system(size: 16, weight: .semibold))
+                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                     .foregroundColor(gradientManager.currentAccentColor)
                 }
             }

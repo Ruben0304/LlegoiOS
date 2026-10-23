@@ -190,14 +190,14 @@ struct LoginView: View {
             // Título con efecto typewriter y cursor
             HStack(alignment: .firstTextBaseline, spacing: 0) {
                 Text(displayedText)
-                    .font(.system(size: 48, weight: .bold))
+                    .scaledFont(size: 48, weight: .bold, relativeTo: .largeTitle)
                     .foregroundColor(.white)
                     .lineSpacing(6)
                     .fixedSize(horizontal: false, vertical: true)
 
                 if showCursor && displayedText.count < fullText.count {
                     Text("|")
-                        .font(.system(size: 48, weight: .bold))
+                        .scaledFont(size: 48, weight: .bold, relativeTo: .largeTitle)
                         .foregroundColor(.white)
                         .opacity(showCursor ? 1 : 0)
                 }
@@ -227,9 +227,9 @@ struct LoginView: View {
                     } label: {
                         HStack {
                             Image(systemName: "arrow.left")
-                                .font(.system(size: 16, weight: .semibold))
+                                .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                             Text("Volver")
-                                .font(.system(size: 16, weight: .semibold))
+                                .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                             Spacer()
                         }
                         .foregroundColor(Color.black.opacity(0.7))
@@ -274,7 +274,7 @@ struct LoginView: View {
                                 .frame(width: 22, height: 22)
                             
                             Text("Continuar con Google")
-                                .font(.system(size: 19, weight: .medium))
+                                .scaledFont(size: 19, weight: .medium, relativeTo: .title3)
                                 .foregroundColor(.black.opacity(0.85))
                         }
                         .frame(maxWidth: .infinity)
@@ -293,7 +293,7 @@ struct LoginView: View {
                     HStack {
                         Rectangle().fill(Color.gray.opacity(0.3)).frame(height: 1)
                         Text("o")
-                            .font(.system(size: 14))
+                            .scaledFont(size: 14, relativeTo: .subheadline)
                             .foregroundColor(.gray)
                         Rectangle().fill(Color.gray.opacity(0.3)).frame(height: 1)
                     }
@@ -306,7 +306,7 @@ struct LoginView: View {
                         }
                     } label: {
                         Text("O continuar con correo")
-                            .font(.system(size: 16, weight: .semibold))
+                            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                             .foregroundColor(.black)
                             .frame(maxWidth: .infinity)
                             .frame(height: 50)
@@ -317,7 +317,7 @@ struct LoginView: View {
 
                     // Terms and Conditions Footer
                     Text("Al iniciar sesión, aceptas nuestros [Términos y Condiciones](\(LegalLinks.termsURL)) y nuestra [Política de Privacidad](\(LegalLinks.privacyURL)).")
-                        .font(.system(size: 13, weight: .regular))
+                        .scaledFont(size: 13, relativeTo: .footnote)
                         .foregroundColor(Color.black.opacity(0.5))
                         .multilineTextAlignment(.center)
                         .lineSpacing(4)
@@ -375,7 +375,7 @@ struct LoginView: View {
             }
 
             Text("By continuing you agree to our terms and privacy policy.")
-                .font(.system(size: 12, weight: .medium))
+                .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
                 .padding(.top, 6)
@@ -446,13 +446,13 @@ struct LoginView: View {
                         .frame(width: 20, height: 20)
                         .overlay(
                             Image(systemName: "checkmark")
-                                .font(.system(size: 12, weight: .bold))
+                                .scaledFont(size: 12, weight: .bold, relativeTo: .caption)
                                 .foregroundColor(.white)
                                 .opacity(rememberMe ? 1 : 0)
                         )
 
                     Text("Remember me")
-                        .font(.system(size: 14, weight: .medium))
+                        .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                         .foregroundColor(.gray)
                 }
             }
@@ -464,7 +464,7 @@ struct LoginView: View {
                 print("Forgot password tapped")
             } label: {
                 Text("Forgot Password?")
-                    .font(.system(size: 14, weight: .semibold))
+                    .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                     .foregroundColor(primaryAccent)
             }
             .buttonStyle(.plain)
@@ -475,11 +475,11 @@ struct LoginView: View {
         authField(icon: "envelope.fill", isFocused: focusedLoginField == .email) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Correo electrónico")
-                    .font(.system(size: 12, weight: .medium))
+                    .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                     .foregroundColor(.gray)
 
                 TextField("", text: $viewModel.email, prompt: Text("Correo electrónico").foregroundColor(.gray))
-                    .font(.system(size: 16))
+                    .scaledFont(size: 16, relativeTo: .body)
                     .keyboardType(.emailAddress)
                     .textInputAutocapitalization(.none)
                     .autocorrectionDisabled()
@@ -496,7 +496,7 @@ struct LoginView: View {
         authField(icon: "lock.fill", isFocused: focusedLoginField == .password) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Contraseña")
-                    .font(.system(size: 12, weight: .medium))
+                    .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                     .foregroundColor(.gray)
 
                 Group {
@@ -506,7 +506,7 @@ struct LoginView: View {
                         SecureField("", text: $viewModel.password, prompt: Text("Contraseña").foregroundColor(.gray))
                     }
                 }
-                .font(.system(size: 16))
+                .scaledFont(size: 16, relativeTo: .body)
                 .focused($focusedLoginField, equals: .password)
                 .submitLabel(.go)
                 .onSubmit {
@@ -520,7 +520,7 @@ struct LoginView: View {
                 showLoginPassword.toggle()
             } label: {
                 Image(systemName: showLoginPassword ? "eye.slash.fill" : "eye.fill")
-                    .font(.system(size: 16, weight: .medium))
+                    .scaledFont(size: 16, weight: .medium, relativeTo: .body)
                     .foregroundColor(.gray)
                     .frame(minWidth: 44, minHeight: 44)
                     .contentShape(Rectangle())
@@ -533,11 +533,11 @@ struct LoginView: View {
         authField(icon: "person.fill", isFocused: focusedRegisterField == .name) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Nombre completo")
-                    .font(.system(size: 12, weight: .medium))
+                    .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                     .foregroundColor(.gray)
 
                 TextField("", text: $viewModel.registerName, prompt: Text("Nombre completo").foregroundColor(.gray))
-                    .font(.system(size: 16))
+                    .scaledFont(size: 16, relativeTo: .body)
                     .textContentType(.name)
                     .focused($focusedRegisterField, equals: .name)
                     .submitLabel(.next)
@@ -552,11 +552,11 @@ struct LoginView: View {
         authField(icon: "envelope.fill", isFocused: focusedRegisterField == .email) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Correo electrónico")
-                    .font(.system(size: 12, weight: .medium))
+                    .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                     .foregroundColor(.gray)
 
                 TextField("", text: $viewModel.registerEmail, prompt: Text("Correo electrónico").foregroundColor(.gray))
-                    .font(.system(size: 16))
+                    .scaledFont(size: 16, relativeTo: .body)
                     .keyboardType(.emailAddress)
                     .textInputAutocapitalization(.none)
                     .autocorrectionDisabled()
@@ -573,11 +573,11 @@ struct LoginView: View {
         authField(icon: "phone.fill", isFocused: focusedRegisterField == .phone) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Phone Number (optional)")
-                    .font(.system(size: 12, weight: .medium))
+                    .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                     .foregroundColor(.gray)
 
                 TextField("", text: $viewModel.registerPhone, prompt: Text("Teléfono").foregroundColor(.gray))
-                    .font(.system(size: 16))
+                    .scaledFont(size: 16, relativeTo: .body)
                     .keyboardType(.phonePad)
                     .focused($focusedRegisterField, equals: .phone)
                     .submitLabel(.next)
@@ -592,7 +592,7 @@ struct LoginView: View {
         authField(icon: "lock.fill", isFocused: focusedRegisterField == .password) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Contraseña")
-                    .font(.system(size: 12, weight: .medium))
+                    .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                     .foregroundColor(.gray)
 
                 Group {
@@ -602,7 +602,7 @@ struct LoginView: View {
                         SecureField("", text: $viewModel.registerPassword, prompt: Text("Password (min. 6 characters)").foregroundColor(.gray))
                     }
                 }
-                .font(.system(size: 16))
+                .scaledFont(size: 16, relativeTo: .body)
                 .focused($focusedRegisterField, equals: .password)
                 .submitLabel(.go)
                 .onSubmit {
@@ -616,7 +616,7 @@ struct LoginView: View {
                 showRegisterPassword.toggle()
             } label: {
                 Image(systemName: showRegisterPassword ? "eye.slash.fill" : "eye.fill")
-                    .font(.system(size: 16, weight: .medium))
+                    .scaledFont(size: 16, weight: .medium, relativeTo: .body)
                     .foregroundColor(.gray)
                     .frame(minWidth: 44, minHeight: 44)
                     .contentShape(Rectangle())
@@ -637,7 +637,7 @@ struct LoginView: View {
                     .fill(Color(.systemGray6).opacity(0.8))
 
                 Image(systemName: icon)
-                    .font(.system(size: 16, weight: .medium))
+                    .scaledFont(size: 16, weight: .medium, relativeTo: .body)
                     .foregroundColor(primaryAccent)
             }
             .frame(width: 48, height: 48)
@@ -665,7 +665,7 @@ struct LoginView: View {
         } label: {
             HStack(spacing: 10) {
                 Text(title)
-                    .font(.system(size: 17, weight: .semibold))
+                    .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
                     .foregroundColor(.white)
 
                 if case .loading = viewModel.state {
@@ -695,12 +695,12 @@ struct LoginView: View {
                     .frame(width: 36, height: 36)
                     .overlay(
                         Text(symbol)
-                            .font(.system(size: 16, weight: .bold))
+                            .scaledFont(size: 16, weight: .bold, relativeTo: .body)
                             .foregroundColor(accent)
                     )
 
                 Text(title)
-                    .font(.system(size: 15, weight: .semibold))
+                    .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                     .foregroundColor(.black)
 
                 Spacer()
@@ -730,7 +730,7 @@ struct LoginView: View {
                     .scaleEffect(1.4)
 
                 Text(selectedTab == .login ? "Signing in..." : "Creating account...")
-                    .font(.system(size: 16, weight: .semibold))
+                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                     .foregroundColor(.white)
             }
             .padding(40)

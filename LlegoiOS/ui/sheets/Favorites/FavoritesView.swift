@@ -106,7 +106,7 @@ struct FavoritesView: View {
     private func errorState(message: String) -> some View {
         VStack(spacing: 20) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 60))
+                .scaledFont(size: 60, relativeTo: .largeTitle)
                 .foregroundColor(.red.opacity(0.6))
             Text(message)
                 .scaledFont(size: 16, weight: .medium, relativeTo: .body)
@@ -143,7 +143,7 @@ struct FavoritesView: View {
                     .frame(width: 92, height: 92)
 
                 Image(systemName: "heart")
-                    .font(.system(size: 34, weight: .semibold))
+                    .scaledFont(size: 34, weight: .semibold, relativeTo: .largeTitle)
                     .foregroundColor(gradientManager.currentAccentColor)
             }
 
@@ -162,7 +162,7 @@ struct FavoritesView: View {
             Button(action: { dismiss() }) {
                 HStack(spacing: 8) {
                     Image(systemName: "storefront")
-                        .font(.system(size: 14, weight: .semibold))
+                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                     Text("Explorar productos")
                         .scaledFont(size: 15, weight: .bold, design: .rounded, relativeTo: .subheadline)
                 }
@@ -244,7 +244,7 @@ struct FavoriteItemCard: View {
             VStack(spacing: 8) {
                 Button(action: onRemove) {
                     Image(systemName: "trash.fill")
-                        .font(.system(size: 11, weight: .medium))
+                        .scaledFont(size: 11, weight: .medium, relativeTo: .caption)
                         .foregroundColor(.red.opacity(0.8))
                         .frame(width: 28, height: 28)
                         .background(
@@ -258,7 +258,7 @@ struct FavoriteItemCard: View {
 
                 Button(action: onAddToCart) {
                     Image(systemName: "cart.badge.plus")
-                        .font(.system(size: 11, weight: .semibold))
+                        .scaledFont(size: 11, weight: .semibold, relativeTo: .caption)
                         .foregroundColor(gradientManager.currentAccentColor)
                         .frame(width: 28, height: 28)
                         .background(

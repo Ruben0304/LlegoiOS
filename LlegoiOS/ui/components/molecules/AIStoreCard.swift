@@ -58,14 +58,14 @@ struct AIStoreCard: View {
                 VStack(alignment: .leading, spacing: 6) {
                     // Nombre de la tienda
                     Text(branch.name)
-                        .font(.system(size: nameFontSize, weight: .semibold))
+                        .scaledFont(size: nameFontSize, weight: .semibold, relativeTo: .subheadline)
                         .foregroundColor(.primary)
                         .lineLimit(1)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     if let reason = branch.reason, !reason.isEmpty {
                         Text(reason)
-                            .font(.system(size: 12, weight: .semibold))
+                            .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                             .foregroundColor(gradientManager.currentAccentColor)
                             .lineLimit(2)
                     }
@@ -73,11 +73,11 @@ struct AIStoreCard: View {
                     // Dirección
                     HStack(spacing: 4) {
                         Image(systemName: "location.fill")
-                            .font(.system(size: 10))
+                            .scaledFont(size: 10, relativeTo: .caption2)
                             .foregroundColor(.secondary)
 
                         Text(branch.address)
-                            .font(.system(size: detailFontSize))
+                            .scaledFont(size: detailFontSize, relativeTo: .caption)
                             .foregroundColor(.secondary)
                             .lineLimit(1)
                     }
@@ -86,10 +86,10 @@ struct AIStoreCard: View {
                     HStack {
                         HStack(spacing: 4) {
                             Text("⚡")
-                                .font(.system(size: detailFontSize))
+                                .scaledFont(size: detailFontSize, relativeTo: .caption)
 
                             Text("\(etaMinutes) min")
-                                .font(.system(size: detailFontSize, weight: .medium))
+                                .scaledFont(size: detailFontSize, weight: .medium, relativeTo: .caption)
                                 .foregroundColor(.secondary)
                         }
 
@@ -106,7 +106,7 @@ struct AIStoreCard: View {
                                     .fill(Color.green)
                                     .frame(width: 6, height: 6)
                                 Text("Abierto")
-                                    .font(.system(size: 11, weight: .medium))
+                                    .scaledFont(size: 11, weight: .medium, relativeTo: .caption)
                                     .foregroundColor(.green)
                             }
                         } else if normalizedStatus == "closed" {
@@ -115,7 +115,7 @@ struct AIStoreCard: View {
                                     .fill(Color.red)
                                     .frame(width: 6, height: 6)
                                 Text("Cerrado")
-                                    .font(.system(size: 11, weight: .medium))
+                                    .scaledFont(size: 11, weight: .medium, relativeTo: .caption)
                                     .foregroundColor(.red)
                             }
                         }
@@ -151,7 +151,7 @@ struct AIStoreCard: View {
                         Circle()
                             .fill(Color.llegoBackground)
                         Image(systemName: "storefront")
-                            .font(.system(size: 24))
+                            .scaledFont(size: 24, relativeTo: .title)
                             .foregroundColor(gradientManager.currentAccentColor)
                     }
                 @unknown default:

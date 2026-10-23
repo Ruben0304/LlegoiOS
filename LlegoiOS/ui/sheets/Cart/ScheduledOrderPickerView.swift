@@ -35,7 +35,7 @@ struct ScheduledOrderPickerView: View {
 
                 if let error = validationError {
                     Label(error, systemImage: "exclamationmark.triangle.fill")
-                        .font(.system(size: 13, weight: .medium))
+                        .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                         .foregroundColor(.orange)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 24)

@@ -72,23 +72,23 @@ struct AIPaymentMethodCard: View {
                     .frame(width: 56, height: 56)
 
                 Image(systemName: paymentIcon)
-                    .font(.system(size: 24, weight: .semibold))
+                    .scaledFont(size: 24, weight: .semibold, relativeTo: .title)
                     .foregroundColor(accentColor)
             }
 
             // Información del método de pago
             VStack(alignment: .leading, spacing: 6) {
                 Text(formatMethodName(paymentMethod.method))
-                    .font(.system(size: 15, weight: .semibold))
+                    .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                     .foregroundColor(.primary)
 
                 HStack(spacing: 4) {
                     Image(systemName: "dollarsign.circle.fill")
-                        .font(.system(size: 12))
+                        .scaledFont(size: 12, relativeTo: .caption)
                         .foregroundColor(.secondary)
 
                     Text("Moneda: \(paymentMethod.currency)")
-                        .font(.system(size: 13))
+                        .scaledFont(size: 13, relativeTo: .footnote)
                         .foregroundColor(.secondary)
                 }
             }
@@ -97,7 +97,7 @@ struct AIPaymentMethodCard: View {
 
             // Indicador de disponibilidad
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 24))
+                .scaledFont(size: 24, relativeTo: .title)
                 .foregroundColor(.green)
         }
         .padding(12)

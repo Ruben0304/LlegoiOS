@@ -81,7 +81,7 @@ struct ProductDetailView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(action: { dismiss() }) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 18, weight: .semibold))
+                            .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
                     }
                     .accessibilityLabel("Cerrar")
                 }
@@ -90,10 +90,10 @@ struct ProductDetailView: View {
                     Button(action: { toggleFavorite() }) {
                         ZStack(alignment: .bottomTrailing) {
                             Image(systemName: favoritesManager.isFavorite(productId: productId) ? "heart.fill" : "heart")
-                                .font(.system(size: 17, weight: .semibold))
+                                .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
                             if !favoritesManager.isFavorite(productId: productId) {
                                 Image(systemName: "plus.circle.fill")
-                                    .font(.system(size: 9, weight: .bold))
+                                    .scaledFont(size: 9, weight: .bold, relativeTo: .caption2)
                                     .background(Circle().fill(Color.white))
                                     .offset(x: 2, y: 2)
                             }
@@ -194,7 +194,7 @@ struct ProductDetailView: View {
     private var offlineBanner: some View {
         HStack(spacing: 8) {
             Image(systemName: "wifi.slash")
-                .font(.system(size: 13, weight: .semibold))
+                .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
             Text("Sin conexión · datos guardados")
                 .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
             Spacer(minLength: 0)
@@ -213,7 +213,7 @@ struct ProductDetailView: View {
     private func errorView(message: String) -> some View {
         VStack(spacing: 20) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 60))
+                .scaledFont(size: 60, relativeTo: .largeTitle)
                 .foregroundColor(gradientManager.currentAccentColor)
 
             Text("Error")
@@ -231,7 +231,7 @@ struct ProductDetailView: View {
             }) {
                 HStack(spacing: 8) {
                     Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 16, weight: .semibold))
+                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                     Text("Reintentar")
                         .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
                 }
@@ -371,7 +371,7 @@ struct ProductDetailView: View {
             Spacer()
 
             Image(systemName: "chevron.right")
-                .font(.system(size: 14, weight: .regular))
+                .scaledFont(size: 14, relativeTo: .subheadline)
                 .foregroundColor(.secondary)
         }
     }
@@ -379,7 +379,7 @@ struct ProductDetailView: View {
     private func productHeaderSection(product: Product) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(product.name)
-                .font(.system(size: 26, weight: .semibold))
+                .scaledFont(size: 26, weight: .semibold, relativeTo: .title)
                 .foregroundColor(.primary)
                 .tracking(-0.5)
 
@@ -391,14 +391,14 @@ struct ProductDetailView: View {
                                 decimal: viewModel.finalUnitPrice(for: detail),
                                 currency: detail.currency)
                         )
-                        .font(.system(size: 22, weight: .semibold))
+                        .scaledFont(size: 22, weight: .semibold, relativeTo: .title2)
                         .foregroundColor(.primary)
 
                         if !viewModel.selectedVariantOptions.isEmpty {
                             Text(
                                 "(base \(viewModel.formatPrice(price: detail.price, currency: detail.currency)))"
                             )
-                            .font(.system(size: 13, weight: .medium))
+                            .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
                             .foregroundColor(.secondary)
                         }
                     }
@@ -532,7 +532,7 @@ struct ProductDetailView: View {
                     viewModel.formatPriceAdjustment(
                         decimal: option.priceAdjustment, currency: currency)
                 )
-                .font(.system(size: 15, weight: .medium))
+                .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
                 .foregroundColor(option.priceAdjustment > .zero ? .secondary : .primary)
             }
             .padding(.horizontal, 16)
@@ -569,7 +569,7 @@ struct ProductDetailView: View {
                 Text(
                     "Disfruta de un producto de calidad preparado con ingredientes frescos y el mejor servicio."
                 )
-                .font(.system(size: 14, weight: .regular))
+                .scaledFont(size: 14, relativeTo: .subheadline)
                 .foregroundColor(.secondary)
                 .lineSpacing(1.5)
                 .fixedSize(horizontal: false, vertical: true)
@@ -662,7 +662,7 @@ struct ProductDetailView: View {
         HStack(spacing: 0) {
             Button(action: decrementQuantity) {
                 Image(systemName: "minus")
-                    .font(.system(size: 16, weight: .medium))
+                    .scaledFont(size: 16, weight: .medium, relativeTo: .body)
 
                     .frame(width: 36, height: 36)
                     .frame(minWidth: 44, minHeight: 44)
@@ -677,7 +677,7 @@ struct ProductDetailView: View {
 
             Button(action: incrementQuantity) {
                 Image(systemName: "plus")
-                    .font(.system(size: 16, weight: .medium))
+                    .scaledFont(size: 16, weight: .medium, relativeTo: .body)
 
                     .frame(width: 36, height: 36)
                     .frame(minWidth: 44, minHeight: 44)
@@ -698,7 +698,7 @@ struct ProductDetailView: View {
                     .contentTransition(.symbolEffect(.replace))
                 Text(showAddedToCartFeedback ? "¡Agregado!" : "Añadir \(formatTotalPrice())")
             }
-            .font(.system(size: 16, weight: .semibold))
+            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
             .padding(.horizontal, 24)
             .padding(.vertical, 12)
         }
@@ -806,7 +806,7 @@ private struct SimilarBranchCircleCard: View {
                     placeholder: { Circle().fill(Color.gray.opacity(0.2)) },
                     failure: {
                         Image(systemName: "storefront")
-                            .font(.system(size: 36))
+                            .scaledFont(size: 36, relativeTo: .largeTitle)
                             .foregroundColor(.gray)
                     }
                 )

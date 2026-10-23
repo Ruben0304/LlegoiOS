@@ -62,7 +62,7 @@ struct OrderConfirmationView: View {
                 .frame(width: 92, height: 92)
 
             Image(systemName: "checkmark")
-                .font(.system(size: 42, weight: .bold))
+                .scaledFont(size: 42, weight: .bold, relativeTo: .largeTitle)
                 .foregroundColor(.black)
         }
         .drawingGroup()
@@ -75,7 +75,7 @@ struct OrderConfirmationView: View {
 
     private var titleBlock: some View {
         Text("Orden completada")
-            .font(.system(size: 28, weight: .heavy, design: .rounded))
+            .scaledFont(size: 28, weight: .heavy, design: .rounded, relativeTo: .title)
             .tracking(1)
             .foregroundColor(titleColor)
             .multilineTextAlignment(.center)

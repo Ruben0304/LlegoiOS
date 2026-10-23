@@ -19,11 +19,11 @@ struct CategoryChip: View {
             HStack(spacing: 8) {
                 Image(systemName: isSelected ? "checkmark" : icon)
                     .fontWeight(.semibold)
-                    .font(.system(size: 14))
+                    .scaledFont(size: 14, relativeTo: .subheadline)
                     .foregroundColor(isTinted ? .white : .black)
                 Text(title)
                     .fontWeight(.semibold)
-                    .font(.system(size: 14))
+                    .scaledFont(size: 14, relativeTo: .subheadline)
                     .foregroundColor(isTinted ? .white : .black)
             }
             .padding(.horizontal, 3)

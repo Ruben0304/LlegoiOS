@@ -27,10 +27,10 @@ struct ProfileLocationPickerView: View {
                         Annotation("", coordinate: coord) {
                             VStack(spacing: 0) {
                                 Image(systemName: "mappin.circle.fill")
-                                    .font(.system(size: 40))
+                                    .scaledFont(size: 40, relativeTo: .largeTitle)
                                     .foregroundColor(gradientManager.currentAccentColor)
                                 Image(systemName: "arrowtriangle.down.fill")
-                                    .font(.system(size: 14))
+                                    .scaledFont(size: 14, relativeTo: .subheadline)
                                     .foregroundColor(gradientManager.currentAccentColor)
                                     .offset(y: -6)
                             }
@@ -55,7 +55,7 @@ struct ProfileLocationPickerView: View {
                 HStack {
                     Button(action: { dismiss() }) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 16, weight: .semibold))
+                            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                             .foregroundColor(.primary)
                             .frame(width: 44, height: 44)
                             .background(.ultraThinMaterial, in: Circle())
@@ -79,7 +79,7 @@ struct ProfileLocationPickerView: View {
                         }
                     }) {
                         Image(systemName: "location.fill")
-                            .font(.system(size: 18, weight: .semibold))
+                            .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
                             .foregroundColor(gradientManager.currentAccentColor)
                             .frame(width: 44, height: 44)
                             .background(.ultraThinMaterial, in: Circle())
@@ -96,11 +96,11 @@ struct ProfileLocationPickerView: View {
                     // Dirección seleccionada
                     HStack(spacing: 12) {
                         Image(systemName: "mappin.circle.fill")
-                            .font(.system(size: 24))
+                            .scaledFont(size: 24, relativeTo: .title)
                             .foregroundColor(showConfirmation ? .llegoAccent : gradientManager.currentAccentColor)
                         
                         Text(showConfirmation ? "¡Ubicación guardada!" : addressText)
-                            .font(.system(size: 15, weight: .medium))
+                            .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
                             .foregroundColor(.primary)
                             .lineLimit(2)
                         
@@ -117,10 +117,10 @@ struct ProfileLocationPickerView: View {
                                     .tint(.white)
                             } else if showConfirmation {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 20))
+                                    .scaledFont(size: 20, relativeTo: .title3)
                             }
                             Text(showConfirmation ? "Listo" : (selectedCoordinate == nil ? "Selecciona una ubicación" : "Confirmar ubicación"))
-                                .font(.system(size: 17, weight: .semibold))
+                                .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
                         }
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)

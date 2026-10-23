@@ -363,7 +363,7 @@ struct ProfileView: View {
 
             VStack(spacing: 20) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 60))
+                    .scaledFont(size: 60, relativeTo: .largeTitle)
                     .foregroundColor(.red)
 
                 Text(message)
@@ -400,7 +400,7 @@ struct ProfileView: View {
                 Link("Ayuda", destination: help)
             }
         }
-        .font(.system(size: 14, weight: .medium))
+        .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
     }
@@ -412,7 +412,7 @@ struct ProfileView: View {
         }) {
             HStack(spacing: 14) {
                 Image(systemName: "arrow.right.square")
-                    .font(.system(size: 18, weight: .medium))
+                    .scaledFont(size: 18, weight: .medium, relativeTo: .title3)
                     .foregroundColor(.red)
 
                 Text("Cerrar sesión")
@@ -439,7 +439,7 @@ struct ProfileView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 20, weight: .semibold))
+                    .scaledFont(size: 20, weight: .semibold, relativeTo: .title3)
                     .foregroundColor(.orange)
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -503,7 +503,7 @@ struct ProfileView: View {
                         .tint(.red)
                 } else {
                     Image(systemName: "trash")
-                        .font(.system(size: 18, weight: .medium))
+                        .scaledFont(size: 18, weight: .medium, relativeTo: .title3)
                         .foregroundColor(.red)
                 }
 
@@ -624,7 +624,7 @@ struct ProfileView: View {
                                         .frame(width: 116, height: 116)
                                         .overlay(
                                             Image(systemName: "person.fill")
-                                                .font(.system(size: 48, weight: .medium))
+                                                .scaledFont(size: 48, weight: .medium, relativeTo: .largeTitle)
                                                 .foregroundColor(gradientManager.currentAccentColor)
                                         )
                                 @unknown default:
@@ -647,7 +647,7 @@ struct ProfileView: View {
                                 .frame(width: 116, height: 116)
                                 .overlay(
                                     Image(systemName: "person.fill")
-                                        .font(.system(size: 48, weight: .medium))
+                                        .scaledFont(size: 48, weight: .medium, relativeTo: .largeTitle)
                                         .foregroundColor(gradientManager.currentAccentColor)
                                 )
                         }
@@ -683,7 +683,7 @@ struct ProfileView: View {
                                         systemName: viewModel.isUploadingAvatar
                                             ? "hourglass" : "camera.fill"
                                     )
-                                    .font(.system(size: 16, weight: .bold))
+                                    .scaledFont(size: 16, weight: .bold, relativeTo: .body)
                                     .foregroundColor(.white)
                                 }
                                 .frame(minWidth: 44, minHeight: 44)
@@ -701,13 +701,13 @@ struct ProfileView: View {
                 // Información del usuario
                 VStack(spacing: 8) {
                     Text(viewModel.currentUser?.fullName ?? cachedProfile?.fullName ?? "Usuario")
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .scaledFont(size: 28, weight: .bold, design: .rounded, relativeTo: .title)
                         .foregroundColor(.primary)
                         .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
 
                     HStack(spacing: 6) {
                     Image(systemName: "envelope.fill")
-                        .font(.system(size: 13, weight: .semibold))
+                        .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                         .foregroundColor(gradientManager.currentAccentColor.opacity(0.8))
 
                         Text(viewModel.currentUser?.email ?? cachedProfile?.email ?? "")
@@ -729,7 +729,7 @@ struct ProfileView: View {
                     }) {
                         HStack(spacing: 6) {
                             Image(systemName: "at")
-                                .font(.system(size: 13, weight: .semibold))
+                                .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                                 .foregroundColor(gradientManager.currentAccentColor)
 
                             Text(viewModel.currentUser?.username ?? "")
@@ -737,7 +737,7 @@ struct ProfileView: View {
                                 .foregroundColor(.gray)
 
                             Image(systemName: "pencil")
-                                .font(.system(size: 11, weight: .semibold))
+                                .scaledFont(size: 11, weight: .semibold, relativeTo: .caption)
                                 .foregroundColor(.gray.opacity(0.6))
                         }
                         .padding(.horizontal, 20)
@@ -765,7 +765,7 @@ struct ProfileView: View {
         }) {
             HStack(spacing: 12) {
                 Image(systemName: "phone.circle")
-                    .font(.system(size: 22, weight: .regular))
+                    .scaledFont(size: 22, relativeTo: .title2)
                     .foregroundColor(.gray)
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -778,7 +778,7 @@ struct ProfileView: View {
                             ? (viewModel.currentUser?.phone ?? "")
                             : "Añade un teléfono para que puedan llamarte"
                     )
-                    .font(.system(size: 14, weight: .medium))
+                    .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
                     .foregroundColor(.gray)
                     .lineLimit(1)
                 }
@@ -786,7 +786,7 @@ struct ProfileView: View {
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
+                    .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                     .foregroundColor(.gray.opacity(0.6))
             }
             .padding(16)
@@ -809,7 +809,7 @@ struct ProfileView: View {
         }) {
             HStack(spacing: 12) {
                 Image(systemName: "location.circle")
-                    .font(.system(size: 22, weight: .regular))
+                    .scaledFont(size: 22, relativeTo: .title2)
                     .foregroundColor(.gray)
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -826,7 +826,7 @@ struct ProfileView: View {
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
+                    .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                     .foregroundColor(.gray.opacity(0.6))
             }
             .padding(16)
@@ -847,7 +847,7 @@ struct ProfileView: View {
         VStack(spacing: 12) {
             HStack {
                 Image(systemName: "person.text.rectangle.fill")
-                    .font(.system(size: 20, weight: .semibold))
+                    .scaledFont(size: 20, weight: .semibold, relativeTo: .title3)
                     .foregroundColor(gradientManager.currentAccentColor)
                 Text("Verificación de identidad para efectivo")
                     .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
@@ -866,7 +866,7 @@ struct ProfileView: View {
                     .frame(width: 28, height: 28)
                     .overlay(
                         Image(systemName: cashKycStatusIcon)
-                            .font(.system(size: 12, weight: .semibold))
+                            .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                             .foregroundColor(cashKycStatusColor)
                     )
 
@@ -899,7 +899,7 @@ struct ProfileView: View {
             Button(action: startCashKycFromAccount) {
                 HStack(spacing: 12) {
                     Image(systemName: "shield.checkerboard")
-                        .font(.system(size: 18, weight: .medium))
+                        .scaledFont(size: 18, weight: .medium, relativeTo: .title3)
                         .foregroundColor(gradientManager.currentAccentColor)
                     VStack(alignment: .leading, spacing: 4) {
                         Text(cashKycActionTitle)
@@ -911,7 +911,7 @@ struct ProfileView: View {
                     }
                     Spacer()
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
+                        .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                         .foregroundColor(.gray.opacity(0.7))
                 }
                 .padding(16)
@@ -1058,7 +1058,7 @@ struct ProfileView: View {
         ) {
             HStack(spacing: 12) {
                 Image(systemName: "list.bullet.rectangle.portrait")
-                    .font(.system(size: 20, weight: .regular))
+                    .scaledFont(size: 20, relativeTo: .title3)
                     .foregroundColor(.gray)
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -1074,7 +1074,7 @@ struct ProfileView: View {
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
+                    .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                     .foregroundColor(.gray.opacity(0.6))
             }
             .padding(16)
@@ -1096,7 +1096,7 @@ struct ProfileView: View {
         }) {
             HStack(spacing: 12) {
                 Image(systemName: "creditcard")
-                    .font(.system(size: 20, weight: .regular))
+                    .scaledFont(size: 20, relativeTo: .title3)
                     .foregroundColor(.gray)
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -1133,7 +1133,7 @@ struct ProfileView: View {
         VStack(spacing: 16) {
             HStack {
                 Image(systemName: "star.circle.fill")
-                    .font(.system(size: 20, weight: .semibold))
+                    .scaledFont(size: 20, weight: .semibold, relativeTo: .title3)
                     .foregroundColor(.llegoSecondary)
 
                 Text("Nivel de Cliente")
@@ -1161,7 +1161,7 @@ struct ProfileView: View {
                             .frame(width: 56, height: 56)
 
                         Image(systemName: "star.fill")
-                            .font(.system(size: 26, weight: .semibold))
+                            .scaledFont(size: 26, weight: .semibold, relativeTo: .title)
                             .foregroundColor(.llegoSecondary)
                     }
 
@@ -1318,7 +1318,7 @@ struct ProfileView: View {
                             .frame(width: 44, height: 44)
 
                         Image(systemName: "checkmark.seal.fill")
-                            .font(.system(size: 20, weight: .semibold))
+                            .scaledFont(size: 20, weight: .semibold, relativeTo: .title3)
                             .foregroundColor(.llegoPrimary)
                     }
 
@@ -1328,7 +1328,7 @@ struct ProfileView: View {
                             .foregroundColor(.gray)
 
                         Text("\(completedCount)")
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .scaledFont(size: 28, weight: .bold, design: .rounded, relativeTo: .title)
                             .foregroundColor(.llegoPrimary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
@@ -1366,7 +1366,7 @@ struct ProfileView: View {
             } else if orders.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "bag")
-                        .font(.system(size: 32, weight: .light))
+                        .scaledFont(size: 32, weight: .light, relativeTo: .largeTitle)
                         .foregroundColor(.gray.opacity(0.5))
 
                     Text("No tienes pedidos aún")
@@ -1445,7 +1445,7 @@ struct ProfileView: View {
         VStack(spacing: 14) {
             HStack {
                 Image(systemName: "creditcard.fill")
-                    .font(.system(size: 20, weight: .semibold))
+                    .scaledFont(size: 20, weight: .semibold, relativeTo: .title3)
                     .foregroundColor(gradientManager.currentAccentColor)
 
                 Text("Método de Pago Preferido")
@@ -1475,7 +1475,7 @@ struct ProfileView: View {
                             .frame(width: 56, height: 56)
 
                         Image(systemName: "creditcard.fill")
-                            .font(.system(size: 24, weight: .semibold))
+                            .scaledFont(size: 24, weight: .semibold, relativeTo: .title)
                             .foregroundColor(.white.opacity(0.7))
                     }
 
@@ -1514,7 +1514,7 @@ struct ProfileView: View {
                 // Header
                 HStack(spacing: 12) {
                     Image(systemName: "sparkles")
-                        .font(.system(size: 18, weight: .regular))
+                        .scaledFont(size: 18, relativeTo: .title3)
                         .foregroundColor(gradientManager.currentAccentColor.opacity(0.78))
 
                     VStack(alignment: .leading, spacing: 2) {
@@ -1537,7 +1537,7 @@ struct ProfileView: View {
                     }) {
                         HStack(spacing: 12) {
                             Image(systemName: engine.icon)
-                                .font(.system(size: 16, weight: .medium))
+                                .scaledFont(size: 16, weight: .medium, relativeTo: .body)
                                 .foregroundColor(
                                     aiPreferenceManager.selectedEngine == engine
                                         ? gradientManager.currentAccentColor.opacity(0.82) : .gray
@@ -1559,11 +1559,11 @@ struct ProfileView: View {
 
                             if aiPreferenceManager.selectedEngine == engine {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 20, weight: .semibold))
+                                    .scaledFont(size: 20, weight: .semibold, relativeTo: .title3)
                                     .foregroundColor(gradientManager.currentAccentColor.opacity(0.82))
                             } else {
                                 Image(systemName: "circle")
-                                    .font(.system(size: 20, weight: .regular))
+                                    .scaledFont(size: 20, relativeTo: .title3)
                                     .foregroundColor(.gray.opacity(0.3))
                             }
                         }
@@ -1595,7 +1595,7 @@ struct ProfileView: View {
                             systemName: status.isAvailable
                                 ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
                         )
-                        .font(.system(size: 14, weight: .semibold))
+                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                         .foregroundColor(status.isAvailable ? .green : .orange)
 
                         Text(status.message)
@@ -1630,7 +1630,7 @@ struct ProfileView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
                 Image(systemName: "square.grid.2x2")
-                    .font(.system(size: 18, weight: .regular))
+                    .scaledFont(size: 18, relativeTo: .title3)
                     .foregroundColor(.gray)
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -1710,7 +1710,7 @@ struct ProfileView: View {
             NavigationLink(destination: TutorialsView()) {
                 HStack(spacing: 12) {
                     Image(systemName: "play.rectangle")
-                        .font(.system(size: 18, weight: .regular))
+                        .scaledFont(size: 18, relativeTo: .title3)
                         .foregroundColor(.gray)
 
                     VStack(alignment: .leading, spacing: 2) {
@@ -1726,7 +1726,7 @@ struct ProfileView: View {
                     Spacer()
 
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
+                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                         .foregroundColor(.gray.opacity(0.6))
                 }
                 .padding(16)
@@ -1748,7 +1748,7 @@ struct ProfileView: View {
                 }) {
                     HStack(spacing: 12) {
                         Image(systemName: "arrow.counterclockwise")
-                            .font(.system(size: 16, weight: .semibold))
+                            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                             .foregroundColor(gradientManager.currentAccentColor.opacity(0.82))
 
                         Text("Mostrar tutoriales en el feed")
@@ -1776,7 +1776,7 @@ struct ProfileView: View {
         }) {
             HStack(spacing: 12) {
                 Image(systemName: "sparkles.rectangle.stack")
-                    .font(.system(size: 18, weight: .regular))
+                    .scaledFont(size: 18, relativeTo: .title3)
                     .foregroundColor(.gray)
 
                 VStack(alignment: .leading, spacing: 2) {
@@ -1792,7 +1792,7 @@ struct ProfileView: View {
                 Spacer()
 
                 Image(systemName: "arrow.counterclockwise")
-                    .font(.system(size: 14, weight: .semibold))
+                    .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
                     .foregroundColor(.gray.opacity(0.6))
             }
             .padding(16)
@@ -1829,11 +1829,11 @@ struct EditNameView: View {
 
                         HStack(spacing: 16) {
                             Image(systemName: "person.fill")
-                                .font(.system(size: 18, weight: .medium))
+                                .scaledFont(size: 18, weight: .medium, relativeTo: .title3)
                                 .foregroundColor(.llegoAccent)
 
                             TextField("Ingresa tu nombre", text: $tempName)
-                                .font(.system(size: 17, weight: .medium))
+                                .scaledFont(size: 17, weight: .medium, relativeTo: .body)
                                 .foregroundColor(.primary)
                         }
                         .padding(18)
@@ -1968,7 +1968,7 @@ struct PaymentMethodsSheet: View {
                         }) {
                             HStack(spacing: 12) {
                                 Image(systemName: "plus.circle.fill")
-                                    .font(.system(size: 22, weight: .semibold))
+                                    .scaledFont(size: 22, weight: .semibold, relativeTo: .title2)
                                     .foregroundColor(.llegoAccent)
 
                                 Text("Agregar método de pago")
@@ -2017,7 +2017,7 @@ struct PaymentCardView: View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
                 Image(systemName: cardIcon)
-                    .font(.system(size: 28, weight: .semibold))
+                    .scaledFont(size: 28, weight: .semibold, relativeTo: .title)
                     .foregroundColor(.white)
 
                 Spacer()
@@ -2152,18 +2152,18 @@ struct EditUsernameSheet: View {
                             .frame(width: 80, height: 80)
 
                         Image(systemName: "at.circle.fill")
-                            .font(.system(size: 40))
+                            .scaledFont(size: 40, relativeTo: .largeTitle)
                             .foregroundColor(gradientManager.currentAccentColor)
                     }
 
                     Text("Editar nombre de usuario")
-                        .font(.system(size: 24, weight: .bold))
+                        .scaledFont(size: 24, weight: .bold, relativeTo: .title)
                         .foregroundColor(.primary)
 
                     Text(
                         "Tu nombre de usuario es único y otros usuarios pueden usarlo para enviarte dinero."
                     )
-                    .font(.system(size: 15))
+                    .scaledFont(size: 15, relativeTo: .subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
@@ -2183,7 +2183,7 @@ struct EditUsernameSheet: View {
                         TextField("usuario", text: $viewModel.editingUsername)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled(true)
-                            .font(.system(size: 18, weight: .medium))
+                            .scaledFont(size: 18, weight: .medium, relativeTo: .title3)
                             .focused($isUsernameFocused)
                     }
                     .padding(.horizontal, 16)
@@ -2203,7 +2203,7 @@ struct EditUsernameSheet: View {
                 if let errorMessage = viewModel.errorMessage {
                     HStack(spacing: 8) {
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 14))
+                            .scaledFont(size: 14, relativeTo: .subheadline)
                             .foregroundColor(.red)
 
                         Text(errorMessage)
@@ -2225,7 +2225,7 @@ struct EditUsernameSheet: View {
                         } else {
                             HStack(spacing: 10) {
                                 Image(systemName: "checkmark")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                                 Text("Guardar cambios")
                                     .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                             }
@@ -2280,18 +2280,18 @@ struct EditPhoneSheet: View {
                             .frame(width: 80, height: 80)
 
                         Image(systemName: "phone.circle.fill")
-                            .font(.system(size: 40))
+                            .scaledFont(size: 40, relativeTo: .largeTitle)
                             .foregroundColor(gradientManager.currentAccentColor)
                     }
 
                     Text("Editar teléfono")
-                        .font(.system(size: 24, weight: .bold))
+                        .scaledFont(size: 24, weight: .bold, relativeTo: .title)
                         .foregroundColor(.primary)
 
                     Text(
                         "Los negocios podrán contactarte por teléfono o WhatsApp cuando hagas un pedido. Puedes dejarlo vacío para eliminarlo."
                     )
-                    .font(.system(size: 15))
+                    .scaledFont(size: 15, relativeTo: .subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
@@ -2305,14 +2305,14 @@ struct EditPhoneSheet: View {
 
                     HStack(spacing: 8) {
                         Image(systemName: "phone.fill")
-                            .font(.system(size: 16, weight: .semibold))
+                            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                             .foregroundColor(.gray)
 
                         TextField("5XXX XXXX", text: $viewModel.editingPhone)
                             .keyboardType(.phonePad)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled(true)
-                            .font(.system(size: 18, weight: .medium))
+                            .scaledFont(size: 18, weight: .medium, relativeTo: .title3)
                             .focused($isPhoneFocused)
                     }
                     .padding(.horizontal, 16)
@@ -2323,7 +2323,7 @@ struct EditPhoneSheet: View {
                     )
 
                     Text("Si es de Cuba basta con los 8 dígitos: añadimos el +53 automáticamente. Si es de otro país, escríbelo con + y el código de país.")
-                        .font(.system(size: 12))
+                        .scaledFont(size: 12, relativeTo: .caption)
                         .foregroundColor(.secondary)
                 }
                 .padding(.horizontal)
@@ -2331,7 +2331,7 @@ struct EditPhoneSheet: View {
                 if let errorMessage = viewModel.errorMessage {
                     HStack(spacing: 8) {
                         Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 14))
+                            .scaledFont(size: 14, relativeTo: .subheadline)
                             .foregroundColor(.red)
 
                         Text(errorMessage)
@@ -2353,7 +2353,7 @@ struct EditPhoneSheet: View {
                         } else {
                             HStack(spacing: 10) {
                                 Image(systemName: "checkmark")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                                 Text("Guardar cambios")
                                     .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                             }
@@ -2717,7 +2717,7 @@ private struct AccountCashKycSheet: View {
                         dismiss()
                     }) {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 24))
+                            .scaledFont(size: 24, relativeTo: .title)
                             .foregroundColor(.secondary)
                             .symbolRenderingMode(.hierarchical)
                             .frame(minWidth: 44, minHeight: 44)
@@ -2781,12 +2781,12 @@ private struct AccountCashKycSheet: View {
                     .frame(width: 52, height: 52)
 
                 Image(systemName: "checkmark.shield")
-                    .font(.system(size: 21, weight: .semibold))
+                    .scaledFont(size: 21, weight: .semibold, relativeTo: .title2)
                     .foregroundColor(gradientManager.currentAccentColor)
             }
 
             Text("Verificación KYC")
-                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .scaledFont(size: 24, weight: .bold, design: .rounded, relativeTo: .title)
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
 
             Spacer(minLength: 0)
@@ -2821,7 +2821,7 @@ private struct AccountCashKycSheet: View {
                         .frame(width: 40, height: 40)
 
                     Image(systemName: "banknote")
-                        .font(.system(size: 18, weight: .semibold))
+                        .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
                         .foregroundColor(gradientManager.currentAccentColor)
                 }
 
@@ -2899,13 +2899,13 @@ private struct AccountCashKycSheet: View {
                             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
 
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 22, weight: .semibold))
+                            .scaledFont(size: 22, weight: .semibold, relativeTo: .title2)
                             .foregroundStyle(.white, .green)
                             .background(Color.white, in: Circle())
                             .offset(x: 6, y: -6)
                     } else {
                         Image(systemName: icon)
-                            .font(.system(size: 24, weight: .medium))
+                            .scaledFont(size: 24, weight: .medium, relativeTo: .title)
                             .foregroundColor(gradientManager.currentAccentColor)
                             .frame(width: 84, height: 84, alignment: .center)
                     }
@@ -2939,7 +2939,7 @@ private struct AccountCashKycSheet: View {
                     Image(systemName: isComplete ? "arrow.triangle.2.circlepath" : "plus")
                     Text(isComplete ? "Cambiar foto" : "Agregar foto")
                 }
-                .font(.system(size: 15, weight: .semibold))
+                .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
                 .foregroundColor(isComplete ? Color.adaptiveOnSurface(colorScheme) : .white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 46)
@@ -2973,7 +2973,7 @@ private struct AccountCashKycSheet: View {
                     Text("Listo")
                         .fontWeight(.semibold)
                 }
-                .font(.system(size: 16, weight: .semibold))
+                .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 54)
@@ -2992,7 +2992,7 @@ private struct AccountCashKycSheet: View {
                     Text("Entendido")
                         .fontWeight(.semibold)
                 }
-                .font(.system(size: 16, weight: .semibold))
+                .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 54)
@@ -3010,7 +3010,7 @@ private struct AccountCashKycSheet: View {
                     Text("Enviar verificación")
                         .fontWeight(.semibold)
                 }
-                .font(.system(size: 16, weight: .semibold))
+                .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 54)
@@ -3048,7 +3048,7 @@ private struct AccountCashKycSheet: View {
             Image(systemName: icon)
             Text(text)
         }
-        .font(.system(size: 12, weight: .semibold))
+        .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
         .foregroundColor(gradientManager.currentAccentColor)
         .padding(.horizontal, 10)
         .padding(.vertical, 7)

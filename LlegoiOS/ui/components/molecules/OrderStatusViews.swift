@@ -11,9 +11,9 @@ struct OrderStatusBadge: View {
     var body: some View {
         HStack(spacing: 5) {
             Image(systemName: status.icon)
-                .font(.system(size: 11, weight: .bold))
+                .scaledFont(size: 11, weight: .bold, relativeTo: .caption)
             Text(status.displayName)
-                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .scaledFont(size: 12, weight: .bold, design: .rounded, relativeTo: .caption)
                 .lineLimit(1)
         }
         .foregroundColor(status.color)
@@ -76,7 +76,7 @@ struct OrderStatusStepper: View {
                     .overlay {
                         if isDone {
                             Image(systemName: "checkmark")
-                                .font(.system(size: 8, weight: .black))
+                                .scaledFont(size: 8, weight: .black, relativeTo: .caption2)
                                 .foregroundColor(.white)
                         } else if isCurrent {
                             Circle()
@@ -88,7 +88,7 @@ struct OrderStatusStepper: View {
             .frame(height: 22)
 
             Text(title)
-                .font(.system(size: 10, weight: isCurrent ? .bold : .medium))
+                .scaledFont(size: 10, weight: isCurrent ? .bold : .medium, relativeTo: .caption2)
                 .foregroundColor(reached ? status.color : .secondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
@@ -114,13 +114,13 @@ struct OrderDeadlineNotice: View {
 
             HStack(alignment: .top, spacing: 8) {
                 Image(systemName: remaining == nil ? "clock.badge.xmark" : "hourglass")
-                    .font(.system(size: compact ? 12 : 14, weight: .semibold))
+                    .scaledFont(size: compact ? 12 : 14, weight: .semibold, relativeTo: .subheadline)
                     .foregroundColor(remaining == nil ? .red : .orange)
                 Text(
                     remaining.map { status.deadlineMessage(remaining: $0) }
                         ?? "El plazo terminó."
                 )
-                .font(.system(size: compact ? 12 : 13, weight: .medium))
+                .scaledFont(size: compact ? 12 : 13, weight: .medium, relativeTo: .footnote)
                 .foregroundColor(tint)
                 .fixedSize(horizontal: false, vertical: true)
                 .monospacedDigit()

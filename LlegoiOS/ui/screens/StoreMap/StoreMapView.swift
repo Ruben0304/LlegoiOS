@@ -74,7 +74,7 @@ struct StoreMapView: View {
                         showCart = true
                     } label: {
                         Image(systemName: "cart")
-                            .font(.system(size: 16, weight: .semibold))
+                            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
                     }
                     .badge(cartManager.cartItemCount)
                     .id("storemap-cart-badge-\(cartManager.cartItemCount)")
@@ -171,7 +171,7 @@ struct StoreMapView: View {
                                     ZStack {
                                         Color.gray.opacity(0.15)
                                         Image(systemName: "storefront")
-                                            .font(.system(size: 16))
+                                            .scaledFont(size: 16, relativeTo: .body)
                                             .foregroundColor(.gray.opacity(0.5))
                                     }
                                     .frame(width: 42, height: 42)
@@ -258,7 +258,7 @@ struct StoreMapView: View {
                 .controlSize(.large)
                 .tint(gradientManager.currentAccentColor)
             Text("Cargando tiendas...")
-                .font(.system(size: 16, weight: .medium))
+                .scaledFont(size: 16, weight: .medium, relativeTo: .body)
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -359,7 +359,7 @@ private struct StoreMapOptionsModal: View {
                         ZStack {
                             Color.gray.opacity(0.15)
                             Image(systemName: "storefront")
-                                .font(.system(size: 24))
+                                .scaledFont(size: 24, relativeTo: .title)
                                 .foregroundColor(.gray.opacity(0.5))
                         }
                     }
@@ -381,7 +381,7 @@ private struct StoreMapOptionsModal: View {
             // Info
             VStack(spacing: 8) {
                 Text(store.name)
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .scaledFont(size: 24, weight: .bold, design: .rounded, relativeTo: .title)
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
 
@@ -390,9 +390,9 @@ private struct StoreMapOptionsModal: View {
                 if !store.acceptingOrders {
                     HStack(spacing: 6) {
                         Image(systemName: "pause.circle.fill")
-                            .font(.system(size: 12, weight: .semibold))
+                            .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
                         Text(BranchOrderingMessages.notAcceptingOrdersShort)
-                            .font(.system(size: 13, weight: .semibold))
+                            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
                     }
                     .foregroundColor(.orange)
                     .padding(.horizontal, 14)
@@ -403,10 +403,10 @@ private struct StoreMapOptionsModal: View {
                 if let address = store.address {
                     HStack(spacing: 6) {
                         Image(systemName: "location.fill")
-                            .font(.system(size: 12, weight: .medium))
+                            .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
                             .foregroundColor(.secondary)
                         Text(address)
-                            .font(.system(size: 15, weight: .regular))
+                            .scaledFont(size: 15, relativeTo: .subheadline)
                             .foregroundColor(.secondary)
                     }
                 }
@@ -457,10 +457,10 @@ private struct StoreMapOptionsModal: View {
                 Button(action: onViewProducts) {
                     HStack(spacing: 10) {
                         Image(systemName: "bag.fill")
-                            .font(.system(size: 18, weight: .semibold))
+                            .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
                             .foregroundColor(.white)
                         Text("Ver Productos")
-                            .font(.system(size: 17, weight: .semibold))
+                            .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
                             .foregroundColor(.white)
                     }
                     .frame(maxWidth: .infinity)
@@ -473,9 +473,9 @@ private struct StoreMapOptionsModal: View {
                 Button(action: onViewProfile) {
                     HStack(spacing: 10) {
                         Image(systemName: "storefront")
-                            .font(.system(size: 18, weight: .semibold))
+                            .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
                         Text("Ver Perfil de Tienda")
-                            .font(.system(size: 17, weight: .semibold))
+                            .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
