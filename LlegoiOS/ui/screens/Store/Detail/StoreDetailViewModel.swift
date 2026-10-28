@@ -22,6 +22,7 @@ class StoreDetailViewModel: ObservableObject {
     @Published var branchProducts: [StoreProductGraphQL] = []
     @Published var branchCombos: [ComboDetailGraphQL] = []
     @Published var branchShowcases: [ShowcaseGraphQL] = []
+    @Published var branchMenu: BranchMenuInfo?
     @Published var isLoadingSiblings: Bool = false
     @Published var isLoadingProducts: Bool = false
     @Published var isLoadingCombos: Bool = false
@@ -57,6 +58,7 @@ class StoreDetailViewModel: ObservableObject {
     // MARK: - Dependencies
     private let repository = StoreDetailRepository()
     private let comboRepository = ComboDetailRepository()
+    private let menuRepository = BranchMenuRepository()
 
     // Default images - Empty strings to trigger AsyncImage failure -> shows generic assets
     private let defaultLogoUrl = ""
@@ -89,6 +91,7 @@ class StoreDetailViewModel: ObservableObject {
                     self.loadBranchProducts(branchId: id)
                     self.loadBranchCombos(branchId: id)
                     self.loadSimilarBranches(branchId: id)
+                    self.loadBranchMenu(branchId: id)
 
                 case .failure(let error):
                     let message = "Error al cargar detalles: \(error.localizedDescription)"
@@ -224,6 +227,18 @@ class StoreDetailViewModel: ObservableObject {
                     self.branchCombos = []
                 }
             }
+        }
+    }
+
+    /// Solo expone la carta si está activa y su OCR terminó.
+    func loadBranchMenu(branchId: String) {
+        Task {
+            guard let menu = try? await menuRepository.fetchBranchMenu(branchId: branchId),
+                  menu.isActive, menu.ocrStatus == "done" else {
+                branchMenu = nil
+                return
+            }
+            branchMenu = menu
         }
     }
 

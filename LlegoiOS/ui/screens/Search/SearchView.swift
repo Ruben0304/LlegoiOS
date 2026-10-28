@@ -13,6 +13,7 @@ struct SearchView: View {
     @StateObject private var viewModel = SearchViewModel()
     @StateObject private var gradientManager = GradientStateManager.shared
     @StateObject private var syncService = OfflineSyncService.shared
+    @StateObject private var menuSearch = BranchMenuSearchViewModel()
     @State private var productCounts: [String: Int] = [:]
     @State private var selectedStore: StoreWithCoordinates? = nil
     @State private var selectedStoreGradient: ExtractedGradient? = nil
@@ -50,6 +51,11 @@ struct SearchView: View {
                         }
                         if let notice = viewModel.combinationNotice {
                             combinationNoticeBanner(notice)
+                        }
+
+                        // Coincidencias dentro de las cartas (OCR) de las sucursales
+                        if !menuSearch.results.isEmpty {
+                            BranchMenuSearchSection(hits: menuSearch.results)
                         }
 
                         // Contenido según estado
@@ -121,6 +127,9 @@ struct SearchView: View {
                     // Ya estamos sirviendo datos locales: búsqueda en tiempo real con debounce
                     viewModel.searchLive(query: newValue)
                 }
+            }
+            .onChange(of: searchText) { _, newValue in
+                menuSearch.search(query: newValue)
             }
             .onChange(of: viewModel.selectedCategory) { _, _ in
                 if searchText.isEmpty {
@@ -754,6 +763,7 @@ private struct SearchCombinationCard: View {
     let isPreparing: Bool
     let onAdd: () -> Void
     var onProductTap: ((String) -> Void)? = nil
+    @ObservedObject private var gradientManager = GradientStateManager.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -801,7 +811,7 @@ private struct SearchCombinationCard: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(Color.llegoPrimary, in: Capsule())
+                    .background(gradientManager.currentAccentColor, in: Capsule())
                 }
                 .buttonStyle(.plain)
                 .disabled(isPreparing)

@@ -305,6 +305,10 @@ type Query {
   greet(name: String! = "mundo", jwt: String = null): String!
   """Banners promocionales activos para el feed (público)"""
   platformBanners(appTarget: String! = "customer"): [PlatformBannerType!]!
+  """Carta (menú OCR) activa de una sucursal"""
+  branchMenu(branchId: String!, jwt: String = null): BranchMenuType
+  """Busca texto dentro de las cartas de sucursales de negocios aprobados (máx. 20)"""
+  searchMenus(query: String!, branchTipo: String = null, first: Int! = 10, jwt: String = null): [MenuSearchResultType!]!
 }
 
 """Banner promocional de la plataforma (imagen 16:9) creado por Llego"""
@@ -3551,3 +3555,38 @@ directive @specifiedBy(
 """Indicates an Input Object is a OneOf Input Object."""
 directive @oneOf on INPUT_OBJECT
 
+type MenuQualityType {
+  verdict: String!
+  reasons: [String!]!
+  tips: [String!]!
+  messages: [String!]!
+}
+
+type MenuMatchType {
+  lineIndex: Int!
+  start: Int!
+  end: Int!
+  text: String!
+  """4 puntos normalizados (0-1) [[x, y], ...] sobre la imagen"""
+  polygon: [[Float!]!]!
+}
+
+type BranchMenuType {
+  id: String!
+  branchId: String!
+  image: String!
+  isActive: Boolean!
+  ocrStatus: String!
+  ocrError: String
+  quality: MenuQualityType
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  imageUrl: String!
+}
+
+type MenuSearchResultType {
+  menu: BranchMenuType!
+  matchCount: Int!
+  matches: [MenuMatchType!]!
+  branch: BranchType
+}

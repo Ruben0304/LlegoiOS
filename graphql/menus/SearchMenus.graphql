@@ -1,0 +1,23 @@
+query SearchMenus($query: String!, $first: Int! = 20, $jwt: String) {
+  searchMenus(query: $query, first: $first, jwt: $jwt) {
+    menu {
+      id
+      branchId
+      imageUrl
+      ocrStatus
+      isActive
+    }
+    matchCount
+    matches {
+      lineIndex
+      start
+      end
+      text
+      polygon
+    }
+    branch {
+      id
+      name
+    }
+  }
+}

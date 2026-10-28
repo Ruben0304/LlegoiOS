@@ -39,6 +39,7 @@ public extension LlegoAPI {
       case "BranchConnection": return LlegoAPI.Objects.BranchConnection
       case "BranchEdge": return LlegoAPI.Objects.BranchEdge
       case "BranchLikeType": return LlegoAPI.Objects.BranchLikeType
+      case "BranchMenuType": return LlegoAPI.Objects.BranchMenuType
       case "BranchScheduleType": return LlegoAPI.Objects.BranchScheduleType
       case "BranchSuggestionType": return LlegoAPI.Objects.BranchSuggestionType
       case "BranchSyncType": return LlegoAPI.Objects.BranchSyncType
@@ -74,6 +75,8 @@ public extension LlegoAPI {
       case "InitiatePaymentResult": return LlegoAPI.Objects.InitiatePaymentResult
       case "IosConfigType": return LlegoAPI.Objects.IosConfigType
       case "MaintenanceConfigType": return LlegoAPI.Objects.MaintenanceConfigType
+      case "MenuMatchType": return LlegoAPI.Objects.MenuMatchType
+      case "MenuSearchResultType": return LlegoAPI.Objects.MenuSearchResultType
       case "Mutation": return LlegoAPI.Objects.Mutation
       case "OrderComboModifierType": return LlegoAPI.Objects.OrderComboModifierType
       case "OrderComboSelectedOptionType": return LlegoAPI.Objects.OrderComboSelectedOptionType

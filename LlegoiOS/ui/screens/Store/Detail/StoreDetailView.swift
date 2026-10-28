@@ -788,6 +788,32 @@ struct StoreDetailView: View {
                                     }
                                 }
 
+                                if let menu = viewModel.branchMenu {
+                                    VStack(alignment: .leading, spacing: 16) {
+                                        Divider()
+                                            .padding(.horizontal, 20)
+                                        NavigationLink {
+                                            BranchMenuViewer(menu: menu, title: store.name)
+                                        } label: {
+                                            HStack(spacing: 12) {
+                                                Image(systemName: "doc.text.image")
+                                                    .font(.system(size: 18, weight: .semibold))
+                                                    .foregroundColor(gradientManager.currentAccentColor)
+                                                Text("Ver carta")
+                                                    .font(.system(size: 17, weight: .semibold))
+                                                    .foregroundColor(.primary)
+                                                Spacer()
+                                                Image(systemName: "chevron.right")
+                                                    .font(.system(size: 13, weight: .semibold))
+                                                    .foregroundColor(.secondary)
+                                            }
+                                            .padding(.horizontal, 20)
+                                            .contentShape(Rectangle())
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+
                                 if !viewModel.branchShowcases.isEmpty && viewModel.branchDetail?.catalogOnly != true {
                                     VStack(alignment: .leading, spacing: 16) {
                                         Divider()

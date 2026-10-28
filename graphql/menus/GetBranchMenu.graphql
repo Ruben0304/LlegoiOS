@@ -1,0 +1,9 @@
+query GetBranchMenu($branchId: String!, $jwt: String) {
+  branchMenu(branchId: $branchId, jwt: $jwt) {
+    id
+    branchId
+    imageUrl
+    ocrStatus
+    isActive
+  }
+}
