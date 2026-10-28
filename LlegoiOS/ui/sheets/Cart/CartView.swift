@@ -31,11 +31,14 @@ struct CartView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = CartViewModel()
-    @StateObject private var gradientManager = GradientStateManager.shared
+    @ObservedObject private var locationManager = UserLocationManager.shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var selectedCurrency: Currency = .CUP
     @State private var selectedPaymentMethod: PaymentMethod?
     @State private var showPaymentMethodPicker = false
     @State private var showOrdersFromCart = false
+    @State private var showCartAnimationPreview = false
 
     // MARK: - Stripe PaymentSheet
     @State private var paymentSheet: PaymentSheet?
@@ -61,7 +64,6 @@ struct CartView: View {
     @State private var showAdView = false
     @State private var showAddressPicker = false
     @State private var showDeliveryAddressAlert = false
-    @State private var pendingPaymentAfterAddressSelection = false
 
     // MARK: - Fly-to-cart Animation
     @State private var flyingParticles: [FlyingParticle] = []
@@ -162,6 +164,17 @@ struct CartView: View {
                 }
                 .fullScreenCover(isPresented: $showOrdersFromCart, content: ordersFromCartCover)
         }
+        .fullScreenCover(isPresented: $showCartAnimationPreview) {
+            FirstCartCelebration(
+                photo: CartFlightPhoto(imageURL: viewModel.cartItems.first?.imageUrl, cacheKey: nil),
+                accent: cartAccent,
+                onFinish: {
+                    var transaction = Transaction()
+                    transaction.disablesAnimations = true
+                    withTransaction(transaction) { showCartAnimationPreview = false }
+                })
+                .presentationBackground(.clear)
+        }
     }
 
     // MARK: - Cart Sheets Layer
@@ -170,13 +183,16 @@ struct CartView: View {
         ZStack(alignment: .top) {
             cartGradientBackground
                 .ignoresSafeArea()
-                .animation(.easeInOut(duration: 0.8), value: gradientManager.currentCategoryIndex)
-            flyingParticlesOverlay
             cartContent
+            flyingParticlesOverlay
         }
         .navigationTitle("Carrito")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { cartToolbarItems }
+        .tint(cartAccent)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if showsCheckoutDock { checkoutDock }
+        }
         .sheet(isPresented: $showPaymentMethodPicker) {
             PaymentMethodPickerView(
                 paymentMethods: filteredPaymentMethods,
@@ -197,18 +213,14 @@ struct CartView: View {
         .sheet(isPresented: $showTransferSmsSheet) { transferSmsSheetContent }
         .sheet(isPresented: $showAddressPicker) {
             SavedAddressesView(isSelectingDeliveryAddress: true) { address in
-                viewModel.selectDeliveryAddress(address)
-                if pendingPaymentAfterAddressSelection {
-                    pendingPaymentAfterAddressSelection = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { processPayment() }
-                }
+                viewModel.selectedAddress = address
             }
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
         .confirmationDialog("Dirección de entrega", isPresented: $showDeliveryAddressAlert, titleVisibility: .visible) {
             Button("Esta dirección") { processPayment() }
-            Button("Otra dirección") { pendingPaymentAfterAddressSelection = true; showAddressPicker = true }
+            Button("Otra dirección") { showAddressPicker = true }
             Button("Cancelar", role: .cancel) {}
         } message: {
             Text(deliveryAddressAlertMessage)
@@ -243,24 +255,20 @@ struct CartView: View {
 
     private var cartLoadingOverlay: some View {
         ZStack {
-            Color.black.opacity(0.4).ignoresSafeArea()
-            VStack(spacing: 16) {
-                LottieView(name: "loading").frame(width: 150, height: 150)
-                ProgressView()
-                    .progressViewStyle(.circular)
-                    .tint(gradientManager.currentAccentColor)
-                Text("Preparando pago...")
-                    .scaledFont(size: 16, weight: .medium, relativeTo: .body)
-                    .foregroundColor(.primary)
-                    .padding(.top, 4)
+            Color.black.opacity(0.3).ignoresSafeArea()
+            VStack(spacing: 18) {
+                ProgressView().controlSize(.large).tint(cartAccent)
+                Text("Preparando tu pedido…")
+                    .font(.system(.headline, design: .rounded))
+                Text("Un momento, por favor")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
             .padding(32)
-            .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.white)
-                    .shadow(color: Color.black.opacity(0.12), radius: 14, x: 0, y: 8)
-            )
+            .modifier(CartSurface())
+            .padding(24)
         }
+        .accessibilityAddTraits(.isModal)
     }
 
     // MARK: - Toolbar
@@ -270,18 +278,30 @@ struct CartView: View {
         ToolbarItem(placement: .navigationBarLeading) {
             Button(action: { dismiss() }) {
                 Image(systemName: "xmark")
-                    .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
-                    .foregroundColor(gradientManager.currentAccentColor)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(cartAccent)
             }
             .accessibilityLabel("Cerrar carrito")
         }
+
+        #if DEBUG
+        ToolbarItem(placement: .navigationBarTrailing) {
+            Button {
+                showCartAnimationPreview = true
+            } label: {
+                Image(systemName: "play.circle")
+            }
+            .accessibilityLabel("Probar animación del carrito")
+            .disabled(viewModel.isCreatingOrder || isLoadingPayment)
+        }
+        #endif
 
         ToolbarItem(placement: .navigationBarTrailing) {
             if availableCurrencies.count > 1 {
                 Menu {
                     ForEach(availableCurrencies, id: \.self) { currency in
                         Button(action: {
-                            withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                            withAnimation(reduceMotion ? nil : .spring(response: 0.6, dampingFraction: 0.8)) {
                                 selectedCurrency = currency
                             }
                         }) {
@@ -293,22 +313,17 @@ struct CartView: View {
                         }
                     }
                 } label: {
-                    Text(selectedCurrency.rawValue)
+                    Label(selectedCurrency.rawValue, systemImage: "chevron.down")
+                        .font(.system(.subheadline, weight: .semibold))
                 }
+                .accessibilityLabel("Moneda: \(selectedCurrency.rawValue)")
+                .accessibilityHint("Cambiar la moneda del pedido")
+                .disabled(viewModel.isRefreshingCart || viewModel.isCreatingOrder || isLoadingPayment)
             } else {
                 Text(selectedCurrency.rawValue)
             }
         }
 
-        if !viewModel.cartItems.isEmpty {
-            ToolbarItem(placement: .bottomBar) {
-                bottomPaymentMethodAction
-            }
-
-            ToolbarItem(placement: .bottomBar) {
-                bottomPlaceOrderAction
-            }
-        }
     }
 
     // MARK: - Sheet Contents
@@ -390,9 +405,8 @@ struct CartView: View {
                     ToolbarItem(placement: .navigationBarLeading) {
                         Button(action: { showOrdersFromCart = false }) {
                             Image(systemName: "xmark")
-                                .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
+                                .font(.system(size: 16, weight: .semibold))
                         }
-                        .accessibilityLabel("Cerrar")
                     }
                 }
         }
@@ -432,153 +446,113 @@ struct CartView: View {
 
     // MARK: - Cart Gradient Background
     private var cartGradientBackground: some View {
-        let palette = gradientManager.getCurrentGradientPalette()
+        CartStyle.background(colorScheme)
+    }
 
-        return ZStack {
-            // Base color - muy suave
-            palette.veryLight
-                .opacity(0.4)
+    private var cartAccent: Color { CartStyle.ink(colorScheme) }
 
-            // Gradiente sutil
-            RadialGradient(
-                gradient: Gradient(stops: [
-                    .init(color: palette.light.opacity(0.15), location: 0.0),
-                    .init(color: palette.veryLight.opacity(0.3), location: 0.4),
-                    .init(
-                        color: Color.white.opacity(colorScheme == .dark ? 0.05 : 0.95),
-                        location: 1.0),
-                ]),
-                center: UnitPoint(x: 0.85, y: 0.15),
-                startRadius: 10,
-                endRadius: 600
-            )
+    private var showsCheckoutDock: Bool {
+        guard !viewModel.cartItems.isEmpty else { return false }
+        if case .loading = viewModel.state { return false }
+        if case .error = viewModel.state { return false }
+        return true
+    }
+
+    private var displayItemCount: Int {
+        cartDisplayEntries.reduce(0) { count, entry in
+            switch entry.kind {
+            case .single(let item): return count + item.quantity
+            case .combo(let primary, _): return count + primary.quantity
+            }
         }
+    }
+
+    private var cartShopName: String {
+        let shops = Set(viewModel.cartItems.map(\.shop).filter { !$0.isEmpty })
+        return shops.count == 1 ? (shops.first ?? "Tu selección") : "Tu selección"
     }
 
     // MARK: - Payment Method Selector
     private var paymentMethodSelector: some View {
-        VStack(spacing: 16) {
-            HStack {
-                Text("Método de Pago")
-                    .scaledFont(size: 18, weight: .bold, design: .rounded, relativeTo: .title3)
-                    .foregroundColor(gradientManager.currentAccentColor)
-
-                Spacer()
-
-                Button(action: {
-                    showPaymentMethodPicker = true
-                }) {
-                    HStack(spacing: 6) {
-                        Text(selectedPaymentMethod != nil ? "Cambiar" : "Seleccionar")
-                            .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
-                        Image(systemName: "chevron.right")
-                            .scaledFont(size: 12, weight: .bold, relativeTo: .caption)
-                    }
-                    .foregroundColor(gradientManager.currentAccentColor)
-                }
-            }
-
-            if let method = selectedPaymentMethod {
-                HStack(spacing: 16) {
-                    // Icono del método
+        VStack(alignment: .leading, spacing: 12) {
+            Button(action: { showPaymentMethodPicker = true }) {
+                HStack(spacing: 12) {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(method.color.opacity(0.1))
-                            .frame(width: 50, height: 50)
-
-                        switch method.imageType {
-                        case .systemIcon(let iconName):
-                            Image(systemName: iconName)
-                                .scaledFont(size: 22, weight: .semibold, relativeTo: .title2)
-                                .foregroundColor(method.color)
-                        case .assetImage(let imageName):
-                            Image(imageName)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 30, height: 30)
-                        case .url:
-                            Image(systemName: "creditcard")
-                                .scaledFont(size: 22, weight: .semibold, relativeTo: .title2)
-                                .foregroundColor(method.color)
-                        }
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(CartStyle.inset(colorScheme))
+                        paymentMethodIcon
                     }
+                    .frame(width: 46, height: 46)
+                    .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(method.name)
-                            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
-                            .foregroundColor(gradientManager.currentAccentColor)
-
-                        Text(method.description)
-                            .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
-                            .foregroundColor(.gray)
+                        Text(selectedPaymentMethod == nil ? "¿Cómo prefieres pagar?" : "Pagar con")
+                            .font(selectedPaymentMethod == nil ? .subheadline.weight(.semibold) : .caption)
+                            .foregroundStyle(selectedPaymentMethod == nil ? .primary : .secondary)
+                        Text(selectedPaymentMethod?.name ?? "Elige un método de pago")
+                            .font(selectedPaymentMethod == nil ? .caption : .subheadline.weight(.semibold))
+                            .foregroundStyle(selectedPaymentMethod == nil ? .secondary : .primary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-
-                    Spacer()
-
-                    // Moneda
-                    Text(method.currency)
-                        .scaledFont(size: 13, weight: .bold, relativeTo: .footnote)
-                        .foregroundColor(method.color)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(method.color.opacity(0.15))
-                        .cornerRadius(8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    if viewModel.isLoadingPaymentMethods {
+                        ProgressView()
+                    } else {
+                        Image(systemName: "chevron.right")
+                            .font(.system(.caption, weight: .bold))
+                            .foregroundStyle(cartAccent)
+                    }
                 }
                 .padding(16)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.white)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .stroke(method.color.opacity(0.3), lineWidth: 1.5)
-                        )
-                        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-                )
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(viewModel.hasMultipleBranches || viewModel.isLoadingPaymentMethods || viewModel.isRefreshingCart)
+            .modifier(CartSurface())
+            .accessibilityLabel(selectedPaymentMethod.map { "Método de pago: \($0.name). Cambiar" } ?? "Elegir método de pago")
 
-                if shouldShowCashKycBanner {
-                    cashKycInfoCard
-                } else if isLoadingCashKycStatus {
-                    cashKycLoadingCard
-                }
-            } else {
-                Button(action: {
-                    showPaymentMethodPicker = true
-                }) {
-                    HStack {
-                        Image(systemName: "creditcard")
-                            .scaledFont(size: 20, weight: .semibold, relativeTo: .title3)
-                            .foregroundColor(.gray)
-
-                        Text("Selecciona un método de pago")
-                            .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
-                            .foregroundColor(.gray)
-
-                        Spacer()
-
-                        Image(systemName: "chevron.right")
-                            .scaledFont(size: 14, weight: .bold, relativeTo: .subheadline)
-                            .foregroundColor(.gray)
+            if !viewModel.isLoadingPaymentMethods && filteredPaymentMethods.isEmpty && !viewModel.hasMultipleBranches {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(availablePaymentMethods.isEmpty
+                         ? "No pudimos cargar métodos de pago. Intenta de nuevo."
+                         : "Esta tienda no tiene métodos de pago en \(selectedCurrency.rawValue). Cambia la moneda arriba para continuar.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    if availablePaymentMethods.isEmpty {
+                        Button("Volver a cargar", action: viewModel.loadPaymentMethods)
+                            .font(.subheadline.weight(.semibold))
+                            .frame(minHeight: 44)
                     }
-                    .padding(16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(Color.gray.opacity(0.3), lineWidth: 1.5)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .fill(Color.white)
-                            )
-                    )
                 }
+                .padding(.horizontal, 4)
+            }
+
+            if shouldShowCashKycBanner {
+                cashKycInfoCard
+            } else if isLoadingCashKycStatus {
+                cashKycLoadingCard
             }
         }
-        .padding(.top, 8)
+    }
+
+    @ViewBuilder
+    private var paymentMethodIcon: some View {
+        if let method = selectedPaymentMethod {
+            switch method.imageType {
+            case .systemIcon(let icon):
+                Image(systemName: icon).font(.title3).foregroundStyle(cartAccent)
+            case .assetImage(let name):
+                Image(name).resizable().scaledToFit().padding(10)
+            case .url:
+                Image(systemName: "creditcard").font(.title3).foregroundStyle(cartAccent)
+            }
+        } else {
+            Image(systemName: "creditcard").font(.title3).foregroundStyle(cartAccent)
+        }
     }
 
     // MARK: - Process Payment
     private func processPayment() {
-        // Un segundo toque (o la vuelta del selector de dirección) no debe lanzar otra compra.
-        guard !isOrderInProgress else { return }
-
         // Validaciones iniciales
         if viewModel.cartItems.isEmpty {
             paymentAlertMessage = "No hay productos en el carrito."
@@ -590,13 +564,6 @@ struct CartView: View {
         // BRANCH_NOT_ACCEPTING_ORDERS, así que se avisa antes de pedir biometría.
         if !viewModel.branchAcceptingOrders {
             paymentAlertMessage = BranchOrderingMessages.notAcceptingOrdersAlert
-            showPaymentAlert = true
-            return
-        }
-
-        if let message = viewModel.missingExchangeRateMessage {
-            viewModel.refreshExchangeRate()
-            paymentAlertMessage = message
             showPaymentAlert = true
             return
         }
@@ -728,21 +695,21 @@ struct CartView: View {
             HStack(alignment: .top, spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(gradientManager.currentAccentColor.opacity(0.12))
+                        .fill(cartAccent.opacity(0.12))
                         .frame(width: 40, height: 40)
 
                     Image(systemName: "exclamationmark.shield")
-                        .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
-                        .foregroundColor(gradientManager.currentAccentColor)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(cartAccent)
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Activa tu KYC para pagar en efectivo")
-                        .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
+                    Text("Verifica tu identidad para pagar en efectivo")
+                        .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(.primary)
 
                     Text(cashKycBannerMessage)
-                        .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
+                        .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -755,16 +722,16 @@ struct CartView: View {
             }) {
                 HStack(spacing: 8) {
                     Image(systemName: "checkmark.shield")
-                    Text("Hacer KYC ahora")
+                    Text("Verificar mi identidad")
                         .fontWeight(.semibold)
                 }
-                .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
-                .foregroundColor(gradientManager.currentAccentColor)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(cartAccent)
                 .frame(maxWidth: .infinity)
                 .frame(height: 44)
                 .background(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(gradientManager.currentAccentColor.opacity(0.10))
+                        .fill(cartAccent.opacity(0.10))
                 )
             }
             .buttonStyle(.plain)
@@ -772,10 +739,10 @@ struct CartView: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.white)
+                .fill(CartStyle.surface(colorScheme))
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(gradientManager.currentAccentColor.opacity(0.18), lineWidth: 1)
+                        .stroke(cartAccent.opacity(0.18), lineWidth: 1)
                 )
                 .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
         )
@@ -784,10 +751,10 @@ struct CartView: View {
     private var cashKycLoadingCard: some View {
         HStack(spacing: 10) {
             ProgressView()
-                .tint(gradientManager.currentAccentColor)
+                .tint(cartAccent)
 
-            Text("Consultando estado de tu KYC para efectivo...")
-                .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
+            Text("Consultando tu verificación para efectivo…")
+                .font(.system(size: 13, weight: .medium))
                 .foregroundColor(.secondary)
 
             Spacer(minLength: 0)
@@ -795,10 +762,10 @@ struct CartView: View {
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.white.opacity(0.92))
+                .fill(CartStyle.surface(colorScheme))
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(gradientManager.currentAccentColor.opacity(0.12), lineWidth: 1)
+                        .stroke(cartAccent.opacity(0.12), lineWidth: 1)
                 )
         )
     }
@@ -1058,7 +1025,6 @@ struct CartView: View {
     private func createOrderWithPaymentMethod(
         _ paymentMethodId: String, paymentIntentId: String? = nil
     ) {
-        guard !viewModel.isCreatingOrder else { return }
         isLoadingPayment = true
 
         viewModel.createOrder(
@@ -1103,12 +1069,11 @@ struct CartView: View {
     }
 
     private var loadingView: some View {
-        VStack(spacing: 20) {
-            LottieView(name: "loader")
-                .frame(width: 150, height: 150)
-            Text("Cargando carrito...")
-                .scaledFont(size: 16, weight: .medium, relativeTo: .body)
-                .foregroundColor(.gray)
+        VStack(spacing: 18) {
+            ProgressView().controlSize(.large).tint(cartAccent)
+            Text("Preparando tu carrito…")
+                .font(.system(.headline, design: .rounded))
+                .foregroundStyle(cartAccent)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -1116,21 +1081,21 @@ struct CartView: View {
     private func errorView(message: String) -> some View {
         VStack(spacing: 20) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .scaledFont(size: 60, relativeTo: .largeTitle)
+                .font(.system(size: 60))
                 .foregroundColor(.red.opacity(0.6))
             Text(message)
-                .scaledFont(size: 16, weight: .medium, relativeTo: .body)
+                .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
             Button("Reintentar") {
                 viewModel.loadCart()
             }
-            .scaledFont(size: 16, weight: .bold, relativeTo: .body)
+            .font(.system(size: 16, weight: .bold))
             .foregroundColor(.white)
             .padding(.horizontal, 30)
             .padding(.vertical, 12)
-            .background(gradientManager.currentAccentColor)
+            .background(cartAccent)
             .cornerRadius(12)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1138,26 +1103,52 @@ struct CartView: View {
 
     private var populatedCartView: some View {
         ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: 12) {
-                cartItemsPanel
+            VStack(alignment: .leading, spacing: 26) {
+                CartHeroHeader(count: displayItemCount, shop: cartShopName)
 
-                if viewModel.hasMultipleBranches {
-                    multipleBranchesBanner
+                VStack(spacing: 12) {
+                    HStack {
+                        CartSectionHeading(number: "01", title: "Tu selección")
+                        Button("Añadir más", action: { dismiss() })
+                            .font(.system(.caption, weight: .semibold))
+                            .foregroundStyle(cartAccent)
+                            .frame(minHeight: 44)
+                            .buttonStyle(.plain)
+                    }
+                    cartItemsPanel
+                    if viewModel.hasMultipleBranches { multipleBranchesBanner }
+                    storeClosedBanner
                 }
 
-                storeClosedBanner
-
-                if viewModel.isStorePickupEnabled && viewModel.isPickupAvailableForCurrentCart {
-                    fulfillmentSelectorCard
+                VStack(alignment: .leading, spacing: 14) {
+                    CartSectionHeading(number: "02", title: "A tu manera")
+                    VStack(spacing: 0) {
+                        fulfillmentSelectorCard
+                        if viewModel.branchSchedule != nil {
+                            Divider().padding(.horizontal, 16)
+                            scheduledOrderCard
+                        }
+                    }
+                    .modifier(CartSurface())
                 }
 
-                scheduledOrderCard
+                VStack(alignment: .leading, spacing: 14) {
+                    CartSectionHeading(number: "03", title: "Pago y resumen")
+                    paymentMethodSelector
+                    priceBreakdown
+                }
 
-                priceBreakdown
+                if !viewModel.hasWatchedAds && viewModel.potentialSavings > 0 {
+                    promotionSavingsCard
+                }
+                if viewModel.isLoadingSuggestions || !viewModel.suggestedProducts.isEmpty {
+                    suggestedProductsSection
+                        .disabled(viewModel.isRefreshingCart || viewModel.isCreatingOrder)
+                }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 20)
             .padding(.top, 8)
-            .padding(.bottom, 24)
+            .padding(.bottom, 28)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
@@ -1165,38 +1156,21 @@ struct CartView: View {
     private var cartItemsPanel: some View {
         VStack(spacing: 0) {
             ForEach(Array(cartDisplayEntries.enumerated()), id: \.element.id) { index, entry in
-                VStack(spacing: 0) {
-                    cartEntryView(entry)
-                        .transition(
-                            .asymmetric(
-                                insertion: .scale.combined(with: .opacity),
-                                removal: .scale.combined(with: .opacity)
-                            )
-                        )
-                        .animation(
-                            .easeInOut(duration: 0.3).delay(Double(index) * 0.05),
-                            value: cartDisplayEntries.count)
-
-                    if index < cartDisplayEntries.count - 1 {
-                        Divider()
-                            .padding(.horizontal, 12)
-                    }
+                cartEntryView(entry)
+                    .disabled(viewModel.isRefreshingCart || viewModel.isCreatingOrder)
+                if index < cartDisplayEntries.count - 1 {
+                    Divider().padding(.horizontal, 16)
                 }
             }
         }
-        .background(
+        .modifier(CartSurface())
+        .background {
             GeometryReader { geo in
-                Color.white
-                    .onAppear {
-                        cartItemsCardFrame = geo.frame(in: .global)
-                    }
-                    .onChange(of: cartDisplayEntries.count) { _, _ in
-                        cartItemsCardFrame = geo.frame(in: .global)
-                    }
+                Color.clear
+                    .onAppear { cartItemsCardFrame = geo.frame(in: .global) }
+                    .onChange(of: geo.frame(in: .global)) { _, frame in cartItemsCardFrame = frame }
             }
-        )
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+        }
     }
 
     @ViewBuilder
@@ -1207,17 +1181,17 @@ struct CartView: View {
                 item: item,
                 selectedCurrency: selectedCurrency.rawValue,
                 onIncrement: {
-                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                    withAnimation(reduceMotion ? nil : .spring(response: 0.6, dampingFraction: 0.8)) {
                         viewModel.incrementQuantity(cartItemId: item.id)
                     }
                 },
                 onDecrement: {
-                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                    withAnimation(reduceMotion ? nil : .spring(response: 0.6, dampingFraction: 0.8)) {
                         viewModel.decrementQuantity(cartItemId: item.id)
                     }
                 },
                 onRemove: {
-                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                    withAnimation(reduceMotion ? nil : .spring(response: 0.6, dampingFraction: 0.8)) {
                         viewModel.removeFromCart(cartItemId: item.id)
                     }
                 }
@@ -1228,17 +1202,17 @@ struct CartView: View {
                 components: components,
                 selectedCurrency: selectedCurrency.rawValue,
                 onIncrement: {
-                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                    withAnimation(reduceMotion ? nil : .spring(response: 0.6, dampingFraction: 0.8)) {
                         viewModel.incrementQuantity(cartItemId: primaryItem.id)
                     }
                 },
                 onDecrement: {
-                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                    withAnimation(reduceMotion ? nil : .spring(response: 0.6, dampingFraction: 0.8)) {
                         viewModel.decrementQuantity(cartItemId: primaryItem.id)
                     }
                 },
                 onRemove: {
-                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                    withAnimation(reduceMotion ? nil : .spring(response: 0.6, dampingFraction: 0.8)) {
                         viewModel.removeFromCart(cartItemId: primaryItem.id)
                     }
                 }
@@ -1445,7 +1419,7 @@ struct CartView: View {
 
         // MARK: - Appearance (Opcional - personalizar colores)
         var appearance = PaymentSheet.Appearance()
-        appearance.colors.primary = UIColor(gradientManager.currentAccentColor)
+        appearance.colors.primary = UIColor(cartAccent)
         appearance.colors.background = UIColor(Color.white)
         appearance.cornerRadius = 16.0
         configuration.appearance = appearance
@@ -1549,31 +1523,17 @@ struct CartView: View {
     // MARK: - Suggested Products Section
     private var suggestedProductsSection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header
-            HStack(alignment: .top, spacing: 10) {
-                CartAIIcon()
-
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Text("Lo que le falta a tu carrito")
-                            .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
-                            .foregroundColor(.primary)
-                        if viewModel.isLoadingSuggestions {
-                            ProgressView()
-                                .scaleEffect(0.65)
-                                .tint(.secondary)
-                        }
-                    }
-                    Text("Seleccionado con Inteligencia Artificial para ti")
-                        .scaledFont(size: 12, weight: .regular, relativeTo: .caption)
-                        .foregroundColor(Color(red: 0.45, green: 0.22, blue: 0.90))
-                }
-
-                Spacer()
+            VStack(alignment: .leading, spacing: 5) {
+                Text("¿Algo más para disfrutar?")
+                    .font(.system(.headline, design: .rounded))
+                    .foregroundStyle(cartAccent)
+                Text("Ideas que van bien con tu selección")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 14)
-            .padding(.top, 14)
-            .padding(.bottom, 12)
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 14)
 
             if viewModel.isLoadingSuggestions {
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -1597,7 +1557,7 @@ struct CartView: View {
                                 .padding(10)
                             }
                             .frame(width: 140)
-                            .background(Color.white)
+                            .background(CartStyle.surface(colorScheme))
                             .cornerRadius(10)
                             .shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 2)
                         }
@@ -1631,7 +1591,7 @@ struct CartView: View {
                                         source: source,
                                         destination: destination
                                     )
-                                    flyingParticles.append(particle)
+                                    if !reduceMotion { flyingParticles.append(particle) }
                                 }
                             )
                         }
@@ -1642,10 +1602,10 @@ struct CartView: View {
             } else {
                 HStack(spacing: 8) {
                     Image(systemName: "sparkles")
-                        .scaledFont(size: 14, relativeTo: .subheadline)
+                        .font(.system(size: 14))
                         .foregroundColor(.secondary)
                     Text("No se encontraron recomendaciones")
-                        .scaledFont(size: 13, relativeTo: .footnote)
+                        .font(.system(size: 13))
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -1653,124 +1613,105 @@ struct CartView: View {
                 .padding(.bottom, 14)
             }
         }
-        .background(Color.white)
+        .background(CartStyle.surface(colorScheme))
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
     }
 
     private var emptyCartView: some View {
-        VStack(spacing: 24) {
-            Spacer()
-
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                gradientManager.currentAccentColor.opacity(0.22),
-                                gradientManager.currentAccentColor.opacity(0.12),
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 92, height: 92)
-
-                Image(systemName: "cart")
-                    .scaledFont(size: 34, weight: .semibold, relativeTo: .largeTitle)
-                    .foregroundColor(gradientManager.currentAccentColor)
-            }
-
-            VStack(spacing: 8) {
-                Text("Tu carrito está vacío")
-                    .scaledFont(size: 22, weight: .semibold, design: .rounded, relativeTo: .title2)
-                    .foregroundColor(.primary)
-
-                Text("Agrega productos para comenzar tu pedido")
-                    .scaledFont(size: 15, weight: .regular, relativeTo: .subheadline)
-                    .foregroundColor(.secondary.opacity(0.85))
-                    .multilineTextAlignment(.center)
-            }
-            .padding(.horizontal, 18)
-
-            Button(action: openMyOrdersFromCart) {
-                HStack(spacing: 8) {
+        ScrollView {
+            VStack(spacing: 24) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 38)
+                        .fill(Color.llegoAccent.opacity(0.3))
+                        .frame(width: 140, height: 150)
+                        .rotationEffect(.degrees(-8))
                     Image(systemName: "bag")
-                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
-                    Text("Ver mis pedidos")
-                        .scaledFont(size: 15, weight: .bold, design: .rounded, relativeTo: .subheadline)
+                        .font(.system(size: 58, weight: .light))
+                        .foregroundStyle(cartAccent)
+                    Image(systemName: "sparkle")
+                        .font(.system(size: 25))
+                        .foregroundStyle(cartAccent)
+                        .offset(x: 64, y: -65)
                 }
-                .frame(height: 44)
-                .frame(maxWidth: 200)
-            }
-            .modifier(GlassProminentButtonModifier())
-            .tint(gradientManager.currentAccentColor)
+                .padding(.bottom, 10)
+                .accessibilityHidden(true)
 
-            Spacer()
+                VStack(spacing: 12) {
+                    Text("Todo lo bueno\nempieza por elegir.")
+                        .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                        .tracking(-1)
+                        .foregroundStyle(cartAccent)
+                    Text("Tu carrito está esperando tus favoritos.\nEncuentra algo que te encante.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+                Button(action: { dismiss() }) {
+                    Label("Explorar productos", systemImage: "arrow.right")
+                        .font(.system(.body, design: .rounded, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.vertical, 17)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.llegoPrimary, in: RoundedRectangle(cornerRadius: 18))
+                }
+                .buttonStyle(.plain)
+                Button("Ver mis pedidos", action: openMyOrdersFromCart)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(cartAccent)
+                    .frame(minHeight: 44)
+            }
+            .padding(.horizontal, 32)
+            .padding(.vertical, 60)
+            .frame(maxWidth: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: - Scheduled Order Card
+    // MARK: - Scheduled Order
 
     private var scheduledOrderCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "calendar.clock")
-                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
-                    .foregroundColor(gradientManager.currentAccentColor)
-                Text("Programar pedido")
-                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
-                    .foregroundColor(gradientManager.currentAccentColor)
-                Spacer()
-                if viewModel.scheduledFor != nil {
-                    Button(action: { viewModel.scheduledFor = nil }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .scaledFont(size: 18, relativeTo: .title3)
-                            .foregroundColor(.secondary)
-                            .frame(minWidth: 44, minHeight: 44)
-                            .contentShape(Rectangle())
-                    }
-                    .accessibilityLabel("Quitar hora programada")
-                }
-            }
-
-            if let date = viewModel.scheduledFor {
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                    Text(formattedScheduledDate(date))
-                        .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
-                        .foregroundColor(.primary)
-                }
-            } else {
-                Text("Elige una franja horaria para hoy o mañana")
-                    .scaledFont(size: 13, relativeTo: .footnote)
-                    .foregroundColor(.secondary)
-            }
-
+        HStack(spacing: 4) {
             Button(action: { showScheduledOrderPicker = true }) {
-                HStack(spacing: 6) {
-                    Image(systemName: viewModel.scheduledFor != nil ? "pencil" : "clock")
-                        .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
-                    Text(viewModel.scheduledFor != nil ? "Cambiar hora" : "Seleccionar hora")
-                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
+                HStack(spacing: 12) {
+                    Image(systemName: "calendar")
+                        .font(.system(.subheadline, weight: .medium))
+                        .foregroundStyle(cartAccent)
+                        .frame(width: 34)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(viewModel.scheduledFor.map(formattedScheduledDate) ?? "¿Lo prefieres más tarde?")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+                        Text(viewModel.scheduledFor == nil ? "Programa tu pedido para hoy o mañana" : "Pedido programado · cambiar hora")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                    if viewModel.scheduledFor == nil {
+                        Image(systemName: "chevron.right")
+                            .font(.system(.caption, weight: .bold))
+                            .foregroundStyle(.secondary)
+                    }
                 }
-                .foregroundColor(gradientManager.currentAccentColor)
-                .frame(maxWidth: .infinity)
-                .frame(height: 40)
-                .background(gradientManager.currentAccentColor.opacity(0.1))
-                .cornerRadius(12)
+                .padding(.vertical, 16)
+                .padding(.leading, 16)
+                .padding(.trailing, 8)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .disabled(viewModel.branchSchedule == nil)
+            if viewModel.scheduledFor != nil {
+                Button(action: { viewModel.scheduledFor = nil }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Cancelar programación del pedido")
+            }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white)
-                .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
-        )
+        .padding(.trailing, 8)
     }
 
     private func formattedScheduledDate(_ date: Date) -> String {
@@ -1787,100 +1728,111 @@ struct CartView: View {
     // MARK: - Fulfillment Selector
 
     private var fulfillmentSelectorCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Método de entrega")
-                .scaledFont(size: 15, weight: .bold, design: .rounded, relativeTo: .subheadline)
-                .foregroundColor(gradientManager.currentAccentColor)
-
-            HStack(spacing: 8) {
-                fulfillmentOptionButton(
-                    mode: .delivery,
-                    icon: "bicycle",
-                    title: "Envío a domicilio"
-                )
-                fulfillmentOptionButton(
-                    mode: .pickup,
-                    icon: "bag.fill",
-                    title: "Recoger en tienda"
-                )
+        VStack(alignment: .leading, spacing: 16) {
+            if viewModel.isStorePickupEnabled && viewModel.isPickupAvailableForCurrentCart {
+                HStack(spacing: 8) {
+                    fulfillmentOptionButton(mode: .delivery, icon: "bicycle", title: "A domicilio")
+                    fulfillmentOptionButton(mode: .pickup, icon: "bag", title: "Recoger en tienda")
+                }
             }
 
-            if viewModel.fulfillmentMode == .pickup, let pickup = viewModel.selectedPickup {
-                HStack(spacing: 10) {
-                    ZStack {
-                        Circle()
-                            .fill(gradientManager.currentAccentColor.opacity(0.12))
-                            .frame(width: 34, height: 34)
-                        Image(systemName: "mappin.circle.fill")
-                            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
-                            .foregroundColor(gradientManager.currentAccentColor)
+            if viewModel.fulfillmentMode == .pickup {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "storefront")
+                        .font(.title3)
+                        .foregroundStyle(cartAccent)
+                        .frame(width: 34)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(viewModel.selectedPickup?.branchName ?? cartShopName)
+                            .font(.subheadline.weight(.semibold))
+                        Text(viewModel.selectedPickup?.address ?? "La tienda te indicará el punto de recogida")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text("Recogida sin coste de envío")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(cartAccent)
                     }
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(pickup.branchName)
-                            .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
-                            .foregroundColor(.primary)
-                        if let address = pickup.address, !address.isEmpty {
-                            Text(address)
-                                .scaledFont(size: 12, weight: .regular, relativeTo: .caption)
-                                .foregroundColor(.secondary)
-                        } else {
-                            Text("La tienda te indicará el punto de recogida")
-                                .scaledFont(size: 12, weight: .regular, relativeTo: .caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    Spacer(minLength: 0)
                 }
-                .padding(12)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(gradientManager.currentAccentColor.opacity(0.06))
-                )
-                .transition(.move(edge: .top).combined(with: .opacity))
+            } else {
+                Button(action: { showAddressPicker = true }) {
+                    HStack(alignment: .center, spacing: 12) {
+                        Image(systemName: "mappin.and.ellipse")
+                            .font(.title3)
+                            .foregroundStyle(cartAccent)
+                            .frame(width: 34)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(needsDeliveryAddress ? "¿Dónde te lo llevamos?" : deliveryAddressTitle)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                            Text(needsDeliveryAddress ? "Elige una dirección de entrega" : deliveryAddressDetail)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        Image(systemName: "chevron.right")
+                            .font(.system(.caption, weight: .bold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(minHeight: 48)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Elegir o cambiar la dirección de entrega")
             }
         }
         .padding(16)
-        .background(Color.white)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
-        .animation(.spring(response: 0.38, dampingFraction: 0.82), value: viewModel.fulfillmentMode)
+        .animation(reduceMotion ? nil : .smooth(duration: 0.25), value: viewModel.fulfillmentMode)
+    }
+
+    private var needsDeliveryAddress: Bool {
+        viewModel.selectedAddress == nil && (!locationManager.hasLocation || locationManager.isAutoFallback)
+    }
+
+    private var deliveryAddressTitle: String {
+        guard let address = viewModel.selectedAddress else { return "Entregar en tu ubicación" }
+        return address.label.isEmpty ? "Dirección de entrega" : address.label
+    }
+
+    private var deliveryAddressDetail: String {
+        viewModel.selectedAddress?.street ?? locationManager.userAddress
     }
 
     private func fulfillmentOptionButton(mode: FulfillmentMode, icon: String, title: String) -> some View {
         let isSelected = viewModel.fulfillmentMode == mode
-        return Button(action: {
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                viewModel.setFulfillmentMode(mode)
-            }
-        }) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
+        return Button {
+            withAnimation(reduceMotion ? nil : .smooth(duration: 0.25)) { viewModel.setFulfillmentMode(mode) }
+        } label: {
+            VStack(spacing: 7) {
+                Image(systemName: icon).font(.system(.title3, weight: .medium))
                 Text(title)
-                    .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
+                    .font(.system(.caption, weight: .semibold))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: 42)
-            .foregroundColor(isSelected ? .white : .secondary)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(isSelected ? gradientManager.currentAccentColor : Color(.systemGray6))
-            )
+            .foregroundStyle(isSelected ? cartAccent : .secondary)
+            .frame(maxWidth: .infinity, minHeight: 70)
+            .padding(.vertical, 8)
+            .background(isSelected ? Color.llegoAccent.opacity(0.18) : CartStyle.inset(colorScheme), in: RoundedRectangle(cornerRadius: 16))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16)
+                    .strokeBorder(isSelected ? cartAccent.opacity(0.45) : .clear, lineWidth: 1.5)
+            }
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 
     private var multipleBranchesBanner: some View {
         HStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(.orange)
             Text(
                 "Solo puedes pedir a una tienda a la vez. Elimina productos de otras tiendas para continuar."
             )
-            .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
+            .font(.system(size: 12, weight: .medium))
             .foregroundColor(.primary)
             .fixedSize(horizontal: false, vertical: true)
         }
@@ -1898,14 +1850,14 @@ struct CartView: View {
             // Pedidos pausados por la tienda: el checkout está bloqueado.
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: "pause.circle.fill")
-                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.orange)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(BranchOrderingMessages.notAcceptingOrdersShort)
-                        .scaledFont(size: 13, weight: .bold, relativeTo: .footnote)
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundColor(.primary)
                     Text(BranchOrderingMessages.notAcceptingOrdersDetail)
-                        .scaledFont(size: 12, weight: .regular, relativeTo: .caption)
+                        .font(.system(size: 12, weight: .regular))
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -1923,11 +1875,11 @@ struct CartView: View {
                     .fill(Color.red)
                     .frame(width: 8, height: 8)
                 Text(status.label)
-                    .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(.red)
                 Spacer()
                 Text("Programa tu pedido para cuando abra")
-                    .scaledFont(size: 11, weight: .regular, relativeTo: .caption2)
+                    .font(.system(size: 11, weight: .regular))
                     .foregroundColor(.secondary)
             }
             .padding(.horizontal, 12)
@@ -1943,90 +1895,55 @@ struct CartView: View {
         showOrdersFromCart = true
     }
 
-    private var bottomPaymentMethodAction: some View {
-        Button(action: {
-            if !viewModel.hasMultipleBranches {
-                showPaymentMethodPicker = true
-            }
-        }) {
-            HStack(spacing: 6) {
-                if let method = selectedPaymentMethod {
-                    switch method.imageType {
-                    case .systemIcon(let iconName):
-                        Image(systemName: iconName)
-                            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
-                    case .assetImage(let imageName):
-                        Image(imageName)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 18, height: 18)
-                    case .url:
-                        Image(systemName: "creditcard")
-                            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
-                    }
-
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("Pagar con")
-                            .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
-                        Text(method.name)
-                            .scaledFont(size: 13, weight: .bold, relativeTo: .footnote)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                    }
-                    .frame(maxWidth: 120)
-                } else {
-                    Image(systemName: "creditcard")
-                        .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
-                    Text("Método")
-                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
-                }
-            }
-            .frame(minWidth: 140)
-            .frame(height: 52)
-        }
-        .modifier(GlassProminentButtonModifier())
-        .tint(.black)
-        .disabled(viewModel.hasMultipleBranches)
-        .opacity(viewModel.hasMultipleBranches ? 0.45 : 1.0)
+    private var checkoutDock: some View {
+        CartCheckoutDock(
+            total: viewModel.hasShowcaseItems ? "Por confirmar" : viewModel.formattedTotal,
+            caption: checkoutCaption,
+            title: checkoutTitle,
+            isBusy: viewModel.isRefreshingCart || viewModel.isCreatingOrder || isLoadingPayment,
+            isBlocked: isPlaceOrderBlocked || (selectedPaymentMethod == nil && (viewModel.isLoadingPaymentMethods || filteredPaymentMethods.isEmpty)),
+            onContinue: continueCheckout)
     }
 
-    private var bottomPlaceOrderAction: some View {
-        Button(action: {
-            if !viewModel.hasMultipleBranches {
-                if viewModel.fulfillmentMode == .pickup {
-                    processPayment()
-                } else {
-                    showDeliveryAddressAlert = true
-                }
-            }
-        }) {
-            HStack(spacing: 6) {
-                if selectedPaymentMethod?.id == "invoice_international" {
-                    Text("Enviar factura")
-                        .scaledFont(size: 14, weight: .bold, design: .rounded, relativeTo: .subheadline)
-                } else {
-                    Text("Pedir")
-                        .scaledFont(size: 16, weight: .bold, design: .rounded, relativeTo: .body)
-                    Text(viewModel.formattedTotal)
-                        .scaledFont(size: 14, weight: .bold, design: .rounded, relativeTo: .subheadline)
-                }
-            }
-            .frame(minWidth: 150)
-            .frame(height: 52)
+    private var checkoutTitle: String {
+        if viewModel.isRefreshingCart { return "Actualizando tu carrito…" }
+        if viewModel.isCreatingOrder || isLoadingPayment { return "Preparando pedido…" }
+        if viewModel.hasMultipleBranches { return "Elige productos de una tienda" }
+        if !viewModel.branchAcceptingOrders { return "Pedidos pausados por la tienda" }
+        if selectedPaymentMethod == nil {
+            return viewModel.isLoadingPaymentMethods ? "Cargando métodos de pago…" : "Elegir cómo pagar"
         }
-        .modifier(GlassProminentButtonModifier())
-        .tint(gradientManager.currentAccentColor)
-        .disabled(isPlaceOrderBlocked || isOrderInProgress)
-        .opacity(isPlaceOrderBlocked ? 0.45 : 1.0)
+        if viewModel.fulfillmentMode == .delivery && needsDeliveryAddress { return "Elegir dirección de entrega" }
+        return selectedPaymentMethod?.id == "invoice_international" ? "Enviar factura" : "Confirmar pedido"
+    }
+
+    private var checkoutCaption: String {
+        if viewModel.hasShowcaseItems { return "Precio pendiente de la tienda" }
+        if viewModel.fulfillmentMode == .delivery && viewModel.deliveryFeePaymentMode == .cashCUP {
+            return "Total + \(viewModel.formattedDeliveryFee) de envío al entregar"
+        }
+        return viewModel.fulfillmentMode == .delivery ? "Total estimado" : "Total del pedido"
+    }
+
+    private func continueCheckout() {
+        guard !isPlaceOrderBlocked, !viewModel.isRefreshingCart, !viewModel.isCreatingOrder else { return }
+        guard selectedPaymentMethod != nil else {
+            showPaymentMethodPicker = true
+            return
+        }
+        if viewModel.fulfillmentMode == .pickup {
+            processPayment()
+        } else if needsDeliveryAddress {
+            // Choosing an address returns to the review screen; it never submits an order.
+            showAddressPicker = true
+        } else {
+            showDeliveryAddressAlert = true
+        }
     }
 
     /// El pedido no se puede hacer: hay productos de varias tiendas o la tienda pausó los pedidos.
     private var isPlaceOrderBlocked: Bool {
         viewModel.hasMultipleBranches || !viewModel.branchAcceptingOrders
-    }
-
-    private var isOrderInProgress: Bool {
-        isLoadingPayment || viewModel.isCreatingOrder
     }
 
     private var deliveryAddressAlertMessage: String {
@@ -2040,138 +1957,112 @@ struct CartView: View {
     }
 
     private var priceBreakdown: some View {
-        VStack(spacing: 12) {
-            // Tarjeta única: Subtotal + Cargo de servicio + Envío + Total
-            VStack(spacing: 0) {
-                // Subtotal
-                priceRow(
-                    label: "Subtotal",
-                    value: viewModel.formattedSubtotal,
-                    labelWeight: .regular,
-                    valueWeight: .medium
-                )
+        VStack(spacing: 0) {
+            HStack {
+                Text("LA CUENTA, CLARITA")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .tracking(1.5)
+                Spacer()
+                Image(systemName: "receipt")
+            }
+            .foregroundStyle(cartAccent.opacity(0.75))
+            .padding(18)
 
-                priceDivider
+            CartReceiptDivider().padding(.horizontal, 18)
+            priceRow(label: "Productos", value: viewModel.hasShowcaseItems ? "Por confirmar" : viewModel.formattedSubtotal, labelWeight: .regular, valueWeight: .medium)
+            serviceFeeInline
 
-                // Cargo de servicio
-                serviceFeeInline
-
-                priceDivider
-
-                // Envío
-                HStack {
-                    Text("Envío")
-                        .scaledFont(size: 14, weight: .regular, relativeTo: .subheadline)
-                        .foregroundColor(.secondary)
-                    if !viewModel.deliveryFeeDescription.isEmpty {
-                        Text("· \(viewModel.deliveryFeeDescription)")
-                            .scaledFont(size: 13, weight: .regular, relativeTo: .footnote)
-                            .foregroundColor(
-                                viewModel.deliveryFeeError != nil
-                                    && viewModel.deliveryFeeEstimate == nil
-                                    ? .red : Color(.tertiaryLabel)
-                            )
-                            .lineLimit(1)
-                    }
-                    Spacer()
-                    if viewModel.isLoadingDeliveryFee {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle())
-                            .scaleEffect(0.75)
+            VStack(alignment: .leading, spacing: 9) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(viewModel.fulfillmentMode == .pickup ? "Recogida" : "Envío estimado")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 8)
+                    if viewModel.isLoadingDeliveryFee && viewModel.fulfillmentMode == .delivery {
+                        ProgressView().controlSize(.small)
                     } else {
                         Text(viewModel.formattedDeliveryFee)
-                            .scaledFont(size: 14, weight: .medium, design: .rounded, relativeTo: .subheadline)
-                            .foregroundColor(.primary)
+                            .font(.system(.subheadline, design: .rounded, weight: .medium))
                     }
                 }
-                .padding(.top, 13)
-                .padding(.horizontal, 16)
-
-                if shouldShowCashCUPDeliveryToggle {
-                    deliveryFeePaymentPrompt
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 13)
-                        .transition(
-                            .asymmetric(
-                                insertion: .move(edge: .bottom).combined(with: .opacity),
-                                removal: .opacity
-                            )
-                        )
-                } else {
-                    Spacer()
-                        .frame(height: 8)
+                if viewModel.fulfillmentMode == .delivery {
+                    Text(viewModel.deliveryFeeDescription)
+                        .font(.caption)
+                        .foregroundStyle(viewModel.deliveryFeeError != nil && viewModel.deliveryFeeEstimate == nil ? .orange : .secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if viewModel.deliveryFeeError != nil, let branch = viewModel.cartItems.first?.branchId {
+                        Button("Volver a estimar envío") { viewModel.fetchDeliveryFeeEstimate(branchId: branch) }
+                            .font(.caption.weight(.semibold))
+                            .frame(minHeight: 44)
+                    }
                 }
+                if shouldShowCashCUPDeliveryToggle { deliveryFeePaymentPrompt }
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 12)
 
-                priceDivider
-
-                // Total
-                HStack {
-                    Text("Total")
-                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
-                        .foregroundColor(.primary)
-                    Spacer()
-                    Text(viewModel.formattedTotal)
-                        .scaledFont(size: 20, weight: .bold, design: .rounded, relativeTo: .title3)
-                        .foregroundColor(.primary)
-                }
-                .padding(.top, 14)
-                .padding(.horizontal, 16)
-
-                if shouldShowCashCUPDeliveryToggle,
-                    viewModel.deliveryFeePaymentMode == .cashCUP
-                {
-                    Text("El envío se paga en efectivo CUP al entregar")
-                        .scaledFont(size: 11, weight: .medium, relativeTo: .caption2)
-                        .foregroundColor(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 10)
+            CartReceiptDivider().padding(.horizontal, 18)
+            VStack(alignment: .leading, spacing: 8) {
+                if typeSize.isAccessibilitySize {
+                    VStack(alignment: .leading, spacing: 8) { receiptTotalLabel; receiptTotalValue }
                 } else {
-                    Spacer()
-                        .frame(height: 14)
+                    HStack(alignment: .firstTextBaseline) { receiptTotalLabel; Spacer(minLength: 8); receiptTotalValue }
+                }
+                if shouldShowCashCUPDeliveryToggle && viewModel.deliveryFeePaymentMode == .cashCUP {
+                    Text("El envío se paga aparte: \(viewModel.formattedDeliveryFee) en efectivo al entregar.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if viewModel.hasShowcaseItems {
+                    Text("La tienda confirmará el precio de tu pedido personalizado.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
-            .animation(.spring(response: 0.42, dampingFraction: 0.86), value: selectedCurrency)
-            .background(Color.white)
-            .cornerRadius(16)
-            .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
-
-            // Incentivo para ver anuncios (solo si no ha visto)
-            if !viewModel.hasWatchedAds {
-                HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Ahorra viendo una promoción")
-                            .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
-                            .foregroundColor(.primary)
-                        Text(
-                            "\(viewModel.formattedTotalWithDiscount) · ahorras \(viewModel.formattedPotentialSavings)"
-                        )
-                        .scaledFont(size: 13, relativeTo: .footnote)
-                        .foregroundColor(.secondary)
-                    }
-
-                    Spacer()
-
-                    Button(action: { showAdView = true }) {
-                        Text("Ver")
-                            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(Capsule().fill(Color(.systemGreen)))
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 14)
-                .background(Color.white)
-                .cornerRadius(16)
-                .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
-            }
-
-            // Productos recomendados por IA
-            suggestedProductsSection
+            .padding(18)
         }
+        .modifier(CartSurface())
+    }
+
+    private var receiptTotalLabel: some View {
+        Text(viewModel.fulfillmentMode == .delivery ? "Total estimado" : "Total")
+            .font(.system(.headline, design: .rounded))
+            .foregroundStyle(cartAccent)
+    }
+
+    private var receiptTotalValue: some View {
+        Text(viewModel.hasShowcaseItems ? "Por confirmar" : viewModel.formattedTotal)
+            .font(.system(.title3, design: .rounded, weight: .bold))
+            .foregroundStyle(cartAccent)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var promotionSavingsCard: some View {
+        Button(action: { showAdView = true }) {
+            HStack(spacing: 12) {
+                Image(systemName: "play.rectangle")
+                    .font(.title2)
+                    .foregroundStyle(cartAccent)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Un pequeño plan para ahorrar")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Text("Mira una promoción y ahorra \(viewModel.formattedPotentialSavings) en el servicio.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(cartAccent)
+            }
+            .padding(16)
+            .background(Color.llegoAccent.opacity(colorScheme == .dark ? 0.08 : 0.18), in: RoundedRectangle(cornerRadius: 20))
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Opcional. Reduce el cargo de servicio después de ver la promoción")
     }
 
     private var orderConfirmationLocationLabel: String {
@@ -2194,21 +2085,21 @@ struct CartView: View {
     ) -> some View {
         HStack {
             Text(label)
-                .scaledFont(size: 14, weight: labelWeight, relativeTo: .subheadline)
+                .font(.system(.subheadline, weight: labelWeight))
                 .foregroundColor(.secondary)
             Spacer()
             Text(value)
-                .scaledFont(size: 14, weight: valueWeight, design: .rounded, relativeTo: .subheadline)
+                .font(.system(.subheadline, design: .rounded, weight: valueWeight))
                 .foregroundColor(.primary)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 13)
+        .padding(.vertical, 12)
     }
 
     private var deliveryFeePaymentPrompt: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("¿Quieres pagar el envío en USD o en efectivo CUP al mensajero?")
-                .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
+                .font(.system(size: 12, weight: .medium))
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -2241,54 +2132,43 @@ struct CartView: View {
     {
         Button(action: action) {
             Text(title)
-                .scaledFont(size: 11, weight: .semibold, relativeTo: .caption2)
-                .foregroundColor(isSelected ? .white : .secondary)
+                .font(.caption.weight(.semibold))
+                .foregroundColor(isSelected ? Color.white : Color.secondary)
                 .padding(.horizontal, 10)
-                .padding(.vertical, 7)
+                .frame(minHeight: 44)
                 .background(
                     Capsule()
                         .fill(
                             isSelected
-                                ? gradientManager.currentAccentColor
-                                : Color(.systemGray5)
+                                ? Color.llegoPrimary
+                                : CartStyle.inset(colorScheme)
                         )
                 )
         }
         .buttonStyle(.plain)
     }
 
-    private var priceDivider: some View {
-        Rectangle()
-            .fill(Color(.separator).opacity(0.5))
-            .frame(height: 0.5)
-            .padding(.horizontal, 16)
-    }
-
     // MARK: - Service Fee Inline (dentro de la tarjeta de precios)
     private var serviceFeeInline: some View {
         HStack {
-            HStack(spacing: 6) {
-                Text("Cargo de servicio")
-                    .scaledFont(size: 14, weight: .regular, relativeTo: .subheadline)
-                    .foregroundColor(.secondary)
-                Text("\(viewModel.serviceFeePercentage)%")
-                    .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
-                    .foregroundColor(Color(.tertiaryLabel))
-            }
+            Text("Servicio (\(viewModel.serviceFeePercentage)%)")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
-                Text(viewModel.formattedServiceFee)
-                    .scaledFont(size: 14, weight: .medium, design: .rounded, relativeTo: .subheadline)
+                Text(viewModel.hasShowcaseItems ? "Por confirmar" : viewModel.formattedServiceFee)
+                    .font(.system(.subheadline, design: .rounded, weight: .medium))
                     .foregroundColor(viewModel.hasWatchedAds ? Color(.systemGreen) : .primary)
                 if viewModel.hasWatchedAds {
                     Text("-\(viewModel.formattedAdSavings)")
-                        .scaledFont(size: 11, weight: .regular, relativeTo: .caption2)
+                        .font(.system(size: 11, weight: .regular))
                         .foregroundColor(Color(.systemGreen))
                 }
             }
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 13)
+        .padding(.vertical, 12)
         .fullScreenCover(isPresented: $showAdView) {
             PromoStoriesView(
                 onComplete: {
@@ -2302,142 +2182,6 @@ struct CartView: View {
         }
     }
 
-    // MARK: - Payment Methods Info Banner
-
-    private var paymentMethodsInfoBanner: some View {
-        Group {
-            if viewModel.isLoadingPaymentMethods {
-                HStack(spacing: 10) {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                    Text("Cargando métodos de pago...")
-                        .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(14)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color.gray.opacity(0.06))
-                )
-            } else if !availablePaymentMethods.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "creditcard.fill")
-                            .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
-                            .foregroundColor(gradientManager.currentAccentColor)
-                        Text("Este negocio acepta")
-                            .scaledFont(size: 13, weight: .bold, relativeTo: .footnote)
-                            .foregroundColor(gradientManager.currentAccentColor)
-                    }
-
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(availablePaymentMethods, id: \.id) { method in
-                                HStack(spacing: 5) {
-                                    switch method.imageType {
-                                    case .systemIcon(let iconName):
-                                        Image(systemName: iconName)
-                                            .scaledFont(size: 11, weight: .semibold, relativeTo: .caption)
-                                            .foregroundColor(method.color)
-                                    case .assetImage(let imageName):
-                                        Image(imageName)
-                                            .resizable()
-                                            .scaledToFit()
-                                            .frame(width: 13, height: 13)
-                                    case .url:
-                                        Image(systemName: "creditcard")
-                                            .scaledFont(size: 11, weight: .semibold, relativeTo: .caption)
-                                            .foregroundColor(method.color)
-                                    }
-                                    Text(method.name)
-                                        .scaledFont(size: 11, weight: .semibold, relativeTo: .caption2)
-                                        .foregroundColor(.primary)
-                                }
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(
-                                    Capsule()
-                                        .fill(method.color.opacity(0.1))
-                                        .overlay(
-                                            Capsule()
-                                                .stroke(method.color.opacity(0.25), lineWidth: 1)
-                                        )
-                                )
-                            }
-                        }
-                    }
-
-                    HStack(spacing: 4) {
-                        Image(systemName: "info.circle")
-                            .scaledFont(size: 10, weight: .medium, relativeTo: .caption2)
-                            .foregroundColor(.secondary.opacity(0.6))
-                        Text("Otros negocios pueden ofrecer métodos adicionales.")
-                            .scaledFont(size: 11, weight: .medium, relativeTo: .caption2)
-                            .foregroundColor(.secondary.opacity(0.6))
-                            .italic()
-                    }
-                }
-                .padding(14)
-                .background(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(gradientManager.currentAccentColor.opacity(0.04))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(
-                                    gradientManager.currentAccentColor.opacity(0.1), lineWidth: 1)
-                        )
-                )
-            }
-        }
-    }
-
-}
-
-private struct GlassProminentButtonModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content.buttonStyle(.glassProminent)
-        } else {
-            content.buttonStyle(.borderedProminent)
-        }
-    }
-}
-
-private struct CartAIIcon: View {
-    @State private var rotation: Double = 0
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(
-                    AngularGradient(
-                        colors: [
-                            Color(red: 1.00, green: 0.42, blue: 0.62),
-                            Color(red: 0.75, green: 0.35, blue: 0.95),
-                            Color(red: 0.20, green: 0.52, blue: 1.00),
-                            Color(red: 0.10, green: 0.80, blue: 0.88),
-                            Color(red: 1.00, green: 0.42, blue: 0.62),
-                        ],
-                        center: .center
-                    )
-                )
-                .rotationEffect(.degrees(rotation))
-                .frame(width: 50, height: 50)
-
-            Image(systemName: "sparkles")
-                .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
-                .foregroundColor(.white)
-                .shadow(color: .black.opacity(0.25), radius: 2, x: 0, y: 1)
-        }
-        .frame(width: 34, height: 34)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .onAppear {
-            withAnimation(.linear(duration: 4).repeatForever(autoreverses: false)) {
-                rotation = 360
-            }
-        }
-    }
 }
 
 #Preview {

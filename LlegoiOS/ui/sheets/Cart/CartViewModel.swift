@@ -22,6 +22,7 @@ class CartViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var hasWatchedAds: Bool = false  // Descuento por ver anuncios
     @Published var isCreatingOrder: Bool = false
+    @Published private(set) var isRefreshingCart = false
     @Published var createdOrder: CreatedOrder?
     @Published var orderError: String?
 
@@ -46,7 +47,6 @@ class CartViewModel: ObservableObject {
     @Published var isLoadingDeliveryFee: Bool = false
     @Published var deliveryFeeError: String?
     @Published var deliveryFeePaymentMode: DeliveryFeePaymentMode = .sameCurrency
-    private var deliveryFeeRequestId = 0
 
     private let repository = CartRepository()
     private let cartManager = CartManager.shared
@@ -69,9 +69,6 @@ class CartViewModel: ObservableObject {
     private var cartBranchId: String?
     private var cartProducts: [CartProductGraphQL] = []
     @Published private(set) var branchAcceptedCurrency: String?
-    /// Tasa CUP por USD de la sucursal; respaldo cuando los productos no traen la suya.
-    @Published private(set) var branchExchangeRate: Int?
-    @Published private(set) var isLoadingExchangeRate: Bool = false
     @Published private(set) var cashKycMerchantId: String?
     @Published private(set) var cashKycBranchId: String?
     @Published private(set) var branchOpenStatus: BranchOpenStatus?
@@ -86,11 +83,6 @@ class CartViewModel: ObservableObject {
 
     // Scheduled order
     @Published var scheduledFor: Date?
-
-    // Un reintento de la misma compra reutiliza la clave para que el backend devuelva el
-    // pedido ya creado (p. ej. si se perdió la respuesta) en vez de crear otro.
-    private var orderAttemptKey: String?
-    private var orderAttemptFingerprint: String?
 
     // MARK: - AI Suggestions
     @Published var suggestedProducts: [Product] = []
@@ -163,61 +155,14 @@ class CartViewModel: ObservableObject {
 
         switch deliveryFeePaymentMode {
         case .sameCurrency:
-            // Sin tasa no se suma nada: el pedido queda bloqueado por missingExchangeRateMessage.
             return convertAmount(
                 estimate.deliveryFee,
                 from: estimate.currency,
                 to: selectedCurrency
-            ) ?? 0.0
+            )
         case .cashCUP:
             return 0.0
         }
-    }
-
-    /// Tasa CUP por USD disponible: la de los productos del carrito o, si no traen, la de la sucursal.
-    private var availableExchangeRate: Int? {
-        if let rate = cartItems.compactMap(\.exchangeRate).first(where: { $0 > 0 }) {
-            return rate
-        }
-        if let rate = branchExchangeRate, rate > 0 {
-            return rate
-        }
-        return nil
-    }
-
-    /// El envío hay que convertirlo de moneda y no hay tasa para hacerlo.
-    private var isDeliveryFeeMissingExchangeRate: Bool {
-        guard fulfillmentMode == .delivery, let estimate = deliveryFeeEstimate else {
-            return false
-        }
-        let target = deliveryFeePaymentMode == .sameCurrency ? selectedCurrency : "CUP"
-        return convertAmount(estimate.deliveryFee, from: estimate.currency, to: target) == nil
-    }
-
-    /// Mensaje que bloquea el pedido mientras falte la tasa de cambio (convertir 1:1 cobraría
-    /// p. ej. 500 CUP de envío como 500 USD).
-    var missingExchangeRateMessage: String? {
-        guard !cartItems.isEmpty else { return nil }
-        let currency = selectedCurrency.uppercased()
-        let itemsMissingRate = cartItems.contains { $0.isMissingExchangeRate(for: currency) }
-        let deliveryMissingRate = isDeliveryFeeMissingExchangeRate
-        guard itemsMissingRate || deliveryMissingRate else { return nil }
-
-        if isLoadingExchangeRate {
-            return "Estamos obteniendo la tasa de cambio. Espera unos segundos e inténtalo de nuevo."
-        }
-        if deliveryMissingRate && !itemsMissingRate {
-            return
-                "No pudimos obtener la tasa de cambio para pasar el envío a \(currency). Inténtalo de nuevo en unos segundos o paga el envío en efectivo (CUP)."
-        }
-        return
-            "No pudimos obtener la tasa de cambio para calcular el total en \(currency). Inténtalo de nuevo en unos segundos o cambia de moneda."
-    }
-
-    /// Vuelve a pedir la tasa de la sucursal (p. ej. al intentar pagar sin ella).
-    func refreshExchangeRate() {
-        guard let branchId = cartBranchId, !isLoadingExchangeRate else { return }
-        fetchBranchAcceptedCurrency(branchId: branchId)
     }
 
     /// Moneda del envío estimado
@@ -235,11 +180,9 @@ class CartViewModel: ObservableObject {
         deliveryFeeEstimate?.zoneName
     }
 
-    /// Tasa de servicio actual. El descuento por ver promociones solo existía en la app:
-    /// el backend no lo conoce y cobra la tasa completa, así que el total que se mostraba
-    /// no era el que se cobraba. Hasta que el backend lo aplique, se muestra la tasa completa.
+    /// Tasa de servicio actual: reducida si el usuario vio las promociones
     var currentServiceFeeRate: Double {
-        serviceFeeRate
+        hasWatchedAds ? discountedServiceFeeRate : serviceFeeRate
     }
 
     /// Porcentaje de servicio formateado
@@ -258,7 +201,7 @@ class CartViewModel: ObservableObject {
     }
 
     /// Ahorro ya aplicado por ver las promociones
-    var adSavings: Double { 0 }
+    var adSavings: Double { hasWatchedAds ? serviceFeeSavingsAmount : 0 }
 
     var total: Double {
         subtotal + payableDeliveryFee + serviceFee
@@ -281,26 +224,18 @@ class CartViewModel: ObservableObject {
         if let estimate = deliveryFeeEstimate {
             switch deliveryFeePaymentMode {
             case .sameCurrency:
-                guard
-                    let converted = convertAmount(
-                        estimate.deliveryFee,
-                        from: estimate.currency,
-                        to: selectedCurrency
-                    )
-                else {
-                    return "Sin tasa"
-                }
+                let converted = convertAmount(
+                    estimate.deliveryFee,
+                    from: estimate.currency,
+                    to: selectedCurrency
+                )
                 return formatPriceWithCurrency(converted, currency: selectedCurrency.uppercased())
             case .cashCUP:
-                guard
-                    let cupAmount = convertAmount(
-                        estimate.deliveryFee,
-                        from: estimate.currency,
-                        to: "CUP"
-                    )
-                else {
-                    return "Sin tasa"
-                }
+                let cupAmount = convertAmount(
+                    estimate.deliveryFee,
+                    from: estimate.currency,
+                    to: "CUP"
+                )
                 return formatPriceWithCurrency(cupAmount, currency: "CUP")
             }
         }
@@ -388,8 +323,12 @@ class CartViewModel: ObservableObject {
     // MARK: - Actions
 
     /// Cargar productos del carrito (desde local + GraphQL)
-    func loadCart() {
-        state = .loading
+    func loadCart(keepingContent: Bool = false) {
+        if keepingContent && !cartItems.isEmpty {
+            isRefreshingCart = true
+        } else {
+            state = .loading
+        }
         errorMessage = nil
         fetchServiceFeeRate()
 
@@ -397,6 +336,7 @@ class CartViewModel: ObservableObject {
             guard let self = self else { return }
 
             Task { @MainActor in
+                self.isRefreshingCart = false
                 switch result {
                 case .success(let cartProducts):
                     // Store cart products for order creation
@@ -479,6 +419,8 @@ class CartViewModel: ObservableObject {
                         self.fetchBranchAcceptedCurrency(branchId: branchId)
                         self.fetchCashKycMerchantContext(branchId: branchId)
                         self.fetchBranchScheduleStatus(branchId: branchId)
+                        // Estimar envío usando el branchId del primer producto
+                        self.fetchDeliveryFeeEstimate(branchId: branchId)
                         if self.selectedPickup == nil || self.selectedPickup?.branchId != branchId {
                             self.selectedPickup = PickupSelection(
                                 branchId: branchId,
@@ -506,17 +448,10 @@ class CartViewModel: ObservableObject {
                     {
                         if let defaultAddr = addresses.first(where: { $0.id == defaultId }) {
                             self.defaultAddress = defaultAddr
-                            // Recargar el carrito (p. ej. al cambiar cantidades) no debe
-                            // deshacer la dirección que el usuario eligió.
                             if self.selectedAddress == nil {
                                 self.selectedAddress = defaultAddr
                             }
                         }
-                    }
-
-                    // El envío se estima con la dirección del pedido, ya resuelta arriba.
-                    if let branchId = self.cartBranchId {
-                        self.fetchDeliveryFeeEstimate(branchId: branchId)
                     }
 
                     self.state = .success
@@ -780,34 +715,14 @@ class CartViewModel: ObservableObject {
 
     // MARK: - Delivery Fee Estimation
 
-    /// Cambia la dirección de entrega del pedido y recalcula el envío hasta ella.
-    func selectDeliveryAddress(_ address: SavedAddress) {
-        selectedAddress = address
-        // El envío de la dirección anterior no vale para la nueva.
-        deliveryFeeEstimate = nil
-        if let branchId = cartBranchId {
-            fetchDeliveryFeeEstimate(branchId: branchId)
-        }
-    }
-
-    /// Obtener estimación de envío desde el backend, hasta la dirección del pedido
-    /// (la elegida o, si no hay, la ubicación actual: la misma que usa buildDeliveryAddress).
+    /// Obtener estimación de envío desde el backend
     func fetchDeliveryFeeEstimate(branchId: String) {
         isLoadingDeliveryFee = true
         deliveryFeeError = nil
-        deliveryFeeRequestId += 1
-        let requestId = deliveryFeeRequestId
-        let address = buildDeliveryAddress()
 
-        repository.estimateDeliveryFee(
-            branchId: branchId,
-            deliveryLatitude: address?.latitude,
-            deliveryLongitude: address?.longitude
-        ) { [weak self] result in
+        repository.estimateDeliveryFee(branchId: branchId) { [weak self] result in
             Task { @MainActor in
                 guard let self = self else { return }
-                // Si se cambió la dirección mientras tanto, esta respuesta ya no vale.
-                guard requestId == self.deliveryFeeRequestId else { return }
                 self.isLoadingDeliveryFee = false
 
                 switch result {
@@ -857,17 +772,12 @@ class CartViewModel: ObservableObject {
     }
 
     private func fetchBranchAcceptedCurrency(branchId: String) {
-        isLoadingExchangeRate = true
         repository.fetchBranchAcceptedCurrency(branchId: branchId) { [weak self] result in
             guard let self = self else { return }
             Task { @MainActor in
-                self.isLoadingExchangeRate = false
-                // Ignorar respuestas de una tienda que ya no es la del carrito.
-                guard self.cartBranchId == branchId else { return }
                 switch result {
-                case .success(let info):
-                    self.branchAcceptedCurrency = info.acceptedCurrency?.uppercased()
-                    self.branchExchangeRate = info.exchangeRate
+                case .success(let accepted):
+                    self.branchAcceptedCurrency = accepted?.uppercased()
                 case .failure(let error):
                     print("⚠️ Error loading branch accepted currency: \(error.localizedDescription)")
                 }
@@ -954,11 +864,6 @@ class CartViewModel: ObservableObject {
         completion:
             @escaping @Sendable (Result<(CreatedOrder, InitiatePaymentResultModel), Error>) -> Void
     ) {
-        guard !isCreatingOrder else {
-            print("⚠️ Ya hay un pedido en creación; se ignora el nuevo intento")
-            return
-        }
-
         guard let branchId = cartBranchId else {
             let error = NSError(
                 domain: "CartViewModel", code: -1,
@@ -974,6 +879,8 @@ class CartViewModel: ObservableObject {
             completion(.failure(error))
             return
         }
+
+        orderError = nil
 
         let items = buildOrderRequestItems()
         guard !items.isEmpty else {
@@ -1014,14 +921,6 @@ class CartViewModel: ObservableObject {
         }
 
         isCreatingOrder = true
-        orderError = nil
-        let idempotencyKey = orderIdempotencyKey(
-            branchId: branchId,
-            items: items,
-            fulfillment: fulfillment,
-            deliveryAddress: deliveryAddress,
-            paymentMethod: "pending"
-        )
 
         print("🛒 Creating order with new payment flow...")
         print("   Branch: \(branchId)")
@@ -1038,8 +937,7 @@ class CartViewModel: ObservableObject {
             paymentMethod: "pending",  // Temporary, will be updated by payment
             paymentIntentId: nil,
             comments: comments,
-            scheduledFor: scheduledFor,
-            idempotencyKey: idempotencyKey
+            scheduledFor: scheduledFor
         ) { [weak self] result in
             guard let self = self else { return }
 
@@ -1048,7 +946,6 @@ class CartViewModel: ObservableObject {
                 case .success(let order):
                     print("✅ Order created: \(order.orderNumber)")
                     self.createdOrder = order
-                    self.resetOrderAttemptKey()
 
                     // Step 2: Initiate Payment
                     do {
@@ -1269,11 +1166,6 @@ class CartViewModel: ObservableObject {
         comments: String? = nil,
         completion: @escaping @Sendable (Result<CreatedOrder, Error>) -> Void
     ) {
-        guard !isCreatingOrder else {
-            print("⚠️ Ya hay un pedido en creación; se ignora el nuevo intento")
-            return
-        }
-
         guard let branchId = cartBranchId else {
             let error = NSError(
                 domain: "CartViewModel", code: -1,
@@ -1289,6 +1181,8 @@ class CartViewModel: ObservableObject {
             completion(.failure(error))
             return
         }
+
+        orderError = nil
 
         let items = buildOrderRequestItems()
         guard !items.isEmpty else {
@@ -1329,14 +1223,6 @@ class CartViewModel: ObservableObject {
         }
 
         isCreatingOrder = true
-        orderError = nil
-        let idempotencyKey = orderIdempotencyKey(
-            branchId: branchId,
-            items: items,
-            fulfillment: fulfillment,
-            deliveryAddress: deliveryAddress,
-            paymentMethod: paymentMethod
-        )
 
         print("🛒 Creating order...")
         print("   Branch: \(branchId)")
@@ -1352,8 +1238,7 @@ class CartViewModel: ObservableObject {
             paymentMethod: paymentMethod,
             paymentIntentId: paymentIntentId,
             comments: comments,
-            scheduledFor: scheduledFor,
-            idempotencyKey: idempotencyKey
+            scheduledFor: scheduledFor
         ) { [weak self] result in
             Task { @MainActor in
                 guard let self = self else { return }
@@ -1363,7 +1248,6 @@ class CartViewModel: ObservableObject {
                 case .success(let order):
                     print("✅ Order created successfully: \(order.orderNumber)")
                     self.createdOrder = order
-                    self.resetOrderAttemptKey()
                     completion(.success(order))
 
                 case .failure(let error):
@@ -1385,11 +1269,11 @@ class CartViewModel: ObservableObject {
                     .quantity ?? 0
                 cartManager.updateComboQuantity(
                     comboGroupId: comboGroupId, quantity: currentComboQty + 1)
-                loadCart()
+                loadCart(keepingContent: true)
                 return
             }
             cartManager.updateQuantity(cartItemId: cartItemId, quantity: item.quantity + 1)
-            loadCart()
+            loadCart(keepingContent: true)
         }
     }
 
@@ -1406,7 +1290,7 @@ class CartViewModel: ObservableObject {
                 } else {
                     cartManager.updateComboQuantity(comboGroupId: comboGroupId, quantity: newQty)
                 }
-                loadCart()
+                loadCart(keepingContent: true)
                 return
             }
             let newQuantity = item.quantity - 1
@@ -1414,7 +1298,7 @@ class CartViewModel: ObservableObject {
                 removeFromCart(cartItemId: cartItemId)
             } else {
                 cartManager.updateQuantity(cartItemId: cartItemId, quantity: newQuantity)
-                loadCart()
+                loadCart(keepingContent: true)
             }
         }
     }
@@ -1423,17 +1307,16 @@ class CartViewModel: ObservableObject {
     func removeFromCart(cartItemId: String) {
         if let comboGroupId = cartItems.first(where: { $0.id == cartItemId })?.comboGroupId {
             cartManager.removeComboFromCart(comboGroupId: comboGroupId)
-            loadCart()
+            loadCart(keepingContent: true)
             return
         }
         cartManager.removeFromCart(cartItemId: cartItemId)
-        loadCart()
+        loadCart(keepingContent: true)
     }
 
     /// Limpiar todo el carrito
     func clearCart() {
         cartManager.clearCart()
-        resetOrderAttemptKey()
         cartItems = []
         state = .success
         fulfillmentMode = .delivery
@@ -1452,86 +1335,6 @@ class CartViewModel: ObservableObject {
     func setPickupSelection(_ selection: PickupSelection?) {
         selectedPickup = selection
         persistPickupSelection()
-    }
-
-    // MARK: - Order Idempotency
-
-    /// Clave del intento de compra: se reutiliza mientras la petición sea la misma y se
-    /// renueva si cambia el carrito, la entrega, la dirección, el método o la hora.
-    private func orderIdempotencyKey(
-        branchId: String,
-        items: [OrderRequestItem],
-        fulfillment: FulfillmentPayloadInput,
-        deliveryAddress: DeliveryAddressInput?,
-        paymentMethod: String
-    ) -> String {
-        let fingerprint = orderFingerprint(
-            branchId: branchId,
-            items: items,
-            fulfillment: fulfillment,
-            deliveryAddress: deliveryAddress,
-            paymentMethod: paymentMethod
-        )
-        if let key = orderAttemptKey, orderAttemptFingerprint == fingerprint {
-            return key
-        }
-        let key = UUID().uuidString
-        orderAttemptKey = key
-        orderAttemptFingerprint = fingerprint
-        return key
-    }
-
-    private func resetOrderAttemptKey() {
-        orderAttemptKey = nil
-        orderAttemptFingerprint = nil
-    }
-
-    private func orderFingerprint(
-        branchId: String,
-        items: [OrderRequestItem],
-        fulfillment: FulfillmentPayloadInput,
-        deliveryAddress: DeliveryAddressInput?,
-        paymentMethod: String
-    ) -> String {
-        // Los ítems salen de diccionarios: se ordenan para que el mismo carrito dé la misma huella.
-        let itemLines = items.map { item -> String in
-            let selections = (item.comboSelections ?? []).map { selection -> String in
-                let options = selection.selectedOptions.map { option -> String in
-                    let modifiers = option.modifiers.map(\.name).joined(separator: ",")
-                    return "\(option.productId)x\(option.quantity)[\(modifiers)]"
-                }
-                return "\(selection.slotId){\(options.joined(separator: ";"))}"
-            }
-            let parts: [String] = [
-                item.itemType.rawValue,
-                item.productId ?? "",
-                item.comboId ?? "",
-                item.showcaseId ?? "",
-                item.description ?? "",
-                String(item.quantity),
-                selections.joined(separator: "|"),
-            ]
-            return parts.joined(separator: "#")
-        }
-        .sorted()
-
-        let addressLine: String
-        if let address = deliveryAddress {
-            addressLine = "\(address.latitude),\(address.longitude)"
-        } else {
-            addressLine = "-"
-        }
-        let scheduledLine = scheduledFor.map { String($0.timeIntervalSince1970) } ?? "-"
-        let header: [String] = [
-            branchId,
-            fulfillment.type.rawValue,
-            fulfillment.pickupBranchId ?? "",
-            fulfillment.pickupWindowId ?? "",
-            addressLine,
-            paymentMethod,
-            scheduledLine,
-        ]
-        return (header + itemLines).joined(separator: "\n")
     }
 
     private func persistPickupSelection() {
@@ -1719,18 +1522,17 @@ class CartViewModel: ObservableObject {
         return String(format: "%.2f %@", price, currency)
     }
 
-    /// nil cuando hace falta una tasa de cambio y no hay ninguna.
     private func convertAmount(
         _ amount: Double, from sourceCurrency: String, to targetCurrency: String
     )
-        -> Double?
+        -> Double
     {
         let from = sourceCurrency.uppercased()
         let to = targetCurrency.uppercased()
         if from == to { return amount }
 
-        guard let rate = availableExchangeRate else {
-            return nil
+        guard let rate = cartItems.compactMap(\.exchangeRate).first(where: { $0 > 0 }) else {
+            return amount
         }
 
         if from == "USD" && to == "CUP" {
@@ -1838,20 +1640,6 @@ struct CartItem: Identifiable, Hashable {
         }
 
         return finalUnitPrice
-    }
-
-    /// El precio habría que convertirlo con la tasa y el producto no trae ni tasa ni precio convertido.
-    func isMissingExchangeRate(for selectedCurrency: String) -> Bool {
-        let selected = selectedCurrency.uppercased()
-        let original = canonicalCurrencyForDisplay
-        guard selected != original, supportsCurrency(selected) else { return false }
-        if let convertedCurrency, convertedCurrency.uppercased() == selected,
-            convertedPrice != nil
-        {
-            return false
-        }
-        if let rate = exchangeRate, rate > 0 { return false }
-        return (original == "USD" && selected == "CUP") || (original == "CUP" && selected == "USD")
     }
 
     func formattedPrice(for selectedCurrency: String) -> String {

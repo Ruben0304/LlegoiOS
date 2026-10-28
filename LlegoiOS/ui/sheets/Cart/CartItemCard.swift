@@ -1,7 +1,5 @@
 import SwiftUI
 
-// MARK: - Cart Item Card
-
 struct CartItemCard: View {
     let item: CartItem
     let selectedCurrency: String
@@ -9,222 +7,127 @@ struct CartItemCard: View {
     let onDecrement: () -> Void
     let onRemove: () -> Void
 
-    @ObservedObject private var gradientManager = GradientStateManager.shared
-    @State private var showDeleteConfirmation = false
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Imagen del producto circular
-            ZStack {
-                Circle()
-                    .fill(Color(.systemGray5))
-                    .frame(width: 56, height: 56)
-
-                if item.isShowcase && item.imageUrl.isEmpty {
-                    Image(systemName: "sparkles.rectangle.stack.fill")
-                        .scaledFont(size: 22, weight: .medium, relativeTo: .title2)
-                        .foregroundColor(gradientManager.currentAccentColor)
-                } else {
-                    CachedAsyncImage(
-                        url: URL(string: item.imageUrl),
-                        content: { image in
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: 56, height: 56)
-                                .clipShape(Circle())
-                        },
-                        placeholder: {
-                            ProgressView()
-                                .tint(Color.gray.opacity(0.6))
-                                .scaleEffect(0.85)
-                                .frame(width: 56, height: 56)
-                        }
-                    )
-                }
-            }
-            .frame(width: 56, height: 56)
-            .overlay(Circle().stroke(Color(.systemGray4), lineWidth: 1))
-
-            // Información del producto
-            VStack(alignment: .leading, spacing: 5) {
-                Text(item.name)
-                    .scaledFont(size: 15, weight: .bold, relativeTo: .subheadline)
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-
-                if item.isShowcase {
-                    Text(item.showcaseRequestDescription ?? "")
-                        .scaledFont(size: 12, weight: .regular, relativeTo: .caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(2)
-                } else if item.isComboComponent {
-                    HStack(spacing: 6) {
-                        Text(item.comboName ?? "Combo")
-                            .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
-                            .foregroundColor(gradientManager.currentAccentColor)
-                        if let slotName = item.comboComponentSlotName, !slotName.isEmpty {
-                            Text("•")
-                                .scaledFont(size: 10, weight: .medium, relativeTo: .caption2)
-                                .foregroundColor(.secondary)
-                            Text(slotName)
-                                .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                } else {
-                    HStack(spacing: 6) {
-                        Text(item.shop)
-                            .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
-                            .foregroundColor(.secondary)
-
-                        Text("•")
-                            .scaledFont(size: 10, weight: .medium, relativeTo: .caption2)
-                            .foregroundColor(.secondary)
-
-                        Text(item.weight)
-                            .scaledFont(size: 11, weight: .medium, relativeTo: .caption2)
-                            .foregroundColor(gradientManager.currentAccentColor)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                artwork
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(item.name)
+                        .font(.system(.subheadline, weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if item.isShowcase {
+                        Text(item.showcaseRequestDescription ?? "Pedido a tu medida")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        Text([item.shop, item.weight].filter { !$0.isEmpty }.joined(separator: " · "))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Text("\(item.formattedPrice(for: selectedCurrency)) / unidad")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
-
-                // Precio y total
-                if item.isShowcase {
-                    HStack(spacing: 6) {
-                        Text("Precio por confirmar")
-                            .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
-                            .foregroundColor(.orange)
-
-                        Text("•")
-                            .scaledFont(size: 10, weight: .medium, relativeTo: .caption2)
-                            .foregroundColor(.secondary)
-
-                        Text("Cantidad: \(item.quantity)")
-                            .scaledFont(size: 12, weight: .bold, relativeTo: .caption)
-                            .foregroundColor(gradientManager.currentAccentColor)
-                    }
-                } else {
-                    HStack(spacing: 6) {
-                        Text(item.formattedPrice(for: selectedCurrency))
-                            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
-                            .foregroundColor(.secondary)
-
-                        Text("× \(item.quantity)")
-                            .scaledFont(size: 12, weight: .bold, relativeTo: .caption)
-                            .foregroundColor(gradientManager.currentAccentColor)
-
-                        Text("=")
-                            .scaledFont(size: 11, weight: .medium, relativeTo: .caption2)
-                            .foregroundColor(.secondary)
-
-                        Text(item.formattedItemTotal(for: selectedCurrency))
-                            .scaledFont(size: 15, weight: .bold, design: .rounded, relativeTo: .subheadline)
-                            .foregroundColor(gradientManager.currentAccentColor)
-                    }
-                }
-
-                if let currencyInfo = item.currencyInfoText(for: selectedCurrency) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "info.circle.fill")
-                            .scaledFont(size: 10, weight: .medium, relativeTo: .caption2)
-                        Text(currencyInfo)
-                            .scaledFont(size: 11, weight: .medium, relativeTo: .caption2)
-                            .lineLimit(2)
-                    }
-                    .foregroundColor(.orange.opacity(0.9))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(
-                        Capsule()
-                            .fill(Color.orange.opacity(0.12))
-                    )
-                }
-
-                if !item.selectedVariants.isEmpty {
-                    VStack(alignment: .leading, spacing: 2) {
-                        ForEach(item.selectedVariants, id: \.self) { variant in
-                            HStack(spacing: 4) {
-                                Text("\(variant.listName):")
-                                    .scaledFont(size: 11, weight: .semibold, relativeTo: .caption2)
-                                    .foregroundColor(.secondary)
-                                Text(variant.optionName)
-                                    .scaledFont(size: 11, weight: .regular, relativeTo: .caption2)
-                                    .foregroundColor(.primary)
-                                if variant.priceAdjustment != .zero {
-                                    Text(
-                                        String(
-                                            format: "(%@$%.2f)",
-                                            variant.priceAdjustment > .zero ? "+" : "",
-                                            NSDecimalNumber(decimal: variant.priceAdjustment)
-                                                .doubleValue
-                                        )
-                                    )
-                                    .scaledFont(size: 10, weight: .medium, relativeTo: .caption2)
-                                    .foregroundColor(.secondary)
-                                }
-                            }
-                        }
-                    }
-                    .padding(.top, 2)
-                }
-            }
-
-            Spacer()
-
-            // Controles compactos
-            VStack(spacing: 8) {
+                .frame(maxWidth: .infinity, alignment: .leading)
                 Button(action: onRemove) {
-                    Image(systemName: "trash.fill")
-                        .scaledFont(size: 11, weight: .medium, relativeTo: .caption)
-                        .foregroundColor(.red.opacity(0.8))
-                        .frame(width: 28, height: 28)
-                        .background(
-                            Circle()
-                                .fill(.ultraThinMaterial)
-                        )
-                        .frame(minWidth: 44, minHeight: 44)
+                    Image(systemName: "trash")
+                        .font(.system(.subheadline, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 44, height: 44)
                         .contentShape(Rectangle())
                 }
-                .accessibilityLabel("Eliminar del carrito")
+                .buttonStyle(.plain)
+                .accessibilityLabel("Quitar \(item.name) del carrito")
+            }
 
-                // Controles de cantidad
-                HStack(spacing: 6) {
-                    Button(action: onDecrement) {
-                        Image(systemName: "minus")
-                            .scaledFont(size: 9, weight: .bold, relativeTo: .caption2)
-                            .foregroundColor(.primary)
-                            .frame(width: 28, height: 28)
-                            .background(
-                                Circle()
-                                    .fill(.thinMaterial)
-                            )
-                            .frame(minWidth: 44, minHeight: 44)
-                            .contentShape(Rectangle())
+            if !item.selectedVariants.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(item.selectedVariants, id: \.self) { variant in
+                        Text(variantSummary(variant))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
-                    .accessibilityLabel("Quitar uno")
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(CartStyle.inset(scheme), in: RoundedRectangle(cornerRadius: 12))
+            }
 
-                    Text("\(item.quantity)")
-                        .scaledFont(size: 14, weight: .bold, design: .rounded, relativeTo: .subheadline)
-                        .foregroundColor(.primary)
-                        .frame(width: 22)
+            if let info = item.currencyInfoText(for: selectedCurrency) {
+                Label(info, systemImage: "info.circle")
+                    .font(.caption)
+                    .foregroundStyle(scheme == .dark ? .orange : Color(red: 0.5, green: 0.29, blue: 0.04))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
-                    Button(action: onIncrement) {
-                        Image(systemName: "plus")
-                            .scaledFont(size: 9, weight: .bold, relativeTo: .caption2)
-                            .foregroundColor(.primary)
-                            .frame(width: 28, height: 28)
-                            .background(
-                                Circle()
-                                    .fill(.thinMaterial)
-                            )
-                            .frame(minWidth: 44, minHeight: 44)
-                            .contentShape(Rectangle())
-                    }
-                    .accessibilityLabel("Agregar uno")
+            if typeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 10) {
+                    itemTotal
+                    quantityControl
+                }
+            } else {
+                HStack(spacing: 8) {
+                    itemTotal
+                    Spacer(minLength: 4)
+                    quantityControl
                 }
             }
         }
-        .padding(12)
+        .padding(16)
+        .accessibilityElement(children: .contain)
+    }
+
+    private var itemTotal: some View {
+        Text(item.isShowcase ? "Precio por confirmar" : item.formattedItemTotal(for: selectedCurrency))
+            .font(.system(item.isShowcase ? .caption : .headline, design: .rounded, weight: .bold))
+            .foregroundStyle(CartStyle.ink(scheme))
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityLabel(item.isShowcase ? "Precio por confirmar" : "Total: \(item.formattedItemTotal(for: selectedCurrency))")
+    }
+
+    private var quantityControl: some View {
+        CartQuantityControl(
+            quantity: item.quantity, name: item.name,
+            onDecrement: onDecrement, onIncrement: onIncrement)
+    }
+
+    private var artwork: some View {
+        ZStack {
+            CartStyle.inset(scheme)
+            if item.isShowcase && item.imageUrl.isEmpty {
+                Image(systemName: "sparkles.rectangle.stack")
+                    .font(.system(size: 25))
+                    .foregroundStyle(CartStyle.ink(scheme))
+            } else {
+                CachedAsyncImage(
+                    url: URL(string: item.imageUrl),
+                    content: { $0.resizable().scaledToFill() },
+                    placeholder: { ProgressView().tint(CartStyle.ink(scheme)) },
+                    failure: {
+                        Image(systemName: "photo")
+                            .font(.title3)
+                            .foregroundStyle(.secondary)
+                    })
+            }
+        }
+        .frame(width: typeSize.isAccessibilitySize ? 56 : 76, height: typeSize.isAccessibilitySize ? 56 : 76)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .accessibilityHidden(true)
+    }
+
+    private func variantSummary(_ variant: SelectedVariantOption) -> String {
+        var summary = "\(variant.listName): \(variant.optionName)"
+        if variant.priceAdjustment != .zero {
+            summary += String(format: " (%@%.2f)", variant.priceAdjustment > .zero ? "+" : "", NSDecimalNumber(decimal: variant.priceAdjustment).doubleValue)
+        }
+        return summary
     }
 }
 

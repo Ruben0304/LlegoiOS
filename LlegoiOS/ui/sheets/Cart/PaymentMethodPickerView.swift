@@ -5,21 +5,23 @@ struct PaymentMethodPickerView: View {
     let paymentMethods: [PaymentMethod]
     @Binding var selectedMethod: PaymentMethod?
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var scheme
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
-                Color(UIColor.systemGroupedBackground)
+                CartStyle.background(scheme)
                     .ignoresSafeArea()
 
                 ScrollView {
                     VStack(spacing: 16) {
-                        //                        header
+                        header
                         paymentList
                     }
                 }
             }
-            .navigationTitle("Métodos de Pago")
+            .navigationTitle("Cómo quieres pagar")
+            .tint(CartStyle.ink(scheme))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -33,14 +35,14 @@ struct PaymentMethodPickerView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Métodos de pago")
-                .scaledFont(size: 22, weight: .bold, design: .rounded, relativeTo: .title2)
+            Text("Elige lo que va contigo.")
+                .font(.system(.title2, design: .rounded, weight: .bold))
                 .foregroundColor(.primary)
 
             Text(
-                "Elige la opción que prefieras. Mostramos sólo la información esencial para que la decisión sea rápida."
+                "Después volverás al resumen para confirmar tu pedido."
             )
-            .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
+            .font(.subheadline)
             .foregroundColor(.secondary)
             .fixedSize(horizontal: false, vertical: true)
         }
@@ -53,37 +55,29 @@ struct PaymentMethodPickerView: View {
             if paymentMethods.isEmpty {
                 VStack(spacing: 16) {
                     Image(systemName: "creditcard.trianglebadge.exclamationmark")
-                        .scaledFont(size: 50, relativeTo: .largeTitle)
+                        .font(.system(size: 50))
                         .foregroundColor(.gray)
 
                     Text("No hay métodos de pago disponibles")
-                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.primary)
 
                     Text("Por favor, intenta de nuevo más tarde")
-                        .scaledFont(size: 14, relativeTo: .subheadline)
+                        .font(.system(size: 14))
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, 100)
             } else {
                 LazyVStack(spacing: 12) {
-                    ForEach(enumeratedPaymentMethods, id: \.element.id) { pair in
-                        let index = pair.offset
-                        let method = pair.element
+                    ForEach(paymentMethods) { method in
                         PaymentMethodRow(
                             method: method,
                             isSelected: selectedMethod?.id == method.id,
                             onTap: {
-                                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                    selectedMethod = method
-                                }
-                                // Cerrar después de seleccionar
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                    dismiss()
-                                }
-                            },
-                            animationDelay: Double(index) * 0.05
+                                selectedMethod = method
+                                dismiss()
+                            }
                         )
                     }
                 }
@@ -93,7 +87,4 @@ struct PaymentMethodPickerView: View {
         }
     }
 
-    private var enumeratedPaymentMethods: [(offset: Int, element: PaymentMethod)] {
-        Array(paymentMethods.enumerated())
-    }
 }

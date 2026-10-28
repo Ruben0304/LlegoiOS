@@ -1,0 +1,6 @@
+shopping_cart
+Author: ap-school
+Source: https://sketchfab.com/3d-models/shopping-cart-6cd3a07fe1d3434cb857e29ea972a85a
+License: CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/
+Original attribution is preserved in the USDZ metadata.
+Display changes: normalized size and origin; recolored in Llego teal and sage with satin materials, studio lighting and a soft contact shadow. Original mesh preserved.

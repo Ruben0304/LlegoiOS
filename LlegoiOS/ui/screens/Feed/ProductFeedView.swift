@@ -3,6 +3,7 @@ import SwiftUI
 
 struct ProductFeedView: View {
     @StateObject private var viewModel = ProductFeedViewModel()
+    @StateObject private var feedCart = FeedCartInteraction()
     @StateObject private var favoritesManager = FavoritesManager.shared
     @ObservedObject private var cartManager = CartManager.shared
     @StateObject private var gradientManager = GradientStateManager.shared
@@ -47,7 +48,7 @@ struct ProductFeedView: View {
                 if #available(iOS 26.0, *) {
                     ToolbarItem(placement: .navigationBarLeading) {
                         Text(appModeManager.isSimple ? "Inicio" : "Explorar")
-                            .scaledFont(size: 22, weight: .semibold, relativeTo: .title2)
+                            .font(.system(size: 22, weight: .semibold))
                             .foregroundColor(Color.adaptiveOnBackground(colorScheme))
                             .fixedSize()
                     }
@@ -55,7 +56,7 @@ struct ProductFeedView: View {
                 } else {
                     ToolbarItem(placement: .navigationBarLeading) {
                         Text(appModeManager.isSimple ? "Inicio" : "Explorar")
-                            .scaledFont(size: 22, weight: .semibold, relativeTo: .title2)
+                            .font(.system(size: 22, weight: .semibold))
                             .foregroundColor(Color.adaptiveOnBackground(colorScheme))
                             .fixedSize()
                     }
@@ -66,7 +67,7 @@ struct ProductFeedView: View {
                     if favoritesManager.favoriteItemCount > 0 {
                         Button(action: { showFavoritesSheet = true }) {
                             Image(systemName: "heart")
-                                .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
+                                .font(.system(size: 16, weight: .semibold))
                         }
                         .badge(favoritesManager.favoriteItemCount)
                         .id("favorites-toolbar-badge-\(favoritesManager.favoriteItemCount)")
@@ -74,33 +75,23 @@ struct ProductFeedView: View {
                     } else {
                         Button(action: { showFavoritesSheet = true }) {
                             Image(systemName: "heart")
-                                .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
+                                .font(.system(size: 16, weight: .semibold))
                         }
                         .accessibilityLabel("Favoritos")
                     }
                 }
 
-                // Botón de carrito
+                // A stable toolbar identity keeps the flight target valid as its badge changes.
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    if cartManager.cartItemCount > 0 {
-                        Button(action: {
-                            showCart = true
-                        }) {
-                            Image(systemName: "cart")
-                                .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
-                        }
-                        .badge(cartManager.cartItemCount)
-                        .id("cart-toolbar-badge-\(cartManager.cartItemCount)")
-                        .accessibilityLabel("Carrito")
-                    } else {
-                        Button(action: {
-                            showCart = true
-                        }) {
-                            Image(systemName: "cart")
-                                .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
-                        }
-                        .accessibilityLabel("Carrito")
+                    Button { showCart = true } label: {
+                        Image(systemName: "cart")
+                            .font(.system(size: 16, weight: .semibold))
+                            .symbolEffect(.bounce, value: feedCart.arrivalCount)
                     }
+                    .badge(cartManager.cartItemCount)
+                    .background(CartFlightAnchorReader(anchor: feedCart.cartAnchor))
+                    .accessibilityLabel("Carrito")
+                    .accessibilityValue("\(cartManager.cartItemCount) productos")
                 }
 
                 // Modo simple: pedidos, separado de favoritos y carrito por un
@@ -113,7 +104,7 @@ struct ProductFeedView: View {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button(action: openOrders) {
                             Image(systemName: "bag")
-                                .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
+                                .font(.system(size: 16, weight: .semibold))
                         }
                         .accessibilityLabel("Pedidos")
                     }
@@ -153,6 +144,20 @@ struct ProductFeedView: View {
                 CartView()
             }
             .onAppear { viewModel.loadFeed() }
+        }
+        .environmentObject(feedCart)
+        .overlay { FeedCartFlightOverlay(interaction: feedCart, accent: gradientManager.currentAccentColor) }
+        .onChange(of: feedCart.productToCustomize) { _, productID in
+            guard let productID else { return }
+            selectedProductId = productID
+            feedCart.productToCustomize = nil
+        }
+        .alert("No se pudo agregar", isPresented: Binding(
+            get: { feedCart.errorMessage != nil },
+            set: { if !$0 { feedCart.errorMessage = nil } })) {
+            Button("Entendido", role: .cancel) { feedCart.errorMessage = nil }
+        } message: {
+            Text(feedCart.errorMessage ?? "Inténtalo de nuevo.")
         }
     }
 
@@ -237,7 +242,7 @@ struct ProductFeedView: View {
     private var categoryEmptyState: some View {
         VStack(spacing: 14) {
             Image(systemName: "line.3.horizontal.decrease.circle")
-                .scaledFont(size: 42, weight: .light, relativeTo: .largeTitle)
+                .font(.system(size: 42, weight: .light))
                 .foregroundStyle(gradientManager.currentAccentColor)
 
             VStack(spacing: 6) {
@@ -245,12 +250,12 @@ struct ProductFeedView: View {
                     viewModel.selectedCategoryName.map { "No hay nada en \($0)" }
                         ?? "No hay nada en esta categoría"
                 )
-                .scaledFont(size: 18, weight: .semibold, design: .rounded, relativeTo: .title3)
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 .multilineTextAlignment(.center)
 
                 Text("Prueba con otra categoría o mira todo lo disponible.")
-                    .scaledFont(size: 14, relativeTo: .subheadline)
+                    .font(.system(size: 14))
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme).opacity(0.65))
                     .multilineTextAlignment(.center)
             }
@@ -260,7 +265,7 @@ struct ProductFeedView: View {
                 viewModel.selectCategory(nil)
             } label: {
                 Text("Ver todo")
-                    .scaledFont(size: 15, weight: .semibold, design: .rounded, relativeTo: .subheadline)
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
                     .foregroundColor(.white)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
@@ -365,7 +370,7 @@ struct ProductFeedView: View {
             !section.items.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
                 Text(titleOverride ?? section.title)
-                    .scaledFont(size: 20, weight: .bold, design: .rounded, relativeTo: .title3)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                     .padding(.horizontal, 20)
 
@@ -387,7 +392,7 @@ struct ProductFeedView: View {
     private var explorarSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Explora otras opciones")
-                .scaledFont(size: 20, weight: .bold, design: .rounded, relativeTo: .title3)
+                .font(.system(size: 20, weight: .bold, design: .rounded))
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 .padding(.horizontal, 20)
 
@@ -403,8 +408,6 @@ struct ProductFeedView: View {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         selectedProductId = product.id
                     }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityAddTraits(.isButton)
                 }
             }
             .padding(.horizontal, 20)
@@ -461,8 +464,6 @@ struct ProductFeedView: View {
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                 selectedProductId = product.id
                             }
-                            .accessibilityElement(children: .combine)
-                            .accessibilityAddTraits(.isButton)
                             .padding(.vertical, 12)
                     }
                 }
@@ -478,7 +479,7 @@ struct ProductFeedView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text(section.title)
-                    .scaledFont(size: 20, weight: .bold, design: .rounded, relativeTo: .title3)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 Spacer()
             }
@@ -496,8 +497,6 @@ struct ProductFeedView: View {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             selectedProductId = product.id
                         }
-                        .accessibilityElement(children: .combine)
-                        .accessibilityAddTraits(.isButton)
                         .padding(.vertical, 12)
                     }
                 }
@@ -517,7 +516,7 @@ struct ProductFeedView: View {
             HStack {
                 HStack(spacing: 8) {
                     Text(section.title)
-                        .scaledFont(size: 20, weight: .bold, design: .rounded, relativeTo: .title3)
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundColor(Color.adaptiveOnSurface(colorScheme))
 
                     // Badge based on section type
@@ -540,8 +539,6 @@ struct ProductFeedView: View {
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             selectedProductId = product.id
                         }
-                        .accessibilityElement(children: .combine)
-                        .accessibilityAddTraits(.isButton)
                         .padding(.vertical, 12)
                     }
                 }
@@ -584,12 +581,12 @@ struct ProductFeedView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         if let title = banner.title, !title.isEmpty {
                             Text(title)
-                                .scaledFont(size: 18, weight: .bold, relativeTo: .title3)
+                                .font(.system(size: 18, weight: .bold))
                                 .foregroundColor(.white)
                         }
                         if let subtitle = banner.subtitle, !subtitle.isEmpty {
                             Text(subtitle)
-                                .scaledFont(size: 13, relativeTo: .footnote)
+                                .font(.system(size: 13))
                                 .foregroundColor(.white.opacity(0.9))
                         }
                     }
@@ -610,10 +607,10 @@ struct ProductFeedView: View {
         switch sectionType {
         case .trending:
             Text("🔥")
-                .scaledFont(size: 14, relativeTo: .subheadline)
+                .font(.system(size: 14))
         case .nuevosLugaresFavoritos:
             Text("Nuevo")
-                .scaledFont(size: 11, weight: .bold, relativeTo: .caption)
+                .font(.system(size: 11, weight: .bold))
                 .foregroundColor(.white)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
@@ -624,7 +621,7 @@ struct ProductFeedView: View {
                 : hour >= 12 && hour < 20 ? "sun.max.fill"
                 : "moon.stars.fill"
             Image(systemName: icon)
-                .scaledFont(size: 14, relativeTo: .subheadline)
+                .font(.system(size: 14))
                 .foregroundColor(hour >= 6 && hour < 20 ? .orange : .indigo)
         default:
             EmptyView()
@@ -650,17 +647,14 @@ struct ProductFeedView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Aprende a usar Llego")
-                    .scaledFont(size: 20, weight: .bold, design: .rounded, relativeTo: .title3)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 Spacer()
                 Button(action: { viewModel.dismissTutorials() }) {
                     Image(systemName: "xmark.circle.fill")
-                        .scaledFont(size: 22, relativeTo: .title2)
+                        .font(.system(size: 22))
                         .foregroundColor(.gray.opacity(0.7))
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(Rectangle())
                 }
-                .accessibilityLabel("Ocultar tutoriales")
             }
             .padding(.horizontal, 20)
 
@@ -687,10 +681,10 @@ struct ProductFeedView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Combos especiales")
-                        .scaledFont(size: 20, weight: .bold, design: .rounded, relativeTo: .title3)
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                     Text("Personaliza tu pedido")
-                        .scaledFont(size: 13, relativeTo: .footnote)
+                        .font(.system(size: 13))
                         .foregroundColor(.secondary)
                 }
                 Spacer()
@@ -722,10 +716,10 @@ struct ProductFeedView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Text("Pide de nuevo")
-                    .scaledFont(size: 20, weight: .bold, design: .rounded, relativeTo: .title3)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 Image(systemName: "arrow.clockwise")
-                    .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(gradientManager.currentAccentColor)
                 Spacer()
             }
@@ -739,8 +733,6 @@ struct ProductFeedView: View {
                                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                                 selectedProductId = item.productId
                             }
-                            .accessibilityElement(children: .combine)
-                            .accessibilityAddTraits(.isButton)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -755,12 +747,12 @@ struct ProductFeedView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Negocios destacados")
-                    .scaledFont(size: 20, weight: .bold, design: .rounded, relativeTo: .title3)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 Spacer()
                 NavigationLink(destination: StoreListView()) {
                     Text("Ver todo")
-                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(gradientManager.currentAccentColor)
                 }
             }
@@ -826,15 +818,15 @@ struct ProductFeedView: View {
                 VStack(spacing: 20) {
                     Spacer()
                     Image(systemName: "flame")
-                        .scaledFont(size: 48, relativeTo: .largeTitle)
+                        .font(.system(size: 48, weight: .regular))
                         .foregroundColor(.orange)
                         .padding(.bottom, 8)
                     VStack(spacing: 8) {
                         Text("No hay productos destacados")
-                            .scaledFont(size: 22, weight: .semibold, design: .rounded, relativeTo: .title2)
+                            .font(.system(size: 22, weight: .semibold, design: .rounded))
                             .foregroundColor(.primary)
                         Text("Vuelve más tarde para ver las mejores ofertas")
-                            .scaledFont(size: 15, relativeTo: .subheadline)
+                            .font(.system(size: 15, weight: .regular))
                             .foregroundColor(.secondary.opacity(0.8))
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 40)
@@ -851,10 +843,10 @@ struct ProductFeedView: View {
     private func errorState(message: String) -> some View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .scaledFont(size: 50, relativeTo: .largeTitle)
+                .font(.system(size: 50))
                 .foregroundColor(.orange)
             Text(message)
-                .scaledFont(size: 16, weight: .medium, relativeTo: .body)
+                .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
@@ -894,7 +886,7 @@ struct StoreCircleCard: View {
                         placeholder: { Circle().fill(Color.gray.opacity(0.2)) },
                         failure: {
                             Image(systemName: "storefront")
-                                .scaledFont(size: 36, relativeTo: .largeTitle)
+                                .font(.system(size: 36))
                                 .foregroundColor(.gray)
                         }
                     )
@@ -902,13 +894,13 @@ struct StoreCircleCard: View {
                     .clipShape(Circle())
                 } else {
                     Image(systemName: "storefront")
-                        .scaledFont(size: 36, relativeTo: .largeTitle)
+                        .font(.system(size: 36))
                         .foregroundColor(accentColor)
                 }
             }
 
             Text(store.name)
-                .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
+                .font(.system(size: 13, weight: .medium))
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
@@ -917,7 +909,7 @@ struct StoreCircleCard: View {
     }
 }
 
-private extension FeedProduct {
+extension FeedProduct {
     var cachedKeyBaja: String { "product_baja_\(id)" }
     var cachedKeyMedia: String { "product_media_\(id)" }
     var cachedBranchAvatarKey: String { "branch_avatar_\(branchId)" }
@@ -954,28 +946,30 @@ struct FeaturedProductCard: View {
                         }
 
                         Text(product.branchName)
-                            .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
+                            .font(.system(size: 12, weight: .medium))
                             .foregroundColor(.white.opacity(0.9))
                     }
                 }
 
                 Text(product.name)
-                    .scaledFont(size: 18, weight: .bold, relativeTo: .title3)
+                    .font(.system(size: 18, weight: .bold))
                     .foregroundColor(.white)
                     .lineLimit(2)
                     .frame(height: 44, alignment: .leading)
 
-                HStack {
-                    Text(product.formattedPrice)
-                        .scaledFont(size: 16, weight: .bold, relativeTo: .body)
-                        .foregroundColor(.white)
-
-                    if let distance = product.formattedDistance {
-                        Text("•").foregroundColor(.white.opacity(0.6))
-                        Text(distance)
-                            .scaledFont(size: 13, relativeTo: .footnote)
-                            .foregroundColor(.white.opacity(0.8))
+                HStack(alignment: .center, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(product.formattedPrice)
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.white)
+                        if let distance = product.formattedDistance {
+                            Text(distance)
+                                .font(.system(size: 12))
+                                .foregroundColor(.white.opacity(0.8))
+                        }
                     }
+                    Spacer(minLength: 4)
+                    FeedAddToCartButton(product: product, style: .featured)
                 }
             }
             .padding(16)
@@ -1023,7 +1017,7 @@ struct SmallProductCard: View {
                 // Badge overlay
                 if let badge = badge {
                     Text(badge)
-                        .scaledFont(size: 10, weight: .bold, relativeTo: .caption2)
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundColor(.white)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
@@ -1034,14 +1028,20 @@ struct SmallProductCard: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(product.name)
-                    .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                     .lineLimit(2)
                     .frame(height: 36, alignment: .top)
 
-                Text(product.formattedPrice)
-                    .scaledFont(size: 13, weight: .bold, relativeTo: .footnote)
-                    .foregroundColor(accentColor)
+                HStack(spacing: 4) {
+                    Text(product.formattedPrice)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(accentColor)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    Spacer(minLength: 0)
+                    FeedAddToCartButton(product: product, style: .compact)
+                }
             }
             .frame(width: 140, alignment: .leading)
         }
@@ -1120,7 +1120,7 @@ struct CompactProductCard: View {
                 } label: {
                     let isFavorite = favoritesManager.isFavorite(productId: product.id)
                     Image(systemName: isFavorite ? "heart.fill" : "heart")
-                        .scaledFont(size: 14, weight: .bold, relativeTo: .subheadline)
+                        .font(.system(size: 14, weight: .bold))
                         .foregroundColor(isFavorite ? .red : .gray)
                         .frame(width: 30, height: 30)
                         .background(
@@ -1135,7 +1135,7 @@ struct CompactProductCard: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(product.name)
-                    .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                     .lineLimit(2)
                     .frame(height: 40, alignment: .top)
@@ -1153,15 +1153,21 @@ struct CompactProductCard: View {
                     }
 
                     Text(product.businessName)
-                        .scaledFont(size: 12, relativeTo: .caption)
+                        .font(.system(size: 12))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
                 .frame(height: 16)
 
-                Text(product.formattedPrice)
-                    .scaledFont(size: 16, weight: .bold, relativeTo: .body)
-                    .foregroundColor(accentColor)
+                HStack(spacing: 4) {
+                    Text(product.formattedPrice)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(accentColor)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    Spacer(minLength: 0)
+                    FeedAddToCartButton(product: product, style: .compact)
+                }
             }
         }
         .padding(12)
@@ -1222,7 +1228,7 @@ struct TutorialFeedCard: View {
                         .frame(width: 48, height: 48)
 
                     Image(systemName: "play.fill")
-                        .scaledFont(size: 20, weight: .bold, relativeTo: .title3)
+                        .font(.system(size: 20, weight: .bold))
                         .foregroundColor(accentColor)
                         .offset(x: 2)
                 }
@@ -1233,7 +1239,7 @@ struct TutorialFeedCard: View {
                     HStack {
                         Spacer()
                         Text(tutorial.duration)
-                            .scaledFont(size: 11, weight: .semibold, relativeTo: .caption)
+                            .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(.white)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
@@ -1250,7 +1256,7 @@ struct TutorialFeedCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     if let category = tutorial.category {
                         Text(category)
-                            .scaledFont(size: 10, weight: .semibold, relativeTo: .caption2)
+                            .font(.system(size: 10, weight: .semibold))
                             .foregroundColor(.llegoSecondary)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 3)
@@ -1261,7 +1267,7 @@ struct TutorialFeedCard: View {
                     }
 
                     Text(tutorial.title)
-                        .scaledFont(size: 13, weight: .bold, relativeTo: .footnote)
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundColor(.white)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
@@ -1284,7 +1290,7 @@ struct TutorialFeedCard: View {
         switch downloadManager.status(for: tutorial.id) {
         case .downloaded:
             Image(systemName: "checkmark.circle.fill")
-                .scaledFont(size: 20, relativeTo: .title3)
+                .font(.system(size: 20))
                 .foregroundColor(.green)
                 .padding(6)
                 .background(.ultraThinMaterial, in: Circle())
@@ -1296,7 +1302,7 @@ struct TutorialFeedCard: View {
                     .tint(.white)
                     .frame(width: 16, height: 16)
                 Text("\(Int(progress * 100))%")
-                    .scaledFont(size: 10, weight: .semibold, relativeTo: .caption2)
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundColor(.white)
             }
             .padding(.horizontal, 8)
@@ -1322,10 +1328,10 @@ struct TutorialVideoPlayerView: View {
                     Rectangle().fill(Color.black)
                     VStack(spacing: 16) {
                         Image(systemName: "play.circle.fill")
-                            .scaledFont(size: 60, relativeTo: .largeTitle)
+                            .font(.system(size: 60))
                             .foregroundColor(.white)
                         Text(tutorial.title)
-                            .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
+                            .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(.white)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
@@ -1335,14 +1341,14 @@ struct TutorialVideoPlayerView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     Text(tutorial.title)
-                        .scaledFont(size: 20, weight: .bold, relativeTo: .title3)
+                        .font(.system(size: 20, weight: .bold))
                     Text(tutorial.description)
-                        .scaledFont(size: 15, relativeTo: .subheadline)
+                        .font(.system(size: 15))
                         .foregroundColor(.secondary)
                     HStack {
                         Image(systemName: "clock").foregroundColor(accentColor)
                         Text(tutorial.duration)
-                            .scaledFont(size: 14, relativeTo: .subheadline)
+                            .font(.system(size: 14))
                             .foregroundColor(.secondary)
                     }
                 }
@@ -1392,7 +1398,7 @@ struct PromotionCard: View {
                             .fill(typeColor.opacity(0.3))
                             .overlay(
                                 Image(systemName: promotion.type.icon)
-                                    .scaledFont(size: 30, relativeTo: .largeTitle)
+                                    .font(.system(size: 30))
                                     .foregroundColor(typeColor)
                             )
                     }
@@ -1403,9 +1409,9 @@ struct PromotionCard: View {
                 // Type badge
                 HStack(spacing: 4) {
                     Image(systemName: promotion.type.icon)
-                        .scaledFont(size: 10, weight: .bold, relativeTo: .caption2)
+                        .font(.system(size: 10, weight: .bold))
                     Text(promotion.type.label)
-                        .scaledFont(size: 11, weight: .bold, relativeTo: .caption)
+                        .font(.system(size: 11, weight: .bold))
                 }
                 .foregroundColor(.white)
                 .padding(.horizontal, 8)
@@ -1422,7 +1428,7 @@ struct PromotionCard: View {
                         HStack {
                             Spacer()
                             Text(discount)
-                                .scaledFont(size: 14, weight: .black, relativeTo: .subheadline)
+                                .font(.system(size: 14, weight: .black))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
@@ -1440,12 +1446,12 @@ struct PromotionCard: View {
             // Content
             VStack(alignment: .leading, spacing: 6) {
                 Text(promotion.title)
-                    .scaledFont(size: 15, weight: .bold, relativeTo: .subheadline)
+                    .font(.system(size: 15, weight: .bold))
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                     .lineLimit(1)
 
                 Text(promotion.description)
-                    .scaledFont(size: 12, relativeTo: .caption)
+                    .font(.system(size: 12))
                     .foregroundColor(.secondary)
                     .lineLimit(2)
                     .frame(height: 32, alignment: .top)
@@ -1456,12 +1462,12 @@ struct PromotionCard: View {
                         HStack(spacing: 4) {
                             if let original = promotion.formattedOriginalPrice {
                                 Text(original)
-                                    .scaledFont(size: 12, relativeTo: .caption)
+                                    .font(.system(size: 12))
                                     .foregroundColor(.secondary)
                                     .strikethrough()
                             }
                             Text(discounted)
-                                .scaledFont(size: 14, weight: .bold, relativeTo: .subheadline)
+                                .font(.system(size: 14, weight: .bold))
                                 .foregroundColor(accentColor)
                         }
                     }
@@ -1472,9 +1478,9 @@ struct PromotionCard: View {
                     if let time = promotion.timeRemaining {
                         HStack(spacing: 3) {
                             Image(systemName: "clock.fill")
-                                .scaledFont(size: 10, relativeTo: .caption2)
+                                .font(.system(size: 10))
                             Text(time)
-                                .scaledFont(size: 11, weight: .medium, relativeTo: .caption)
+                                .font(.system(size: 11, weight: .medium))
                         }
                         .foregroundColor(promotion.type == .flash ? .red : .secondary)
                     }
@@ -1483,7 +1489,7 @@ struct PromotionCard: View {
                 // Store name
                 if let storeName = promotion.storeName {
                     Text(storeName)
-                        .scaledFont(size: 11, relativeTo: .caption)
+                        .font(.system(size: 11))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
@@ -1571,19 +1577,19 @@ struct LoginPromptCard: View {
                     .frame(width: 44, height: 44)
 
                 Image(systemName: "sparkles")
-                    .scaledFont(size: 20, weight: .semibold, relativeTo: .title3)
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(accentColor)
             }
 
             VStack(alignment: .leading, spacing: 3) {
                 Text("Mejores recomendaciones para ti")
-                    .scaledFont(size: 14, weight: .semibold, design: .rounded, relativeTo: .subheadline)
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text("Inicia sesión y descubre más productos personalizados.")
-                    .scaledFont(size: 12, relativeTo: .caption)
+                    .font(.system(size: 12, weight: .regular))
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme).opacity(0.65))
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1592,7 +1598,7 @@ struct LoginPromptCard: View {
 
             Button(action: onTap) {
                 Text("Entrar")
-                    .scaledFont(size: 14, weight: .semibold, design: .rounded, relativeTo: .subheadline)
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundColor(.white)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
@@ -1680,7 +1686,7 @@ struct ReorderItemCard: View {
                         .frame(width: 120, height: 90)
                         .overlay(
                             Image(systemName: "bag.fill")
-                                .scaledFont(size: 28, relativeTo: .title)
+                                .font(.system(size: 28))
                                 .foregroundColor(.gray.opacity(0.4))
                         )
                 }
@@ -1688,17 +1694,20 @@ struct ReorderItemCard: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.name)
-                    .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                     .lineLimit(2)
                     .frame(width: 120, height: 34, alignment: .topLeading)
 
                 Text(item.branchName)
-                    .scaledFont(size: 11, relativeTo: .caption)
+                    .font(.system(size: 11))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
                     .frame(width: 120, alignment: .leading)
             }
+
+            FeedAddToCartButton(item: item, style: .inline)
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .frame(width: 120)
         .padding(10)
@@ -1721,59 +1730,61 @@ struct PideDeNuevoInlineCard: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: 14) {
-                if let imageUrl = item.imageUrl, !imageUrl.isEmpty {
-                    CachedAsyncImage(
-                        url: URL(string: imageUrl),
-                        cacheKey: "reorder_inline_\(item.productId)",
-                        displaySize: CGSize(width: 64, height: 64),
-                        content: { image in image.resizable().scaledToFill() },
-                        placeholder: { AdaptiveShimmerView(cornerRadius: 12) },
-                        failure: { AdaptiveShimmerView(cornerRadius: 12) }
-                    )
-                    .frame(width: 64, height: 64)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                } else {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.gray.opacity(0.15))
-                        .frame(width: 64, height: 64)
-                        .overlay(
-                            Image(systemName: "bag.fill")
-                                .scaledFont(size: 24, relativeTo: .title)
-                                .foregroundColor(.gray.opacity(0.4))
+        HStack(spacing: 8) {
+            Button(action: onTap) {
+                HStack(spacing: 14) {
+                    if let imageUrl = item.imageUrl, !imageUrl.isEmpty {
+                        CachedAsyncImage(
+                            url: URL(string: imageUrl),
+                            cacheKey: "reorder_inline_\(item.productId)",
+                            displaySize: CGSize(width: 64, height: 64),
+                            content: { image in image.resizable().scaledToFill() },
+                            placeholder: { AdaptiveShimmerView(cornerRadius: 12) },
+                            failure: { AdaptiveShimmerView(cornerRadius: 12) }
                         )
-                }
+                        .frame(width: 64, height: 64)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    } else {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.gray.opacity(0.15))
+                            .frame(width: 64, height: 64)
+                            .overlay(
+                                Image(systemName: "bag.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(.gray.opacity(0.4))
+                            )
+                    }
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("¿Lo pides de nuevo?")
-                        .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
-                        .foregroundColor(.secondary)
-                    Text(item.name)
-                        .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
-                        .foregroundColor(Color.adaptiveOnSurface(colorScheme))
-                        .lineLimit(1)
-                    Text(item.branchName)
-                        .scaledFont(size: 12, relativeTo: .caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("¿Lo pides de nuevo?")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.secondary)
+                        Text(item.name)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(Color.adaptiveOnSurface(colorScheme))
+                            .lineLimit(1)
+                        Text(item.branchName)
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-                Image(systemName: "arrow.right.circle.fill")
-                    .scaledFont(size: 28, relativeTo: .title)
-                    .foregroundColor(accentColor)
+                }
+                .contentShape(Rectangle())
             }
-            .padding(14)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.cardBackground(colorScheme))
-                    .shadow(
-                        color: .black.opacity(colorScheme == .dark ? 0.2 : 0.06),
-                        radius: 6, x: 0, y: 3)
-            )
+            .buttonStyle(.plain)
+
+            FeedAddToCartButton(item: item, style: .inline)
         }
-        .buttonStyle(.plain)
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.cardBackground(colorScheme))
+                .shadow(
+                    color: .black.opacity(colorScheme == .dark ? 0.2 : 0.06),
+                    radius: 6, x: 0, y: 3)
+        )
     }
 }
 
@@ -1814,12 +1825,12 @@ struct FeaturedStoreCard: View {
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text(store.name)
-                            .scaledFont(size: 16, weight: .bold, relativeTo: .body)
+                            .font(.system(size: 16, weight: .bold))
                             .foregroundColor(.white)
                             .lineLimit(1)
                         if let address = store.address, !address.isEmpty {
                             Text(address)
-                                .scaledFont(size: 12, relativeTo: .caption)
+                                .font(.system(size: 12))
                                 .foregroundColor(.white.opacity(0.8))
                                 .lineLimit(1)
                         }
@@ -1828,7 +1839,7 @@ struct FeaturedStoreCard: View {
                     Spacer()
 
                     Text("Ver tienda")
-                        .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(.white)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
@@ -1854,7 +1865,7 @@ struct FeaturedStoreCard: View {
                         .fill(accentColor.opacity(0.2))
                         .overlay(
                             Image(systemName: "storefront.fill")
-                                .scaledFont(size: 40, relativeTo: .largeTitle)
+                                .font(.system(size: 40))
                                 .foregroundColor(accentColor.opacity(0.5))
                         )
                 }
@@ -1864,7 +1875,7 @@ struct FeaturedStoreCard: View {
                 .fill(accentColor.opacity(0.2))
                 .overlay(
                     Image(systemName: "storefront.fill")
-                        .scaledFont(size: 40, relativeTo: .largeTitle)
+                        .font(.system(size: 40))
                         .foregroundColor(accentColor.opacity(0.5))
                 )
         }
@@ -1882,7 +1893,7 @@ struct ExplorarProductCard: View {
         VStack(alignment: .leading, spacing: 0) {
             CachedAsyncImage(
                 url: URL(string: product.imageUrlBaja),
-                cacheKey: "explorar_\(product.id)",
+                cacheKey: product.cachedKeyBaja,
                 content: { image in image.resizable().scaledToFill() },
                 placeholder: { AdaptiveShimmerView(cornerRadius: 0) },
                 failure: {
@@ -1890,7 +1901,7 @@ struct ExplorarProductCard: View {
                         .fill(Color.gray.opacity(0.12))
                         .overlay(
                             Image(systemName: "photo")
-                                .scaledFont(size: 28, relativeTo: .title)
+                                .font(.system(size: 28))
                                 .foregroundColor(.gray.opacity(0.35))
                         )
                 }
@@ -1901,21 +1912,22 @@ struct ExplorarProductCard: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(product.name)
-                    .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
 
                 HStack(spacing: 0) {
                     Text(product.formattedPrice)
-                        .scaledFont(size: 14, weight: .bold, relativeTo: .subheadline)
+                        .font(.system(size: 14, weight: .bold))
                         .foregroundColor(accentColor)
-                    Spacer()
+                    Spacer(minLength: 0)
+                    FeedAddToCartButton(product: product, style: .compact)
                 }
 
                 if let branchName = product.branchName.isEmpty ? nil : product.branchName {
                     Text(branchName)
-                        .scaledFont(size: 11, relativeTo: .caption)
+                        .font(.system(size: 11))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }

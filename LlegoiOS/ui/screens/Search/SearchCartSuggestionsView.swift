@@ -4,6 +4,7 @@ struct SearchCartSuggestionsView: View {
     let context: SearchCartContext
     let suggestions: [SearchCombinationCandidate]
     let onProductTap: (String) -> Void
+    @ObservedObject private var gradientManager = GradientStateManager.shared
 
     var body: some View {
         if !suggestions.isEmpty {
@@ -20,7 +21,7 @@ struct SearchCartSuggestionsView: View {
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .stroke(Color.llegoPrimary.opacity(0.10), lineWidth: 1)
+                    .stroke(gradientManager.currentAccentColor.opacity(0.10), lineWidth: 1)
             }
             .accessibilityElement(children: .contain)
         }
@@ -30,10 +31,10 @@ struct SearchCartSuggestionsView: View {
         VStack(alignment: .leading, spacing: 8) {
             Label("En el mismo negocio", systemImage: "bag")
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Color.llegoPrimary)
+                .foregroundStyle(gradientManager.currentAccentColor)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
-                .background(Color.llegoAccent.opacity(0.30), in: Capsule())
+                .background(gradientManager.currentAccentColor.opacity(0.18), in: Capsule())
 
             Text(cartSummary)
                 .font(.headline)
@@ -71,7 +72,7 @@ struct SearchCartSuggestionsView: View {
 
                     Text(formattedPrice(product.price, currency: product.currency))
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.llegoPrimary)
+                        .foregroundStyle(gradientManager.currentAccentColor)
                         .accessibilityLabel("Precio: \(formattedPrice(product.price, currency: product.currency))")
                 }
 
@@ -79,7 +80,7 @@ struct SearchCartSuggestionsView: View {
 
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.llegoPrimary.opacity(0.7))
+                    .foregroundStyle(gradientManager.currentAccentColor.opacity(0.7))
                     .accessibilityHidden(true)
             }
             .padding(12)
@@ -115,11 +116,11 @@ struct SearchCartSuggestionsView: View {
 
     private var imagePlaceholder: some View {
         RoundedRectangle(cornerRadius: 12, style: .continuous)
-            .fill(Color.llegoPrimary.opacity(0.08))
+            .fill(gradientManager.currentAccentColor.opacity(0.08))
             .overlay {
                 Image(systemName: "fork.knife")
                     .font(.title3)
-                    .foregroundStyle(Color.llegoPrimary.opacity(0.55))
+                    .foregroundStyle(gradientManager.currentAccentColor.opacity(0.55))
             }
     }
 

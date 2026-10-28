@@ -6,6 +6,8 @@ struct ProductDetailView: View {
     var catalogOnly: Bool = false
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @StateObject private var cartPackageAnimation = CartPackageAnimation()
     @StateObject private var viewModel = ProductDetailViewModel()
     @ObservedObject private var cartManager = CartManager.shared
     @StateObject private var favoritesManager = FavoritesManager.shared
@@ -81,19 +83,18 @@ struct ProductDetailView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(action: { dismiss() }) {
                         Image(systemName: "xmark")
-                            .scaledFont(size: 18, weight: .semibold, relativeTo: .title3)
+                            .font(.system(size: 18, weight: .semibold))
                     }
-                    .accessibilityLabel("Cerrar")
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: { toggleFavorite() }) {
                         ZStack(alignment: .bottomTrailing) {
                             Image(systemName: favoritesManager.isFavorite(productId: productId) ? "heart.fill" : "heart")
-                                .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
+                                .font(.system(size: 17, weight: .semibold))
                             if !favoritesManager.isFavorite(productId: productId) {
                                 Image(systemName: "plus.circle.fill")
-                                    .scaledFont(size: 9, weight: .bold, relativeTo: .caption2)
+                                    .font(.system(size: 9, weight: .bold))
                                     .background(Circle().fill(Color.white))
                                     .offset(x: 2, y: 2)
                             }
@@ -109,45 +110,44 @@ struct ProductDetailView: View {
 
                 if !catalogOnly {
                     ToolbarItem(placement: .topBarTrailing) {
-                        if cartManager.cartItemCount > 0 {
-                            Button(action: {
-                                showCart = true
-                            }) {
-                                Image(systemName: "cart")
-                                    .foregroundColor(gradientManager.currentAccentColor)
-                            }
-                            .badge(cartManager.cartItemCount)
-                            .id("cart-toolbar-badge-\(cartManager.cartItemCount)")
-                            .accessibilityLabel("Carrito")
-                        } else {
-                            Button(action: {
-                                showCart = true
-                            }) {
-                                Image(systemName: "cart")
-                                    .foregroundColor(gradientManager.currentAccentColor)
-                            }
-                            .accessibilityLabel("Carrito")
+                        Button(action: {
+                            showCart = true
+                        }) {
+                            Image(systemName: "cart")
+                                .foregroundColor(gradientManager.currentAccentColor)
+                                .symbolEffect(.bounce, value: reduceMotion ? 0 : cartPackageAnimation.arrivalCount)
+                                .background(CartFlightFrameReader {
+                                    cartPackageAnimation.destinationFrame = $0
+                                })
                         }
+                        .badge(cartManager.cartItemCount)
+                        .id("cart-toolbar-badge-\(cartManager.cartItemCount)")
+                        .accessibilityLabel("Carrito")
                     }
                 }
 
             }
             .safeAreaInset(edge: .bottom) {
-                VStack(spacing: 8) {
+                VStack(spacing: 0) {
                     if viewModel.isOfflineData {
                         offlineBanner
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 8)
                     }
 
                     if !catalogOnly, viewModel.productDetail != nil {
-                        HStack(spacing: 12) {
-                            quantityControlView
-                            Spacer(minLength: 0)
-                            addToCartButton
-                        }
+                        CartPurchaseBar(
+                            quantity: quantity,
+                            total: formatTotalPrice(),
+                            accent: gradientManager.currentAccentColor,
+                            isAdded: showAddedToCartFeedback,
+                            isEnabled: cartPackageAnimation.flight == nil,
+                            onDecrement: decrementQuantity,
+                            onIncrement: incrementQuantity,
+                            onAdd: addToCart,
+                            onAddButtonFrameChange: { cartPackageAnimation.sourceFrame = $0 })
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 8)
             }
             .onAppear {
                 viewModel.loadProductDetail(id: productId)
@@ -172,6 +172,13 @@ struct ProductDetailView: View {
                 dismiss()
             }
         }
+        .overlay {
+            CartPackageFlightOverlay(animation: cartPackageAnimation, accent: gradientManager.currentAccentColor)
+        }
+        .onDisappear { cartPackageAnimation.cancel() }
+        .onChange(of: reduceMotion) { _, enabled in
+            if enabled { cartPackageAnimation.cancel() }
+        }
     }
 
     // MARK: - Loading View
@@ -183,7 +190,7 @@ struct ProductDetailView: View {
                 .tint(gradientManager.currentAccentColor)
 
             Text("Cargando producto...")
-                .scaledFont(size: 16, weight: .medium, relativeTo: .body)
+                .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.gray)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -194,9 +201,9 @@ struct ProductDetailView: View {
     private var offlineBanner: some View {
         HStack(spacing: 8) {
             Image(systemName: "wifi.slash")
-                .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
+                .font(.system(size: 13, weight: .semibold))
             Text("Sin conexión · datos guardados")
-                .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
+                .font(.system(size: 13, weight: .medium))
             Spacer(minLength: 0)
         }
         .foregroundColor(.secondary)
@@ -213,15 +220,15 @@ struct ProductDetailView: View {
     private func errorView(message: String) -> some View {
         VStack(spacing: 20) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .scaledFont(size: 60, relativeTo: .largeTitle)
+                .font(.system(size: 60))
                 .foregroundColor(gradientManager.currentAccentColor)
 
             Text("Error")
-                .scaledFont(size: 22, weight: .bold, relativeTo: .title2)
+                .font(.system(size: 22, weight: .bold))
                 .foregroundColor(.primary)
 
             Text(message)
-                .scaledFont(size: 16, relativeTo: .body)
+                .font(.system(size: 16))
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
@@ -231,9 +238,9 @@ struct ProductDetailView: View {
             }) {
                 HStack(spacing: 8) {
                     Image(systemName: "arrow.clockwise")
-                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
+                        .font(.system(size: 16, weight: .semibold))
                     Text("Reintentar")
-                        .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
+                        .font(.system(size: 17, weight: .semibold))
                 }
                 .foregroundColor(.white)
                 .padding(.horizontal, 32)
@@ -354,16 +361,16 @@ struct ProductDetailView: View {
             // Store Details
             HStack(spacing: 6) {
                 Text(product.shop)
-                    .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.secondary)
 
                 if let rating = viewModel.productDetail?.shopRating, rating > 0 {
                     Text("•")
-                        .scaledFont(size: 14, weight: .regular, relativeTo: .subheadline)
+                        .font(.system(size: 14, weight: .regular))
                         .foregroundColor(.secondary)
 
                     Text("\(String(format: "%.1f", rating)) ★")
-                        .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.secondary)
                 }
             }
@@ -371,7 +378,7 @@ struct ProductDetailView: View {
             Spacer()
 
             Image(systemName: "chevron.right")
-                .scaledFont(size: 14, relativeTo: .subheadline)
+                .font(.system(size: 14, weight: .regular))
                 .foregroundColor(.secondary)
         }
     }
@@ -379,7 +386,7 @@ struct ProductDetailView: View {
     private func productHeaderSection(product: Product) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(product.name)
-                .scaledFont(size: 26, weight: .semibold, relativeTo: .title)
+                .font(.system(size: 26, weight: .semibold))
                 .foregroundColor(.primary)
                 .tracking(-0.5)
 
@@ -391,14 +398,14 @@ struct ProductDetailView: View {
                                 decimal: viewModel.finalUnitPrice(for: detail),
                                 currency: detail.currency)
                         )
-                        .scaledFont(size: 22, weight: .semibold, relativeTo: .title2)
+                        .font(.system(size: 22, weight: .semibold))
                         .foregroundColor(.primary)
 
                         if !viewModel.selectedVariantOptions.isEmpty {
                             Text(
                                 "(base \(viewModel.formatPrice(price: detail.price, currency: detail.currency)))"
                             )
-                            .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
+                            .font(.system(size: 13, weight: .medium))
                             .foregroundColor(.secondary)
                         }
                     }
@@ -408,14 +415,14 @@ struct ProductDetailView: View {
                        let convertedCurrency = detail.convertedCurrency {
                         HStack(spacing: 6) {
                             Text("≈ \(viewModel.formatPrice(price: convertedPrice, currency: convertedCurrency))")
-                                .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
+                                .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(.secondary)
 
                             if let rate = detail.exchangeRate {
                                 Text("·")
                                     .foregroundColor(.secondary)
                                 Text("1 USD = \(rate) CUP")
-                                    .scaledFont(size: 12, weight: .regular, relativeTo: .caption)
+                                    .font(.system(size: 12, weight: .regular))
                                     .foregroundColor(.secondary)
                             }
                         }
@@ -423,7 +430,7 @@ struct ProductDetailView: View {
                 }
             } else {
                 Text(product.price)
-                    .scaledFont(size: 22, weight: .semibold, relativeTo: .title2)
+                    .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(.primary)
             }
         }
@@ -439,13 +446,13 @@ struct ProductDetailView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Text(list.name)
-                                    .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
+                                    .font(.system(size: 15, weight: .semibold))
                                     .foregroundColor(.primary)
 
                                 Spacer()
 
                                 Text("Requerido")
-                                    .scaledFont(size: 11, weight: .medium, relativeTo: .caption2)
+                                    .font(.system(size: 11, weight: .medium))
                                     .foregroundColor(gradientManager.currentAccentColor)
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
@@ -456,7 +463,7 @@ struct ProductDetailView: View {
                             // Show description if available
                             if let description = list.description, !description.isEmpty {
                                 Text(description)
-                                    .scaledFont(size: 13, weight: .regular, relativeTo: .footnote)
+                                    .font(.system(size: 13, weight: .regular))
                                     .foregroundColor(.secondary)
                                     .padding(.bottom, 4)
                             }
@@ -472,7 +479,7 @@ struct ProductDetailView: View {
                         }
                     } else {
                         Text("\(list.name): sin opciones")
-                            .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
+                            .font(.system(size: 13, weight: .medium))
                             .foregroundColor(.secondary)
                     }
                 }
@@ -532,7 +539,7 @@ struct ProductDetailView: View {
                     viewModel.formatPriceAdjustment(
                         decimal: option.priceAdjustment, currency: currency)
                 )
-                .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
+                .font(.system(size: 15, weight: .medium))
                 .foregroundColor(option.priceAdjustment > .zero ? .secondary : .primary)
             }
             .padding(.horizontal, 16)
@@ -555,13 +562,13 @@ struct ProductDetailView: View {
     private var descriptionSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Descripción")
-                .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(.primary)
 
             // Usar descripción del backend si está disponible
             if let detail = viewModel.productDetail, !detail.description.isEmpty {
                 Text(detail.description)
-                    .scaledFont(size: 14, weight: .regular, relativeTo: .subheadline)
+                    .font(.system(size: 14, weight: .regular))
                     .foregroundColor(.secondary)
                     .lineSpacing(1.5)
                     .fixedSize(horizontal: false, vertical: true)
@@ -569,7 +576,7 @@ struct ProductDetailView: View {
                 Text(
                     "Disfruta de un producto de calidad preparado con ingredientes frescos y el mejor servicio."
                 )
-                .scaledFont(size: 14, relativeTo: .subheadline)
+                .font(.system(size: 14, weight: .regular))
                 .foregroundColor(.secondary)
                 .lineSpacing(1.5)
                 .fixedSize(horizontal: false, vertical: true)
@@ -581,7 +588,7 @@ struct ProductDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Productos similares")
-                    .scaledFont(size: 20, weight: .bold, relativeTo: .title3)
+                    .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.primary)
 
                 Spacer()
@@ -593,14 +600,14 @@ struct ProductDetailView: View {
                     ProgressView()
                         .tint(gradientManager.currentAccentColor)
                     Text("Cargando similares...")
-                        .scaledFont(size: 14, weight: .medium, relativeTo: .subheadline)
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.vertical, 14)
             } else if viewModel.similarProducts.isEmpty {
                 Text("No hay productos similares por ahora.")
-                    .scaledFont(size: 14, weight: .regular, relativeTo: .subheadline)
+                    .font(.system(size: 14, weight: .regular))
                     .foregroundColor(.secondary)
                     .padding(.vertical, 8)
             } else {
@@ -633,7 +640,7 @@ struct ProductDetailView: View {
     private var similarBranchesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Tiendas con productos similares")
-                .scaledFont(size: 20, weight: .bold, relativeTo: .title3)
+                .font(.system(size: 20, weight: .bold))
                 .foregroundColor(.primary)
                 .padding(.top, 8)
                 .padding(.horizontal, 20)
@@ -654,61 +661,6 @@ struct ProductDetailView: View {
                 .padding(.vertical, 12)
             }
         }
-    }
-
-    // MARK: - Bottom Bar
-
-    private var quantityControlView: some View {
-        HStack(spacing: 0) {
-            Button(action: decrementQuantity) {
-                Image(systemName: "minus")
-                    .scaledFont(size: 16, weight: .medium, relativeTo: .body)
-
-                    .frame(width: 36, height: 36)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
-            }
-            .accessibilityLabel("Quitar uno")
-
-            Text("\(quantity)")
-                .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
-
-                .frame(minWidth: 28)
-
-            Button(action: incrementQuantity) {
-                Image(systemName: "plus")
-                    .scaledFont(size: 16, weight: .medium, relativeTo: .body)
-
-                    .frame(width: 36, height: 36)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
-            }
-            .accessibilityLabel("Agregar uno")
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .modifier(CapsuleGlassEffectModifier())
-        .tint(gradientManager.currentAccentColor)
-    }
-
-    private var addToCartButton: some View {
-        Button(action: addToCart) {
-            HStack(spacing: 8) {
-                Image(systemName: showAddedToCartFeedback ? "checkmark" : "cart")
-                    .contentTransition(.symbolEffect(.replace))
-                Text(showAddedToCartFeedback ? "¡Agregado!" : "Añadir \(formatTotalPrice())")
-            }
-            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
-            .padding(.horizontal, 24)
-            .padding(.vertical, 12)
-        }
-        .modifier(GlassProminentButtonModifier())
-        .tint(showAddedToCartFeedback ? .green : gradientManager.currentAccentColor)
-        .scaleEffect(showAddedToCartFeedback ? 1.05 : 1.0)
-        .animation(
-            .spring(response: 0.35, dampingFraction: 0.6), value: showAddedToCartFeedback
-        )
-        .disabled(showAddedToCartFeedback)
     }
 
     // MARK: - Helpers
@@ -759,6 +711,9 @@ struct ProductDetailView: View {
             basePrice: basePrice,
             finalUnitPrice: finalUnitPrice
         )
+        cartPackageAnimation.launch(
+            imageURL: viewModel.productDetail?.imageUrl,
+            cacheKey: "product_\(productId)", reduceMotion: reduceMotion)
         print("🛒 ProductDetailView: Added to cart with \(selected.count) selected variants")
 
         withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) {
@@ -806,7 +761,7 @@ private struct SimilarBranchCircleCard: View {
                     placeholder: { Circle().fill(Color.gray.opacity(0.2)) },
                     failure: {
                         Image(systemName: "storefront")
-                            .scaledFont(size: 36, relativeTo: .largeTitle)
+                            .font(.system(size: 36))
                             .foregroundColor(.gray)
                     }
                 )
@@ -815,38 +770,11 @@ private struct SimilarBranchCircleCard: View {
             }
 
             Text(branch.name)
-                .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
+                .font(.system(size: 13, weight: .medium))
                 .foregroundColor(Color.adaptiveOnSurface(colorScheme))
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
                 .frame(width: 100, height: 36, alignment: .top)
-        }
-    }
-}
-
-private struct GlassProminentButtonModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content.buttonStyle(.glassProminent)
-        } else {
-            content.buttonStyle(.borderedProminent)
-        }
-    }
-}
-
-/// Da al control un fondo flotante de Liquid Glass en cápsula (iOS 26+),
-/// con un respaldo de material translúcido en versiones anteriores.
-private struct CapsuleGlassEffectModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content.glassEffect(.regular.interactive(), in: .capsule)
-        } else {
-            content
-                .background(.regularMaterial, in: Capsule())
-                .overlay(
-                    Capsule()
-                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
-                )
         }
     }
 }

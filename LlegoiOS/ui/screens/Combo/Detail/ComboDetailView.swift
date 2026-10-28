@@ -6,6 +6,8 @@ struct ComboDetailView: View {
     @StateObject private var viewModel = ComboDetailViewModel()
     @ObservedObject private var gradientManager = GradientStateManager.shared
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @StateObject private var cartPackageAnimation = CartPackageAnimation()
     @State private var showCart = false
     @State private var showAddedToCartFeedback = false
     @State private var contentOffset: CGFloat = 60
@@ -38,20 +40,29 @@ struct ComboDetailView: View {
                         showCart = true
                     } label: {
                         Image(systemName: "cart")
-                            .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
+                            .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(gradientManager.currentAccentColor)
+                            .symbolEffect(.bounce, value: reduceMotion ? 0 : cartPackageAnimation.arrivalCount)
+                            .background(CartFlightFrameReader {
+                                cartPackageAnimation.destinationFrame = $0
+                            })
                     }
                     .accessibilityLabel("Carrito")
                 }
 
+            }
+            .safeAreaInset(edge: .bottom) {
                 if viewModel.comboDetail != nil {
-                    ToolbarItem(placement: .bottomBar) {
-                        quantityControlView
-                    }
-
-                    ToolbarItem(placement: .bottomBar) {
-                        addComboToCartButton
-                    }
+                    CartPurchaseBar(
+                        quantity: quantity,
+                        total: formatTotalPrice(),
+                        accent: gradientManager.currentAccentColor,
+                        isAdded: showAddedToCartFeedback,
+                        isEnabled: viewModel.isReadyToAdd && cartPackageAnimation.flight == nil,
+                        onDecrement: decrementQuantity,
+                        onIncrement: incrementQuantity,
+                        onAdd: addComboToCart,
+                        onAddButtonFrameChange: { cartPackageAnimation.sourceFrame = $0 })
                 }
             }
             .onAppear {
@@ -67,6 +78,13 @@ struct ComboDetailView: View {
                 dismiss()
             }
         }
+        .overlay {
+            CartPackageFlightOverlay(animation: cartPackageAnimation, accent: gradientManager.currentAccentColor)
+        }
+        .onDisappear { cartPackageAnimation.cancel() }
+        .onChange(of: reduceMotion) { _, enabled in
+            if enabled { cartPackageAnimation.cancel() }
+        }
     }
 
     // MARK: - Loading
@@ -77,7 +95,7 @@ struct ComboDetailView: View {
                 .controlSize(.large)
                 .tint(gradientManager.currentAccentColor)
             Text("Cargando combo...")
-                .scaledFont(size: 16, weight: .medium, relativeTo: .body)
+                .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -88,10 +106,10 @@ struct ComboDetailView: View {
     private func errorView(message: String) -> some View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .scaledFont(size: 50, relativeTo: .largeTitle)
+                .font(.system(size: 50))
                 .foregroundColor(.orange)
             Text(message)
-                .scaledFont(size: 16, weight: .medium, relativeTo: .body)
+                .font(.system(size: 16, weight: .medium))
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
@@ -121,11 +139,11 @@ struct ComboDetailView: View {
                     if !combo.description.isEmpty {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Descripción")
-                                .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
+                                .font(.system(size: 13, weight: .semibold))
                                 .foregroundColor(.secondary)
                                 .textCase(.uppercase)
                             Text(combo.description)
-                                .scaledFont(size: 16, relativeTo: .body)
+                                .font(.system(size: 16))
                                 .foregroundColor(.primary)
                                 .lineSpacing(3)
                         }
@@ -216,7 +234,7 @@ struct ComboDetailView: View {
 
                 if images.isEmpty {
                     Image(systemName: "square.stack.3d.up.fill")
-                        .scaledFont(size: 60, relativeTo: .largeTitle)
+                        .font(.system(size: 60))
                         .foregroundColor(.white.opacity(0.5))
                 } else if images.count == 1 {
                     heroCircleCell(url: images[0].imageUrl, idx: 0, size: geo.size.height * 0.70)
@@ -265,7 +283,7 @@ struct ComboDetailView: View {
             .buttonStyle(.plain)
 
             Text(combo.name)
-                .scaledFont(size: 26, weight: .bold, relativeTo: .title)
+                .font(.system(size: 26, weight: .bold))
                 .foregroundColor(.primary)
 
             // Combo kind badge
@@ -282,9 +300,9 @@ struct ComboDetailView: View {
         case .discounted:
             HStack(spacing: 6) {
                 Image(systemName: "tag.fill")
-                    .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
+                    .font(.system(size: 12, weight: .semibold))
                 Text(combo.discountLabel)
-                    .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
+                    .font(.system(size: 14, weight: .semibold))
             }
             .foregroundColor(.white)
             .padding(.horizontal, 12)
@@ -294,11 +312,11 @@ struct ComboDetailView: View {
         case .withGifts:
             HStack(spacing: 6) {
                 Image(systemName: "gift.fill")
-                    .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
+                    .font(.system(size: 12, weight: .semibold))
                 Text(combo.giftOptions.count == 1
                      ? "1 producto de regalo"
                      : "\(combo.giftOptions.count) productos de regalo")
-                    .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
+                    .font(.system(size: 14, weight: .semibold))
             }
             .foregroundColor(.white)
             .padding(.horizontal, 12)
@@ -309,11 +327,11 @@ struct ComboDetailView: View {
             let freeCount = combo.slots.filter { $0.isFree }.count
             HStack(spacing: 6) {
                 Image(systemName: "checkmark.seal.fill")
-                    .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
+                    .font(.system(size: 12, weight: .semibold))
                 Text(freeCount == 1
                      ? "1 complemento gratis incluido"
                      : "\(freeCount) complementos gratis incluidos")
-                    .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
+                    .font(.system(size: 14, weight: .semibold))
             }
             .foregroundColor(.white)
             .padding(.horizontal, 12)
@@ -323,10 +341,10 @@ struct ComboDetailView: View {
         case .bundle:
             HStack(spacing: 6) {
                 Image(systemName: "square.stack.3d.up.fill")
-                    .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(gradientManager.currentAccentColor)
                 Text("\(combo.slots.count) \(combo.slots.count == 1 ? "lote" : "lotes") a personalizar")
-                    .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
+                    .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(gradientManager.currentAccentColor)
             }
             .padding(.horizontal, 12)
@@ -339,18 +357,18 @@ struct ComboDetailView: View {
     private func priceRow(combo: ComboDetailGraphQL) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text(viewModel.formattedCalculatedPrice)
-                .scaledFont(size: 28, weight: .bold, relativeTo: .title)
+                .font(.system(size: 28, weight: .bold))
                 .foregroundColor(.primary)
                 .animation(.spring(response: 0.3), value: viewModel.calculatedPrice)
 
             if combo.comboKind == .discounted && combo.hasDiscount {
                 Text(viewModel.formatPrice(viewModel.selectionSubtotal, currency: combo.currency))
-                    .scaledFont(size: 16, relativeTo: .body)
+                    .font(.system(size: 16))
                     .foregroundColor(.secondary)
                     .strikethrough(true, color: .secondary)
 
                 Text(combo.discountLabel)
-                    .scaledFont(size: 13, weight: .bold, relativeTo: .footnote)
+                    .font(.system(size: 13, weight: .bold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
@@ -373,11 +391,11 @@ struct ComboDetailView: View {
                 .clipShape(Circle())
             }
             Text(combo.branchName)
-                .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
+                .font(.system(size: 15, weight: .medium))
                 .foregroundColor(.secondary)
             Spacer()
             Image(systemName: "chevron.right")
-                .scaledFont(size: 13, relativeTo: .footnote)
+                .font(.system(size: 13, weight: .regular))
                 .foregroundColor(.secondary)
         }
     }
@@ -388,15 +406,15 @@ struct ComboDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Image(systemName: "gift.fill")
-                    .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.purple)
                 Text("Incluye de regalo")
-                    .scaledFont(size: 18, weight: .bold, relativeTo: .title3)
+                    .font(.system(size: 18, weight: .bold))
                     .foregroundColor(.primary)
             }
 
             Text("La tienda incluye estos productos gratis con tu combo")
-                .scaledFont(size: 13, relativeTo: .footnote)
+                .font(.system(size: 13))
                 .foregroundColor(.secondary)
 
             VStack(spacing: 10) {
@@ -426,14 +444,14 @@ struct ComboDetailView: View {
                         .frame(width: 64, height: 64)
                         .overlay(
                             Image(systemName: "gift.fill")
-                                .scaledFont(size: 24, relativeTo: .title)
+                                .font(.system(size: 24))
                                 .foregroundColor(.purple.opacity(0.5))
                         )
                 }
 
                 // Gift badge on image
                 Image(systemName: "gift.fill")
-                    .scaledFont(size: 10, weight: .bold, relativeTo: .caption2)
+                    .font(.system(size: 10, weight: .bold))
                     .foregroundColor(.white)
                     .padding(4)
                     .background(Circle().fill(Color.purple))
@@ -442,12 +460,12 @@ struct ComboDetailView: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(gift.productName)
-                    .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
+                    .font(.system(size: 15, weight: .medium))
                     .foregroundColor(.primary)
                     .lineLimit(2)
 
                 Text("Gratis · incluido por la tienda")
-                    .scaledFont(size: 13, relativeTo: .footnote)
+                    .font(.system(size: 13))
                     .foregroundColor(.purple)
             }
 
@@ -455,7 +473,7 @@ struct ComboDetailView: View {
 
             // Non-interactive indicator
             Image(systemName: "checkmark.circle.fill")
-                .scaledFont(size: 20, relativeTo: .title3)
+                .font(.system(size: 20))
                 .foregroundColor(.purple.opacity(0.7))
         }
         .padding(.vertical, 4)
@@ -484,7 +502,7 @@ struct ComboDetailView: View {
 
         return VStack(alignment: .leading, spacing: 24) {
             Text(sectionTitle)
-                .scaledFont(size: 20, weight: .bold, relativeTo: .title3)
+                .font(.system(size: 20, weight: .bold))
                 .foregroundColor(.primary)
 
             ForEach(sortedSlots) { slot in
@@ -500,20 +518,20 @@ struct ComboDetailView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
                         Text(slot.name)
-                            .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
+                            .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(.primary)
 
                         // Free slot badge
                         if slot.isFree {
                             Text("GRATIS")
-                                .scaledFont(size: 11, weight: .bold, relativeTo: .caption)
+                                .font(.system(size: 11, weight: .bold))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 7)
                                 .padding(.vertical, 3)
                                 .background(Capsule().fill(Color.orange))
                         } else if slot.isRequired {
                             Text("Requerido")
-                                .scaledFont(size: 11, weight: .bold, relativeTo: .caption)
+                                .font(.system(size: 11, weight: .bold))
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 7)
                                 .padding(.vertical, 3)
@@ -523,17 +541,17 @@ struct ComboDetailView: View {
 
                     if let desc = slot.description, !desc.isEmpty {
                         Text(desc)
-                            .scaledFont(size: 13, relativeTo: .footnote)
+                            .font(.system(size: 13))
                             .foregroundColor(.secondary)
                     }
 
                     if slot.isFree {
                         Text("Incluido · elige \(slot.maxSelections == 1 ? "1 opción" : "hasta \(slot.maxSelections)")")
-                            .scaledFont(size: 12, relativeTo: .caption)
+                            .font(.system(size: 12))
                             .foregroundColor(.orange)
                     } else {
                         Text(selectionHintText(slot: slot))
-                            .scaledFont(size: 12, relativeTo: .caption)
+                            .font(.system(size: 12))
                             .foregroundColor(.secondary)
                     }
                 }
@@ -543,7 +561,7 @@ struct ComboDetailView: View {
                 let selected = viewModel.slotSelections[slot.id] ?? []
                 if selected.count >= slot.minSelections && !selected.isEmpty {
                     Image(systemName: "checkmark.circle.fill")
-                        .scaledFont(size: 20, relativeTo: .title3)
+                        .font(.system(size: 20))
                         .foregroundColor(slot.isFree ? .orange : .green)
                         .transition(.scale.combined(with: .opacity))
                 }
@@ -604,26 +622,26 @@ struct ComboDetailView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(option.productName)
-                        .scaledFont(size: 15, weight: .medium, relativeTo: .subheadline)
+                        .font(.system(size: 15, weight: .medium))
                         .foregroundColor(.primary)
                         .lineLimit(2)
 
                     if slot.isFree {
                         // Free slot: show "Gratis" regardless of priceAdjustment
                         Text("Gratis")
-                            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
+                            .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.orange)
                     } else if option.priceAdjustment > 0 {
                         Text("+\(viewModel.formatPrice(option.priceAdjustment, currency: combo.currency))")
-                            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
+                            .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(gradientManager.currentAccentColor)
                     } else if option.priceAdjustment < 0 {
                         Text("\(viewModel.formatPrice(option.priceAdjustment, currency: combo.currency))")
-                            .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
+                            .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.green)
                     } else {
                         Text("Incluido")
-                            .scaledFont(size: 13, relativeTo: .footnote)
+                            .font(.system(size: 13))
                             .foregroundColor(.secondary)
                     }
                 }
@@ -660,7 +678,7 @@ struct ComboDetailView: View {
                                 .fill(accentColor)
                                 .frame(width: 22, height: 22)
                             Image(systemName: "checkmark")
-                                .scaledFont(size: 12, weight: .bold, relativeTo: .caption)
+                                .font(.system(size: 12, weight: .bold))
                                 .foregroundColor(.white)
                         }
                     }
@@ -672,65 +690,28 @@ struct ComboDetailView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Bottom Toolbar Views
+    // MARK: - Purchase action
 
-    private var quantityControlView: some View {
-        HStack(spacing: 0) {
-            Button(action: decrementQuantity) {
-                Image(systemName: "minus")
-                    .scaledFont(size: 16, weight: .medium, relativeTo: .body)
-                    .frame(width: 36, height: 36)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
-            }
-            .accessibilityLabel("Quitar uno")
-
-            Text("\(quantity)")
-                .scaledFont(size: 17, weight: .semibold, relativeTo: .body)
-                .frame(minWidth: 28)
-
-            Button(action: incrementQuantity) {
-                Image(systemName: "plus")
-                    .scaledFont(size: 16, weight: .medium, relativeTo: .body)
-                    .frame(width: 36, height: 36)
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
-            }
-            .accessibilityLabel("Agregar uno")
+    private func addComboToCart() {
+        guard viewModel.isReadyToAdd else { return }
+        guard viewModel.addCurrentComboToCart(quantity: quantity) else { return }
+        let combo = viewModel.comboDetail
+        let hasHero = !(combo?.imageUrl ?? "").isEmpty
+        cartPackageAnimation.launch(
+            imageURL: hasHero ? combo?.imageUrl : combo?.representativeProducts.first?.imageUrl,
+            cacheKey: hasHero ? "combo_hero_\(comboId)" : "combo_hero_prod_\(comboId)_0",
+            reduceMotion: reduceMotion)
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
+            showAddedToCartFeedback = true
         }
-        .padding(.horizontal, 4)
-        .tint(gradientManager.currentAccentColor)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation(.easeOut(duration: 0.25)) {
+                showAddedToCartFeedback = false
+            }
+        }
     }
 
-    private var addComboToCartButton: some View {
-        Button {
-            guard viewModel.isReadyToAdd else { return }
-            guard viewModel.addCurrentComboToCart(quantity: quantity) else { return }
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) {
-                showAddedToCartFeedback = true
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                withAnimation(.easeOut(duration: 0.25)) {
-                    showAddedToCartFeedback = false
-                }
-            }
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: showAddedToCartFeedback ? "checkmark" : "cart")
-                    .contentTransition(.symbolEffect(.replace))
-                Text(showAddedToCartFeedback ? "¡Agregado!" : "Añadir \(formatTotalPrice())")
-            }
-            .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
-            .padding(.horizontal, 24)
-            .padding(.vertical, 12)
-        }
-        .modifier(GlassProminentButtonModifier())
-        .tint(showAddedToCartFeedback ? .green : gradientManager.currentAccentColor)
-        .scaleEffect(showAddedToCartFeedback ? 1.05 : 1.0)
-        .animation(.spring(response: 0.35, dampingFraction: 0.6), value: showAddedToCartFeedback)
-        .disabled(!viewModel.isReadyToAdd || showAddedToCartFeedback)
-    }
 
     // MARK: - Helpers
 
@@ -770,16 +751,6 @@ struct ComboDetailView: View {
 }
 
 // MARK: - Button Style Modifiers
-
-private struct GlassProminentButtonModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content.buttonStyle(.glassProminent)
-        } else {
-            content.buttonStyle(.borderedProminent)
-        }
-    }
-}
 
 private struct GlassButtonStyleModifier: ViewModifier {
     func body(content: Content) -> some View {

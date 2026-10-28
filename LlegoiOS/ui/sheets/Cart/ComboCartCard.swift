@@ -8,7 +8,10 @@ struct ComboCartCard: View {
     let onDecrement: () -> Void
     let onRemove: () -> Void
 
-    @ObservedObject private var gradientManager = GradientStateManager.shared
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isExpanded = false
 
     private var sortedComponents: [CartItem] {
         components.sorted { ($0.comboComponentOrder ?? .max) < ($1.comboComponentOrder ?? .max) }
@@ -88,217 +91,126 @@ struct ComboCartCard: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
                 comboArtwork
-
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(alignment: .center, spacing: 8) {
-                        Text("COMBO")
-                            .scaledFont(size: 10, weight: .black, design: .rounded, relativeTo: .caption2)
-                            .foregroundColor(gradientManager.currentAccentColor)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 5)
-                            .background(
-                                Capsule()
-                                    .fill(gradientManager.currentAccentColor.opacity(0.12))
-                            )
-
-                        Text(comboHeaderTitle)
-                            .scaledFont(size: 17, weight: .bold, relativeTo: .body)
-                            .foregroundColor(.primary)
-                            .lineLimit(2)
-                    }
-
-                    Text("Configurado como una sola selección del carrito")
-                        .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
-                        .foregroundColor(.secondary)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        if comboUnitDiscount > 0.009 {
-                            HStack(spacing: 6) {
-                                Text(
-                                    "\(currencyLabel) \(String(format: "%.2f", comboSubtotalPrice))"
-                                )
-                                .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
-                                .foregroundColor(.secondary)
-                                .strikethrough()
-
-                                Text(
-                                    "Ahorro \(currencyLabel) \(String(format: "%.2f", comboDiscountTotal))"
-                                )
-                                .scaledFont(size: 11, weight: .bold, relativeTo: .caption)
-                                .foregroundColor(.green.opacity(0.9))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(
-                                    Capsule()
-                                        .fill(Color.green.opacity(0.12))
-                                )
-                            }
-                        }
-
-                        HStack(spacing: 6) {
-                            Text("\(currencyLabel) \(String(format: "%.2f", comboUnitPrice))")
-                                .scaledFont(size: 13, weight: .semibold, relativeTo: .footnote)
-                                .foregroundColor(.secondary)
-
-                            Text("× \(quantity)")
-                                .scaledFont(size: 12, weight: .bold, relativeTo: .caption)
-                                .foregroundColor(gradientManager.currentAccentColor)
-
-                            Text("=")
-                                .scaledFont(size: 11, weight: .medium, relativeTo: .caption2)
-                                .foregroundColor(.secondary)
-
-                            Text("\(currencyLabel) \(String(format: "%.2f", comboTotalPrice))")
-                                .scaledFont(size: 16, weight: .bold, design: .rounded, relativeTo: .body)
-                                .foregroundColor(gradientManager.currentAccentColor)
-                        }
-                    }
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("COMBO A TU GUSTO")
+                        .font(.system(size: 9, weight: .bold))
+                        .tracking(1)
+                        .foregroundStyle(CartStyle.ink(scheme))
+                    Text(comboHeaderTitle)
+                        .font(.subheadline.weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(primaryItem.shop)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text("\(currencyLabel) \(String(format: "%.2f", comboUnitPrice)) / combo")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-
-                Spacer(minLength: 0)
-            }
-
-            VStack(alignment: .leading, spacing: 10) {
-                ForEach(groupedSlots) { slot in
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(slot.title)
-                            .scaledFont(size: 12, weight: .bold, relativeTo: .caption)
-                            .foregroundColor(.secondary)
-
-                        ForEach(slot.items, id: \.id) { item in
-                            VStack(alignment: .leading, spacing: 3) {
-                                HStack(alignment: .center, spacing: 8) {
-                                    Circle()
-                                        .fill(gradientManager.currentAccentColor.opacity(0.9))
-                                        .frame(width: 6, height: 6)
-
-                                    Text(item.name)
-                                        .scaledFont(size: 14, weight: .semibold, relativeTo: .subheadline)
-                                        .foregroundColor(.primary)
-
-                                    Spacer(minLength: 8)
-
-                                    Text(item.formattedPrice(for: selectedCurrency))
-                                        .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
-                                        .foregroundColor(.secondary)
-                                }
-
-                                if !item.comboModifierNames.isEmpty {
-                                    Text(item.comboModifierNames.joined(separator: ", "))
-                                        .scaledFont(size: 11, weight: .medium, relativeTo: .caption2)
-                                        .foregroundColor(.secondary)
-                                        .padding(.leading, 14)
-                                }
-                            }
-                            .padding(.vertical, 2)
-                        }
-                    }
-                    .padding(10)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(Color(.systemGray6).opacity(0.8))
-                    )
-                }
-            }
-
-            HStack(spacing: 10) {
+                .frame(maxWidth: .infinity, alignment: .leading)
                 Button(action: onRemove) {
-                    Label("Quitar", systemImage: "trash.fill")
-                        .scaledFont(size: 12, weight: .semibold, relativeTo: .caption)
-                        .foregroundColor(.red.opacity(0.85))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 9)
-                        .background(
-                            Capsule()
-                                .fill(Color.red.opacity(0.08))
-                        )
+                    Image(systemName: "trash")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Quitar combo \(comboHeaderTitle)")
+            }
 
-                Spacer(minLength: 0)
+            if comboUnitDiscount > 0.009 {
+                Text("Ahorras \(currencyLabel) \(String(format: "%.2f", comboDiscountTotal)) con este combo")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(CartStyle.ink(scheme))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
-                HStack(spacing: 6) {
-                    quantityButton(systemName: "minus", action: onDecrement)
-
-                    Text("\(quantity)")
-                        .scaledFont(size: 14, weight: .bold, design: .rounded, relativeTo: .subheadline)
-                        .foregroundColor(.primary)
-                        .frame(width: 24)
-
-                    quantityButton(systemName: "plus", action: onIncrement)
+            Button {
+                withAnimation(reduceMotion ? nil : .smooth(duration: 0.25)) { isExpanded.toggle() }
+            } label: {
+                HStack {
+                    Text(isExpanded ? "Ocultar contenido" : "Ver contenido (\(sortedComponents.count))")
+                        .font(.caption.weight(.semibold))
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(.caption.weight(.bold))
+                        .rotationEffect(.degrees(isExpanded ? 180 : 0))
                 }
+                .foregroundStyle(CartStyle.ink(scheme))
+                .padding(.horizontal, 12)
+                .frame(minHeight: 44)
+                .background(CartStyle.inset(scheme), in: RoundedRectangle(cornerRadius: 12))
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityValue(isExpanded ? "Expandido" : "Contraído")
+
+            if isExpanded {
+                VStack(alignment: .leading, spacing: 14) {
+                    ForEach(groupedSlots) { slot in
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(slot.title)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                            ForEach(slot.items) { item in
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(item.name).font(.subheadline)
+                                    if !item.comboModifierNames.isEmpty {
+                                        Text(item.comboModifierNames.joined(separator: ", "))
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    if let info = item.currencyInfoText(for: selectedCurrency) {
+                                        Text(info).font(.caption).foregroundStyle(.orange)
+                                    }
+                                }
+                                .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 4)
+            }
+
+            if typeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 10) { totalLabel; quantityControl }
+            } else {
+                HStack(spacing: 8) { totalLabel; Spacer(minLength: 4); quantityControl }
             }
         }
-        .padding(14)
-        .background(
-            LinearGradient(
-                colors: [
-                    gradientManager.currentAccentColor.opacity(0.08),
-                    Color.white.opacity(0.98),
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
+        .padding(16)
+    }
+
+    private var totalLabel: some View {
+        Text("\(currencyLabel) \(String(format: "%.2f", comboTotalPrice))")
+            .font(.system(.headline, design: .rounded, weight: .bold))
+            .foregroundStyle(CartStyle.ink(scheme))
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityLabel("Total del combo: \(currencyLabel) \(String(format: "%.2f", comboTotalPrice))")
+    }
+
+    private var quantityControl: some View {
+        CartQuantityControl(quantity: quantity, name: comboHeaderTitle, onDecrement: onDecrement, onIncrement: onIncrement)
     }
 
     private var comboArtwork: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            gradientManager.currentAccentColor.opacity(0.18),
-                            Color(.systemGray5),
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: 68, height: 68)
-
+            CartStyle.inset(scheme)
             if let comboImageURL {
                 CachedAsyncImage(
                     url: comboImageURL,
-                    content: { image in
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 68, height: 68)
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    },
-                    placeholder: {
-                        Image(systemName: "shippingbox.fill")
-                            .scaledFont(size: 24, weight: .medium, relativeTo: .title)
-                            .foregroundColor(gradientManager.currentAccentColor)
-                    }
-                )
+                    content: { $0.resizable().scaledToFill() },
+                    placeholder: { ProgressView().tint(CartStyle.ink(scheme)) },
+                    failure: { Image(systemName: "shippingbox").foregroundStyle(CartStyle.ink(scheme)) })
             } else {
-                Image(systemName: "shippingbox.fill")
-                    .scaledFont(size: 24, weight: .medium, relativeTo: .title)
-                    .foregroundColor(gradientManager.currentAccentColor)
+                Image(systemName: "shippingbox")
+                    .font(.title2)
+                    .foregroundStyle(CartStyle.ink(scheme))
             }
         }
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(gradientManager.currentAccentColor.opacity(0.12), lineWidth: 1)
-        )
-    }
-
-    private func quantityButton(systemName: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .scaledFont(size: 10, weight: .bold, relativeTo: .caption2)
-                .foregroundColor(.primary)
-                .frame(width: 30, height: 30)
-                .background(
-                    Circle()
-                        .fill(.thinMaterial)
-                )
-                .frame(minWidth: 44, minHeight: 44)
-                .contentShape(Rectangle())
-        }
-        .accessibilityLabel(systemName == "minus" ? "Quitar uno" : "Agregar uno")
+        .frame(width: typeSize.isAccessibilitySize ? 56 : 76, height: typeSize.isAccessibilitySize ? 56 : 76)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .accessibilityHidden(true)
     }
 }
 

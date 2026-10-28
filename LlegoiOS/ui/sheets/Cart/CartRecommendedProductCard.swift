@@ -7,7 +7,8 @@ struct RecommendedProductCard: View {
 
     @State private var added = false
     @State private var buttonFrame: CGRect = .zero
-    @ObservedObject private var gradientManager = GradientStateManager.shared
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -20,43 +21,43 @@ struct RecommendedProductCard: View {
                         image
                             .resizable()
                             .scaledToFill()
-                            .frame(width: 148, height: 148)
+                            .frame(width: 156, height: 156)
                             .clipped()
                     },
                     placeholder: {
                         Rectangle()
                             .fill(Color(.systemGray6))
-                            .frame(width: 148, height: 148)
+                            .frame(width: 156, height: 156)
                     },
                     failure: {
                         Rectangle()
                             .fill(Color(.systemGray6))
-                            .frame(width: 148, height: 148)
+                            .frame(width: 156, height: 156)
                             .overlay(
                                 Image(systemName: "photo")
-                                    .scaledFont(size: 28, relativeTo: .title)
+                                    .font(.system(size: 28))
                                     .foregroundColor(Color(.systemGray3))
                             )
                     }
                 )
-                .frame(width: 148, height: 148)
+                .frame(width: 156, height: 156)
 
                 // Botón añadir (esquina inferior derecha sobre la imagen)
                 Button(action: {
                     guard !added else { return }
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.6)) { added = true }
+                    withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.6)) { added = true }
                     onAdd(buttonFrame)
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                         withAnimation { added = false }
                     }
                 }) {
                     Image(systemName: added ? "checkmark" : "plus")
-                        .scaledFont(size: 14, weight: .bold, relativeTo: .subheadline)
-                        .foregroundColor(.white)
-                        .frame(width: 32, height: 32)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(scheme == .dark ? Color.llegoPrimary : .white)
+                        .frame(width: 44, height: 44)
                         .background(
                             Circle()
-                                .fill(added ? Color(.systemGreen) : Color(.label))
+                                .fill(CartStyle.ink(scheme))
                         )
                         .background(
                             GeometryReader { geo in
@@ -64,36 +65,35 @@ struct RecommendedProductCard: View {
                                     .onAppear {
                                         buttonFrame = geo.frame(in: .global)
                                     }
+                                    .onChange(of: geo.frame(in: .global)) { _, frame in buttonFrame = frame }
                             }
                         )
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(Rectangle())
                 }
-                .accessibilityLabel(added ? "Agregado al carrito" : "Agregar al carrito")
                 .buttonStyle(.plain)
+                .accessibilityLabel(added ? "Agregado al carrito" : "Agregar \(product.name) al carrito")
                 .padding(8)
                 .scaleEffect(added ? 1.1 : 1.0)
-                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: added)
+                .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.6), value: added)
             }
 
             // Info
             VStack(alignment: .leading, spacing: 3) {
                 Text(product.name)
-                    .scaledFont(size: 13, weight: .regular, relativeTo: .footnote)
+                    .font(.system(size: 13, weight: .regular))
                     .foregroundColor(.primary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text(product.price)
-                    .scaledFont(size: 14, weight: .bold, relativeTo: .subheadline)
+                    .font(.system(size: 14, weight: .bold))
                     .foregroundColor(.primary)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
         }
-        .frame(width: 148)
-        .background(Color.white)
-        .cornerRadius(10)
+        .frame(width: 156)
+        .background(CartStyle.surface(scheme))
+        .cornerRadius(18)
         .shadow(color: Color.black.opacity(0.07), radius: 6, x: 0, y: 2)
     }
 }
