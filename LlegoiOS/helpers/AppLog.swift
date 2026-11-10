@@ -6,17 +6,17 @@ import os
 enum AppLog {
     private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "App")
 
-    static func debug(_ message: @autoclosure () -> String) {
+    static func debug(_ message: @autoclosure @escaping () -> String) {
         #if DEBUG
         logger.debug("\(message(), privacy: .private)")
         #endif
     }
 
-    static func info(_ message: @autoclosure () -> String) {
+    static func info(_ message: @autoclosure @escaping () -> String) {
         logger.info("\(message(), privacy: .private)")
     }
 
-    static func error(_ message: @autoclosure () -> String) {
+    static func error(_ message: @autoclosure @escaping () -> String) {
         logger.error("\(message(), privacy: .private)")
     }
 }
