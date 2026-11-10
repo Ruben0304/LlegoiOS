@@ -96,3 +96,11 @@ LlegoiOS/network/StripeSecrets.swift
 
 # Private planning docs
 PLAN_SALIDA_PRODUCCION_PRIVADO.md
+
+# Local tooling / per-user files (untrack with git rm --cached if already committed)
+apollo-ios-cli
+.claude/settings.local.json
+
+.DS_Store
+.claude/worktrees/
+schema.graphqls.before_*
