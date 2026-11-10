@@ -116,18 +116,12 @@ struct PaymentMethodCard: View {
     
     private var iconBackgroundColor: Color {
         switch paymentMethod.method.lowercased() {
-        case "wallet":
-            return .llegoAccent
         case "transfer", "transfermovil":
             return .llegoSecondary
-        case "stripe", "card":
-            return .llegoTertiary
         case "cash":
             return gradientManager.currentAccentColor
         default:
-            if paymentMethod.code.contains("qvapay") {
-                return Color(red: 0.2, green: 0.6, blue: 0.9)
-            } else if paymentMethod.code.contains("tropipay") {
+            if paymentMethod.code.contains("tropipay") {
                 return Color(red: 0.9, green: 0.4, blue: 0.1)
             }
             return gradientManager.currentAccentColor
@@ -149,12 +143,8 @@ struct PaymentMethodCard: View {
     
     private var defaultDescription: String {
         switch paymentMethod.method.lowercased() {
-        case "wallet":
-            return "Pagar con saldo de wallet"
         case "transfer", "transfermovil":
             return "Transferencia bancaria"
-        case "stripe", "card":
-            return "Pago con tarjeta internacional"
         case "cash":
             return "Pago en efectivo al recibir"
         default:
@@ -164,12 +154,8 @@ struct PaymentMethodCard: View {
     
     private func iconForMethod(_ method: String, code: String) -> String {
         switch method.lowercased() {
-        case "wallet":
-            return "wallet.pass.fill"
         case "transfer", "transfermovil":
             return "building.columns.fill"
-        case "stripe", "card":
-            return "creditcard.fill"
         case "cash":
             if code.contains("usd") {
                 return "dollarsign.circle.fill"
@@ -177,9 +163,7 @@ struct PaymentMethodCard: View {
                 return "banknote.fill"
             }
         default:
-            if code.contains("qvapay") {
-                return "asset:qvapay"
-            } else if code.contains("tropipay") {
+            if code.contains("tropipay") {
                 return "asset:tropipay"
             }
             return "creditcard.fill"
@@ -193,10 +177,10 @@ struct PaymentMethodCard: View {
         PaymentMethodCard(
             paymentMethod: PaymentMethodModel(
                 id: "1",
-                name: "Wallet USD",
-                code: "wallet_usd",
+                name: "Efectivo USD",
+                code: "cash_usd",
                 currency: "USD",
-                method: "wallet",
+                method: "cash",
                 commissionPercent: 0,
                 deliveryFeePercent: 0,
                 isRefundable: true,
@@ -206,7 +190,7 @@ struct PaymentMethodCard: View {
                 isActive: true,
                 displayOrder: 1,
                 iconUrl: nil,
-                instructions: "Paga con tu saldo disponible"
+                instructions: "Paga al recibir"
             ),
             isSelected: true,
             onTap: {}

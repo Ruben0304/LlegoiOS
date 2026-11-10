@@ -2,7 +2,6 @@ import SwiftUI
 
 // MARK: - Payment Method Model (Legacy - for UI compatibility)
 struct PaymentMethod: Identifiable, Equatable {
-    static let syntheticQvaPayId = "synthetic_qvapay"
     static let syntheticTronDealerId = "synthetic_trondealer"
 
     enum ImageType: Equatable {
@@ -35,10 +34,6 @@ struct PaymentMethod: Identifiable, Equatable {
         return lhs.id == rhs.id
     }
 
-    var isSyntheticQvaPay: Bool {
-        id == Self.syntheticQvaPayId
-    }
-
     var isSyntheticTronDealer: Bool {
         id == Self.syntheticTronDealerId
     }
@@ -69,12 +64,8 @@ struct PaymentMethod: Identifiable, Equatable {
         
         // Otherwise, map based on method and code
         switch method.lowercased() {
-        case "wallet":
-            return (.systemIcon("wallet.pass"), Color.llegoAccent)
         case "transfer", "transfermovil":
             return (.systemIcon("building.columns"), Color.llegoSecondary)
-        case "stripe", "card":
-            return (.systemIcon("creditcard"), Color.llegoTertiary)
         case "cash":
             if code.contains("usd") {
                 return (.systemIcon("dollarsign.circle"), Color.llegoAccent)
@@ -83,9 +74,7 @@ struct PaymentMethod: Identifiable, Equatable {
             }
         default:
             // Check for specific payment providers
-            if code.contains("qvapay") {
-                return (.assetImage("qvapay"), Color(red: 0.2, green: 0.6, blue: 0.9))
-            } else if code.contains("tropipay") {
+            if code.contains("tropipay") {
                 return (.assetImage("tropipay"), Color(red: 0.9, green: 0.4, blue: 0.1))
             } else {
                 return (.systemIcon("creditcard"), Color.llegoPrimary)
@@ -95,36 +84,13 @@ struct PaymentMethod: Identifiable, Equatable {
     
     private static func defaultDescription(for method: String) -> String {
         switch method.lowercased() {
-        case "wallet":
-            return "Pagar con saldo"
         case "transfer", "transfermovil":
             return "Transferencia bancaria"
-        case "stripe", "card":
-            return "Pago con tarjeta internacional"
         case "cash":
             return "Pago al recibir"
         default:
             return "Pago digital"
         }
-    }
-
-    static func qvaPay(username: String?) -> PaymentMethod {
-        let description: String
-        if let username, !username.isEmpty {
-            description = "Paga online con QvaPay a @\(username)"
-        } else {
-            description = "Paga online con QvaPay"
-        }
-
-        return PaymentMethod(
-            id: syntheticQvaPayId,
-            name: "QvaPay",
-            description: description,
-            imageType: .assetImage("qvapay"),
-            color: Color(red: 0.2, green: 0.6, blue: 0.9),
-            currency: "USD",
-            isEnabled: true
-        )
     }
 
     static func tronDealer(contact: String?) -> PaymentMethod {

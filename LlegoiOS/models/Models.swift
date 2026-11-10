@@ -7,7 +7,6 @@
 // - OrderModels.swift: Order list and history models
 // - OrderDetailModels.swift: Order detail screen models
 // - OrderTrackingModels.swift: Order tracking and delivery models
-// - PaymentIntentResponse.swift: Payment intent models
 // - PaymentMethod.swift: Payment method models
 // - SearchModels.swift: Search-related models
 // - StoreModels.swift: Store, branch, and story models

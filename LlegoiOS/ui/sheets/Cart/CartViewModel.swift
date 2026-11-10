@@ -53,7 +53,6 @@ class CartViewModel: ObservableObject {
     private let createOrderRepository = CreateOrderRepository()
     private let paymentRepository = PaymentRepository()
     private let paymentMethodManager = PaymentMethodManager.shared
-    private let walletRepository = WalletRepository()
     private let authManager = AuthManager.shared
 
     // Default Address
@@ -124,6 +123,36 @@ class CartViewModel: ObservableObject {
 
     init() {
         bindGlobalRecommendations()
+        NotificationCenter.default.publisher(for: .authSessionInvalidated)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.stopShortcutPolling() }
+            .store(in: &cancellables)
+    }
+
+    func pendingCreatedOrder() -> (id: String, number: String)? {
+        guard authManager.isAuthenticated, let userID = authManager.userId else { return nil }
+        return createOrderRepository.pendingOrder(userID: userID)
+    }
+
+    func hasPendingCheckout() -> Bool {
+        guard authManager.isAuthenticated, let userID = authManager.userId else { return false }
+        return createOrderRepository.hasPendingPayload(userID: userID)
+    }
+
+    func recoverPendingCheckout(completion: @escaping @Sendable (Result<CreatedOrder, Error>) -> Void) {
+        guard !isCreatingOrder, authManager.isAuthenticated, let userID = authManager.userId else {
+            completion(.failure(NSError(domain: "CartViewModel", code: -10,
+                userInfo: [NSLocalizedDescriptionKey: "No se puede recuperar el pedido en este momento"])))
+            return
+        }
+        isCreatingOrder = true
+        createOrderRepository.recoverPending(userID: userID) { [weak self] result in
+            Task { @MainActor in
+                self?.isCreatingOrder = false
+                if case .success(let order) = result { self?.createdOrder = order }
+                completion(result)
+            }
+        }
     }
 
     // MARK: - Computed Properties
@@ -864,6 +893,11 @@ class CartViewModel: ObservableObject {
         completion:
             @escaping @Sendable (Result<(CreatedOrder, InitiatePaymentResultModel), Error>) -> Void
     ) {
+        guard !isCreatingOrder else {
+            completion(.failure(NSError(domain: "CartViewModel", code: -10,
+                userInfo: [NSLocalizedDescriptionKey: "El pedido ya se está procesando"])))
+            return
+        }
         guard let branchId = cartBranchId else {
             let error = NSError(
                 domain: "CartViewModel", code: -1,
@@ -949,6 +983,10 @@ class CartViewModel: ObservableObject {
 
                     // Step 2: Initiate Payment
                     do {
+                        guard try self.createOrderRepository.markPaymentStarted() else {
+                            throw NSError(domain: "CartViewModel", code: -11,
+                                userInfo: [NSLocalizedDescriptionKey: "El pedido \(order.orderNumber) ya fue creado. Revisa su pago en Mis pedidos."])
+                        }
                         let paymentResult = try await self.initiatePaymentForOrder(
                             orderId: order.id,
                             paymentMethodId: paymentMethodId,
@@ -964,9 +1002,14 @@ class CartViewModel: ObservableObject {
                     } catch {
                         await MainActor.run {
                             self.isCreatingOrder = false
-                            self.orderError = error.localizedDescription
+                            let recovery = "El pedido \(order.orderNumber) ya fue creado. Revisa su pago en Mis pedidos."
+                            let nsError = error as NSError
+                            let message = nsError.domain == "CartViewModel" && nsError.code == -11
+                                ? recovery : "\(error.localizedDescription) \(recovery)"
+                            self.orderError = message
                             print("❌ Error initiating payment: \(error.localizedDescription)")
-                            completion(.failure(error))
+                            completion(.failure(NSError(domain: "CartViewModel", code: -11,
+                                userInfo: [NSLocalizedDescriptionKey: message])))
                         }
                     }
 
@@ -1166,6 +1209,11 @@ class CartViewModel: ObservableObject {
         comments: String? = nil,
         completion: @escaping @Sendable (Result<CreatedOrder, Error>) -> Void
     ) {
+        guard !isCreatingOrder else {
+            completion(.failure(NSError(domain: "CartViewModel", code: -10,
+                userInfo: [NSLocalizedDescriptionKey: "El pedido ya se está procesando"])))
+            return
+        }
         guard let branchId = cartBranchId else {
             let error = NSError(
                 domain: "CartViewModel", code: -1,
@@ -1316,6 +1364,7 @@ class CartViewModel: ObservableObject {
 
     /// Limpiar todo el carrito
     func clearCart() {
+        createOrderRepository.clearPendingCheckout()
         cartManager.clearCart()
         cartItems = []
         state = .success
@@ -1544,31 +1593,6 @@ class CartViewModel: ObservableObject {
         }
 
         return amount
-    }
-
-    // MARK: - Wallet Balance Check
-
-    /// Verifica si el usuario tiene saldo suficiente en wallet para cubrir el total.
-    /// - Parameters:
-    ///   - method: El método de pago wallet seleccionado.
-    ///   - requiredAmount: Monto a comparar (total del carrito).
-    ///   - selectedCurrency: Moneda activa en el selector del carrito.
-    /// - Returns: Tupla con si tiene saldo y el balance actual.
-    func checkWalletBalance(
-        for method: PaymentMethodModel,
-        requiredAmount: Double,
-        selectedCurrency: String
-    ) async throws -> (hasSufficientBalance: Bool, available: Double) {
-        guard let jwt = await authManager.getAccessToken() else {
-            throw NSError(
-                domain: "CartViewModel",
-                code: -6,
-                userInfo: [NSLocalizedDescriptionKey: "No hay sesión activa"]
-            )
-        }
-        let balance = try await walletRepository.fetchWalletBalance(jwt: jwt)
-        let available = selectedCurrency.uppercased() == "USD" ? balance.usd : balance.local
-        return (available >= requiredAmount, available)
     }
 }
 

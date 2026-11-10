@@ -14,7 +14,6 @@ struct ProfileView: View {
     @State private var showingLocationPicker = false
     @State private var showingEditName = false
     @State private var showingPaymentMethods = false
-    @State private var showingWallet = false
     // Suscripciones ocultas para revisión App Store (sin venta de planes por ahora)
     // @State private var navigateToPlansAndPricing = false
     @State private var showOnboardingResetConfirmation = false
@@ -33,7 +32,6 @@ struct ProfileView: View {
     private let defaultCustomerLevel: CustomerLevel = .gold
     private let defaultCurrentPoints: Int = 847
     private let defaultNextLevelPoints: Int = 1000
-    private let walletBalance: String = "$120.50"
     @State private var region = MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 23.1136, longitude: -82.3666),
         span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
@@ -204,9 +202,6 @@ struct ProfileView: View {
                             // TODO: Reactivar en post-MVP (Cliente Oro / niveles)
                             // customerLevelSection
 
-                            // Wallet oculto temporalmente
-                            // walletQuickAccessSection
-
                             // Vista previa de pedidos recientes (maneja su propio loading)
                             recentOrdersSection
 
@@ -259,9 +254,6 @@ struct ProfileView: View {
                 .accessibilityLabel("Cerrar sesión")
                 .tint(.red)
             }
-        }
-        .fullScreenCover(isPresented: $showingWallet) {
-            WalletView()
         }
         .sheet(isPresented: $showingLocationPicker) {
             ProfileLocationPickerView()
@@ -1090,44 +1082,6 @@ struct ProfileView: View {
         .buttonStyle(PlainButtonStyle())
     }
 
-    private var walletQuickAccessSection: some View {
-        Button(action: {
-            showingWallet = true
-        }) {
-            HStack(spacing: 12) {
-                Image(systemName: "creditcard")
-                    .scaledFont(size: 20, relativeTo: .title3)
-                    .foregroundColor(.gray)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Wallet")
-                        .scaledFont(size: 16, weight: .semibold, relativeTo: .body)
-                        .foregroundColor(.primary)
-
-                    Text("Saldo disponible")
-                        .scaledFont(size: 13, weight: .medium, relativeTo: .footnote)
-                        .foregroundColor(.gray)
-                }
-
-                Spacer()
-
-                Text(walletBalance)
-                    .scaledFont(size: 15, weight: .semibold, relativeTo: .subheadline)
-                    .foregroundColor(.primary)
-            }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.white)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.black.opacity(0.06), lineWidth: 1)
-            )
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-
     // MARK: - Customer Level Section
     private var customerLevelSection: some View {
         VStack(spacing: 16) {
@@ -1437,72 +1391,6 @@ struct ProfileView: View {
                 Divider()
                     .padding(.leading, 16)
             }
-        }
-    }
-
-    // MARK: - Preferred Payment Method Section
-    private var preferredPaymentMethodSection: some View {
-        VStack(spacing: 14) {
-            HStack {
-                Image(systemName: "creditcard.fill")
-                    .scaledFont(size: 20, weight: .semibold, relativeTo: .title3)
-                    .foregroundColor(gradientManager.currentAccentColor)
-
-                Text("Método de Pago Preferido")
-                    .scaledFont(size: 18, weight: .bold, design: .rounded, relativeTo: .title3)
-                    .foregroundColor(.primary)
-
-                Spacer()
-            }
-
-            Button(action: {
-                // No hacer nada - deshabilitado
-            }) {
-                HStack(spacing: 16) {
-                    // Ícono de tarjeta
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(
-                                LinearGradient(
-                                    gradient: Gradient(colors: [
-                                        Color.gray.opacity(0.5),
-                                        Color.gray.opacity(0.4),
-                                    ]),
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 56, height: 56)
-
-                        Image(systemName: "creditcard.fill")
-                            .scaledFont(size: 24, weight: .semibold, relativeTo: .title)
-                            .foregroundColor(.white.opacity(0.7))
-                    }
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 8) {
-                            Text("Stripe próximamente")
-                                .scaledFont(size: 16, weight: .bold, design: .rounded, relativeTo: .body)
-                                .foregroundColor(.secondary)
-                        }
-
-                        Text("Tarjetas de crédito/débito próximamente disponibles")
-                            .scaledFont(size: 12, weight: .medium, relativeTo: .caption)
-                            .foregroundColor(.secondary.opacity(0.7))
-                    }
-
-                    Spacer()
-                }
-                .padding(18)
-                .background(
-                    RoundedRectangle(cornerRadius: 18)
-                        .fill(Color.white)
-                        .shadow(color: Color.black.opacity(0.03), radius: 12, x: 0, y: 4)
-                )
-                .opacity(0.6)
-            }
-            .buttonStyle(PlainButtonStyle())
-            .disabled(true)
         }
     }
 

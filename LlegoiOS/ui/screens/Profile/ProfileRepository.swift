@@ -1,3 +1,4 @@
+import os
 import Foundation
 import Apollo
 
@@ -54,7 +55,7 @@ class ProfileRepository {
                         tokenType: data.tokenType
                     )
 
-                    print("✅ Login exitoso: \(user.email)")
+                    Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Auth").info("Inicio de sesión exitoso")
                     continuation.resume(returning: session)
 
                 case .failure(let error):
@@ -120,7 +121,7 @@ class ProfileRepository {
                         tokenType: data.tokenType
                     )
 
-                    print("✅ Registro exitoso: \(user.email)")
+                    Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Auth").info("Registro exitoso")
                     continuation.resume(returning: session)
 
                 case .failure(let error):
@@ -185,7 +186,7 @@ class ProfileRepository {
                         tokenType: data.tokenType
                     )
 
-                    print("✅ Login con Google exitoso: \(user.email)")
+                    Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Auth").info("Inicio con Google exitoso")
                     continuation.resume(returning: session)
 
                 case .failure(let error):
@@ -253,7 +254,7 @@ class ProfileRepository {
                         tokenType: data.tokenType
                     )
 
-                    print("✅ Login con Apple exitoso: \(user.email)")
+                    Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Auth").info("Inicio con Apple exitoso")
                     continuation.resume(returning: session)
 
                 case .failure(let error):
@@ -380,7 +381,7 @@ class ProfileRepository {
                         defaultAddressId: nil
                     )
 
-                    print("✅ Usuario actualizado: \(user.username)")
+                    Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Profile").info("Usuario actualizado")
                     continuation.resume(returning: user)
 
                 case .failure(let error):

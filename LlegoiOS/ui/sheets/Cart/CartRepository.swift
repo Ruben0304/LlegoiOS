@@ -694,91 +694,26 @@ class CartRepository {
 
         print("📤 Enviando upload multipart al endpoint REST...")
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if let error = error {
-                print("❌ Error de red validando pago: \(error.localizedDescription)")
-                Task { @MainActor in completion(.failure(error)) }
-                return
-            }
-
-            guard let httpResponse = response as? HTTPURLResponse else {
-                let error = NSError(
-                    domain: "CartRepository",
-                    code: -4,
-                    userInfo: [NSLocalizedDescriptionKey: "Respuesta inválida del servidor"]
-                )
-                print("❌ Error: \(error.localizedDescription)")
-                Task { @MainActor in completion(.failure(error)) }
-                return
-            }
-
-            guard let data = data else {
-                let error = NSError(
-                    domain: "CartRepository",
-                    code: -5,
-                    userInfo: [NSLocalizedDescriptionKey: "El servidor no devolvió datos"]
-                )
-                print("❌ Error: \(error.localizedDescription)")
-                Task { @MainActor in completion(.failure(error)) }
-                return
-            }
-
-            let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
-
-            if (200...299).contains(httpResponse.statusCode) {
-                do {
-                    let validationResult = try decoder.decode(
-                        PaymentValidationResult.self, from: data)
-                    print("✅ Validación procesada. matched: \(validationResult.matched)")
-                    print("   message: \(validationResult.message)")
-                    print(
-                        "   detectedTransferId: \(validationResult.detectedTransferId ?? "sin detectar")"
-                    )
-
-                    if let extracted = validationResult.extractedData {
-                        print("   extractedData:")
-                        print("     banco: \(extracted.banco ?? "desconocido")")
-                        print("     quienEnvio: \(extracted.quienEnvio ?? "desconocido")")
-                        print(
-                            "     esMensajeBanco: \(String(describing: extracted.esMensajeBanco))")
-                        print("     monto: \(String(describing: extracted.cantidadTransferida))")
-                        print("     numeroTransferencia: \(extracted.numeroTransferencia ?? "n/a")")
-                    }
-                    if let savedPayment = validationResult.savedPayment {
-                        print("   savedPaymentId: \(savedPayment.id ?? "sin id")")
-                    } else {
-                        print("   savedPayment: null")
-                    }
-
-                    Task { @MainActor in completion(.success(validationResult)) }
-                } catch {
-                    print("❌ Error decodificando respuesta: \(error.localizedDescription)")
-                    Task { @MainActor in completion(.failure(error)) }
+        Task { @MainActor in
+            do {
+                let (data, response) = try await AuthenticatedURLSession.data(for: request)
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw NSError(domain: "CartRepository", code: -4,
+                                  userInfo: [NSLocalizedDescriptionKey: "Respuesta inválida del servidor"])
                 }
-            } else {
-                do {
-                    let errorBody = try decoder.decode(
-                        PaymentValidationErrorResponse.self, from: data)
-                    let apiError = NSError(
-                        domain: "CartRepository",
-                        code: httpResponse.statusCode,
-                        userInfo: [NSLocalizedDescriptionKey: errorBody.message]
-                    )
-                    print("❌ Error API (\(httpResponse.statusCode)): \(errorBody.message)")
-                    Task { @MainActor in completion(.failure(apiError)) }
-                } catch {
-                    let rawMessage = String(data: data, encoding: .utf8) ?? "Respuesta desconocida"
-                    let apiError = NSError(
-                        domain: "CartRepository",
-                        code: httpResponse.statusCode,
-                        userInfo: [NSLocalizedDescriptionKey: rawMessage]
-                    )
-                    print("❌ Error API (\(httpResponse.statusCode)). Raw: \(rawMessage)")
-                    Task { @MainActor in completion(.failure(apiError)) }
+                let decoder = JSONDecoder()
+                decoder.keyDecodingStrategy = .convertFromSnakeCase
+                guard (200...299).contains(httpResponse.statusCode) else {
+                    let message = (try? decoder.decode(PaymentValidationErrorResponse.self, from: data).message)
+                        ?? String(data: data, encoding: .utf8) ?? "Respuesta desconocida"
+                    throw NSError(domain: "CartRepository", code: httpResponse.statusCode,
+                                  userInfo: [NSLocalizedDescriptionKey: message])
                 }
+                completion(.success(try decoder.decode(PaymentValidationResult.self, from: data)))
+            } catch {
+                completion(.failure(error))
             }
-        }.resume()
+        }
     }
 
     func fetchCloudCandidates(
