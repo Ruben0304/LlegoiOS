@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import os
 
 #if canImport(FoundationModels)
 import FoundationModels
@@ -149,7 +150,7 @@ final class RecommendationEngine {
 
             // Extraer la respuesta
             let responseText = response.content
-            print("🔍 [RecommendationEngine] Texto de respuesta: '\(responseText)'")
+            Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Recommendations").debug("Respuesta: \(responseText, privacy: .private)")
             print("🔍 [RecommendationEngine] Longitud de respuesta: \(responseText.count) caracteres")
 
             // Limpiar y extraer IDs

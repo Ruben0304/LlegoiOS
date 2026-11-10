@@ -1,3 +1,4 @@
+import os
 import SwiftUI
 import AuthenticationServices
 import GoogleSignIn
@@ -420,7 +421,7 @@ struct LoginView: View {
             let authorizationCode = result.serverAuthCode
             let email = result.user.profile?.email
 
-            print("Google Login Successful: \(email ?? "No Email")")
+            Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Auth").info("Inicio con Google exitoso")
             Task { @MainActor in
                 await viewModel.signInWithGoogle(
                     idToken: idToken,

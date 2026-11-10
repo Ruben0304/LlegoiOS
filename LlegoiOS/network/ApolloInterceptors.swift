@@ -8,13 +8,23 @@ struct AuthorizationInterceptor: HTTPInterceptor {
         next: NextHTTPInterceptorFunction
     ) async throws -> HTTPResponse {
         var request = request
-        let authorization = await MainActor.run {
-            AuthManager.shared.getAuthorizationHeader()
+        let session = await MainActor.run {
+            (AuthManager.shared.getAuthorizationHeader(), AuthManager.shared.getAccessToken(),
+             AuthManager.shared.sessionGeneration)
         }
-        if let authorization {
-            request.addValue(authorization, forHTTPHeaderField: "Authorization")
+        if let authorization = session.0 {
+            request.setValue(authorization, forHTTPHeaderField: "Authorization")
         }
-        return try await next(request)
+        let authenticatedRequest = request
+        let response = try await next(authenticatedRequest)
+        await AuthenticatedURLSession.inspect(
+            request: authenticatedRequest, token: session.1, generation: session.2,
+            status: response.response.statusCode, data: Data())
+        return await response.mapChunks { response, data in
+            await AuthenticatedURLSession.inspect(
+                request: authenticatedRequest, token: session.1, generation: session.2, status: response.statusCode, data: data)
+            return data
+        }
     }
 }
 
@@ -35,7 +45,7 @@ struct LlegoInterceptorProvider: InterceptorProvider {
     func httpInterceptors<Operation: GraphQLOperation>(
         for operation: Operation
     ) -> [any HTTPInterceptor] {
-        [AuthorizationInterceptor()] + DefaultInterceptorProvider.shared.httpInterceptors(for: operation)
+        DefaultInterceptorProvider.shared.httpInterceptors(for: operation) + [AuthorizationInterceptor()]
     }
 
     func responseParser<Operation: GraphQLOperation>(

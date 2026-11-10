@@ -1,9 +1,13 @@
 import SwiftUI
 import SwiftData
-@preconcurrency import StripePaymentSheet
+import Foundation
+import os
 
 @main
 struct iOSApp: App {
+    static var isTestMode: Bool {
+        ProcessInfo.processInfo.environment["LLEGO_TEST_MODE"] == "1"
+    }
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     private let sharedModelContainer: ModelContainer?
@@ -11,6 +15,11 @@ struct iOSApp: App {
 
     @MainActor
     init() {
+        if Self.isTestMode {
+            self.sharedModelContainer = nil
+            self.modelContainerErrorMessage = nil
+            return
+        }
         let schema = Schema([
             LocalBusiness.self,
             LocalBranch.self,
@@ -36,25 +45,6 @@ struct iOSApp: App {
             print("❌ Error creando ModelContainer: \(error.localizedDescription)")
         }
 
-        // Fetch the Stripe publishable key from the backend at startup.
-        // This keeps the key centralized in the backend env vars (STRIPE_PUBLISHABLE_KEY).
-        Task {
-            guard let url = URL(string: "https://llegobackend-production.up.railway.app/stripe/config") else { return }
-            do {
-                let (data, _) = try await URLSession.shared.data(from: url)
-                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let key = json["publishable_key"] as? String,
-                   key.hasPrefix("pk_") {
-                    StripeAPI.defaultPublishableKey = key
-                    print("✅ Stripe configured: \(key.prefix(20))...")
-                } else {
-                    print("⚠️ Stripe config: unexpected response format")
-                }
-            } catch {
-                print("⚠️ Failed to fetch Stripe config: \(error.localizedDescription)")
-            }
-        }
-
         _ = CartRecommendationsManager.shared
 
         // Iniciar GPS silenciosamente desde el arranque.
@@ -72,7 +62,9 @@ struct iOSApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                if let sharedModelContainer {
+                if Self.isTestMode {
+                    Color.clear
+                } else if let sharedModelContainer {
                     ContentView()
                         .modelContainer(sharedModelContainer)
                 } else {
@@ -80,15 +72,6 @@ struct iOSApp: App {
                 }
             }
                 .preferredColorScheme(.light) // Forzar modo claro en toda la app
-                .onOpenURL { url in
-                    let stripeHandled = StripeAPI.handleURLCallback(with: url)
-
-                    if stripeHandled {
-                        print("✅ Stripe manejó la URL: \(url)")
-                    } else {
-                        print("⚠️ URL no manejada por Stripe: \(url)")
-                    }
-                }
         }
     }
 }

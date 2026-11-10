@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import os
 import SwiftUI
 
 // MARK: - User Model
@@ -78,6 +79,7 @@ class AuthManager: ObservableObject {
     @Published var tokenType: String?
     @Published var userId: String?
     @Published var isAuthenticated: Bool = false
+    private(set) var sessionGeneration = UUID()
 
     /// True when logged in with the App Store review demo account.
     /// Used to skip real payment flows and speed up order simulation.
@@ -112,13 +114,14 @@ class AuthManager: ObservableObject {
                 account: tokenKey
             )
 
+            sessionGeneration = UUID()
             currentUser = session.user
             accessToken = normalizedToken
             tokenType = session.tokenType
             userId = session.user.id
             isAuthenticated = true
 
-            print("✅ Sesión guardada: \(session.user.email)")
+            Logger(subsystem: keychainService, category: "Auth").info("Sesión guardada")
         } catch {
             print("❌ Error guardando sesión: \(error.localizedDescription)")
         }
@@ -126,6 +129,7 @@ class AuthManager: ObservableObject {
 
     /// Cerrar sesión
     func signOut() {
+        sessionGeneration = UUID()
         currentUser = nil
         accessToken = nil
         tokenType = nil
@@ -134,6 +138,8 @@ class AuthManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: sessionKey)
         UserDefaults.standard.removeObject(forKey: userIdKey)
         KeychainHelper.delete(service: keychainService, account: tokenKey)
+        PendingCheckout().clearAll()
+        NotificationCenter.default.post(name: .authSessionInvalidated, object: nil)
         print("✅ Sesión cerrada exitosamente")
     }
 
@@ -192,7 +198,7 @@ class AuthManager: ObservableObject {
             userId = session.user.id
             accessToken = getAccessToken()
             isAuthenticated = accessToken != nil
-            print("✅ Sesión cargada: \(session.user.email)")
+            Logger(subsystem: keychainService, category: "Auth").info("Sesión cargada")
             return
         }
 
@@ -212,7 +218,7 @@ class AuthManager: ObservableObject {
                 account: tokenKey
             )
             persistUser(legacySession.user, tokenType: legacySession.tokenType)
-            print("✅ Sesión migrada: \(legacySession.user.email)")
+            Logger(subsystem: keychainService, category: "Auth").info("Sesión migrada")
             return
         }
 

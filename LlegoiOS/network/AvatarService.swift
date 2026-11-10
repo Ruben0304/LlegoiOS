@@ -56,7 +56,7 @@ class AvatarService {
         request.httpBody = body
         
         // Ejecutar request
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await AuthenticatedURLSession.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NSError(domain: "AvatarService", code: 500, userInfo: [NSLocalizedDescriptionKey: "Respuesta inválida del servidor"])

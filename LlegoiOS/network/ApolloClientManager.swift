@@ -5,7 +5,8 @@ import Apollo
 final class ApolloClientManager: @unchecked Sendable {
     nonisolated(unsafe) static let shared = ApolloClientManager()
     
-    static let baseURL = "https://llegobackend-production.up.railway.app"
+    static let baseURL = ProcessInfo.processInfo.environment["LLEGO_TEST_MODE"] == "1"
+        ? "https://llego-test.invalid" : "https://llegobackend-production.up.railway.app"
 
     private(set) lazy var apollo: ApolloClient = {
         return ApolloClient(networkTransport: networkTransport, store: store)

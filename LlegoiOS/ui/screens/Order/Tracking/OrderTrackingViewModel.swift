@@ -19,6 +19,10 @@ final class OrderTrackingViewModel: ObservableObject {
 
     init(orderId: String) {
         self.orderId = orderId
+        NotificationCenter.default.publisher(for: .authSessionInvalidated)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.stopPolling() }
+            .store(in: &cancellables)
         load()
     }
 
