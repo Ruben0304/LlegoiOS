@@ -1,3 +1,4 @@
+import os
 //
 //  LocalSearchRepository.swift
 //  LlegoiOS
@@ -71,7 +72,7 @@ final class LocalSearchRepository {
         do {
             allBranches = try ctx.fetch(FetchDescriptor<LocalBranch>())
             allProducts = try ctx.fetch(FetchDescriptor<LocalProduct>())
-            print("🔍 searchStores(\"\(query)\") - Total sucursales: \(allBranches.count), productos: \(allProducts.count)")
+            Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Search").debug("Búsqueda local: \(query, privacy: .private), sucursales: \(allBranches.count), productos: \(allProducts.count)")
         } catch {
             print("❌ LocalSearchRepository - Error fetching branches: \(error)")
             return ([], [:])
@@ -89,7 +90,7 @@ final class LocalSearchRepository {
         .sorted { $0.1 > $1.1 }
         .prefix(topK)
         .map { $0.0 }
-        print("🔍 searchStores(\"\(query)\") - Sucursales con score >= \(minScore): \(matchedBranches.count)")
+        Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Search").debug("Búsqueda local: \(query, privacy: .private), resultados: \(matchedBranches.count)")
 
         // Agrupar productos por branch
         let productsByBranch = Dictionary(grouping: allProducts, by: { $0.branchId })

@@ -13,6 +13,13 @@ final class ConversationalSearchRepository {
     private var activeBackendTask: Task<Void, Never>?
     private var activeBackendRequestId: UUID?
 
+    /// Cancela la petición en curso (y con ella el WebSocket de streaming).
+    func cancelActiveRequest() {
+        activeBackendTask?.cancel()
+        activeBackendTask = nil
+        activeBackendRequestId = nil
+    }
+
     func sendMessage(
         message: String,
         provider: ConversationalAIProvider,
@@ -140,7 +147,7 @@ private actor AIChatBackendClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try jsonEncoder.encode(requestPayload)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await AuthenticatedURLSession.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, (200..<300).contains(httpResponse.statusCode) else {
             throw NSError(
                 domain: "AIChat",
@@ -191,6 +198,24 @@ private actor AIChatBackendClient {
         )
         webSocket.resume()
 
+        // receive() no reacciona a la cancelación de la Task: hay que cerrar el socket a mano.
+        return try await withTaskCancellationHandler {
+            try await runStream(
+                webSocket, message: message, deviceId: deviceId, jwt: jwt,
+                onChunk: onChunk, onStreamFinished: onStreamFinished)
+        } onCancel: {
+            webSocket.cancel(with: URLSessionWebSocketTask.CloseCode.normalClosure, reason: nil)
+        }
+    }
+
+    private func runStream(
+        _ webSocket: URLSessionWebSocketTask,
+        message: String,
+        deviceId: String?,
+        jwt: String?,
+        onChunk: @escaping @Sendable (String) async -> Void,
+        onStreamFinished: @escaping @Sendable (Bool) async -> Void
+    ) async throws -> AIChatData {
         defer {
             webSocket.cancel(with: URLSessionWebSocketTask.CloseCode.normalClosure, reason: nil)
         }
@@ -453,7 +478,7 @@ private actor AIChatBackendClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try jsonEncoder.encode(payload)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await AuthenticatedURLSession.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, (200..<300).contains(httpResponse.statusCode) else {
             throw NSError(
                 domain: "AIChat",
@@ -530,7 +555,7 @@ private actor AIChatBackendClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try jsonEncoder.encode(payload)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await AuthenticatedURLSession.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, (200..<300).contains(httpResponse.statusCode) else {
             throw NSError(
                 domain: "AIChat",

@@ -145,7 +145,7 @@ private struct PromoBannerCard: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(accessibilityTitle)
-        } else if let actionUrl = banner.actionUrl, let url = URL(string: actionUrl) {
+        } else if let actionUrl = banner.actionUrl, let url = URL(string: actionUrl)?.webOnly {
             Button {
                 UIApplication.shared.open(url)
             } label: {

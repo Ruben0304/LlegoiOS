@@ -1,3 +1,4 @@
+import os
 //
 //  ConversationalSearchViewModel.swift
 //  LlegoiOS
@@ -30,13 +31,25 @@ class ConversationalSearchViewModel: ObservableObject {
     private let repository = ConversationalSearchRepository()
     private let locationManager = UserLocationManager.shared
     private var activeStreamingAssistantMessageId: UUID?
+    private var sessionObserver: AnyCancellable?
+
+    init() {
+        sessionObserver = NotificationCenter.default.publisher(for: .authSessionInvalidated)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.repository.cancelActiveRequest()
+                self?.isTyping = false
+                self?.loadingProductsMessageId = nil
+                self?.state = .idle
+            }
+    }
     private var streamedChunkCount = 0
 
     func sendMessage(_ text: String) {
         print("\n╔═══════════════════════════════════════════════════╗")
         print("║  [VIEWMODEL] sendMessage iniciado                 ║")
         print("╚═══════════════════════════════════════════════════╝")
-        print("📤 [VIEWMODEL] Mensaje del usuario: \"\(text)\"")
+        Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Chat").debug("Mensaje: \(text, privacy: .private)")
 
         // Agregar mensaje del usuario
         let userMessage = ConversationalChatMessage(
@@ -103,7 +116,7 @@ class ConversationalSearchViewModel: ObservableObject {
                     print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
                     print("📋 [VIEWMODEL] Datos recibidos:")
                     print("  ├─ Response Type: \(chatData.responseType)")
-                    print("  ├─ AI Text: \"\(chatData.aiText)\"")
+                    Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Chat").debug("Respuesta: \(chatData.aiText, privacy: .private)")
                     print("  ├─ Confidence: \(chatData.confidence)")
                     print("  ├─ Products: \(chatData.productEntities.count)")
                     if !chatData.productEntities.isEmpty {
@@ -119,7 +132,7 @@ class ConversationalSearchViewModel: ObservableObject {
                     if !chatData.branchEntities.isEmpty {
                         print("  ├─ Tiendas:")
                         chatData.branchEntities.enumerated().forEach { index, branch in
-                            print("  │  \(index + 1). \(branch.name) - \(branch.address)")
+                            print("  │  \(index + 1). \(branch.name)")
                             print("  │     └─ Avatar: \(branch.avatarUrl ?? "N/A")")
                         }
                     }

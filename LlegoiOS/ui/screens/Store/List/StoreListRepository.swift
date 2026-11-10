@@ -1,3 +1,4 @@
+import os
 import Apollo
 import Combine
 import Foundation
@@ -602,7 +603,7 @@ class StoreListRepository {
                         )
                     }
 
-                    print("✅ Found \(mappedBranches.count) branches matching '\(query)'")
+                    Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Search").debug("Búsqueda: \(query, privacy: .private), resultados: \(mappedBranches.count)")
                     completion(.success(mappedBranches))
 
                 case .failure(let error):
