@@ -369,7 +369,7 @@ class ProductListViewModel: ObservableObject {
 
     // Execute search (called when user submits search)
     func executeSearch() {
-        Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Search").debug("Búsqueda: \(searchQuery, privacy: .private)")
+        Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Search").debug("Búsqueda: \(self.searchQuery, privacy: .private)")
         if !searchQuery.isEmpty {
             performVectorSearch()
         } else {
@@ -386,7 +386,7 @@ class ProductListViewModel: ObservableObject {
             return
         }
 
-        Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Search").debug("Búsqueda vectorial: \(searchQuery, privacy: .private)")
+        Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Search").debug("Búsqueda vectorial: \(self.searchQuery, privacy: .private)")
         isSearching = true
 
         repository.searchProducts(
