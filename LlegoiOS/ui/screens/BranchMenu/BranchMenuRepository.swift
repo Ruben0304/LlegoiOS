@@ -35,7 +35,7 @@ final class BranchMenuRepository {
 
     func searchMenus(query: String) async throws -> [MenuSearchHit] {
         let response = try await apolloClient.fetch(
-            query: LlegoAPI.SearchMenusQuery(query: query, first: 20),
+            query: LlegoAPI.SearchMenusQuery(query: query, first: 20, jwt: .none),
             cachePolicy: .networkOnly
         )
         if let error = response.errors?.first {
@@ -65,7 +65,7 @@ final class BranchMenuRepository {
 
     func fetchBranchMenu(branchId: String) async throws -> BranchMenuInfo? {
         let response = try await apolloClient.fetch(
-            query: LlegoAPI.GetBranchMenuQuery(branchId: branchId),
+            query: LlegoAPI.GetBranchMenuQuery(branchId: branchId, jwt: .none),
             cachePolicy: .networkOnly
         )
         if let error = response.errors?.first {

@@ -4,7 +4,7 @@ import Combine
 import CoreLocation
 import CryptoKit
 import LocalAuthentication
-import StripePaymentSheet
+import os
 import SwiftUI
 import UIKit
 
@@ -38,16 +38,15 @@ struct CartView: View {
     @State private var selectedPaymentMethod: PaymentMethod?
     @State private var showPaymentMethodPicker = false
     @State private var showOrdersFromCart = false
+    @State private var showPendingOrderAlert = false
+    @State private var pendingOrderNumber = ""
+    @State private var checkedPendingOrder = false
     @State private var showCartAnimationPreview = false
 
-    // MARK: - Stripe PaymentSheet
-    @State private var paymentSheet: PaymentSheet?
+    // MARK: - Payment State
     @State private var isLoadingPayment = false
-    @State private var paymentResult: PaymentSheetResult?
     @State private var showPaymentAlert = false
     @State private var paymentAlertMessage = ""
-    @State private var generatedPaymentLink: String?
-    @State private var showPaymentLinkSheet = false
     @State private var showBankTransferSheet = false
     @State private var showOrderConfirmation = false
     @State private var showTransferSmsSheet = false
@@ -130,11 +129,46 @@ struct CartView: View {
                 } message: {
                     Text(paymentAlertMessage)
                 }
+                .alert("Pedido pendiente", isPresented: $showPendingOrderAlert) {
+                    if pendingOrderNumber.isEmpty {
+                        Button("Recuperar pedido") {
+                            viewModel.recoverPendingCheckout { result in
+                                Task { @MainActor in
+                                    switch result {
+                                    case .success:
+                                        showOrdersFromCart = true
+                                    case .failure(let error):
+                                        paymentAlertMessage = error.localizedDescription
+                                        showPaymentAlert = true
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        Button("Ver mis pedidos") { showOrdersFromCart = true }
+                    }
+                    Button("Ahora no", role: .cancel) {}
+                } message: {
+                    if pendingOrderNumber.isEmpty {
+                        Text("La creación quedó pendiente. Al recuperar, se usará el mismo pedido; si no llegó a crearse, se creará ahora. El pago no se iniciará automáticamente.")
+                    } else {
+                        Text("El pedido \(pendingOrderNumber) ya fue creado. Revisa su pago en Mis pedidos antes de volver a pagar.")
+                    }
+                }
                 .overlay {
                     if isLoadingPayment { cartLoadingOverlay }
                 }
                 .onAppear {
                     viewModel.loadCart()
+                    if !checkedPendingOrder {
+                        checkedPendingOrder = true
+                        if let order = viewModel.pendingCreatedOrder() {
+                            pendingOrderNumber = order.number
+                            showPendingOrderAlert = true
+                        } else if viewModel.hasPendingCheckout() {
+                            showPendingOrderAlert = true
+                        }
+                    }
                     ensureSelectedCurrencyIsValid()
                     viewModel.selectedCurrency = selectedCurrency.rawValue
                 }
@@ -199,14 +233,6 @@ struct CartView: View {
                 selectedMethod: $selectedPaymentMethod
             )
             .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $showPaymentLinkSheet) {
-            PaymentLinkSheetView(
-                paymentLink: generatedPaymentLink ?? "",
-                onDismiss: { showPaymentLinkSheet = false }
-            )
-            .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showBankTransferSheet) { bankTransferSheetContent }
@@ -632,42 +658,7 @@ struct CartView: View {
     }
 
     private func executePaymentProcessing(paymentMethod: PaymentMethod) {
-        let backendMethod = viewModel.paymentMethods.first { $0.id == paymentMethod.id }
-
-        // Wallet → verificar saldo antes de crear el pedido
-        if backendMethod?.method.lowercased() == "wallet", let method = backendMethod {
-            isLoadingPayment = true
-            Task {
-                do {
-                    let (hasSufficient, available) = try await viewModel.checkWalletBalance(
-                        for: method,
-                        requiredAmount: viewModel.total,
-                        selectedCurrency: selectedCurrency.rawValue
-                    )
-                    await MainActor.run {
-                        isLoadingPayment = false
-                        if hasSufficient {
-                            createOrderWithPaymentMethod(paymentMethod.id)
-                        } else {
-                            let currencyLabel = selectedCurrency.rawValue
-                            paymentAlertMessage =
-                                "Saldo insuficiente en tu wallet. Tienes \(String(format: "%.2f", available)) \(currencyLabel) y el pedido requiere \(String(format: "%.2f", viewModel.total)) \(currencyLabel)."
-                            showPaymentAlert = true
-                        }
-                    }
-                } catch {
-                    await MainActor.run {
-                        isLoadingPayment = false
-                        paymentAlertMessage =
-                            "No se pudo verificar el saldo: \(error.localizedDescription)"
-                        showPaymentAlert = true
-                    }
-                }
-            }
-            return
-        }
-
-        // Todos los demás métodos (incluyendo QvaPay): solo crear el pedido.
+        // Solo crear el pedido.
         // El pago se completa desde la pantalla de detalle del pedido.
         createOrderWithPaymentMethod(paymentMethod.id)
     }
@@ -1266,228 +1257,6 @@ struct CartView: View {
             storeImageUrl: order.branchImageUrl,
             userAvatarUrl: AuthManager.shared.currentUser?.avatarUrl
         )
-    }
-
-    // MARK: - Generate Payment Link (LEGACY - NEEDS UPDATE)
-    // TODO: Actualizar para usar el nuevo flujo de pagos con initiatePayment
-    private func generatePaymentLink() {
-        isLoadingPayment = true
-
-        // Este método necesita ser actualizado para usar el nuevo sistema de pagos
-        print("⚠️ generatePaymentLink() necesita ser actualizado al nuevo sistema")
-
-        isLoadingPayment = false
-        paymentAlertMessage = "Esta funcionalidad está siendo actualizada al nuevo sistema de pagos"
-        showPaymentAlert = true
-
-        /* CÓDIGO LEGACY - COMENTADO
-        // Convertir el total a centavos
-        let amountInCents = Int(viewModel.total * 100)
-        
-        print("🔗 Generando Payment Link")
-        print("💰 Monto: \(amountInCents) centavos (\(viewModel.formattedTotal))")
-        
-        paymentRepository.createPaymentLink(
-            amount: amountInCents,
-            currency: "usd",
-            metadata: [
-                "cart_items": String(viewModel.totalItems),
-                "subtotal": String(format: "%.2f", viewModel.subtotal),
-                "delivery_fee": String(format: "%.2f", viewModel.deliveryFee)
-            ]
-        ) { [self] result in
-            Task { @MainActor in
-                self.isLoadingPayment = false
-        
-                switch result {
-                case .success(let paymentLinkURL):
-                    print("✅ Payment Link generado exitosamente")
-                    self.generatedPaymentLink = paymentLinkURL
-                    self.showPaymentLinkSheet = true
-        
-                case .failure(let error):
-                    print("❌ Error generando Payment Link: \(error.localizedDescription)")
-                    self.paymentAlertMessage = "Error al generar el link de pago: \(error.localizedDescription)"
-                    self.showPaymentAlert = true
-                }
-            }
-        }
-        */
-    }
-
-    // MARK: - Stripe Payment (LEGACY - NEEDS UPDATE)
-    // TODO: Actualizar para usar el nuevo flujo de pagos con initiatePayment
-    private func initiateStripePayment() {
-        isLoadingPayment = true
-
-        // Este método necesita ser actualizado para usar el nuevo sistema de pagos
-        print("⚠️ initiateStripePayment() necesita ser actualizado al nuevo sistema")
-
-        isLoadingPayment = false
-        paymentAlertMessage = "Esta funcionalidad está siendo actualizada al nuevo sistema de pagos"
-        showPaymentAlert = true
-
-        /* CÓDIGO LEGACY - COMENTADO
-        // Convertir el total a centavos (Stripe maneja montos en centavos)
-        let amountInCents = Int(viewModel.total * 100)
-        
-        print("💳 Iniciando pago con Stripe")
-        print("💰 Monto: \(amountInCents) centavos (\(viewModel.formattedTotal))")
-        
-        // Verificar si estamos en modo mock
-        if StripeConfig.useMockData {
-            print("🧪 Usando MOCK MODE - llamando directamente a Stripe API (solo para testing)")
-        
-            // Crear PaymentIntent directamente con Stripe API (SOLO PARA TESTING)
-            paymentRepository.createPaymentIntentDirectly(
-                amount: amountInCents,
-                currency: "usd"
-            ) { [self] result in
-                Task { @MainActor in
-                    self.isLoadingPayment = false
-        
-                    switch result {
-                    case .success(let response):
-                        print("✅ [MOCK MODE] PaymentIntent creado exitosamente")
-                        self.configurePaymentSheet(response: response)
-        
-                    case .failure(let error):
-                        print("❌ [MOCK MODE] Error creando PaymentIntent: \(error.localizedDescription)")
-                        self.paymentAlertMessage = "Error al iniciar el pago: \(error.localizedDescription)"
-                        self.showPaymentAlert = true
-                    }
-                }
-            }
-        } else {
-            print("🏭 Usando modo PRODUCCIÓN - llamando al backend")
-        
-            // Crear PaymentIntent en el backend (PRODUCCIÓN)
-            paymentRepository.createPaymentIntent(
-                amount: amountInCents,
-                currency: "usd",
-                customerEmail: AuthManager.shared.currentUser?.email ?? "",
-                metadata: [
-                    "cart_items": String(viewModel.totalItems),
-                    "subtotal": String(format: "%.2f", viewModel.subtotal),
-                    "delivery_fee": String(format: "%.2f", viewModel.deliveryFee)
-                ]
-            ) { [self] result in
-                Task { @MainActor in
-                    self.isLoadingPayment = false
-        
-                    switch result {
-                    case .success(let response):
-                        print("✅ PaymentIntent creado exitosamente")
-                        self.configurePaymentSheet(response: response)
-        
-                    case .failure(let error):
-                        print("❌ Error creando PaymentIntent: \(error.localizedDescription)")
-                        self.paymentAlertMessage = "Error al iniciar el pago: \(error.localizedDescription)"
-                        self.showPaymentAlert = true
-                    }
-                }
-            }
-        }
-        */
-    }
-
-    private func configurePaymentSheet(response: PaymentIntentResponse) {
-        // Configurar Stripe con la publishable key
-        STPAPIClient.shared.publishableKey = response.publishableKey
-
-        // Configurar PaymentSheet
-        var configuration = PaymentSheet.Configuration()
-        configuration.merchantDisplayName = "Llego"
-
-        // Solo configurar customer si no estamos en modo mock
-        if !StripeConfig.useMockData && response.customer != "cus_mock" {
-            // Configurar customer (solo en producción con backend)
-            configuration.customer = .init(
-                id: response.customer,
-                ephemeralKeySecret: response.ephemeralKey
-            )
-            print("✅ Customer configurado: \(response.customer)")
-        } else {
-            print("🧪 [MOCK MODE] Omitiendo configuración de Customer")
-        }
-
-        // Permitir métodos de pago diferidos (como cuentas bancarias)
-        configuration.allowsDelayedPaymentMethods = true
-
-        // Configurar URL de retorno para autenticación
-        configuration.returnURL = StripeConfig.returnURL
-
-        // MARK: - Appearance (Opcional - personalizar colores)
-        var appearance = PaymentSheet.Appearance()
-        appearance.colors.primary = UIColor(cartAccent)
-        appearance.colors.background = UIColor(Color.white)
-        appearance.cornerRadius = 16.0
-        configuration.appearance = appearance
-
-        // Crear PaymentSheet
-        self.paymentSheet = PaymentSheet(
-            paymentIntentClientSecret: response.paymentIntent,
-            configuration: configuration
-        )
-
-        print("✅ PaymentSheet configurado correctamente")
-        print("   PaymentIntent: \(response.paymentIntent.prefix(20))...")
-        if StripeConfig.enableInstallments {
-            print("   💳 Pagos a plazos habilitados (se mostrarán si son elegibles)")
-        }
-
-        // Mostrar PaymentSheet automáticamente
-        presentPaymentSheet()
-    }
-
-    private func presentPaymentSheet() {
-        guard let paymentSheet = paymentSheet else {
-            print("⚠️ PaymentSheet no está configurado")
-            return
-        }
-
-        // Obtener el UIViewController actual
-        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-            let rootViewController = windowScene.windows.first?.rootViewController
-        else {
-            print("❌ No se pudo obtener el rootViewController")
-            return
-        }
-
-        // Encontrar el viewController presentado más reciente
-        var topViewController = rootViewController
-        while let presented = topViewController.presentedViewController {
-            topViewController = presented
-        }
-
-        // Presentar PaymentSheet
-        paymentSheet.present(from: topViewController) { [self] paymentResult in
-            Task { @MainActor in
-                self.handlePaymentResult(paymentResult)
-            }
-        }
-    }
-
-    private func handlePaymentResult(_ result: PaymentSheetResult) {
-        self.paymentResult = result
-
-        switch result {
-        case .completed:
-            print("✅ Pago completado exitosamente")
-
-            // Crear pedido real después del pago exitoso
-            createOrderWithPaymentMethod("credit_card")
-
-        case .canceled:
-            print("⚠️ Pago cancelado por el usuario")
-            paymentAlertMessage = "Pago cancelado. Puedes intentar nuevamente cuando estés listo."
-            showPaymentAlert = true
-
-        case .failed(let error):
-            print("❌ Pago fallido: \(error.localizedDescription)")
-            paymentAlertMessage = "Error al procesar el pago: \(error.localizedDescription)"
-            showPaymentAlert = true
-        }
     }
 
     // MARK: - Flying Particles Overlay

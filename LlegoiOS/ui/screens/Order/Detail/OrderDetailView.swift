@@ -197,13 +197,6 @@ struct OrderDetailView: View {
                 CartView()
             }
         }
-        .background(
-            StripePaymentSheetPresenter(
-                isPresented: $viewModel.showStripePaymentSheet,
-                paymentSheet: viewModel.paymentSheet,
-                onCompletion: viewModel.handleStripePaymentResult
-            )
-        )
     }
 
     // MARK: - Order Gradient Background
@@ -762,14 +755,6 @@ struct OrderDetailView: View {
                                 Text(paymentStatusText(order.paymentStatus))
                                     .scaledFont(size: 13, relativeTo: .footnote)
                                     .foregroundColor(.secondary)
-                                if viewModel.isPollingQvaPay {
-                                    ProgressView()
-                                        .scaleEffect(0.7)
-                                        .tint(gradientManager.currentAccentColor)
-                                    Text("Verificando...")
-                                        .scaledFont(size: 12, relativeTo: .caption)
-                                        .foregroundColor(gradientManager.currentAccentColor)
-                                }
                             }
                         }
 

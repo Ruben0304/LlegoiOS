@@ -1,3 +1,4 @@
+import os
 import Combine
 import Foundation
 import SwiftUI
@@ -368,7 +369,7 @@ class ProductListViewModel: ObservableObject {
 
     // Execute search (called when user submits search)
     func executeSearch() {
-        print("🔍 executeSearch() - query: '\(searchQuery)'")
+        Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Search").debug("Búsqueda: \(self.searchQuery, privacy: .private)")
         if !searchQuery.isEmpty {
             performVectorSearch()
         } else {
@@ -385,7 +386,7 @@ class ProductListViewModel: ObservableObject {
             return
         }
 
-        print("🔍 performVectorSearch() - Starting search for: '\(searchQuery)'")
+        Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Search").debug("Búsqueda vectorial: \(self.searchQuery, privacy: .private)")
         isSearching = true
 
         repository.searchProducts(

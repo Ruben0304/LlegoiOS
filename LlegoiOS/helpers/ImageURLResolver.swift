@@ -20,3 +20,10 @@ enum ImageURLResolver {
         return nil
     }
 }
+
+extension URL {
+    /// URLs que vienen del servidor (banners, redes sociales) solo se abren si son http/https.
+    var webOnly: URL? {
+        ["http", "https"].contains(scheme?.lowercased() ?? "") ? self : nil
+    }
+}

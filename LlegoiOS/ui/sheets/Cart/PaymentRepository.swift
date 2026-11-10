@@ -783,7 +783,7 @@ class PaymentRepository {
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
         request.httpBody = body
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await AuthenticatedURLSession.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NSError(
                 domain: "GlobalCashKycREST",
@@ -889,7 +889,7 @@ class PaymentRepository {
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: payload)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await AuthenticatedURLSession.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw graphQLError("Respuesta inválida del servidor")
         }
@@ -954,7 +954,7 @@ class PaymentRepository {
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
         request.httpBody = body
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await AuthenticatedURLSession.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw graphQLError("Respuesta inválida al subir evidencia")
         }

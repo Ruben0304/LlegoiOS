@@ -1,3 +1,4 @@
+import os
 //
 //  SearchRepository.swift
 //  LlegoiOS
@@ -209,7 +210,7 @@ final class SearchRepository {
         categoryId: String? = nil,
         completion: @escaping @Sendable (Result<[Product], Error>) -> Void
     ) {
-        print("🌐 SearchRepository - searchProducts() called with query: '\(query)'")
+        Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Search").debug("Productos: \(query, privacy: .private)")
 
         // Obtener JWT si está disponible
         let jwt = AuthManager.shared.getAccessToken()
@@ -411,7 +412,7 @@ final class SearchRepository {
                 Result<([StoreWithCoordinates], [String: [ProductGraphQL]]), Error>
             ) -> Void
     ) {
-        print("🌐 SearchRepository - searchBranches() called with query: '\(query)'")
+        Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Search").debug("Sucursales: \(query, privacy: .private)")
 
         // Obtener JWT si está disponible
         let jwt = AuthManager.shared.getAccessToken()

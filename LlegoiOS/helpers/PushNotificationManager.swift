@@ -298,6 +298,7 @@ final class PushNotificationManager: NSObject, ObservableObject {
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        guard !iOSApp.isTestMode else { return true }
         UNUserNotificationCenter.current().delegate = self
 
         // Solo re-registrar si ya hay permiso; el diálogo se pide al confirmar el primer pedido

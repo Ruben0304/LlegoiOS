@@ -1,3 +1,4 @@
+import os
 //
 //  ConversationalSearchView.swift
 //  LlegoiOS
@@ -205,7 +206,7 @@ struct ConversationalSearchView: View {
         print("\n╔═══════════════════════════════════════════════════╗")
         print("║  [VIEW] handleSendAction                          ║")
         print("╚═══════════════════════════════════════════════════╝")
-        print("📝 [VIEW] Texto del mensaje: \"\(messageText)\"")
+        Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Chat").debug("Mensaje: \(messageText, privacy: .private)")
 
         if messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             print("⚠️ [VIEW] Mensaje vacío - mostrando feedback de error")
@@ -234,7 +235,7 @@ struct ConversationalSearchView: View {
         print("╔═══════════════════════════════════════════════════╗")
         print("║  [VIEW] sendMessage                               ║")
         print("╚═══════════════════════════════════════════════════╝")
-        print("📤 [VIEW] Enviando al ViewModel: \"\(textToSend)\"")
+        Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Chat").debug("Enviando mensaje: \(textToSend, privacy: .private)")
         print("🧹 [VIEW] TextField limpiado\n")
 
         // Enviar al ViewModel
@@ -261,7 +262,7 @@ struct MessageBubble: View {
         print("🎨 [UI RENDER] MessageBubble - Mensaje del Asistente")
         print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         print("📋 [UI] Response Type: \"\(responseType)\"")
-        print("💬 [UI] Texto: \"\(message.text)\"")
+        Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Chat").debug("Respuesta: \(message.text, privacy: .private)")
         print("📦 [UI] Products count: \(message.productEntities?.count ?? 0)")
         print("🏪 [UI] Branches count: \(message.branchEntities?.count ?? 0)")
         if let confidence = message.confidence {
@@ -280,7 +281,7 @@ struct MessageBubble: View {
         if let branchEntities = message.branchEntities, !branchEntities.isEmpty {
             print("\n✅ [UI RENDER] Renderizando \(branchEntities.count) tiendas:")
             for (index, branch) in branchEntities.enumerated() {
-                print("  ├─ Tienda \(index + 1): \(branch.name) - \(branch.address)")
+                print("  ├─ Tienda \(index + 1): \(branch.name)")
             }
         }
 

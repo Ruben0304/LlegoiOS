@@ -1328,7 +1328,7 @@ struct SocialButton: View {
 
     var body: some View {
         Button(action: {
-            if let urlString = url, let url = URL(string: urlString) {
+            if let urlString = url, let url = URL(string: urlString)?.webOnly {
                 UIApplication.shared.open(url)
             }
         }) {

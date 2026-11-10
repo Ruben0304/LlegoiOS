@@ -1,3 +1,4 @@
+import os
 import AuthenticationServices
 import Combine
 import Foundation
@@ -109,7 +110,7 @@ class ProfileViewModel: ObservableObject {
             email = ""
             password = ""
 
-            print("✅ Login exitoso: \(session.user.email)")
+            Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Auth").info("Inicio de sesión exitoso")
 
         } catch {
             errorMessage = "Error al iniciar sesión: \(error.localizedDescription)"
@@ -154,7 +155,7 @@ class ProfileViewModel: ObservableObject {
             registerPassword = ""
             registerPhone = ""
 
-            print("✅ Registro exitoso: \(session.user.email)")
+            Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Auth").info("Registro exitoso")
 
         } catch {
             errorMessage = "Error al registrarse: \(error.localizedDescription)"
@@ -225,7 +226,7 @@ class ProfileViewModel: ObservableObject {
                     state = .authenticated
                     updateCachedUserInfo(session.user)
 
-                    print("✅ Apple Sign In exitoso: \(session.user.email)")
+                    Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Auth").info("Inicio con Apple exitoso")
                 } else {
                     errorMessage = "Credencial de Apple inválida"
                     state = .unauthenticated
@@ -257,7 +258,7 @@ class ProfileViewModel: ObservableObject {
 
         do {
             print(
-                "🔍 Iniciando login con Google. email: \(email ?? "desconocido") authCode: \(authorizationCode != nil)"
+                "🔍 Iniciando login con Google. authCode: \(authorizationCode != nil)"
             )
             let session = try await repository.loginWithGoogle(
                 idToken: idToken,
@@ -270,7 +271,7 @@ class ProfileViewModel: ObservableObject {
             state = .authenticated
             updateCachedUserInfo(session.user)
 
-            print("✅ Google Sign In exitoso: \(session.user.email)")
+            Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Auth").info("Inicio con Google exitoso")
         } catch {
             errorMessage = "Error al iniciar sesión con Google: \(error.localizedDescription)"
             state = .unauthenticated
@@ -598,7 +599,7 @@ class ProfileViewModel: ObservableObject {
                 authManager.applyCurrentUser(newUser)
                 updateCachedUserInfo(newUser)
 
-                print("✅ Username actualizado a: \(updatedUser.username)")
+                print("✅ Username actualizado")
             }
 
             showEditUsernameSheet = false
@@ -676,7 +677,7 @@ class ProfileViewModel: ObservableObject {
                 authManager.applyCurrentUser(newUser)
                 updateCachedUserInfo(newUser)
 
-                print("✅ Teléfono actualizado a: \(updatedUser.phone ?? "(vacío)")")
+                Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Profile").info("Teléfono actualizado")
             }
 
             showEditPhoneSheet = false
@@ -684,7 +685,7 @@ class ProfileViewModel: ObservableObject {
 
         } catch {
             errorMessage = "Error al actualizar teléfono: \(error.localizedDescription)"
-            print("❌ Error updating phone: \(error)")
+            print("❌ Error updating phone: \(error.localizedDescription)")
         }
 
         isUpdatingPhone = false

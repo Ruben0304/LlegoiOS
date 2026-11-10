@@ -1,3 +1,4 @@
+import os
 import Foundation
 import Apollo
 
@@ -64,7 +65,7 @@ class TronDealerRepository {
                                 orderId: data.orderId
                             )
                             
-                            print("✅ TronDealer payment initiated: \(result.address)")
+                            Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Payments").info("Pago TronDealer iniciado")
                             continuation.resume(returning: result)
                             
                         case .failure(let error):

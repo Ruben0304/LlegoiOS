@@ -6,7 +6,7 @@ Aplicación de delivery y e-commerce construida con SwiftUI que conecta usuarios
 
 - **Framework**: SwiftUI (iOS 15+)
 - **Lenguaje**: Swift 5.9+
-- **API Cliente**: Apollo iOS 2.0.0 (GraphQL)
+- **API Cliente**: Apollo iOS 2.4.0 (upstream, versión exacta) (GraphQL)
 - **Cache**: SQLite (ApolloSQLite)
 - **Pagos**: Stripe iOS SDK
 - **Backend**: GraphQL API (Railway)
@@ -273,7 +273,7 @@ Ver `PaymentManager.swift` como referencia.
 ## 📦 Dependencias
 
 Instaladas via SPM (Swift Package Manager):
-- Apollo iOS 2.0.0
+- Apollo iOS 2.4.0 (upstream, versión exacta)
 - ApolloAPI
 - ApolloSQLite
 - Lottie iOS

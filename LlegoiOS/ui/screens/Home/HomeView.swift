@@ -15,9 +15,6 @@ struct HomeView: View {
 
     @ObservedObject private var authManager = AuthManager.shared
 
-    // Home ViewModel
-    @StateObject private var viewModel = HomeViewModel()
-
     // Animation states
     @State private var carouselAppeared = false
     @State private var toolbarAppeared = false

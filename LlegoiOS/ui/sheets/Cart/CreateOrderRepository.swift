@@ -5,78 +5,39 @@ import Foundation
 final class CreateOrderRepository {
     private let jsonEncoder = JSONEncoder()
     private let jsonDecoder = JSONDecoder()
+    private let pendingCheckout: PendingCheckout
+    private let performRequest: @Sendable (URLRequest) async throws -> (Data, URLResponse)
+    private var checkoutKey: String?
+    private var checkoutUserID: String?
 
-    // MARK: - Create Order
-
-    func createOrder(
-        branchId: String,
-        items: [OrderRequestItem],
-        fulfillment: FulfillmentPayloadInput = .delivery,
-        deliveryAddress: DeliveryAddressInput?,
-        paymentMethod: String,
-        paymentIntentId: String? = nil,
-        comments: String? = nil,
-        promoCode: String? = nil,
-        scheduledFor: Date? = nil,
-        idempotencyKey: String? = nil,
-        completion: @escaping @Sendable (Result<CreatedOrder, Error>) -> Void
-    ) {
-        Task { @MainActor in
-            // Un token vacío también es no autenticado: antes caía en una ruta de Apollo sin
-            // clave de idempotencia (un doble toque podía crear dos pedidos).
-            guard let jwt = AuthManager.shared.getAccessToken(), !jwt.isEmpty else {
-                completion(
-                    .failure(
-                        NSError(
-                            domain: "CreateOrderRepository", code: 401,
-                            userInfo: [NSLocalizedDescriptionKey: "No autenticado"])))
-                return
-            }
-
-            // JSON para enviar fulfillment (DELIVERY o PICKUP) y la clave de idempotencia
-            createMixedOrder(
-                branchId: branchId,
-                items: items,
-                fulfillment: fulfillment,
-                deliveryAddress: deliveryAddress,
-                paymentMethod: paymentMethod,
-                paymentIntentId: paymentIntentId,
-                comments: comments,
-                promoCode: promoCode,
-                scheduledFor: scheduledFor,
-                idempotencyKey: idempotencyKey,
-                jwt: jwt,
-                completion: completion
-            )
-        }
+    init(pendingCheckout: PendingCheckout = PendingCheckout(),
+         performRequest: @escaping @Sendable (URLRequest) async throws -> (Data, URLResponse) = {
+             try await AuthenticatedURLSession.data(for: $0)
+         }) {
+        self.pendingCheckout = pendingCheckout
+        self.performRequest = performRequest
     }
 
-    private func createMixedOrder(
-        branchId: String,
-        items: [OrderRequestItem],
-        fulfillment: FulfillmentPayloadInput,
-        deliveryAddress: DeliveryAddressInput?,
-        paymentMethod: String,
-        paymentIntentId: String?,
-        comments: String?,
-        promoCode: String?,
-        scheduledFor: Date?,
-        idempotencyKey: String?,
-        jwt: String,
-        completion: @escaping @Sendable (Result<CreatedOrder, Error>) -> Void
-    ) {
-        guard let endpointURL = URL(string: "\(ApolloClientManager.baseURL)/graphql") else {
-            completion(
-                .failure(
-                    NSError(
-                        domain: "CreateOrderRepository",
-                        code: -2,
-                        userInfo: [NSLocalizedDescriptionKey: "Endpoint GraphQL inválido"]
-                    )))
-            return
-        }
+    func clearPendingCheckout() {
+        guard let checkoutKey, let checkoutUserID else { return }
+        pendingCheckout.clear(for: checkoutKey, userID: checkoutUserID, endpoint: ApolloClientManager.baseURL)
+        self.checkoutKey = nil
+    }
 
-        let mutation = """
+    func markPaymentStarted() throws -> Bool {
+        guard let checkoutKey, let checkoutUserID else { return false }
+        return try pendingCheckout.markPaymentStarted(for: checkoutKey, userID: checkoutUserID, endpoint: ApolloClientManager.baseURL)
+    }
+
+    func pendingOrder(userID: String) -> (id: String, number: String)? {
+        pendingCheckout.pendingOrder(userID: userID, endpoint: ApolloClientManager.baseURL)
+    }
+
+    func hasPendingPayload(userID: String) -> Bool {
+        pendingCheckout.pendingPayload(userID: userID, endpoint: ApolloClientManager.baseURL) != nil
+    }
+
+    private static let mutation = """
             mutation CreateOrder($input: CreateOrderInput!, $jwt: String!) {
               createOrder(input: $input, jwt: $jwt) {
                 id
@@ -147,8 +108,67 @@ final class CreateOrderRepository {
             }
             """
 
-        let payload = MixedCreateOrderRequestPayload(
-            query: mutation,
+    // MARK: - Create Order
+
+    func createOrder(
+        branchId: String,
+        items: [OrderRequestItem],
+        fulfillment: FulfillmentPayloadInput = .delivery,
+        deliveryAddress: DeliveryAddressInput?,
+        paymentMethod: String,
+        paymentIntentId: String? = nil,
+        comments: String? = nil,
+        promoCode: String? = nil,
+        scheduledFor: Date? = nil,
+        idempotencyKey: String? = nil,
+        completion: @escaping @Sendable (Result<CreatedOrder, Error>) -> Void
+    ) {
+        Task { @MainActor in
+            // Un token vacío también es no autenticado: antes caía en una ruta de Apollo sin
+            // clave de idempotencia (un doble toque podía crear dos pedidos).
+            guard let jwt = AuthManager.shared.getAccessToken(), !jwt.isEmpty else {
+                completion(
+                    .failure(
+                        NSError(
+                            domain: "CreateOrderRepository", code: 401,
+                            userInfo: [NSLocalizedDescriptionKey: "No autenticado"])))
+                return
+            }
+
+            // JSON para enviar fulfillment (DELIVERY o PICKUP) y la clave de idempotencia
+            createMixedOrder(
+                branchId: branchId,
+                items: items,
+                fulfillment: fulfillment,
+                deliveryAddress: deliveryAddress,
+                paymentMethod: paymentMethod,
+                paymentIntentId: paymentIntentId,
+                comments: comments,
+                promoCode: promoCode,
+                scheduledFor: scheduledFor,
+                idempotencyKey: idempotencyKey,
+                jwt: jwt,
+                completion: completion
+            )
+        }
+    }
+
+    private func createMixedOrder(
+        branchId: String,
+        items: [OrderRequestItem],
+        fulfillment: FulfillmentPayloadInput,
+        deliveryAddress: DeliveryAddressInput?,
+        paymentMethod: String,
+        paymentIntentId: String?,
+        comments: String?,
+        promoCode: String?,
+        scheduledFor: Date?,
+        idempotencyKey: String?,
+        jwt: String,
+        completion: @escaping @Sendable (Result<CreatedOrder, Error>) -> Void
+    ) {
+        var payload = MixedCreateOrderRequestPayload(
+            query: Self.mutation,
             variables: .init(
                 jwt: jwt,
                 input: .init(
@@ -205,6 +225,60 @@ final class CreateOrderRepository {
         )
 
         do {
+            if idempotencyKey == nil {
+                guard let userID = AuthManager.shared.userId, !userID.isEmpty else {
+                    throw NSError(domain: "CreateOrderRepository", code: 401,
+                                  userInfo: [NSLocalizedDescriptionKey: "No se pudo identificar la sesión"])
+                }
+                jsonEncoder.outputFormatting = .sortedKeys
+                let input = try jsonEncoder.encode(payload.variables.input)
+                payload.variables.input.idempotencyKey = try pendingCheckout.key(
+                    for: input, userID: userID, endpoint: ApolloClientManager.baseURL)
+                checkoutUserID = userID
+            }
+            checkoutKey = payload.variables.input.idempotencyKey
+            send(payload, rememberOrder: idempotencyKey == nil, completion: completion)
+        } catch {
+            completion(.failure(error))
+        }
+    }
+
+    func recoverPending(userID: String, completion: @escaping @Sendable (Result<CreatedOrder, Error>) -> Void) {
+        guard let jwt = AuthManager.shared.getAccessToken(), !jwt.isEmpty,
+              let pending = pendingCheckout.pendingPayload(userID: userID, endpoint: ApolloClientManager.baseURL) else {
+            completion(.failure(NSError(domain: "CreateOrderRepository", code: -5,
+                userInfo: [NSLocalizedDescriptionKey: "No se encontró el pedido pendiente para esta sesión"])))
+            return
+        }
+        do {
+            var input = try jsonDecoder.decode(MixedCreateOrderRequestPayload.Input.self, from: pending.payload)
+            input.idempotencyKey = pending.key
+            checkoutKey = pending.key
+            checkoutUserID = userID
+            send(.init(query: Self.mutation, variables: .init(jwt: jwt, input: input)),
+                 rememberOrder: true, completion: completion)
+        } catch {
+            completion(.failure(error))
+        }
+    }
+
+    private func send(_ payload: MixedCreateOrderRequestPayload, rememberOrder: Bool,
+                      completion: @escaping @Sendable (Result<CreatedOrder, Error>) -> Void) {
+        guard let endpointURL = URL(string: "\(ApolloClientManager.baseURL)/graphql") else {
+            completion(
+                .failure(
+                    NSError(
+                        domain: "CreateOrderRepository",
+                        code: -2,
+                        userInfo: [NSLocalizedDescriptionKey: "Endpoint GraphQL inválido"]
+                    )))
+            return
+        }
+
+        do {
+            let requestKey = payload.variables.input.idempotencyKey
+            let requestUserID = checkoutUserID
+            let requestGeneration = AuthManager.shared.sessionGeneration
             var request = URLRequest(url: endpointURL)
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -212,7 +286,13 @@ final class CreateOrderRepository {
 
             Task {
                 do {
-                    let (data, response) = try await URLSession.shared.data(for: request)
+                    let (data, response) = try await performRequest(request)
+                    guard SessionErrorPolicy.isCurrent(token: payload.variables.jwt, generation: requestGeneration,
+                        currentToken: AuthManager.shared.getAccessToken(),
+                        currentGeneration: AuthManager.shared.sessionGeneration) else {
+                        throw NSError(domain: "CreateOrderRepository", code: 401,
+                            userInfo: [NSLocalizedDescriptionKey: "La sesión cambió; revisa Mis pedidos"])
+                    }
                     guard let httpResponse = response as? HTTPURLResponse else {
                         throw NSError(
                             domain: "CreateOrderRepository",
@@ -247,6 +327,11 @@ final class CreateOrderRepository {
                     }
 
                     let createdOrder = mapToCreatedOrder(order)
+                    if rememberOrder, let requestKey, let requestUserID {
+                        try pendingCheckout.rememberOrder(for: requestKey, userID: requestUserID,
+                                                          endpoint: ApolloClientManager.baseURL, id: createdOrder.id,
+                                                          number: createdOrder.orderNumber)
+                    }
                     completion(.success(createdOrder))
                 } catch {
                     completion(.failure(error))
@@ -403,14 +488,14 @@ struct CreatedOrderDiscount {
 
 private struct MixedCreateOrderRequestPayload: Encodable {
     let query: String
-    let variables: Variables
+    var variables: Variables
 
     struct Variables: Encodable {
         let jwt: String
-        let input: Input
+        var input: Input
     }
 
-    struct Input: Encodable {
+    struct Input: Codable {
         let branchId: String
         let items: [Item]
         let fulfillment: Fulfillment
@@ -421,10 +506,10 @@ private struct MixedCreateOrderRequestPayload: Encodable {
         let promoCode: String?
         let scheduledFor: String?
         // Con la misma clave, el backend devuelve el pedido ya creado en vez de duplicarlo.
-        let idempotencyKey: String?
+        var idempotencyKey: String?
     }
 
-    struct Item: Encodable {
+    struct Item: Codable {
         let quantity: Int
         let itemType: String
         let productId: String?
@@ -444,22 +529,22 @@ private struct MixedCreateOrderRequestPayload: Encodable {
         }
     }
 
-    struct ComboSelection: Encodable {
+    struct ComboSelection: Codable {
         let slotId: String
         let selectedOptions: [SelectedOption]
     }
 
-    struct SelectedOption: Encodable {
+    struct SelectedOption: Codable {
         let productId: String
         let quantity: Int
         let modifiers: [Modifier]
     }
 
-    struct Modifier: Encodable {
+    struct Modifier: Codable {
         let name: String
     }
 
-    struct DeliveryAddress: Encodable {
+    struct DeliveryAddress: Codable {
         let street: String
         let latitude: Double
         let longitude: Double
@@ -472,7 +557,7 @@ private struct MixedCreateOrderRequestPayload: Encodable {
         let deliveryInstructions: String?
     }
 
-    struct Fulfillment: Encodable {
+    struct Fulfillment: Codable {
         let type: String
         let pickupBranchId: String?
         let pickupWindowId: String?

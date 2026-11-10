@@ -1,7 +1,7 @@
+import os
 import Combine
 import Foundation
 import UIKit
-import StripePaymentSheet
 
 @MainActor
 final class OrderDetailViewModel: ObservableObject {
@@ -19,9 +19,6 @@ final class OrderDetailViewModel: ObservableObject {
     @Published var newComment: String = ""
     @Published var paymentMethod: PaymentMethodModel?
     @Published var isLoadingPaymentMethod = false
-    @Published var paymentSheet: PaymentSheet?
-    @Published var showStripePaymentSheet = false
-    @Published var isPollingQvaPay = false
     @Published var isPollingTronDealer = false
     @Published var showTronDealerSheet = false
     @Published var tronDealerPaymentInfo: TronDealerPaymentResult?
@@ -43,18 +40,23 @@ final class OrderDetailViewModel: ObservableObject {
 
     private let repository = OrderDetailRepository()
     private let paymentRepository = PaymentRepository()
-    private let qvaPayRepository = QvaPayRepository()
     private let tronDealerRepository = TronDealerRepository()
     private let paymentMethodManager = PaymentMethodManager.shared
     private let authManager = AuthManager.shared
     private let orderId: String
-    private var qvaPayPollingTask: Task<Void, Never>?
     private var tronDealerPollingTask: Task<Void, Never>?
     private var liveUpdatesTask: Task<Void, Never>?
+    private var sessionObserver: AnyCancellable?
     private static let liveUpdateInterval: UInt64 = 10_000_000_000
 
     init(orderId: String) {
         self.orderId = orderId
+        sessionObserver = NotificationCenter.default.publisher(for: .authSessionInvalidated)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.stopLiveUpdates()
+                self?.stopTronDealerPolling()
+            }
         load()
     }
 
@@ -314,12 +316,6 @@ final class OrderDetailViewModel: ObservableObject {
     private func initiatePaymentWithMethod(_ method: PaymentMethodModel, order: OrderDetail) {
         let methodType = method.method.lowercased()
 
-        // QvaPay → abrir URL de pago
-        if methodType == "qvapay" || method.code.lowercased().contains("qvapay") {
-            initiateQvaPayPayment(order: order)
-            return
-        }
-
         // TronDealer → mostrar dirección y QR
         if methodType == "usdt" || method.code.lowercased().contains("trondealer") || method.code.lowercased().contains("usdt") {
             initiateTronDealerPayment(order: order)
@@ -332,59 +328,11 @@ final class OrderDetailViewModel: ObservableObject {
             return
         }
 
-        guard ["wallet", "stripe"].contains(methodType) else {
-            showPaymentAlertMessage("Este método de pago aún no está disponible.")
-            return
-        }
-
-        guard let jwt = authManager.getAccessToken() else {
-            showPaymentAlertMessage("No hay sesión activa.")
-            return
-        }
-
-        isInitiatingPayment = true
-
-        Task {
-            do {
-                let result = try await paymentRepository.initiatePayment(
-                    orderId: order.id,
-                    paymentMethodId: method.id,
-                    jwt: jwt,
-                    includeDeliveryFee: true
-                )
-
-                await MainActor.run {
-                    self.isInitiatingPayment = false
-                }
-
-                if methodType == "wallet" {
-                    handleWalletPaymentResult(result.paymentAttempt)
-                } else {
-                    try await presentStripePaymentSheet(using: result.paymentAttempt)
-                }
-            } catch {
-                await MainActor.run {
-                    self.isInitiatingPayment = false
-                }
-                let normalizedError = error.localizedDescription.lowercased()
-                if normalizedError.contains("no permite pago") || normalizedError.contains("estado no permite") || normalizedError.contains("estado del pedido") || normalizedError.contains("invalid order status") || (normalizedError.contains("order status") && normalizedError.contains("payment")) {
-                    refresh()
-                    showPaymentAlertMessage("El estado del pedido cambió y ya no permite pagar ahora. Actualizamos la información.")
-                } else {
-                    showPaymentAlertMessage(error.localizedDescription)
-                }
-            }
-        }
+        showPaymentAlertMessage("Este método de pago aún no está disponible.")
     }
     
     private func initiatePaymentWithOrderMethod(_ order: OrderDetail) {
         let methodType = order.paymentMethod.lowercased()
-
-        // QvaPay
-        if methodType.contains("qvapay") {
-            initiateQvaPayPayment(order: order)
-            return
-        }
 
         // TronDealer / USDT
         if methodType.contains("usdt") || methodType.contains("trondealer") {
@@ -401,20 +349,6 @@ final class OrderDetailViewModel: ObservableObject {
         showPaymentAlertMessage("Método de pago no disponible.")
     }
 
-    func handleStripePaymentResult(_ result: PaymentSheetResult) {
-        switch result {
-        case .completed:
-            showPaymentAlertMessage("Pago completado. Estamos confirmando la transacción.")
-            refreshAfterPayment()
-        case .canceled:
-            showPaymentAlertMessage("Pago cancelado.")
-        case .failed(let error):
-            showPaymentAlertMessage("Error en el pago: \(error.localizedDescription)")
-        }
-
-        paymentSheet = nil
-    }
-
     func canInitiatePayment(for order: OrderDetail) -> Bool {
         // Si el cliente ya confirmó la transferencia en esta sesión, no mostrar botón de pago
         if transferPaymentConfirmed { return false }
@@ -427,50 +361,6 @@ final class OrderDetailViewModel: ObservableObject {
             paymentStatus: order.paymentStatus,
             paymentMethodType: methodType
         )
-    }
-
-    private func handleWalletPaymentResult(_ attempt: PaymentAttemptModel) {
-        switch attempt.status.lowercased() {
-        case "completed":
-            showPaymentAlertMessage("Pago confirmado con Wallet.")
-            refreshAfterPayment()
-        case "failed":
-            showPaymentAlertMessage("Pago rechazado. Intenta nuevamente.")
-        default:
-            showPaymentAlertMessage("Pago en proceso. Te avisaremos cuando se confirme.")
-            refreshAfterPayment()
-        }
-    }
-
-    private func presentStripePaymentSheet(using attempt: PaymentAttemptModel) async throws {
-        // Demo mode: backend auto-completed the payment — no Stripe sheet needed.
-        // This also handles any case where the payment was already completed server-side.
-        if attempt.status.lowercased() == "completed" && attempt.stripeClientSecret == nil {
-            await MainActor.run {
-                self.showPaymentAlertMessage("✅ Pago procesado exitosamente.")
-            }
-            refreshAfterPayment()
-            return
-        }
-
-        guard let clientSecret = attempt.stripeClientSecret else {
-            throw NSError(
-                domain: "OrderDetailViewModel",
-                code: -6,
-                userInfo: [NSLocalizedDescriptionKey: "No se recibió el client secret de Stripe."]
-            )
-        }
-
-        var configuration = PaymentSheet.Configuration()
-        configuration.merchantDisplayName = "Llego"
-        configuration.allowsDelayedPaymentMethods = true
-        configuration.returnURL = StripeConfig.returnURL
-
-        self.paymentSheet = PaymentSheet(
-            paymentIntentClientSecret: clientSecret,
-            configuration: configuration
-        )
-        self.showStripePaymentSheet = true
     }
 
     private func refreshAfterPayment() {
@@ -528,18 +418,6 @@ final class OrderDetailViewModel: ObservableObject {
             return byMethod
         }
 
-        if normalized.contains("wallet") {
-            return methods.first(where: { $0.method.lowercased() == "wallet" })
-        }
-
-        if normalized.contains("stripe") {
-            return methods.first(where: { $0.method.lowercased() == "stripe" })
-        }
-        
-        if normalized.contains("qvapay") {
-            return methods.first(where: { $0.method.lowercased() == "qvapay" || $0.code.lowercased().contains("qvapay") })
-        }
-        
         if normalized.contains("usdt") || normalized.contains("trondealer") {
             return methods.first(where: { $0.method.lowercased() == "usdt" || $0.code.lowercased().contains("usdt") || $0.code.lowercased().contains("trondealer") })
         }
@@ -585,103 +463,6 @@ final class OrderDetailViewModel: ObservableObject {
 
     var showTimeline: Bool {
         !(order?.timeline.isEmpty ?? true)
-    }
-    
-    // MARK: - QvaPay Payment
-    
-    private func initiateQvaPayPayment(order: OrderDetail) {
-        isInitiatingPayment = true
-        
-        Task {
-            do {
-                let result = try await qvaPayRepository.initiateQvapayPayment(orderId: order.id)
-                
-                await MainActor.run {
-                    self.isInitiatingPayment = false
-                }
-                
-                // Abrir URL en Safari
-                if let url = URL(string: result.paymentUrl) {
-                    await UIApplication.shared.open(url)
-                }
-                
-                // Iniciar polling
-                startQvaPayPolling()
-                
-            } catch {
-                await MainActor.run {
-                    self.isInitiatingPayment = false
-                    let normalizedError = error.localizedDescription.lowercased()
-                    if normalizedError.contains("no permite pago") || normalizedError.contains("estado no permite") || normalizedError.contains("estado del pedido") || normalizedError.contains("invalid order status") || (normalizedError.contains("order status") && normalizedError.contains("payment")) {
-                        self.refresh()
-                        self.showPaymentAlertMessage("El estado del pedido cambió y ya no permite pagar ahora. Actualizamos la información.")
-                    } else {
-                        self.showPaymentAlertMessage("No se pudo generar el enlace de pago: \(error.localizedDescription)")
-                    }
-                }
-            }
-        }
-    }
-    
-    private func startQvaPayPolling() {
-        isPollingQvaPay = true
-        
-        qvaPayPollingTask = Task {
-            let maxAttempts = 40 // 2 minutos (40 * 3s)
-            let pollingInterval: TimeInterval = 3.0
-            
-            for attempt in 1...maxAttempts {
-                if Task.isCancelled {
-                    return
-                }
-                
-                do {
-                    let updatedOrder = try await repository.fetchOrderAsync(id: orderId)
-                    
-                    await MainActor.run {
-                        self.order = updatedOrder
-                    }
-                    
-                    // Verificar si el pago se completó
-                    if updatedOrder.paymentStatus == .completed {
-                        await MainActor.run {
-                            self.isPollingQvaPay = false
-                            self.showPaymentAlertMessage("¡Pago completado exitosamente!")
-                        }
-                        return
-                    }
-                    
-                    // Verificar si el pago falló
-                    if updatedOrder.paymentStatus == .failed {
-                        await MainActor.run {
-                            self.isPollingQvaPay = false
-                            self.showPaymentAlertMessage("El pago fue rechazado o cancelado")
-                        }
-                        return
-                    }
-                    
-                } catch {
-                    print("⚠️ Error en polling QvaPay attempt \(attempt): \(error)")
-                }
-                
-                // Esperar antes del siguiente intento
-                if attempt < maxAttempts {
-                    try? await Task.sleep(nanoseconds: UInt64(pollingInterval * 1_000_000_000))
-                }
-            }
-            
-            // Timeout
-            await MainActor.run {
-                self.isPollingQvaPay = false
-                self.showPaymentAlertMessage("No pudimos verificar tu pago automáticamente. Revisa el estado de tu orden.")
-            }
-        }
-    }
-    
-    func stopQvaPayPolling() {
-        qvaPayPollingTask?.cancel()
-        qvaPayPollingTask = nil
-        isPollingQvaPay = false
     }
     
     // MARK: - TronDealer Payment
@@ -813,7 +594,7 @@ final class OrderDetailViewModel: ObservableObject {
                     return
                 }
 
-                print("🔍 initiatePayment → orderId: \(order.id), paymentMethodId: \(methodId), jwtPrefix: \(String(jwt.prefix(20)))...")
+                Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.llego", category: "Payments").info("Iniciando pago")
                 let result = try await paymentRepository.initiatePayment(
                     orderId: order.id,
                     paymentMethodId: methodId,
@@ -891,7 +672,6 @@ final class OrderDetailViewModel: ObservableObject {
     }
 
     deinit {
-        qvaPayPollingTask?.cancel()
         tronDealerPollingTask?.cancel()
         liveUpdatesTask?.cancel()
     }
