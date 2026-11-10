@@ -1,3 +1,4 @@
+import Foundation
 import os
 
 /// Logger central. Los mensajes dinámicos van como `.private` (se redactan fuera de un depurador).
