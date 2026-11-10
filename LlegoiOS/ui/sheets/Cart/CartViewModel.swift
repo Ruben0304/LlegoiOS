@@ -806,7 +806,7 @@ class CartViewModel: ObservableObject {
             Task { @MainActor in
                 switch result {
                 case .success(let accepted):
-                    self.branchAcceptedCurrency = accepted?.uppercased()
+                    self.branchAcceptedCurrency = accepted?.acceptedCurrency?.uppercased()
                 case .failure(let error):
                     print("⚠️ Error loading branch accepted currency: \(error.localizedDescription)")
                 }
