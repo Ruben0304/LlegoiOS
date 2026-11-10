@@ -100,7 +100,7 @@ struct ScaledSystemFont: ViewModifier {
 
 extension View {
     /// `.font(.system(size:weight:design:))` que crece con Dynamic Type según `textStyle`.
-    func scaledFont(
+    nonisolated func scaledFont(
         size: CGFloat,
         weight: Font.Weight = .regular,
         design: Font.Design = .default,
